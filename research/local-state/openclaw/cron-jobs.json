@@ -1,0 +1,384 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "b4d1bb16-4c19-48ee-8d27-d8a5e4f0a623",
+      "name": "morning-urgent-digest",
+      "enabled": false,
+      "createdAtMs": 1777883462207,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 10 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "קרא את memory/<היום>.md ו-memory/<אתמול>.md ותן לי סיכום בעברית של כל מה שהיה ב-WhatsApp ב-12 השעות האחרונות: משימות חשובות, הודעות שלא נעניתי, פגישות, החלטות. סדר לפי דחיפות. אם אין כלום משמעותי — 'אין כלום דחוף'."
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "1b42ea30-4642-49e4-af8e-c8a5c128f4d1",
+      "name": "evening-urgent-digest",
+      "enabled": false,
+      "createdAtMs": 1777883471877,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 22 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "קרא את memory/<היום>.md ו-memory/<אתמול>.md ותן לי סיכום בעברית של כל מה שהיה ב-WhatsApp ב-12 השעות האחרונות: משימות חשובות, הודעות שלא נעניתי, פגישות, החלטות. סדר לפי דחיפות. אם אין כלום משמעותי — 'אין כלום דחוף'."
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "bbc76f6e-18aa-41b8-8492-4676a6d631bf",
+      "name": "morning-activity-neri",
+      "enabled": false,
+      "createdAtMs": 1777884291944,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 10 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "סקור פעילות פיתוח ב-12 השעות האחרונות: בדוק git log ב-K:/האחסון שלי/BEE_Operations וב-E:/Desktop/OpenClawAgent (אם git קיים), קבצים שעודכנו (find -newermt '12 hours ago'), וקבצי סשן Claude Code/Antigravity ב-C:/Users/Barak/.claude/projects/. הפק סיכום בעברית למסירה לקבוצה. פורמט WhatsApp: כוכבית בודדת ל-bold, אין כותרות #, אין טבלאות. התחל ב: '📋 *ברק — סיכום פעילות AI [HH:MM]*'. תכלול: שם פרויקט, מה עודכן (קונקרטי), סדר מהמשמעותי לפחות-משמעותי. אסור להמציא — אם לא ברור, תאר ניטרלי. אורך: 10-30 שורות. אם אין פעילות — שלח 'אין פעילות חדשה'."
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "whatsapp",
+        "to": "120363425994041413@g.us"
+      },
+      "state": {}
+    },
+    {
+      "id": "0956173a-c1f0-41b2-b2a1-a6e8435996b5",
+      "name": "evening-activity-neri",
+      "enabled": false,
+      "createdAtMs": 1777884304125,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 22 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "סקור פעילות פיתוח ב-12 השעות האחרונות: בדוק git log ב-K:/האחסון שלי/BEE_Operations וב-E:/Desktop/OpenClawAgent (אם git קיים), קבצים שעודכנו (find -newermt '12 hours ago'), וקבצי סשן Claude Code/Antigravity ב-C:/Users/Barak/.claude/projects/. הפק סיכום בעברית למסירה לקבוצה. פורמט WhatsApp: כוכבית בודדת ל-bold, אין כותרות #, אין טבלאות. התחל ב: '📋 *ברק — סיכום פעילות AI [HH:MM]*'. תכלול: שם פרויקט, מה עודכן (קונקרטי), סדר מהמשמעותי לפחות-משמעותי. אסור להמציא — אם לא ברור, תאר ניטרלי. אורך: 10-30 שורות. אם אין פעילות — שלח 'אין פעילות חדשה'."
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "whatsapp",
+        "to": "120363425994041413@g.us"
+      },
+      "state": {}
+    },
+    {
+      "id": "6beedb15-db29-4287-a5e1-4cc2f2be0524",
+      "name": "evening-tomorrow-schedule",
+      "enabled": true,
+      "createdAtMs": 1777886986043,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 21 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "הרץ: cd E:/Desktop/OpenClawAgent && node alfred-tomorrow-digest.js cron-output. אם הפלט מתחיל ב-⚡ * שלח אותו בדיוק כפי שהוא לשיחה האישית של ברק (+972509554483). אם הפלט ריק — אל תשלח דבר. אסור לשלוח לכל יעד אחר.",
+        "thinking": "off"
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "failureAlert": {
+        "after": 5,
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "8f11a9f1-f4ff-41d9-88af-e0ff4fa799f0",
+      "name": "monday-morning-digest",
+      "enabled": true,
+      "createdAtMs": 1777921892672,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 7 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "הרץ: cd E:/Desktop/OpenClawAgent && node alfred-monday-digest.js cron-output. אם הפלט מתחיל ב-⚡ * שלח אותו בדיוק כפי שהוא לשיחה האישית של ברק (+972509554483). אם הפלט ריק — אל תשלח דבר. אסור לשלוח לכל יעד אחר.",
+        "thinking": "off"
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "failureAlert": {
+        "after": 5,
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "9f4eb109-6644-4559-b07c-69477d6adea9",
+      "name": "bee-db-snapshot-refresh",
+      "enabled": true,
+      "createdAtMs": 1777922191380,
+      "schedule": {
+        "kind": "cron",
+        "expr": "5 6 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "הרץ: cd E:/Desktop/OpenClawAgent && node refresh-bee-snapshot.js. אחרי הרצה מוצלחת — אל תשלח דבר. אם נכשל — שלח לי בשיחה האישית: '⚠️ snapshot DB לא התעדכן: <reason>'."
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "26921dcd-9b1f-4515-8c2f-8e1bc451345a",
+      "name": "gmail-morning-digest",
+      "enabled": false,
+      "createdAtMs": 1777932327276,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 8 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "השתמש בכלי alfred-gmail.js כדי לסקור את תיבת המייל הראשית. הרץ: cd E:/Desktop/OpenClawAgent && node alfred-gmail.js unread --max 50. סנן: מהיום הקודם והיום. תן לי בשיחה האישית סיכום בעברית מובנה: 1) דחופים (דורשים מענה היום), 2) פגישות / אירועים, 3) דורשים מענה השבוע, 4) להתעלם / ספאם. תקציר 1-2 שורות לכל אחד. אם אין כלום חשוב — 'תיבה שקטה הבוקר'."
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "739d1444-5b21-41ca-8928-8635e04449d0",
+      "name": "weekly-self-review",
+      "enabled": false,
+      "createdAtMs": 1777932829179,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 9 * * 0",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "סקור את 7 הימים האחרונים: דפוסים בשיחה איתי, טעויות שביצעת, תיקונים שתיקנתי לך, פלטי cron איכותיים/חלשים, כללים שהתנגשו בפועל. הצע 0-3 שיפורים (פחות זה יותר). כל הצעה בפורמט: '⚡ *🌱 הצעת שיפור #<N>: ...*' לפי החוק 'Self-Improvement Loop' ב-AGENTS.md. שלח לי בשיחה האישית. עדכן את self-improvement-log.md. אל תבצע שום שינוי לפני אישור מפורש."
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "61f6bc7e-285b-4a31-81c2-fe7a1abaa9d8",
+      "name": "morning-weather-scan",
+      "enabled": true,
+      "createdAtMs": 1777998506611,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 6 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "הרץ: cd E:/Desktop/OpenClawAgent && node alfred-weather.js scan-events --days 1 --pretty true. אם הפלט מתחיל ב-⚡ * שלח אותו בדיוק כפי שהוא לשיחה האישית של ברק (+972509554483). אם הפלט אומר 'חוף בטוח' אל תשלח דבר."
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "d161fb88-4ddf-4ab6-bd3d-d294e19a80f4",
+      "name": "morning-deadlines",
+      "enabled": true,
+      "createdAtMs": 1777998506611,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 7 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "הרץ: cd E:/Desktop/OpenClawAgent && node alfred-deadlines.js cron-output. אם הפלט לא ריק שלח אותו לשיחה האישית של ברק (+972509554483). אם ריק — שתוק."
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "12999586-438a-49c0-8455-f6188f195367",
+      "name": "morning-gov-regulations",
+      "enabled": true,
+      "createdAtMs": 1777998506611,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 9 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "הרץ: cd E:/Desktop/OpenClawAgent && node alfred-gov-rss.js cron-output. אם הפלט לא ריק שלח אותו לשיחה האישית של ברק. אם ריק — שתוק."
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "c16d49b5-8955-44fa-89c4-2e721634f3ce",
+      "name": "clarification-reprompt",
+      "enabled": true,
+      "createdAtMs": 1777992963502,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 * * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "הרץ: cd E:/Desktop/OpenClawAgent && node alfred-clarify.js reprompt-due. אם הפלט מכיל count > 0 — שלח לשיחה האישית של ברק (+972509554483) כל prompt בנפרד, בדיוק כפי שהוא, בלי שינוי. אם count==0 — אל תשלח כלום."
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "40aecb81-d378-48b0-bcea-c58a925b87bb",
+      "name": "bee-snapshot-live-refresh",
+      "enabled": true,
+      "createdAtMs": 1777933940737,
+      "schedule": {
+        "kind": "cron",
+        "expr": "*/15 * * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "הרץ בשקט: cd E:/Desktop/OpenClawAgent && node refresh-bee-snapshot.js. אם הצליח — אל תשלח דבר. אם נכשל פעמיים ברציפות — שלח לי בשיחה אישית: '⚠️ BEE snapshot refresh נכשל: <error>'."
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "last"
+      },
+      "state": {}
+    },
+    {
+      "id": "8a7c2e91-0046-4f2a-9b51-3d6e4c8b7a25",
+      "name": "general-heartbeat",
+      "enabled": true,
+      "createdAtMs": 1778075820000,
+      "schedule": {
+        "kind": "cron",
+        "expr": "*/30 7-21 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "הרץ: cd E:/Desktop/OpenClawAgent && node alfred-heartbeat.js scan. אם הפלט מתחיל ב-⚡ * שלח אותו בדיוק כפי שהוא לשיחה האישית של ברק (+972509554483). אם הפלט ריק — אל תשלח דבר. אסור לשלוח לכל יעד אחר."
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    },
+    {
+      "id": "7f3e9c12-2b8d-4a5e-9c64-1e3f8a2d6c47",
+      "name": "daily-cost-alert",
+      "enabled": true,
+      "createdAtMs": 1778060423797,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 23 * * *",
+        "tz": "Asia/Jerusalem"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "הרץ: cd E:/Desktop/OpenClawAgent && node alfred-budget-alert.js cron-output. אם הפלט מתחיל ב-⚡ * שלח אותו בדיוק כפי שהוא לשיחה האישית של ברק (+972509554483). אם הפלט ריק — אל תשלח דבר. אסור לשלוח לכל יעד אחר."
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "whatsapp",
+        "to": "+972509554483"
+      },
+      "state": {}
+    }
+  ]
+}

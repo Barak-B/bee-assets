@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alfred — סקירה ויזואלית של הסוכן</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --bg-2: #1a2027;
+    --bg-3: #232b35;
+    --line: #2d3742;
+    --text: #e8edf2;
+    --text-dim: #9aa5b1;
+    --accent: #ffb547;
+    --accent-2: #4dabf7;
+    --green: #34c77b;
+    --yellow: #ffd166;
+    --red: #ef5350;
+    --blue: #4dabf7;
+    --purple: #b388ff;
+    --pink: #f06292;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Segoe UI", "Heebo", "Assistant", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0;
+  }
+  header {
+    background: linear-gradient(135deg, #1a2027 0%, #0f1419 100%);
+    padding: 40px 32px;
+    border-bottom: 2px solid var(--accent);
+  }
+  header h1 {
+    font-size: 2.4em;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  header .subtitle {
+    color: var(--text-dim);
+    font-size: 1.05em;
+  }
+  header .updated {
+    color: var(--accent);
+    font-size: 0.85em;
+    margin-top: 12px;
+  }
+  main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 32px;
+  }
+  section {
+    margin-bottom: 56px;
+  }
+  h2 {
+    font-size: 1.7em;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--accent);
+  }
+  h3 {
+    font-size: 1.2em;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+  p { color: var(--text-dim); margin-bottom: 12px; }
+  .lead {
+    font-size: 1.1em;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 20px;
+  }
+
+  /* Status pills */
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.78em;
+    font-weight: 600;
+    margin-left: 6px;
+  }
+  .pill-green { background: rgba(52, 199, 123, 0.15); color: var(--green); }
+  .pill-yellow { background: rgba(255, 209, 102, 0.15); color: var(--yellow); }
+  .pill-red { background: rgba(239, 83, 80, 0.15); color: var(--red); }
+  .pill-blue { background: rgba(77, 171, 247, 0.15); color: var(--blue); }
+  .pill-purple { background: rgba(179, 136, 255, 0.15); color: var(--purple); }
+  .pill-gray { background: rgba(154, 165, 177, 0.15); color: var(--text-dim); }
+
+  /* Top status grid */
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .status-card {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .status-card .label {
+    color: var(--text-dim);
+    font-size: 0.85em;
+    margin-bottom: 4px;
+  }
+  .status-card .value {
+    font-size: 1.05em;
+    font-weight: 600;
+  }
+  .status-card .meta {
+    color: var(--text-dim);
+    font-size: 0.75em;
+    margin-top: 4px;
+  }
+
+  /* Architecture layers */
+  .layer-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .layer {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 22px;
+    border-right: 5px solid var(--accent);
+    position: relative;
+  }
+  .layer h3 {
+    font-size: 1.1em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .layer h3 .icon {
+    font-size: 1.4em;
+  }
+  .layer .components {
+    color: var(--text-dim);
+    font-size: 0.9em;
+    line-height: 1.7;
+  }
+  .layer .components code {
+    background: var(--bg-3);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--accent-2);
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 0.85em;
+  }
+  .layer:nth-child(1) { border-right-color: var(--purple); }
+  .layer:nth-child(2) { border-right-color: var(--blue); }
+  .layer:nth-child(3) { border-right-color: var(--green); }
+  .layer:nth-child(4) { border-right-color: var(--yellow); }
+  .layer:nth-child(5) { border-right-color: var(--pink); }
+  .layer:nth-child(6) { border-right-color: var(--accent); }
+
+  /* Pipeline arrows */
+  .pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 24px 0;
+    background: var(--bg-2);
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+  }
+  .pipeline-step {
+    flex: 1 1 140px;
+    background: var(--bg-3);
+    padding: 14px;
+    border-radius: 8px;
+    text-align: center;
+    position: relative;
+  }
+  .pipeline-step .label {
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .pipeline-step .desc {
+    font-size: 0.83em;
+    color: var(--text-dim);
+  }
+  .pipeline-step:not(:last-child)::after {
+    content: "←";
+    position: absolute;
+    left: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    font-size: 1.2em;
+    font-weight: bold;
+  }
+  @media (max-width: 720px) {
+    .pipeline-step:not(:last-child)::after { display: none; }
+  }
+
+  /* Integrations grid */
+  .int-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .int-card {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .int-card .name {
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .int-card .desc {
+    color: var(--text-dim);
+    font-size: 0.85em;
+    line-height: 1.5;
+  }
+
+  /* Goal progress bars */
+  .goal {
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .goal-name {
+    font-weight: 600;
+    font-size: 1.05em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .goal-pct {
+    font-weight: 700;
+    font-size: 1.05em;
+    color: var(--accent);
+  }
+  .goal-bar {
+    height: 8px;
+    background: var(--bg-3);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .goal-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  .goal-fill.high { background: linear-gradient(90deg, #34c77b 0%, #4dabf7 100%); }
+  .goal-fill.med  { background: linear-gradient(90deg, #ffb547 0%, #ffd166 100%); }
+  .goal-fill.low  { background: linear-gradient(90deg, #ef5350 0%, #f06292 100%); }
+  .goal-details {
+    color: var(--text-dim);
+    font-size: 0.88em;
+    line-height: 1.7;
+    margin-top: 6px;
+  }
+  .goal-details strong { color: var(--text); }
+  .goal-todo {
+    color: var(--yellow);
+    font-size: 0.85em;
+    margin-top: 4px;
+  }
+
+  /* Cron table */
+  .cron-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-2);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .cron-table th, .cron-table td {
+    padding: 10px 14px;
+    text-align: right;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9em;
+  }
+  .cron-table th {
+    background: var(--bg-3);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .cron-table tr:last-child td { border-bottom: none; }
+  .cron-table tr:hover td { background: var(--bg-3); }
+  .cron-table code {
+    background: var(--bg-3);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 0.85em;
+    color: var(--accent-2);
+  }
+
+  /* Tasks */
+  .task-section {
+    margin-bottom: 28px;
+  }
+  .task-section h3 {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .task {
+    display: flex;
+    align-items: flex-start;
+    background: var(--bg-2);
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-right: 4px solid var(--line);
+    gap: 12px;
+  }
+  .task.crit { border-right-color: var(--red); }
+  .task.imp  { border-right-color: var(--yellow); }
+  .task.nice { border-right-color: var(--green); }
+  .task-checkbox {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--text-dim);
+    border-radius: 4px;
+    margin-top: 3px;
+  }
+  .task-body { flex: 1; }
+  .task-title { font-weight: 600; margin-bottom: 2px; }
+  .task-detail { color: var(--text-dim); font-size: 0.88em; }
+  .task-meta { color: var(--accent-2); font-size: 0.78em; margin-top: 4px; }
+
+  /* Footer */
+  footer {
+    margin-top: 60px;
+    padding: 24px 32px;
+    border-top: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 0.85em;
+    text-align: center;
+    background: var(--bg-2);
+  }
+  footer code {
+    background: var(--bg-3);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: "Cascadia Code", monospace;
+    color: var(--accent-2);
+  }
+
+  /* TOC */
+  .toc {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-bottom: 32px;
+  }
+  .toc h3 { color: var(--accent); margin-bottom: 10px; }
+  .toc ol { list-style: none; counter-reset: t; }
+  .toc ol li { counter-increment: t; padding: 4px 0; }
+  .toc ol li::before {
+    content: counter(t) ". ";
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .toc a {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .toc a:hover { color: var(--accent); }
+
+  /* Plain text emphasis */
+  .strong { color: var(--text); font-weight: 600; }
+  .accent { color: var(--accent); }
+  .dim { color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🤖 Alfred — סקירה ויזואלית של הסוכן</h1>
+  <div class="subtitle">העוזר האישי של ברק — WhatsApp-first, רץ על OpenClaw v2026.5.2 מאז 2026-05-04</div>
+  <div class="updated">📅 עודכן: 2026-05-25 · 11/16 cron פעילים · DeepSeek + Gemini fallback</div>
+</header>
+
+<main>
+
+<!-- TOC -->
+<div class="toc">
+  <h3>📑 תוכן עניינים</h3>
+  <ol>
+    <li><a href="#what">מה Alfred עושה — בשפה פשוטה</a></li>
+    <li><a href="#status">סטטוס תשתיות חיות</a></li>
+    <li><a href="#architecture">ארכיטקטורה — 6 שכבות</a></li>
+    <li><a href="#pipeline">זרימת הודעה — Pipeline</a></li>
+    <li><a href="#integrations">אינטגרציות (13 פעילות)</a></li>
+    <li><a href="#goals">12 יעדים ואחוז השלמה</a></li>
+    <li><a href="#cron">16 משימות cron</a></li>
+    <li><a href="#tasks">משימות לעבודה מושלמת</a></li>
+  </ol>
+</div>
+
+<!-- WHAT -->
+<section id="what">
+  <h2>💡 מה Alfred עושה — בשפה פשוטה</h2>
+  <p class="lead">
+    Alfred הוא <strong>עוזר אישי שרץ על המחשב של ברק 24/7</strong> ומתקשר איתו דרך WhatsApp (self-chat).
+    הוא לא תוכנה שצריך לפתוח — הוא תהליך רקע שמאזין, מעבד, ושולח הודעות מסודרות.
+  </p>
+  <p class="lead">
+    הוא מקבל קלט מ-<strong>4 ערוצים</strong>: הודעות WhatsApp נכנסות, מיילים ב-Gmail, אירועים מ-Google Calendar,
+    ופעולות יזומות לפי לוח זמנים (cron). הוא מסווג כל קלט ל-10 קטגוריות (לקוח-סטטוס, לקוח-תקלה, ספק, רגולציה, פגישה, רעיון, וכו'),
+    מעשיר עם מידע ממסדי-נתונים שלך (BEE Operations, Monday, SolarEdge), ומשיב <strong>בלבד דרך 4 יעדים מאושרים</strong>:
+  </p>
+  <ul style="color: var(--text-dim); margin-right: 24px; margin-bottom: 16px;">
+    <li>✉️ ה-self-chat שלך (+972509554483) — לדיג'סטים, תזכורות, חיפושים</li>
+    <li>📝 קבוצת "טיוטות מענה" — להצעות מענה ללקוחות (אתה מאשר/דוחה)</li>
+    <li>🎙️ קבוצת "תמלולים" — לתמלולי הודעות קוליות (Groq Whisper)</li>
+    <li>👥 קבוצת "סטטוס נרי" — לסיכומי פעילות AI יומיים</li>
+  </ul>
+  <p class="lead">
+    בקצרה: <strong class="accent">Alfred מטפל בעומס המידע, אתה מקבל החלטות.</strong>
+    הוא לא מבצע פעולות חיצוניות בלי אישור — הוא מציע, ואתה מאשר.
+  </p>
+</section>
+
+<!-- STATUS -->
+<section id="status">
+  <h2>🟢 סטטוס תשתיות חיות</h2>
+  <div class="status-grid">
+    <div class="status-card">
+      <div class="label">OpenClaw Gateway</div>
+      <div class="value">🟢 חי <span class="pill pill-green">2026.5.2</span></div>
+      <div class="meta">port 18789 · loopback</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Hermes WhatsApp Bridge</div>
+      <div class="value">🟢 חי</div>
+      <div class="meta">port 3000 · bot mode</div>
+    </div>
+    <div class="status-card">
+      <div class="label">WhatsApp Channel</div>
+      <div class="value">🟢 מקושר</div>
+      <div class="meta">+972509554483 · pairing 2026-05-24</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Google Calendar</div>
+      <div class="value">🟢 מאומת</div>
+      <div class="meta">3 יומנים · OAuth 2026-05-24</div>
+    </div>
+    <div class="status-card">
+      <div class="label">DeepSeek (Primary)</div>
+      <div class="value">🟢 פעיל</div>
+      <div class="meta">deepseek-chat · 16s ממוצע</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Gemini (Fallback #1)</div>
+      <div class="value">🟢 פעיל</div>
+      <div class="meta">2.5 Flash · 1500/יום חינם</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Anthropic (Fallback #2)</div>
+      <div class="value">🔴 ללא יתרה</div>
+      <div class="meta">צריך refill ב-console</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Dashboard</div>
+      <div class="value">🔴 לא רץ</div>
+      <div class="meta">port 8765 · dashboard-server.js</div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <h2>🏗️ ארכיטקטורה — 6 שכבות</h2>
+  <p class="lead">המידע זורם מלמטה (קלט) למעלה (פעולה), עם זיכרון ובקרה צמודים לכל שכבה.</p>
+
+  <div class="layer-stack">
+    <div class="layer">
+      <h3><span class="icon">📊</span> שכבה 6 — תצפית (Observability)</h3>
+      <div class="components">
+        <code>dashboard-server.js</code> (372KB) · port 8765 · 7 פאנלים חיים: Alfred Inbox · WhatsApp feed · Examples · Contacts · Sites · Health · Capability tree.
+        12 endpoints + SSE stream.
+        <span class="pill pill-red">לא רץ כרגע</span>
+      </div>
+    </div>
+    <div class="layer">
+      <h3><span class="icon">🔌</span> שכבה 5 — אינטגרציות (Integrations)</h3>
+      <div class="components">
+        13 פעילות: <code>Calendar × 3</code> · <code>Monday × 100 boards</code> · <code>Gmail</code> · <code>BEE Operations DB</code> · <code>SolarEdge</code> · <code>Tracer</code> · <code>Open-Meteo</code> · <code>gov.il RSS</code> · <code>Govmap</code> · <code>Israeli Deadlines</code> · <code>Cost Monitor</code> · <code>Session Parser</code> · <code>Contacts Auto</code>.
+        14 בהמתנה (MCP gateway, Invoice Maven, Sungrow direct, ועוד).
+      </div>
+    </div>
+    <div class="layer">
+      <h3><span class="icon">⏰</span> שכבה 4 — אוטומציה (Automation)</h3>
+      <div class="components">
+        16 משימות cron מתוזמנות: דיג'סט בוקר/ערב · רענון snapshot · התראות מזג אוויר · דדליינים · התראות תקציב.
+        Watchers ב-chokidar שמזרימים אירועים חיים ל-dashboard.
+        <span class="pill pill-green">11 פעילות</span> <span class="pill pill-yellow">5 ממתינות</span>
+      </div>
+    </div>
+    <div class="layer">
+      <h3><span class="icon">💾</span> שכבה 3 — מצב וזיכרון (State)</h3>
+      <div class="components">
+        <code>memory/YYYY-MM-DD.md</code> · <code>contacts.md</code> · <code>sites/&lt;X&gt;.md</code> · <code>TASKS.md</code> · <code>pending-clarifications.json</code> · <code>task-examples.md</code> (few-shot 12) · <code>ideas-drawer.md</code> · <code>knowledge-graph.json</code> (138KB) · <code>monday-inventory.json</code> (425KB).
+        3 SQLite DBs: <code>memory/main.sqlite</code> · <code>tasks/runs.sqlite</code> · <code>flows/registry.sqlite</code>.
+      </div>
+    </div>
+    <div class="layer">
+      <h3><span class="icon">📡</span> שכבה 2 — תקשורת (Transport)</h3>
+      <div class="components">
+        WhatsApp Baileys (in/out) · Gmail OAuth (read) · Voice memos → Groq Whisper.
+        <strong>4 יעדי שליחה בלבד</strong> (חוק יסוד #3): self-chat + 3 קבוצות (טיוטות / תמלולים / נרי).
+        sendPolicy = DENY-by-default.
+      </div>
+    </div>
+    <div class="layer">
+      <h3><span class="icon">🧠</span> שכבה 1 — מוח (Brain)</h3>
+      <div class="components">
+        9 מודולים: <code>alfred-router.js</code> (10 intents + prompt cache 1h) · <code>alfred-enrich.js</code> (parallel BEE+Monday+Cal) · <code>alfred-compose.js</code> (10 templates) · <code>alfred-handle.js</code> (pipeline entry) · <code>alfred-clarify.js</code> (active questioning + learning) · <code>alfred-knowledge.js</code> · <code>alfred-heartbeat.js</code> · <code>alfred-mcp-gateway.js</code> · <code>scripts/skill-verify.cjs</code>.
+        מודלים: DeepSeek-chat (primary) → Gemini 2.5 Flash → Claude Sonnet 4.6.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline">
+  <h2>⚡ זרימת הודעה — Pipeline</h2>
+  <p class="lead">כל הודעה נכנסת עוברת את 5 השלבים האלה לפני שמתפרסמת תשובה:</p>
+  <div class="pipeline">
+    <div class="pipeline-step">
+      <div class="label">1. INGEST</div>
+      <div class="desc">קלט: WhatsApp / Gmail / Voice / Calendar</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">2. INTENT</div>
+      <div class="desc">סיווג ל-10 קטגוריות + entityHints + urgency</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">3. ENRICH</div>
+      <div class="desc">שאילתות מקבילות: BEE + Monday + Calendar + Sites</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">4. COMPOSE</div>
+      <div class="desc">תבנית רנדור (10 templates) או fallback</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">5. ROUTE</div>
+      <div class="desc">ניתוב ל-1 מ-4 יעדים + רישום memory</div>
+    </div>
+  </div>
+  <p style="font-size: 0.9em; margin-top: 10px;">
+    💡 <strong>בירור פעיל:</strong> אם ה-intent מוגדר actionable אבל ambiguous (>0.85 confidence לא-self / >0.6 self), Alfred שואל אותך ב-self-chat,
+    מחכה עד 24 שעות, ושומר את התשובה כ-few-shot example לפעם הבאה.
+  </p>
+</section>
+
+<!-- INTEGRATIONS -->
+<section id="integrations">
+  <h2>🔌 אינטגרציות — 13 פעילות</h2>
+  <div class="int-grid">
+    <div class="int-card">
+      <div class="name">📅 Google Calendar <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">3 יומנים: אישי · משימות-נרי · שלומי-סולארי. קריאה + יצירה + תזכורות.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">📋 Monday.com <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">100 boards דרך GraphQL. ל-digest: ברק (241) + הקמות (5) + CRM (62).</div>
+    </div>
+    <div class="int-card">
+      <div class="name">✉️ Gmail <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">חשבון ראשי (56K הודעות) · OAuth + read unread.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">🗄️ BEE Operations DB <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">Snapshot יומי + HTTP client (JWT cache). לקוחות + אתרים + פרויקטים.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">☀️ SolarEdge <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">דוחות ייצור. 87 אתרים מאומתים.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">📡 Tracer <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">ניטור גנרטורים. 13KB script.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">🌤️ Open-Meteo <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">חינם · GHI/DNI · 16 ימים · התראות גשם לאירועי שטח.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">⚖️ דדליינים ישראליים <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">מע&quot;מ · מ&quot;ה · בט&quot;ל. חישוב דטרמיניסטי · התראות 7/3/1 ימים.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">📰 gov.il RSS <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">משרד אנרגיה + רשות החשמל. חוזרים חדשים יומי 09:30.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">🗺️ Govmap <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">חיפוש כתובת/גוש/חלקה · ITM↔WGS84 · חינם.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">💰 Cost Monitor <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">לוג לכל קריאת LLM. אגרגציה יומית per-skill.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">📜 Session Parser <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">מחלץ WhatsApp inbound מ-OpenClaw sessions/*.jsonl ל-memory.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">👤 Contacts Auto <span class="pill pill-green">פעיל</span></div>
+      <div class="desc">אכלוס אוטומטי של contacts.md מ-messages.sqlite.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">🧾 Invoice Maven <span class="pill pill-yellow">scaffold</span></div>
+      <div class="desc">חשבונית/קבלה/הצעה. דורש API key (טרם הוכנס).</div>
+    </div>
+    <div class="int-card">
+      <div class="name">⚡ Sungrow <span class="pill pill-yellow">creds יש</span></div>
+      <div class="desc">דרך BEE כרגע, ישיר ממתין. 5103 ימים tokens.</div>
+    </div>
+    <div class="int-card">
+      <div class="name">🌐 MCP Gateway <span class="pill pill-yellow">skeleton</span></div>
+      <div class="desc">חיבור Zapier/n8n. ממתין ל-mcp-gateway.env.</div>
+    </div>
+  </div>
+</section>
+
+<!-- GOALS -->
+<section id="goals">
+  <h2>🎯 12 יעדים ואחוז השלמה לפעולה מושלמת</h2>
+  <p class="lead">כל יעד מציג: <strong>אחוז ההשלמה כיום</strong>, <strong>מה כבר עובד</strong>, ו<strong>מה חסר להשלמה מלאה</strong>.</p>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🔄 1. החייאת המערכת אחרי השבתה</div>
+      <div class="goal-pct">95%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill high" style="width: 95%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> Gateway חי · DeepSeek + Gemini fallback · WA channel מחובר · Calendar OAuth מחודש · 11/16 cron פעילים.<br>
+      <span class="goal-todo">🟡 חסר: refill ל-Anthropic credit (fallback שני) · enable 5 cron נוספים.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">📱 2. WhatsApp Triage (סינון וטיפול בהודעות)</div>
+      <div class="goal-pct">70%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill high" style="width: 70%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> האזנה לכל DMs + קבוצות · classification ל-10 intents · sendPolicy עם 4 יעדים · archive boundary לפרטיות.<br>
+      <span class="goal-todo">🟡 חסר: בדיקת outbound ל-3 הקבוצות (טיוטות / תמלולים / נרי) · voice flow end-to-end · site=group mapping.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">📰 3. דיג'סטים יומיים (בוקר/ערב)</div>
+      <div class="goal-pct">55%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill med" style="width: 55%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> evening-tomorrow-schedule (יומן מחר) ב-end-to-end ✅ · weather/deadlines/gov-rss (silent unless event) · snapshot refresh.<br>
+      <span class="goal-todo">🟡 חסר: gmail-morning-digest · urgent-digest (תלוי במ-memory writing) · monday-morning-digest צריך boards אמיתיים עם תאריכים forward-looking.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">📅 4. ניהול יומן (Calendar)</div>
+      <div class="goal-pct">75%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill high" style="width: 75%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> קריאה משלושת היומנים · יצירת אירועים · עדכון · all-day reminders · weather-aware scheduling.<br>
+      <span class="goal-todo">🟡 חסר: סנכרון מ-Monday → calendar (הצעות אוטומטיות) · ייבוא חגי ישראל one-shot.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">☀️ 5. ניטור סולארי (Solar Monitoring)</div>
+      <div class="goal-pct">35%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill low" style="width: 35%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> SolarEdge API · Tracer · BEE snapshot מספק נתוני ניטור.<br>
+      <span class="goal-todo">🟡 חסר: solar-anomaly-watcher (התראות חריגות ייצור) · Sungrow direct (כרגע דרך BEE) · daily production digest.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">⚖️ 6. רגולציה ומיסים</div>
+      <div class="goal-pct">80%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill high" style="width: 80%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> דדליינים ישראלים (מע&quot;מ · מ&quot;ה · בט&quot;ל) · gov.il RSS אנרגיה · רשות החשמל · cron 07:00 + 09:30.<br>
+      <span class="goal-todo">🟡 חסר: licenses-tracker (חידוש רישיון חשמלאי בודק · ביטוח מקצועי · רישוי קבלן רשום) · רשימה ראשונית של תפוגות.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">👥 7. CRM ואנשי קשר</div>
+      <div class="goal-pct">60%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill med" style="width: 60%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> contacts.md אוטו (12 contacts) · Customer 360 enrichment · Customer Intelligence module · site dossier (kfar-yuval).<br>
+      <span class="goal-todo">🟡 חסר: בדיקת draft proposal flow ל-Drafts group · scaling ל-site dossiers נוספים · merge עם BEE clients table.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🌱 8. שיפור עצמי (Self-Improvement)</div>
+      <div class="goal-pct">45%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill low" style="width: 45%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> heartbeat scan כל 30 דק' · clarification-reprompt · self-improving skills · weekly-self-review cron · self-improvement-log.<br>
+      <span class="goal-todo">🟡 חסר: learning loop closing — תיקונים שעשית הופכים אוטומטית ל-corrections.md · proposal-approval flow לתקשורת עם ברק.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🛡️ 9. חוסן רב-ספק (Multi-LLM Resilience)</div>
+      <div class="goal-pct">85%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill high" style="width: 85%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> DeepSeek primary · Gemini 2.5 Flash fallback (חינם 1500/יום) · Claude Sonnet 4.6 רשום · env-var trap מתועד בזיכרון.<br>
+      <span class="goal-todo">🟡 חסר: Anthropic credit refill · Ollama local כ-fallback רביעי · multi-LLM router (S2): בחירת מודל לפי intent+cost.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🎙️ 10. קול ושמע (Voice & Audio)</div>
+      <div class="goal-pct">25%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill low" style="width: 25%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> Groq Whisper-large-v3 מוגדר · קבוצת "תמלולים" קיימת.<br>
+      <span class="goal-todo">🟡 חסר: voice flow end-to-end לא נבדק (קבלת voice → STT → שליחה לקבוצה + memory + הצעת אירוע) · sherpa-onnx Hebrew TTS · Picovoice wake-word.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🔄 11. BEE Operations Integration</div>
+      <div class="goal-pct">40%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill low" style="width: 40%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> Snapshot יומי + רענון 15 דק' · קריאה ישירה מה-sqlite · alfred-bee.js HTTP client (JWT cache).<br>
+      <span class="goal-todo">🟡 חסר: write-back ל-BEE (לוז · משימות · audit-trail) · Electron unification עם BEE app · Document.expiresAt → cron alerts.</span>
+    </div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">📊 12. דאשבורד ותצפית (Observability)</div>
+      <div class="goal-pct">50%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill med" style="width: 50%"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> dashboard-server.js (223KB) קיים · dashboard.html (372KB) קיים · 7 פאנלים מתועדים · 12 endpoints · SSE stream.<br>
+      <span class="goal-todo">🟡 חסר: <strong>לא רץ כרגע</strong> — להפעיל port 8765 · cost-monitoring panel (Langfuse?) · health checks for integrations.</span>
+    </div>
+  </div>
+</section>
+
+<!-- CRON -->
+<section id="cron">
+  <h2>⏰ 16 משימות cron מתוזמנות</h2>
+  <p class="lead">המשימות שמופעלות אוטומטית לפי לוח הזמנים. 11 פעילות, 5 ממתינות.</p>
+  <table class="cron-table">
+    <thead>
+      <tr>
+        <th>שם</th>
+        <th>זמן</th>
+        <th>מקור (סקריפט)</th>
+        <th>יעד</th>
+        <th>סטטוס</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>bee-snapshot-live-refresh</td><td><code>*/15</code></td><td>refresh-bee-snapshot.js</td><td>silent</td><td><span class="pill pill-green">פעיל</span></td></tr>
+      <tr><td>general-heartbeat</td><td><code>*/30 7-21</code></td><td>alfred-heartbeat.js</td><td>self (alert only)</td><td><span class="pill pill-green">פעיל</span></td></tr>
+      <tr><td>clarification-reprompt</td><td><code>0 * * * *</code></td><td>alfred-clarify.js</td><td>self (queue)</td><td><span class="pill pill-green">פעיל</span></td></tr>
+      <tr><td>bee-db-snapshot-refresh</td><td><code>5 6</code></td><td>refresh-bee-snapshot.js</td><td>silent</td><td><span class="pill pill-green">פעיל</span></td></tr>
+      <tr><td>morning-weather-scan</td><td><code>30 6</code></td><td>alfred-weather.js</td><td>self (alert only)</td><td><span class="pill pill-green">פעיל</span></td></tr>
+      <tr><td>morning-deadlines</td><td><code>0 7</code></td><td>alfred-deadlines.js</td><td>self (alert only)</td><td><span class="pill pill-green">פעיל</span></td></tr>
+      <tr><td>monday-morning-digest</td><td><code>0 7</code></td><td>alfred-monday-digest.js</td><td>self</td><td><span class="pill pill-yellow">פעיל / silent</span></td></tr>
+      <tr><td>gmail-morning-digest</td><td><code>0 8</code></td><td>alfred-gmail.js</td><td>self</td><td><span class="pill pill-gray">disabled</span></td></tr>
+      <tr><td>morning-gov-regulations</td><td><code>30 9</code></td><td>alfred-gov-rss.js</td><td>self (alert only)</td><td><span class="pill pill-green">פעיל</span></td></tr>
+      <tr><td>morning-urgent-digest</td><td><code>0 10</code></td><td>(memory + LLM)</td><td>self</td><td><span class="pill pill-gray">disabled</span></td></tr>
+      <tr><td>morning-activity-neri</td><td><code>0 10</code></td><td>(git + scan + LLM)</td><td>קבוצת נרי</td><td><span class="pill pill-gray">disabled</span></td></tr>
+      <tr><td>evening-tomorrow-schedule</td><td><code>30 21</code></td><td>alfred-tomorrow-digest.js</td><td>self</td><td><span class="pill pill-green">פעיל ✅ אומת end-to-end</span></td></tr>
+      <tr><td>evening-urgent-digest</td><td><code>0 22</code></td><td>(memory + LLM)</td><td>self</td><td><span class="pill pill-gray">disabled</span></td></tr>
+      <tr><td>evening-activity-neri</td><td><code>0 22</code></td><td>(git + scan + LLM)</td><td>קבוצת נרי</td><td><span class="pill pill-gray">disabled</span></td></tr>
+      <tr><td>daily-cost-alert</td><td><code>30 23</code></td><td>alfred-budget-alert.js</td><td>self (alert only)</td><td><span class="pill pill-green">פעיל</span></td></tr>
+      <tr><td>weekly-self-review</td><td><code>0 9 * * 0</code></td><td>(memory + LLM)</td><td>self</td><td><span class="pill pill-gray">disabled</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- TASKS -->
+<section id="tasks">
+  <h2>✅ משימות לעבודה מושלמת</h2>
+  <p class="lead">מסודר לפי דחיפות. כל משימה כוללת מאמץ משוער ותלות (אם קיימת).</p>
+
+  <div class="task-section">
+    <h3>🔴 קריטי — לעשות השבוע</h3>
+
+    <div class="task crit">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">1. Refill Anthropic credit</div>
+        <div class="task-detail">דרוש ב-console.anthropic.com → Plans & Billing. בלי זה ה-fallback השני (Claude Sonnet 4.6) לא עובד.</div>
+        <div class="task-meta">⏱️ 5 דקות · 💰 תקציב לבחירתך · 🔧 פעולה שלך</div>
+      </div>
+    </div>
+
+    <div class="task crit">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">2. בדיקה: WhatsApp outbound ל-3 הקבוצות (לא רק self)</div>
+        <div class="task-detail">manual trigger לcron שכותב לקבוצת "טיוטות" / "תמלולים" / "סטטוס נרי" → לוודא שההודעה מגיעה.</div>
+        <div class="task-meta">⏱️ 15 דקות · 🔧 cron run + הסתכלות בקבוצות</div>
+      </div>
+    </div>
+
+    <div class="task crit">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">3. בניית alfred-gmail-digest.js (wrapper נקי)</div>
+        <div class="task-detail">דפוס דומה ל-alfred-tomorrow-digest.js. רק תלוי בחידוש Gmail OAuth.</div>
+        <div class="task-meta">⏱️ 30 דקות · 🔁 אחרי gmail OAuth refresh</div>
+      </div>
+    </div>
+
+    <div class="task crit">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">4. הפעלת dashboard server על port 8765</div>
+        <div class="task-detail"><code>node E:/Desktop/OpenClawAgent/dashboard-server.js</code> + הוספה ל-Startup folder. 7 פאנלים מתועדים מחכים.</div>
+        <div class="task-meta">⏱️ 20 דקות · 🟢 כל הקוד מוכן</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task-section">
+    <h3>🟡 חשוב — לעשות בשבועיים הקרובים</h3>
+
+    <div class="task imp">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">5. תיקון monday-morning-digest סמנטיקה</div>
+        <div class="task-detail">ה-boards שלך הם log היסטורי, לא forward-planner. לבחור: (א) דיווח על "items שעודכנו ב-24 שעות אחרונות" או (ב) להחליף ל-board אחר עם forward-dates.</div>
+        <div class="task-meta">⏱️ 30 דקות · 🤔 דורש החלטה</div>
+      </div>
+    </div>
+
+    <div class="task imp">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">6. voice flow end-to-end</div>
+        <div class="task-detail">voice ב-DM → Groq STT → קבוצת "תמלולים" + memory + הצעת אירוע ביומן אם רלוונטי. מתועד ב-capability-tree §3 Phase 5.5.</div>
+        <div class="task-meta">⏱️ 2 שעות · 🟢 Groq key קיים</div>
+      </div>
+    </div>
+
+    <div class="task imp">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">7. ייבוא חגי ישראל ליומן 'אישי' (one-shot)</div>
+        <div class="task-detail">הסקריפט קיים: <code>node E:/Desktop/OpenClawAgent/import-israeli-holidays.js</code>. מריצים פעם אחת ומקבלים 12 חודשים ביומן.</div>
+        <div class="task-meta">⏱️ 5 דקות · 🟢 קוד מוכן</div>
+      </div>
+    </div>
+
+    <div class="task imp">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">8. site=group mapping</div>
+        <div class="task-detail">קובץ <code>sites/_mapping.json</code> שמקשר JID קבוצה → קובץ אתר. כל הודעה בקבוצה מעדכנת sites/&lt;X&gt;.md.</div>
+        <div class="task-meta">⏱️ 1 שעה · 🤔 דורש רשימת קבוצות→אתרים ממך</div>
+      </div>
+    </div>
+
+    <div class="task imp">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">9. licenses tracker</div>
+        <div class="task-detail">cron יומי עם התראות 30/14/7 ימים: רישיון חשמלאי בודק · ביטוח מקצועי · רישוי קבלן רשום · רכב · נהיגה.</div>
+        <div class="task-meta">⏱️ 1 שעה · 🤔 דורש רשימת תפוגות ראשונית ממך</div>
+      </div>
+    </div>
+
+    <div class="task imp">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">10. multi-LLM router (S2) — חוסן + עלות</div>
+        <div class="task-detail">בחירת מודל לפי intent: noise→Haiku · regulatory→Opus · client→Sonnet · summaries→Gemini · simple→DeepSeek. חיסכון 60-80% עלות LLM.</div>
+        <div class="task-meta">⏱️ 2 שעות · 🟢 כל המודלים זמינים</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="task-section">
+    <h3>🟢 רצוי — חודש קרוב</h3>
+
+    <div class="task nice">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">11. SolarEdge daily anomaly watcher</div>
+        <div class="task-detail">סקריפט שמשווה ייצור יומי לציפי, מתריע על חריגות &gt; 30%. תאפשר תגובה מהירה לתקלות אתרים.</div>
+        <div class="task-meta">⏱️ 4 שעות · 🟢 SolarEdge API פעיל</div>
+      </div>
+    </div>
+
+    <div class="task nice">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">12. Hebrew Document AI (OCR לחשבוניות)</div>
+        <div class="task-detail">חשבוניות נכנסות (JPG/PDF) → טקסט מובנה → BEE.Document. שמירה אוטומטית עם metadata.</div>
+        <div class="task-meta">⏱️ 1 שבוע · 🤔 דורש בחירת ספק OCR</div>
+      </div>
+    </div>
+
+    <div class="task nice">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">13. Cardcom payment links</div>
+        <div class="task-detail">לאחר אישור הצעת מחיר → קישור תשלום אוטומטי דרך WhatsApp. הקטנת זמן גבייה.</div>
+        <div class="task-meta">⏱️ 1 שבוע · 🤔 דורש חשבון Cardcom</div>
+      </div>
+    </div>
+
+    <div class="task nice">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">14. BEE Operations write-back</div>
+        <div class="task-detail">סנכרון דו-כיווני: Alfred → BEE app (לוז + משימות + audit-trail). אינטגרציה מלאה עם המערכת הראשית.</div>
+        <div class="task-meta">⏱️ 1-2 שבועות · 🤔 דורש API endpoint או schema</div>
+      </div>
+    </div>
+
+    <div class="task nice">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">15. Monday webhooks (push במקום poll)</div>
+        <div class="task-detail">החלפת alfred-monday.js poll ב-webhook listener. תגובה תוך שניות במקום דקות.</div>
+        <div class="task-meta">⏱️ 1 יום · 🟢 ROI גבוה</div>
+      </div>
+    </div>
+
+    <div class="task nice">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">16. Gmail משני (barak-barzel@barak-e.com)</div>
+        <div class="task-detail">OAuth לחשבון העסקי המשני. דורש אישור OAuth דרך browser.</div>
+        <div class="task-meta">⏱️ 30 דקות · 🔧 דומה ל-calendar auth</div>
+      </div>
+    </div>
+
+    <div class="task nice">
+      <div class="task-checkbox"></div>
+      <div class="task-body">
+        <div class="task-title">17. MCP Gateway full wiring</div>
+        <div class="task-detail">חיבור filesystem · sqlite · github · gdrive · puppeteer · brave-search MCP servers. תאפשר Alfred להפעיל כלים שונים בקלות.</div>
+        <div class="task-meta">⏱️ 1 שבוע · 🤔 דורש Zapier subscription</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>📂 קבצים מרכזיים: <code>E:\Desktop\OpenClawAgent\</code> (30+ scripts) · <code>~\.openclaw\</code> (runtime) · <code>~\.openclaw\workspace\</code> (state)</p>
+  <p>📖 מסמכים: <code>docs\capability-tree.md</code> (canonical) · <code>workspace\TOPOLOGY.md</code> (architecture) · <code>workspace\AGENTS.md</code> (constitution, 820 lines)</p>
+  <p>🚪 פורטים: gateway 18789 · WhatsApp bridge 3000 · dashboard 8765 (לא רץ)</p>
+  <p>⚙️ גרסה: OpenClaw 2026.5.2 (pinned · auto-update OFF) · Alfred v2 · Gateway hash a374c3a</p>
+  <p style="margin-top: 14px; font-size: 0.78em;">🤖 נוצר 2026-05-25 בעקבות החייאת המערכת אחרי 7 ימי השבתה (2026-05-17 → 2026-05-24).</p>
+</footer>
+
+</body>
+</html>
