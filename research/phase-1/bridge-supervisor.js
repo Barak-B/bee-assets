@@ -215,6 +215,15 @@ async function main() {
     process.exit(1);
   }
 
+  // Bot mode rejects ALL incoming unless an allowlist is set (bridge.js line ~958).
+  // Without this guard you get a confusing "bridge up but Alfred sees nothing" state.
+  if (MODE === "bot" && !(process.env.WHATSAPP_ALLOWED_USERS || "").trim()) {
+    log("WARN", {
+      msg: "bot mode + empty WHATSAPP_ALLOWED_USERS — the bridge REJECTS all incoming. Alfred will see nothing.",
+      action: 'Set WHATSAPP_ALLOWED_USERS="*" for full coverage, or a comma list of phone numbers.',
+    });
+  }
+
   log("startup", { sessionDir: SESSION_DIR, registered, mode: MODE, port: PORT, allowUnpaired: ALLOW_UNPAIRED });
   log("reminder", { msg: "alfred-inbound-watcher.js must be the ONLY /messages consumer. The Hermes gateway must NOT also run WhatsApp." });
 

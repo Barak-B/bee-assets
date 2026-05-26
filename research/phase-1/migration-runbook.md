@@ -79,12 +79,20 @@ Verify the session is now registered:
   ConvertFrom-Json).registered      # → True
 ```
 
-### Step 2 — Start the bridge (standalone, via supervisor)
+### Step 2 — Start the bridge (standalone, via supervisor) — **BOT MODE / full coverage**
+Barak's choice: **bot mode** so Alfred sees client + group messages, not just self-chat.
+(Outbound stays locked to the 4 constitutional dests regardless of mode.)
 ```powershell
 cd "E:\Desktop\OpenClawAgent"
+$env:WHATSAPP_MODE = "bot"
+$env:WHATSAPP_ALLOWED_USERS = "*"     # full coverage. Narrow to a comma-list of phones if noisy/costly.
 node bridge-supervisor.js
 # Expect: spawn → "WhatsApp connected" → "http_listening"
+# (Empty WHATSAPP_ALLOWED_USERS in bot mode = bridge rejects ALL incoming → supervisor WARNs.)
 ```
+**Cost/noise note:** in `*` mode every inbound message Barak receives is classified (one LLM
+call each; `noise` → log-only, no send). Cheap tier (DeepSeek) handles bulk. Narrow the
+allowlist if volume is high.
 In another window, confirm health:
 ```powershell
 curl http://127.0.0.1:3000/health      # → {"status":"connected","queueLength":0,"uptime":…}
@@ -141,9 +149,10 @@ Get-Content "E:\Desktop\OpenClawAgent\logs\inbound-watcher.jsonl" -Tail 30
   connected bridge — only do it when you mean to take WhatsApp down.
 
 ## Notes & options
-- **Bridge mode:** default `self-chat` (only Barak's own self-messages are processed —
-  conservative). To let Alfred see client/group messages, start with `$env:WHATSAPP_MODE="bot"`
-  and set `WHATSAPP_ALLOWED_USERS`. Outbound is still constrained to the 4 dests regardless.
+- **Bridge mode:** **bot / full coverage** (Barak's decision) — Alfred sees client + group
+  messages, set via `$env:WHATSAPP_MODE="bot"` + `$env:WHATSAPP_ALLOWED_USERS="*"`. Outbound
+  is still constrained to the 4 dests regardless. Fall back to `self-chat` only if you want
+  the conservative "Barak's own self-notes only" behavior.
 - **Voice:** set `GROQ_API_KEY` to activate Whisper transcription in the watcher; otherwise
   voice memos are logged as `voice_deferred` and skipped (the orchestration to
   `alfred-voice-action.processVoice` is already wired).
