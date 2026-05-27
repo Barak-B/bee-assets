@@ -71,6 +71,10 @@ const { processVoice } = require("./alfred-voice-action");
 let ledger = null;
 try { ledger = require("./alfred-work-ledger"); } catch (e) { /* ledger optional */ }
 
+// Data archive (Task #67) — optional; files every artifact into E:\bee-data.
+let archive = null;
+try { archive = require("./alfred-archive"); } catch (e) { /* archive optional */ }
+
 // ── Constitutional destinations (the only 4 JIDs Alfred may ever send to) ─────
 const SELF_CHAT = "972509554483@s.whatsapp.net";
 const DRAFTS    = "120363407758194119@g.us";
@@ -318,6 +322,39 @@ function ledgerFinalize(id, opts) {
   } catch (e) { log("ledger_error", { op: "finalize", err: e.message }); }
 }
 
+// ── Archive helpers (Task #67) — file every artifact into E:\bee-data ─────────
+function archiveArtifacts(event, env, wid) {
+  if (!archive) return;
+  try {
+    const ts = normalizeTs(event.timestamp);
+    const intent = env && env.classification && env.classification.intent;
+    const meta = { ts, source: "wa", sender: event.senderId, ledgerId: wid, intent };
+    const firstUrl = Array.isArray(event.mediaUrls) && event.mediaUrls.length ? event.mediaUrls[0] : null;
+    const mt = event.mediaType || "";
+    if (firstUrl && mt === "image") archive.archiveFile({ srcPath: firstUrl, type: "image", meta });
+    else if (firstUrl && mt === "document" && /\.pdf$/i.test(firstUrl)) archive.archiveFile({ srcPath: firstUrl, type: "pdf", meta });
+    if (event.body) archive.appendConversation({ contact: event.chatId || event.senderId, direction: "in", text: event.body, ts, meta: { messageId: event.messageId } });
+    const summary = env && env.dispatch && env.dispatch.summaryToBarak;
+    if (summary) archive.archiveSummary({ text: summary, intent, meta });
+  } catch (e) { log("archive_error", { id: event.messageId, err: e.message }); }
+}
+function archiveVoice(event, v, tr, wid) {
+  if (!archive) return;
+  try {
+    const ts = normalizeTs(event.timestamp);
+    const intent = v && v.classification && v.classification.intent;
+    const meta = { ts, source: "voice", sender: event.senderId, ledgerId: wid, intent };
+    const audio = Array.isArray(event.mediaUrls) && event.mediaUrls.length ? event.mediaUrls[0] : null;
+    let id;
+    if (audio) { const r = archive.archiveFile({ srcPath: audio, type: "voice-audio", meta }); if (r && r.ok) id = r.id; }
+    const text = (tr && tr.text) || "";
+    if (text) archive.archiveTranscript({ id, text, meta });
+    if (text || event.body) archive.appendConversation({ contact: event.chatId || event.senderId, direction: "in", text: text || event.body, ts, meta: { messageId: event.messageId, kind: "voice" } });
+    const prop = v && v.selfChatProposal;
+    if (prop) archive.archiveSummary({ id, text: prop, intent, meta });
+  } catch (e) { log("archive_error", { id: event.messageId, err: e.message }); }
+}
+
 // ── Per-event processing ──────────────────────────────────────────────────────
 function markSeen(id) {
   seen.add(id);
@@ -340,6 +377,8 @@ async function processVoiceEvent(event) {
     // awaiting_condition (waiting on transcription) so the sweep can surface it.
     log("voice_deferred", { id: event.messageId, reason: tr.reason });
     ledgerStep(wid, "awaiting_condition", { error: tr.reason });
+    // Preserve the audio even when transcription isn't wired yet, so nothing is lost.
+    if (archive && audioPath) { try { archive.archiveFile({ srcPath: audioPath, type: "voice-audio", meta: { ts: normalizeTs(event.timestamp), source: "voice", sender: event.senderId, ledgerId: wid } }); } catch (e) { log("archive_error", { err: e.message }); } }
     const digits = String(event.senderId || "").replace(/\D/g, "");
     if (SEND_MODE === "live" && digits.startsWith("972509554483")) {
       await dispatchSend({ kind: "voice-failed", target: "voice-group", jid: VOICE, text: "🎤 [תמלול נכשל — הקשב להקלטה]" }, event);
@@ -375,6 +414,7 @@ async function processVoiceEvent(event) {
     review: outbound.some((o) => o.kind === "clarification" || o.kind === "voice-proposal"),
     sentDests,
   });
+  archiveVoice(event, v, tr, wid);
 }
 
 async function processEvent(event) {
@@ -421,6 +461,7 @@ async function processEvent(event) {
     review: outbound.some((o) => o.kind === "draft" || o.kind === "clarification"),
     sentDests,
   });
+  archiveArtifacts(event, env, wid);
 }
 
 // ── Poll loop ──────────────────────────────────────────────────────────────--
