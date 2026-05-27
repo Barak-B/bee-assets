@@ -180,6 +180,7 @@ const NODES = [
   {id:"tools",col:4,row:8,cat:"sub",ic:"🛠️",t:"כלי דאטא/אינטגרציה",sub:"ניטור · Monday · Google · Tracer (alfred-*.js)",role:"מודולי דאטא/אינטגרציה שרצים בצד Alfred: alfred-solaredge / alfred-monday / alfred-calendar / alfred-gmail / alfred-tracer. תוקנו מ-Hermes ל-Alfred ביישור-מציאות (2026-05-27) — Hermes אינו מוגדר עם MCP עבורם.",tech:"alfred-solaredge/monday/calendar/gmail/tracer.js",s:["*"],ty:["*"],r:["*"]},
   {id:"ledger",col:4,row:9,cat:"sub",ic:"📒",t:"Work Ledger",sub:"מעקב קלט→פלט · כל בקשה נרשמת",role:"מנהל המשימות של הכוורת: כל בקשה מכל מקור נרשמת ועוברת received→processing→drafted→awaiting_barak→done. מוודא ששום דבר לא נופל; sweep מציף משימות תקועות לצ'אט האישי.",tech:"alfred-work-ledger.js · work-ledger.db (better-sqlite3)",s:["*"],ty:["*"],r:["*"]},
   {id:"sweep",col:4,row:10,cat:"sub",ic:"🔔",t:"Ledger Sweep",sub:"מציף תקועים → צ'אט אישי",role:"שומר 'שום דבר לא נופל': cron מריץ sweep על ה-Work Ledger, מזהה משימות תקועות ומציף סיכום לצ'אט האישי בלבד.",tech:"alfred-ledger-sweep.js · cron · self-chat בלבד",s:["cron"],ty:["*"],r:["barak"]},
+  {id:"memgraph",col:4,row:11,cat:"sub",ic:"🕸️",t:"Memory Graph",sub:"גרף ידע מקומי · לקוחות↔אתרים↔תשלומים",role:"גרף ידע מקומי (SQLite + FTS5): ישויות + קשרים זמניים. נבנה אוטומטית מ-entityHints של הראוטר; ה-enrich מושך ממנו הקשר לכל לקוח (אתרים/תקלות/תשלומים/מי טיפל). אפס egress. נגזר מ-KLSGG/agent-memory-graph (MIT) ונכתב מחדש לעברית+B.E.E.",tech:"alfred-memory-graph.js · memory-graph.db",s:["*"],ty:["*"],r:["*"]},
 
   // col5 — outputs
   {id:"selfchat",col:5,row:0,cat:"output",ic:"📥",t:"צ'אט אישי",sub:"972…483@s.whatsapp.net",role:"יעד חוקתי #1 — סיכומים והבהרות לברק בלבד.",tech:"self-chat",s:["*"],ty:["*"],r:["barak"]},
@@ -207,6 +208,7 @@ const EDGES = [
   ["watcher","ledger"],["ledger","sweep"],["sweep","selfchat"],
   ["router","swarm"],["swarm","enrich"],["swarm","tools"],
   ["media","archive"],["clarify","archive"],
+  ["watcher","memgraph"],["memgraph","enrich"],
   ["alfred","neri","hive"],
 ];
 /*DATA-END*/
