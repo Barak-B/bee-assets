@@ -190,6 +190,7 @@ const NODES = [
   {id:"calout",col:5,row:5,cat:"output",ic:"🗓️",t:"אירועי יומן",sub:"tasks-neri / personal",role:"אירוע יומן שנוצר (לאחר אישור).",tech:"Calendar event",s:["cal","wa","voice"],ty:["internal-meeting"],r:["barak","team"]},
   {id:"tasks",col:5,row:6,cat:"output",ic:"✅",t:"TASKS.md",sub:"משימות במעקב",role:"שורת משימה שנוספה למעקב.",tech:"TASKS.md",s:["*"],ty:["internal-task"],r:["barak"]},
   {id:"memout",col:5,row:7,cat:"output",ic:"💾",t:"כתיבת זיכרון",sub:"החלטות · העדפות · few-shot",role:"כתיבה לזיכרון: תיקונים, העדפות, דוגמאות few-shot לראוטר.",tech:"decisions.sqlite · task-examples.md",s:["*"],ty:["*"],r:["*"]},
+  {id:"archive",col:5,row:8,cat:"output",ic:"🗄️",t:"Archive — bee-data",sub:"כל ארטיפקט מאורגן + index",role:"אחסון קר מסודר של כל הדאטא של החברה: images / pdfs / voice+תמלול / conversations / summaries תחת E:/bee-data + index.jsonl לחיפוש. מקומי בלבד.",tech:"alfred-archive.js · E:/bee-data",s:["*"],ty:["*"],r:["*"]},
 ];
 
 // Edges — main data flows (from → to). cat 'hive' = the two-brain coordination link.
@@ -205,6 +206,7 @@ const EDGES = [
   ["calagent","calout"],["clarify","tasks"],["correct","memout"],["curator","memout"],["memory","memout"],
   ["watcher","ledger"],["ledger","sweep"],["sweep","selfchat"],
   ["router","swarm"],["swarm","enrich"],["swarm","tools"],
+  ["media","archive"],["clarify","archive"],
   ["alfred","neri","hive"],
 ];
 /*DATA-END*/
