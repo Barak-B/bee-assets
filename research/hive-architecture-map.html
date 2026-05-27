@@ -177,6 +177,7 @@ const NODES = [
   {id:"memory",col:4,row:6,cat:"hermes",ic:"🧠",t:"Holographic Memory",sub:"זיכרון מקומי · 0 תלויות",role:"זיכרון הולוגרפי של Hermes — שולף ושומר הקשר לאורך זמן.",tech:"Hermes holographic · SQLite",s:["*"],ty:["*"],r:["*"]},
   {id:"curator",col:4,row:7,cat:"hermes",ic:"🗂️",t:"Curator",sub:"אצירת זיכרון",role:"אוצֵר וזיקוק זיכרון — מה לשמור, מה לתמצת.",tech:"Hermes curator.enabled",s:["*"],ty:["*"],r:["*"]},
   {id:"tools",col:4,row:8,cat:"hermes",ic:"🛠️",t:"Heavy Tools (MCP)",sub:"ניטור · Monday · Google · Tracer · Frigate",role:"כלי-העומק של Hermes: ניטור סולארי, Monday, Google Workspace, Tracer, Frigate.",tech:"MCP servers",s:["*"],ty:["*"],r:["*"]},
+  {id:"ledger",col:4,row:9,cat:"sub",ic:"📒",t:"Work Ledger",sub:"מעקב קלט→פלט · כל בקשה נרשמת",role:"מנהל המשימות של הכוורת: כל בקשה מכל מקור נרשמת ועוברת received→processing→drafted→awaiting_barak→done. מוודא ששום דבר לא נופל; sweep מציף משימות תקועות לצ'אט האישי.",tech:"alfred-work-ledger.js · work-ledger.db (better-sqlite3)",s:["*"],ty:["*"],r:["*"]},
 
   // col5 — outputs
   {id:"selfchat",col:5,row:0,cat:"output",ic:"📥",t:"צ'אט אישי",sub:"972…483@s.whatsapp.net",role:"יעד חוקתי #1 — סיכומים והבהרות לברק בלבד.",tech:"self-chat",s:["*"],ty:["*"],r:["barak"]},
@@ -200,6 +201,7 @@ const EDGES = [
   ["enrich","tools"],["enrich","memory"],["hermes","memory"],["hermes","curator"],["hermes","tools"],
   ["clarify","selfchat"],["compose","drafts"],["compose","emailout"],["media","voicegrp"],
   ["calagent","calout"],["clarify","tasks"],["correct","memout"],["curator","memout"],["memory","memout"],
+  ["watcher","ledger"],["ledger","selfchat"],
   ["alfred","neri","hive"],
 ];
 /*DATA-END*/

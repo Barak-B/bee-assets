@@ -67,6 +67,10 @@ const path = require("path");
 const { handle } = require("./alfred-handle");
 const { processVoice } = require("./alfred-voice-action");
 
+// Work-ledger (Task #63) — optional; degrades gracefully if better-sqlite3 is unavailable.
+let ledger = null;
+try { ledger = require("./alfred-work-ledger"); } catch (e) { /* ledger optional */ }
+
 // ── Constitutional destinations (the only 4 JIDs Alfred may ever send to) ─────
 const SELF_CHAT = "972509554483@s.whatsapp.net";
 const DRAFTS    = "120363407758194119@g.us";
@@ -256,11 +260,11 @@ async function dispatchSend(item, srcEvent) {
   // Constitutional guard (defense in depth) — never send outside the 4 destinations.
   if (!isAllowedDestination(item.jid)) {
     log("BLOCKED_non_constitutional_dest", { jid: item.jid, kind: item.kind });
-    return;
+    return false;
   }
   if (SEND_MODE !== "live") {
     log("DRYRUN_send", { jid: item.jid, kind: item.kind, target: item.target, preview: (item.text || "").slice(0, 140) });
-    return;
+    return true; // intended routing is valid — count it for ledger accounting
   }
   try {
     const r = await fetch(`${BRIDGE_URL}/send`, {
@@ -272,13 +276,46 @@ async function dispatchSend(item, srcEvent) {
       const body = await r.text().catch(() => "");
       log("send_failed", { jid: item.jid, kind: item.kind, status: r.status, body: body.slice(0, 200) });
       persistFailed(item, srcEvent, `http_${r.status}`);
-      return;
+      return false;
     }
     log("sent", { jid: item.jid, kind: item.kind, target: item.target });
+    return true;
   } catch (e) {
     log("send_error", { jid: item.jid, kind: item.kind, err: e.message });
     persistFailed(item, srcEvent, e.message);
+    return false;
   }
+}
+
+// ── Work-ledger helpers (Task #63) — track every request input→output ─────────
+function requesterKind(jid) {
+  const d = String(jid || "").replace(/\D/g, "");
+  return d.startsWith("972509554483") ? "barak" : null; // router/identity refines the rest
+}
+function ledgerRecord(event, source) {
+  if (!ledger) return null;
+  try {
+    return ledger.record({
+      source, messageId: event.messageId, sender: event.senderId,
+      requesterKind: requesterKind(event.senderId),
+      text: event.body, meta: { chatId: event.chatId, mediaType: event.mediaType || "" },
+    });
+  } catch (e) { log("ledger_error", { op: "record", err: e.message }); return null; }
+}
+function ledgerStep(id, status, patch) {
+  if (!ledger || !id) return;
+  try { ledger.transition(id, status, patch || {}); }
+  catch (e) { log("ledger_error", { op: "transition", status, err: e.message }); }
+}
+function ledgerFinalize(id, opts) {
+  if (!ledger || !id) return;
+  try {
+    if (opts.correction) { ledger.transition(id, "done", { intent: "correction" }); return; }
+    if (!opts.outboundCount) { ledger.transition(id, "dropped", { intent: opts.intent, urgency: opts.urgency }); return; }
+    ledger.transition(id, opts.review ? "awaiting_barak" : "done", {
+      intent: opts.intent, urgency: opts.urgency, outputDest: (opts.sentDests || []).join(",") || null,
+    });
+  } catch (e) { log("ledger_error", { op: "finalize", err: e.message }); }
 }
 
 // ── Per-event processing ──────────────────────────────────────────────────────
@@ -291,15 +328,18 @@ function markSeen(id) {
 }
 
 async function processVoiceEvent(event) {
+  const wid = ledgerRecord(event, "voice");
   const audioPath = Array.isArray(event.mediaUrls) && event.mediaUrls.length ? event.mediaUrls[0] : null;
-  if (!audioPath) { log("voice_no_audio", { id: event.messageId }); return; }
+  if (!audioPath) { log("voice_no_audio", { id: event.messageId }); ledgerStep(wid, "failed", { error: "no_audio" }); return; }
 
   const tr = await transcribeAudio(audioPath);
   if (!tr.ok) {
     // Per alfred-voice-action CLI note: on transcription failure the runtime should
     // post a fallback marker. We keep that conservative — only in live mode, only to
-    // the voice group, only for Barak's own self-chat memos.
+    // the voice group, only for Barak's own self-chat memos. The item parks in
+    // awaiting_condition (waiting on transcription) so the sweep can surface it.
     log("voice_deferred", { id: event.messageId, reason: tr.reason });
+    ledgerStep(wid, "awaiting_condition", { error: tr.reason });
     const digits = String(event.senderId || "").replace(/\D/g, "");
     if (SEND_MODE === "live" && digits.startsWith("972509554483")) {
       await dispatchSend({ kind: "voice-failed", target: "voice-group", jid: VOICE, text: "🎤 [תמלול נכשל — הקשב להקלטה]" }, event);
@@ -307,6 +347,7 @@ async function processVoiceEvent(event) {
     return;
   }
 
+  ledgerStep(wid, "processing");
   let v;
   try {
     v = await processVoice({
@@ -319,12 +360,21 @@ async function processVoiceEvent(event) {
     });
   } catch (e) {
     log("voice_handle_error", { id: event.messageId, err: e.message });
+    ledgerStep(wid, "failed", { error: e.message });
     return;
   }
 
   const outbound = resolveVoiceOutbound(v);
   log("voice_processed", { id: event.messageId, intent: v && v.classification && v.classification.intent, outboundCount: outbound.length });
-  for (const o of outbound) await dispatchSend(o, event);
+  const sentDests = [];
+  for (const o of outbound) { if (await dispatchSend(o, event)) sentDests.push(o.jid); }
+  ledgerFinalize(wid, {
+    correction: !!(v && v.correctionShortCircuit),
+    intent: v && v.classification && v.classification.intent,
+    outboundCount: outbound.length,
+    review: outbound.some((o) => o.kind === "clarification" || o.kind === "voice-proposal"),
+    sentDests,
+  });
 }
 
 async function processEvent(event) {
@@ -342,12 +392,15 @@ async function processEvent(event) {
     return processVoiceEvent(event);
   }
 
+  const wid = ledgerRecord(event, "wa");
   const message = mapEventToMessage(event);
+  ledgerStep(wid, "processing");
   let env;
   try {
     env = await handle(message);
   } catch (e) {
     log("handle_error", { id: event.messageId, err: e.message });
+    ledgerStep(wid, "failed", { error: e.message });
     return;
   }
 
@@ -358,7 +411,16 @@ async function processEvent(event) {
     target: env && env.dispatch && env.dispatch.target,
     outboundCount: outbound.length,
   });
-  for (const o of outbound) await dispatchSend(o, event);
+  const sentDests = [];
+  for (const o of outbound) { if (await dispatchSend(o, event)) sentDests.push(o.jid); }
+  ledgerFinalize(wid, {
+    correction: !!(env && env.correction && env.correction.matched),
+    intent: env && env.classification && env.classification.intent,
+    urgency: env && env.classification && env.classification.urgency,
+    outboundCount: outbound.length,
+    review: outbound.some((o) => o.kind === "draft" || o.kind === "clarification"),
+    sentDests,
+  });
 }
 
 // ── Poll loop ──────────────────────────────────────────────────────────────--
@@ -509,6 +571,7 @@ async function main() {
     sendMode: SEND_MODE,
     pollMs: POLL_INTERVAL_MS,
     voiceTranscription: process.env.GROQ_API_KEY ? "enabled" : "deferred(no GROQ_API_KEY)",
+    ledger: ledger ? "on" : "off",
     once: ARGV.includes("--once"),
   });
   if (SEND_MODE !== "live") {
