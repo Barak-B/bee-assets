@@ -154,7 +154,7 @@ const NODES = [
   // col1 — transport & ingest
   {id:"bridge",col:1,row:0,cat:"transport",ic:"🌉",t:"Hermes Bridge",sub:"WhatsApp transport · :3000",role:"גשר ה-WhatsApp (Baileys). מתור ההודעות /messages (drain) ל-/send. עכשיו צינור בלבד.",tech:"bridge.js · GET /messages · POST /send",s:["*"],ty:["*"],r:["*"]},
   {id:"watcher",col:1,row:1,cat:"alfred",ic:"🔄",t:"inbound-watcher",sub:"לב המיגרציה · drain → handle",role:"מושך מ-/messages, ממפה ל-handle(), מנתב פלט ל-4 היעדים החוקתיים בלבד.",tech:"alfred-inbound-watcher.js",s:["*"],ty:["*"],r:["*"]},
-  {id:"mailintake",col:1,row:2,cat:"hermes",ic:"📨",t:"Email Intake",sub:"Gmail → pipeline",role:"קולט אימייל ומזין אותו לאותו pipeline (סיווג→העשרה→חיבור).",tech:"Gmail OAuth · Hermes",s:["email"],ty:["*"],r:["*"]},
+  {id:"intake",col:1,row:2,cat:"alfred",ic:"🚪",t:"Intake — כל מקור",sub:"Gmail/יומן/Cron/ידני → pipeline אחיד",role:"שער הקלט המאוחד: מנרמל אירוע מכל מקור (לא רק WhatsApp), רושם ב-Work Ledger, מריץ handle ומנתב ל-4 היעדים החוקתיים. Gmail קריאה-בלבד.",tech:"alfred-intake.js · fromGmail/fromCron/fromManual",s:["email","cal","cron","manual"],ty:["*"],r:["*"]},
   {id:"media",col:1,row:3,cat:"alfred",ic:"🖼️",t:"Media Preprocess",sub:"Vision · PDF · Whisper",role:"קדם-עיבוד מדיה: OCR לתמונות (Gemini), חילוץ PDF (pdfjs+vision), תמלול קול.",tech:"alfred-vision.js · alfred-pdf.js",s:["wa","email","voice"],ty:["*"],r:["*"]},
 
   // col2 — the two brains
@@ -166,6 +166,7 @@ const NODES = [
   {id:"ident",col:3,row:1,cat:"route",ic:"👤",t:"Requester Identity",sub:"ברק / לקוח / צוות / ספק",role:"מזהה מי המבקש (עצמי, לקוח, צוות, ספק, רגולטור) — קובע הרשאות ועדיפות.",tech:"roster.yaml · JID normalize",s:["*"],ty:["*"],r:["*"]},
   {id:"correct",col:3,row:2,cat:"route",ic:"🔧",t:"Correction Detector",sub:"לולאת למידה פסיבית",role:"מזהה כשברק מתקן טיוטה של Alfred (חלון 30 דק'), שומר זוג העדפה ולומד.",tech:"alfred-correction-detector.js · decisions.sqlite",s:["*"],ty:["*"],r:["barak"]},
   {id:"clarify",col:3,row:3,cat:"route",ic:"❓",t:"Clarify",sub:"לשאול / להוסיף / לדלג",role:"מחליט אם לשאול את ברק להבהרה, להוסיף משימה אוטומטית, או לדלג.",tech:"alfred-clarify.js",s:["*"],ty:["*"],r:["*"]},
+  {id:"swarm",col:3,row:4,cat:"route",ic:"🐝",t:"Swarm Plan",sub:"חלוקת-עבודה Alfred↔Hermes",role:"חוזה חלוקת-העבודה של הכוורת: plan(intent) מחזיר צעדים מסודרים, לכל צעד הסוכן הבעלים — מוח (Alfred: סיווג/חיבור/הבהרה/ראייה/PDF/קול) מול כלים+זיכרון (Hermes: ניטור/DB/יומן/Monday/זיכרון). 8 מול 9 יכולות.",tech:"alfred-swarm.js · plan()/route()",s:["*"],ty:["*"],r:["*"]},
 
   // col4 — sub-agents / processing
   {id:"enrich",col:4,row:0,cat:"sub",ic:"📊",t:"Enrich",sub:"DB · ניטור · יומן (במקביל)",role:"שולף הקשר במקביל: לקוח/אתר מה-DB, ניטור חי (SolarEdge/Sungrow), התראות, יומן.",tech:"alfred-enrich.js",s:["*"],ty:["*"],r:["*"]},
@@ -178,6 +179,7 @@ const NODES = [
   {id:"curator",col:4,row:7,cat:"hermes",ic:"🗂️",t:"Curator",sub:"אצירת זיכרון",role:"אוצֵר וזיקוק זיכרון — מה לשמור, מה לתמצת.",tech:"Hermes curator.enabled",s:["*"],ty:["*"],r:["*"]},
   {id:"tools",col:4,row:8,cat:"hermes",ic:"🛠️",t:"Heavy Tools (MCP)",sub:"ניטור · Monday · Google · Tracer · Frigate",role:"כלי-העומק של Hermes: ניטור סולארי, Monday, Google Workspace, Tracer, Frigate.",tech:"MCP servers",s:["*"],ty:["*"],r:["*"]},
   {id:"ledger",col:4,row:9,cat:"sub",ic:"📒",t:"Work Ledger",sub:"מעקב קלט→פלט · כל בקשה נרשמת",role:"מנהל המשימות של הכוורת: כל בקשה מכל מקור נרשמת ועוברת received→processing→drafted→awaiting_barak→done. מוודא ששום דבר לא נופל; sweep מציף משימות תקועות לצ'אט האישי.",tech:"alfred-work-ledger.js · work-ledger.db (better-sqlite3)",s:["*"],ty:["*"],r:["*"]},
+  {id:"sweep",col:4,row:10,cat:"sub",ic:"🔔",t:"Ledger Sweep",sub:"מציף תקועים → צ'אט אישי",role:"שומר 'שום דבר לא נופל': cron מריץ sweep על ה-Work Ledger, מזהה משימות תקועות ומציף סיכום לצ'אט האישי בלבד.",tech:"alfred-ledger-sweep.js · cron · self-chat בלבד",s:["cron"],ty:["*"],r:["barak"]},
 
   // col5 — outputs
   {id:"selfchat",col:5,row:0,cat:"output",ic:"📥",t:"צ'אט אישי",sub:"972…483@s.whatsapp.net",role:"יעד חוקתי #1 — סיכומים והבהרות לברק בלבד.",tech:"self-chat",s:["*"],ty:["*"],r:["barak"]},
@@ -192,16 +194,17 @@ const NODES = [
 
 // Edges — main data flows (from → to). cat 'hive' = the two-brain coordination link.
 const EDGES = [
-  ["wa","bridge"],["voice","bridge"],["email","mailintake"],["cron","alfred"],["manual","alfred"],["cal","hermes"],
+  ["wa","bridge"],["voice","bridge"],["email","intake"],["cron","intake"],["manual","intake"],["cal","hermes"],
   ["bridge","watcher"],["bridge","media"],["media","watcher"],["watcher","alfred"],
-  ["mailintake","hermes"],["hermes","alfred","hive"],["alfred","hermes","hive"],
+  ["intake","alfred"],["hermes","alfred","hive"],["alfred","hermes","hive"],
   ["alfred","router"],["router","ident"],["router","correct"],["router","clarify"],["router","enrich"],
   ["enrich","compose"],["compose","clarify"],
   ["router","calagent"],["router","invoice"],["cron","tender"],["cron","heartbeat"],
   ["enrich","tools"],["enrich","memory"],["hermes","memory"],["hermes","curator"],["hermes","tools"],
   ["clarify","selfchat"],["compose","drafts"],["compose","emailout"],["media","voicegrp"],
   ["calagent","calout"],["clarify","tasks"],["correct","memout"],["curator","memout"],["memory","memout"],
-  ["watcher","ledger"],["ledger","selfchat"],
+  ["watcher","ledger"],["ledger","sweep"],["sweep","selfchat"],
+  ["router","swarm"],["swarm","enrich"],["swarm","tools"],
   ["alfred","neri","hive"],
 ];
 /*DATA-END*/
