@@ -75,6 +75,17 @@ try { ledger = require("./alfred-work-ledger"); } catch (e) { /* ledger optional
 let archive = null;
 try { archive = require("./alfred-archive"); } catch (e) { /* archive optional */ }
 
+// Memory-graph (Task #70) — optional; builds the local KG from each message.
+let memgraph = null;
+try { memgraph = require("./alfred-memory-graph"); } catch (e) { /* memgraph optional */ }
+function memgraphIngest(classification, text, sender) {
+  if (!memgraph) return;
+  try {
+    if (classification) memgraph.ingestHints({ classification, sender, source: "wa" });
+    if (text) memgraph.ingestText({ text, sender, source: "wa" });
+  } catch (e) { log("memgraph_error", { err: e.message }); }
+}
+
 // ── Constitutional destinations (the only 4 JIDs Alfred may ever send to) ─────
 const SELF_CHAT = "972509554483@s.whatsapp.net";
 const DRAFTS    = "120363407758194119@g.us";
@@ -415,6 +426,7 @@ async function processVoiceEvent(event) {
     sentDests,
   });
   archiveVoice(event, v, tr, wid);
+  memgraphIngest(v && v.classification, (tr && tr.text) || event.body, event.senderId);
 }
 
 async function processEvent(event) {
@@ -462,6 +474,7 @@ async function processEvent(event) {
     sentDests,
   });
   archiveArtifacts(event, env, wid);
+  memgraphIngest(env && env.classification, event.body, event.senderId);
 }
 
 // ── Poll loop ──────────────────────────────────────────────────────────────--
