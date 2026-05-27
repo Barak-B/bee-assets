@@ -10,10 +10,12 @@
 //             detect Barak's corrections, OCR images (vision), extract PDFs,
 //             transcribe voice. Anything that is "understand / phrase / perceive".
 //
-//   HERMES  = the HANDS + MEMORY.   Transport · heavy tools · data · recall.
-//             solar monitoring (SolarEdge/Sungrow/Tracer), Monday.com, Google
-//             Workspace, calendar, client/site DB lookups, tender feeds, holographic
-//             memory + curator. Anything that is "fetch / call an API / remember".
+//   HERMES  = TRANSPORT + LONG-TERM MEMORY.
+//             the WhatsApp bridge (Baileys :3000) and holographic memory + curator
+//             ("remember / recall"). A heavier CLI toolset (terminal/code/computer-
+//             use) exists but is intentionally DISABLED for safety. The data/tool
+//             fetches once envisioned here run as alfred-*.js on the Alfred side
+//             today — see the reality note on CAPABILITY_OWNER below.
 //
 // Barak's ask: make them "work as a swarm/hive that shares tasks." A swarm only
 // works if every member knows WHO OWNS WHAT. This file is that coordination
@@ -25,15 +27,16 @@
 //   • plan(intent)      — ordered [{step,cap,agent}] pipeline for each router intent
 //   • summary()         — caps-per-agent + counts + steps-per-intent (for docs/maps)
 //
-// ── THE RULE OF THUMB ──────────────────────────────────────────────────────────
-//   reasoning / language / media           → ALFRED   (it's the model talking)
-//   data / tool calls / monitoring / memory → HERMES   (it's the world being touched)
+// ── THE RULE OF THUMB (reality-aligned 2026-05-27) ───────────────────────────
+//   reasoning / language / media         → ALFRED  (the LLM talking)
+//   data / tool / monitoring fetches      → ALFRED  today — they live as alfred-*.js
+//   transport + long-term memory/recall   → HERMES  (WhatsApp bridge + holographic/curator)
 //
-// Why this boundary? Alfred holds the conversation + the LLM; cheap, stateful,
-// latency-sensitive. Hermes holds the credentials, the API clients, the SQLite
-// stores and the long-term memory; it's where side-effects and secrets live.
-// Keeping perception/phrasing on one side and fetch/recall on the other means the
-// brain never holds a vendor token and the hands never guess at Hebrew tone.
+// Originally the data/tool layer was envisioned on Hermes (the "hands"), but those
+// integrations actually run as alfred-*.js executed by the OpenClaw runtime, and
+// Hermes is NOT configured with them as MCP servers. This contract reflects what
+// RUNS, not the aspiration. If/when a tool moves behind a real Hermes MCP server,
+// flip its owner here and the plans + map follow automatically.
 //
 // The 10 router intents (see alfred-router.js) each become an ordered plan that
 // ALWAYS starts with `classify` (Alfred) and then chains the minimum capabilities
@@ -64,23 +67,25 @@ const CAPABILITY_OWNER = {
   "vision-ocr":        "alfred", // OCR / describe an image (inverter screen, doc photo)
   "pdf-extract":       "alfred", // pull text/fields out of a PDF
   "voice-transcribe":  "alfred", // speech → text for voice notes
+  "invoice":           "alfred", // DRAFT an invoice/quote reply — phrasing
 
-  // invoice: the verb decides the owner. Here we register the capability under the
-  // INVOICE LIFE that recurs in conversation — DRAFTING an invoice/quote reply, which
-  // is language work → ALFRED. (Raw invoice DATA fetches ride 'tender-fetch'/DB on the
-  // Hermes side; if a dedicated invoice-data cap is ever needed, it belongs to Hermes.)
-  "invoice":           "alfred", // DRAFT an invoice/quote — phrasing, so Alfred
+  // ── ALFRED — data / tool modules (run as alfred-*.js on the OpenClaw side) ──
+  // REALITY-ALIGNMENT (2026-05-27): these were originally assigned to Hermes as the
+  // "hands" layer, but in the LIVE system they run as alfred-*.js executed by the
+  // OpenClaw/Alfred runtime — Hermes has no MCP servers for them. Contract = reality.
+  "client-db-lookup":  "alfred", // alfred-bee.js / alfred-customer360.js
+  "site-lookup":       "alfred", // alfred-bee.js (site/installation records)
+  "solar-monitoring":  "alfred", // alfred-solaredge.js / alfred-tracer.js
+  "calendar-fetch":    "alfred", // alfred-calendar.js (Google Calendar)
+  "monday":            "alfred", // alfred-monday*.js (boards / CRM / pipeline)
+  "google-workspace":  "alfred", // alfred-gmail.js (+ Drive / Sheets)
+  "tender-fetch":      "alfred", // alfred-gov-rss.js / tender-tracker (tenders/permits/invoice data)
 
-  // ── HERMES — data / tool / monitoring / memory ─────────────────────────────
-  "client-db-lookup":  "hermes", // resolve a client record from the DB
-  "site-lookup":       "hermes", // resolve a site/installation record
-  "solar-monitoring":  "hermes", // live production/fault telemetry (SolarEdge/Sungrow/Tracer)
-  "calendar-fetch":    "hermes", // read Google Calendar events / availability
-  "monday":            "hermes", // Monday.com boards (jobs, CRM, pipeline)
-  "google-workspace":  "hermes", // Gmail / Drive / Sheets calls
+  // ── HERMES — what it ACTUALLY owns: long-term memory (+ WhatsApp transport) ──
+  // Plus a heavier CLI toolset (terminal/code/computer-use) that exists but is
+  // intentionally DISABLED for safety (see incident_hermes_chatops_2026_05_26).
   "holographic-memory":"hermes", // long-term holographic memory recall
   "curator":           "hermes", // memory curation / knowledge upkeep
-  "tender-fetch":      "hermes", // pull tenders / regulatory / invoice DATA feeds
 };
 
 // ── route(capability) → 'alfred' | 'hermes' | null ─────────────────────────────
