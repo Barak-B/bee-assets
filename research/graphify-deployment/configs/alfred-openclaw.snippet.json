@@ -1,0 +1,32 @@
+{
+  "_comment_paste_into": "~/.openclaw/openclaw.json under mcpServers key",
+  "_comment_safety": "BEFORE editing: cp ~/.openclaw/openclaw.json ~/.openclaw/openclaw.json.bak-pre-graphify",
+  "_comment_after": "Restart Alfred. Verify: openclaw mcp list shows 'bee-graph'",
+  "_comment_tools": "All graphify MCP tools are read-only (query_graph, get_node, get_neighbors, shortest_path, list_prs, get_pr_impact, triage_prs) — no whitelist needed",
+
+  "mcpServers": {
+    "bee-graph": {
+      "_option_A_shared_http": {
+        "_use_if": "graphify-mcp.service running on bee-prod-1 (Stage 3) — RECOMMENDED",
+        "type": "http",
+        "url": "http://<TAILSCALE_IP>:8090/mcp",
+        "headers": {
+          "Authorization": "Bearer <API_KEY from /etc/graphify-mcp.key>"
+        }
+      },
+
+      "_option_B_local_stdio": {
+        "_use_if": "querying a local graph on Barak's PC (e.g. Alfred scripts graph)",
+        "type": "stdio",
+        "command": "python",
+        "args": [
+          "-m", "graphify.serve",
+          "E:\\Desktop\\OpenClawAgent\\workspace\\scripts\\graphify-out\\graph.json"
+        ],
+        "env": {
+          "GRAPHIFY_QUERY_LOG_DISABLE": "1"
+        }
+      }
+    }
+  }
+}
