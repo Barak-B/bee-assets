@@ -26,10 +26,29 @@ uv tool install --force "graphifyy[office,pdf,neo4j,mcp]"
 graphify --version
 
 # --- 3. Register skill on all 3 BEE platforms ---
+# NOTE: claw/hermes installs are PROJECT-SCOPED — they write AGENTS.md into the
+#       CURRENT directory. Running them from C:\WINDOWS\system32 (admin shell)
+#       fails with PermissionError. We cd into each project first.
 Write-Host "[3/5] Registering on Claude Code + OpenClaw (Alfred) + Hermes..."
-graphify install                  # Claude Code (auto-detects Windows)
-graphify claw install             # OpenClaw — writes AGENTS.md guidance
-graphify hermes install           # Hermes — AGENTS.md + ~/.hermes/skills/
+graphify install                  # Claude Code (user-profile scoped, cwd-safe)
+
+$alfredWorkspace = "E:\Desktop\OpenClawAgent\workspace"
+if (Test-Path $alfredWorkspace) {
+  Push-Location $alfredWorkspace
+  graphify claw install           # OpenClaw — writes AGENTS.md here
+  Pop-Location
+} else {
+  Write-Host "  SKIP claw install: $alfredWorkspace not found"
+}
+
+$hermesDir = "E:\bee-hermes"
+if (Test-Path $hermesDir) {
+  Push-Location $hermesDir
+  graphify hermes install         # Hermes — AGENTS.md here + ~/.hermes/skills/
+  Pop-Location
+} else {
+  Write-Host "  SKIP hermes install: $hermesDir not found"
+}
 
 # --- 4. First graph: Alfred's scripts (code-only = local, free, ~1 min) ---
 $alfredScripts = "E:\Desktop\OpenClawAgent\workspace\scripts"
