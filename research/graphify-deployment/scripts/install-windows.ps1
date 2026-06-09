@@ -44,11 +44,16 @@ if (Test-Path $alfredWorkspace) {
 $hermesDir = "E:\bee-hermes"
 if (Test-Path $hermesDir) {
   Push-Location $hermesDir
-  graphify hermes install         # Hermes — AGENTS.md here + ~/.hermes/skills/
+  graphify hermes install         # Hermes — AGENTS.md in this dir ONLY
   Pop-Location
 } else {
   Write-Host "  SKIP hermes install: $hermesDir not found"
 }
+
+# Verified in graphify 0.8.36 source: `graphify hermes install` writes ONLY the
+# AGENTS.md section. The skill file (~/.hermes/skills/graphify/SKILL.md) comes
+# from the global install path below (cwd-independent):
+graphify install --platform hermes
 
 # --- 4. First graph: Alfred's scripts (code-only = local, free, ~1 min) ---
 $alfredScripts = "E:\Desktop\OpenClawAgent\workspace\scripts"
