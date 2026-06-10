@@ -1,0 +1,20 @@
+# Ignore non-content directories during graphify extraction
+local-state/openclaw/
+local-state/hermes/
+*/cache/
+graphify-out/cache/
+
+# Archive — already-pushed reports we don't need re-extracted
+gitnexus-deployment/configs/
+graphify-deployment/configs/
+
+# Demo file is already a graphify output
+graphify-deployment/demo/
+
+# Cloud-session code-only pass: docs need an LLM backend (claude-cli hangs in
+# this container). Run docs extraction locally: /graphify research/ in Claude Code.
+*.md
+*.html
+*.txt
+*.yaml
+*.yml
