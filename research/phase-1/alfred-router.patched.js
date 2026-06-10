@@ -5,7 +5,7 @@
 // POST-CONDITION: route by task type, not by blind fallback chain
 //
 // HOW TO APPLY:
-//   1. Locate existing alfred-router.js (likely E:\Desktop\OpenClawAgent\scripts\alfred-router.js)
+//   1. Locate existing alfred-router.js (E:\Desktop\OpenClawAgent\alfred-router.js — scripts live at repo ROOT, no scripts/ subdir)
 //   2. Compare pickProvider() function against this file's pickProvider()
 //   3. Replace existing function (keep imports + rest of file intact)
 //   4. Test: send a few WhatsApp messages, check logs for "provider: deepseek-v4-flash" on bulk

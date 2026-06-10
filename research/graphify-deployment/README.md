@@ -64,7 +64,7 @@ We already audited + built a deployment kit for GitNexus (`../gitnexus-audit.md`
 ### Stage 1 — Barak's PC (15 min) · `scripts/install-windows.ps1`
 1. `uv tool install "graphifyy[office,pdf,neo4j,mcp]"`
 2. `graphify install` (Claude Code) + `graphify claw install` (Alfred/OpenClaw) + `graphify hermes install`
-3. `/graphify E:\Desktop\OpenClawAgent\workspace\scripts` — Alfred's 27 scripts, code-only, $0, ~1 min
+3. `/graphify E:\Desktop\OpenClawAgent` — Alfred's 30+ scripts live at the repo ROOT (no scripts/ subdir — see `../PATHS.md`), code-only, $0, ~1 min
 4. From now on: Claude Code / Alfred consult the graph before grepping (PreToolUse hook on Claude Code; AGENTS.md guidance on OpenClaw/Hermes)
 
 ### Stage 2 — BEE app index (30 min) · `scripts/index-bee-app.sh`

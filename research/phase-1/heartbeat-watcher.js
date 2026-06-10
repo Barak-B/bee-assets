@@ -8,7 +8,7 @@
 //                 send urgent ⚡ alert to Barak via Alfred.
 //
 // HOW TO INSTALL:
-//   1. Copy to: E:\Desktop\OpenClawAgent\scripts\heartbeat-watcher.js
+//   1. Copy to: E:\Desktop\OpenClawAgent\heartbeat-watcher.js (repo ROOT, no scripts/ subdir)
 //   2. Adjust HERMES_STATE_DB_PATH below if Hermes state.db lives elsewhere
 //   3. Register as Alfred cron:
 //        openclaw cron add heartbeat-watcher \

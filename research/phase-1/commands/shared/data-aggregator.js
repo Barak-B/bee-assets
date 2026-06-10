@@ -66,8 +66,10 @@ export async function gatherSchedule({ days = 7 } = {}) {
 export async function gatherTenders({ within_days = 14 } = {}) {
   // Read tender-tracker-mvp/tenders.db
   const { default: Database } = await import("better-sqlite3");
+  // Default matches tender-tracker-mvp install location (scripts repo ROOT — see research/PATHS.md)
+  const scriptsBase = process.env.OPENCLAW_SCRIPTS || "E:\\Desktop\\OpenClawAgent";
   const dbPath = process.env.TENDER_DB ||
-    `${process.env.HOME || process.env.USERPROFILE}/.openclaw/workspace/scripts/tender-tracker-mvp/tenders.db`;
+    `${scriptsBase}\\tender-tracker-mvp\\tenders.db`;
   try {
     const db = new Database(dbPath, { readonly: true });
     const rows = db.prepare(`

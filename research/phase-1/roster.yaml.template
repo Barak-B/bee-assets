@@ -6,7 +6,7 @@
 #          alfred-customer360, KG (Phase 2), and all downstream agents.
 #
 # HOW TO APPLY:
-#   1. Copy this file to: E:\Desktop\OpenClawAgent\workspace\roster.yaml
+#   1. Copy this file to: C:\Users\Barak\.openclaw\workspace\roster.yaml (matches alfred-identity-roster-patch.js WORKSPACE)
 #   2. Fill in TODOs (phone, email, license numbers) — Barak provides
 #   3. Wire into alfred-identity.js (see snippet at bottom)
 #   4. Test: send a WhatsApp containing "ארז" — should resolve to Erez Cohen

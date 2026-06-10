@@ -45,7 +45,7 @@ tender-tracker-mvp/
 ## Install
 
 ```bash
-cd E:\Desktop\OpenClawAgent\scripts\tender-tracker-mvp
+cd E:\Desktop\OpenClawAgent\tender-tracker-mvp
 npm install
 cp config.example.json config.json
 # Edit config.json — fill in Monday API token + board ID (create if missing)
@@ -181,7 +181,7 @@ See master-plan-v1-v20.md v16 13.B for full design.
 ```bash
 openclaw cron disable tender-tracker-poll
 # Optionally delete:
-rm -rf E:\Desktop\OpenClawAgent\scripts\tender-tracker-mvp\tenders.db
+rm -rf E:\Desktop\OpenClawAgent\tender-tracker-mvp\tenders.db
 ```
 
 Monday board kept intact — manual cleanup if you want.

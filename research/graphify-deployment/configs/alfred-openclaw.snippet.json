@@ -21,7 +21,7 @@
         "command": "python",
         "args": [
           "-m", "graphify.serve",
-          "E:\\Desktop\\OpenClawAgent\\workspace\\scripts\\graphify-out\\graph.json"
+          "E:\\Desktop\\OpenClawAgent\\graphify-out\\graph.json"
         ],
         "env": {
           "GRAPHIFY_QUERY_LOG_DISABLE": "1"

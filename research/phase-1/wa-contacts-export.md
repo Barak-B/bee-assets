@@ -14,7 +14,7 @@
 ## ה-script
 
 ```powershell
-# Save as: E:\Desktop\OpenClawAgent\scripts\wa-contacts-export.ps1
+# Save as: E:\Desktop\OpenClawAgent\wa-contacts-export.ps1
 # Run from: regular PowerShell (not Claude session)
 
 param(
@@ -80,7 +80,7 @@ if ($matches) {
 ## כיצד להריץ
 
 ```powershell
-cd E:\Desktop\OpenClawAgent\scripts
+cd E:\Desktop\OpenClawAgent
 .\wa-contacts-export.ps1
 ```
 
