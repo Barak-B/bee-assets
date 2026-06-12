@@ -61,11 +61,28 @@ We already audited + built a deployment kit for GitNexus (`../gitnexus-audit.md`
 
 ## 5. Deployment plan — 4 stages
 
-### Stage 1 — Barak's PC (15 min) · `scripts/install-windows.ps1`
-1. `uv tool install "graphifyy[office,pdf,neo4j,mcp,anthropic]"` — **`anthropic` extra is required** for the default `claude` backend (without it: "the 'anthropic' package is required for this backend"; hit live 2026-06-10)
-2. `graphify install` (Claude Code) + `graphify claw install` (in `C:\Users\Barak\.openclaw\workspace`) + `graphify install --platform hermes` (skill) + `graphify hermes install` (in `E:\bee-hermes`) — see `../PATHS.md`
-3. `graphify extract E:\Desktop\OpenClawAgent --no-viz --backend claude-cli` — repo ROOT (no `scripts/` subdir). Live run found 118 code + 50 docs + 31 PDFs + 148 images. Using `--backend claude-cli` routes via Barak's Claude subscription (no API cost). Code-only first run? Drop a `.graphifyignore` excluding `*.md *.html *.pdf *.png *.jpg`.
-4. From now on: Claude Code / Alfred consult the graph before grepping (PreToolUse hook on Claude Code; AGENTS.md guidance on OpenClaw/Hermes)
+### Stage 1 — Barak's PC (3 min) · `scripts/install-windows.ps1`
+
+**One-shot, end-to-end.** Open a regular PowerShell (not admin, not in `system32`) and run:
+
+```powershell
+cd <path-to-this-repo>\research\graphify-deployment\scripts
+pwsh .\install-windows.ps1                  # default: code-only graph
+# or:
+pwsh .\install-windows.ps1 -Full            # also extract docs/PDFs/images (~$1-3 via DeepSeek)
+pwsh .\install-windows.ps1 -SkipLabel       # faster, no community names
+```
+
+What it does (all the gotchas baked in — see commit history for live-test evidence):
+1. Installs `graphifyy[office,pdf,neo4j,mcp,anthropic,openai]` (both backend extras — DeepSeek = OpenAI-compatible)
+2. Registers skill on Claude Code (global), Alfred/OpenClaw (`C:\Users\Barak\.openclaw\workspace`), Hermes (`E:\bee-hermes` + global `~/.hermes/skills`)
+3. Writes `.graphifyignore` with every known trap: `backups/`, `**/document_cache/`, `secrets/`, `**/credentials/`, `**/state.db`, and (in default mode) all doc/image extensions
+4. Wipes stale output and extracts a fresh code-only graph (~1874 nodes / 3280 edges / 104 communities)
+5. Labels communities via DeepSeek (auto-reads key from `secrets\bee-integrations.env`) using the **`--backend=X` workaround** (graphify 0.8.38 bug: space-separated `--backend X` is silently ignored in `cluster-only`/`label`)
+6. Installs the git post-commit hook (auto-refresh, $0)
+7. Verifies the graph and prints sample queries
+
+If a step fails, the script keeps going where it can — labeling gracefully falls back to `--no-label` when no API key is found.
 
 ### Stage 2 — BEE app index (30 min) · `scripts/index-bee-app.sh`
 On bee-prod-1 (or wherever BEE app source lives):
