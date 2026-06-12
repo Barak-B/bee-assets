@@ -97,6 +97,14 @@ logs/
 **/state.db
 **/cost.json
 graphify-out/cache/
+
+# Backup snapshots (e.g. backups/wave12-voice-action-20260526T143539Z/) —
+# without this, every alfred-*.js shows up 2x in the graph. Hit live 2026-06-10.
+backups/
+
+# document_cache contains binary PDFs + tilde-named files that confuse path
+# resolution (E:\...\~\.hermes\document_cache\...). Index the originals instead.
+**/document_cache/
 "@ | Out-File -Encoding utf8 -NoNewline $ignoreFile
     Write-Host "  wrote default $ignoreFile"
   }
