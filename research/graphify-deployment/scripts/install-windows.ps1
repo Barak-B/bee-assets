@@ -200,13 +200,25 @@ if ($shouldWrite) {
 # ============================================================
 
 $graphPath = Join-Path $alfredScripts "graphify-out\graph.json"
-$extractBackend = "claude-cli"  # default: uses Claude subscription, $0
 
 if ($Full) {
-  Write-Host "[5/7] Full extract (code + docs/PDFs/images) via claude-cli..."
+  # -Full mode: semantic extraction needed for docs/PDFs/images.
+  # Backend pick: DeepSeek (cheap + reliable) > claude-cli (subscription, but
+  # had 'claude -p exited 1' failures on binary PDFs live 2026-06-12) > error.
+  $secretsFile = Join-Path $alfredScripts "secrets\bee-integrations.env"
+  $deepseekKey = Get-DeepSeekKey $secretsFile
+  if ($deepseekKey) {
+    $env:DEEPSEEK_API_KEY = $deepseekKey
+    $extractBackend = "deepseek"
+    Write-Host "[5/7] Full extract via DeepSeek (~`$1-3 for ~250 files)..."
+  } else {
+    $extractBackend = "claude-cli"
+    Write-Host "[5/7] Full extract via claude-cli (no DeepSeek key found — may fail on binary PDFs)..." -ForegroundColor Yellow
+  }
 } else {
-  Write-Host "[5/7] Code-only extract (fast, $0, no semantic LLM)..."
-  $extractBackend = $null  # AST-only when no docs to process
+  # Code-only: docs ignored via .graphifyignore — pure AST, no backend needed.
+  Write-Host "[5/7] Code-only extract (fast, `$0, no semantic LLM)..."
+  $extractBackend = $null
 }
 
 # Wipe stale output (the 2390-node graph from before backups/ was ignored)
