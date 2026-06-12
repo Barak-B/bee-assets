@@ -62,9 +62,9 @@ We already audited + built a deployment kit for GitNexus (`../gitnexus-audit.md`
 ## 5. Deployment plan — 4 stages
 
 ### Stage 1 — Barak's PC (15 min) · `scripts/install-windows.ps1`
-1. `uv tool install "graphifyy[office,pdf,neo4j,mcp]"`
-2. `graphify install` (Claude Code) + `graphify claw install` (Alfred/OpenClaw) + `graphify hermes install`
-3. `/graphify E:\Desktop\OpenClawAgent` — Alfred's 30+ scripts live at the repo ROOT (no scripts/ subdir — see `../PATHS.md`), code-only, $0, ~1 min
+1. `uv tool install "graphifyy[office,pdf,neo4j,mcp,anthropic]"` — **`anthropic` extra is required** for the default `claude` backend (without it: "the 'anthropic' package is required for this backend"; hit live 2026-06-10)
+2. `graphify install` (Claude Code) + `graphify claw install` (in `C:\Users\Barak\.openclaw\workspace`) + `graphify install --platform hermes` (skill) + `graphify hermes install` (in `E:\bee-hermes`) — see `../PATHS.md`
+3. `graphify extract E:\Desktop\OpenClawAgent --no-viz --backend claude-cli` — repo ROOT (no `scripts/` subdir). Live run found 118 code + 50 docs + 31 PDFs + 148 images. Using `--backend claude-cli` routes via Barak's Claude subscription (no API cost). Code-only first run? Drop a `.graphifyignore` excluding `*.md *.html *.pdf *.png *.jpg`.
 4. From now on: Claude Code / Alfred consult the graph before grepping (PreToolUse hook on Claude Code; AGENTS.md guidance on OpenClaw/Hermes)
 
 ### Stage 2 — BEE app index (30 min) · `scripts/index-bee-app.sh`

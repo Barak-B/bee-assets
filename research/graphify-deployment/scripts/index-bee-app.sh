@@ -18,12 +18,15 @@ export GRAPHIFY_QUERY_LOG_DISABLE=1   # no query log on prod box
 echo "=== Graphify Stage 2 — index BEE app ==="
 
 # --- 0. install (idempotent) ---
+# 'anthropic' extra needed for the default 'claude' backend (graphify auto-detects
+# from API key). Without it: "the 'anthropic' package is required for this backend".
+EXTRAS="postgres,sql,mcp,neo4j,anthropic"
 if ! command -v graphify >/dev/null 2>&1; then
-  echo "[0/4] Installing graphifyy (NOTE: double-y package name)..."
+  echo "[0/4] Installing graphifyy[$EXTRAS] (NOTE: double-y package name)..."
   if command -v uv >/dev/null 2>&1; then
-    uv tool install "graphifyy[postgres,sql,mcp,neo4j]"
+    uv tool install "graphifyy[$EXTRAS]"
   else
-    pipx install "graphifyy[postgres,sql,mcp,neo4j]" || pip install --user "graphifyy[postgres,sql,mcp,neo4j]"
+    pipx install "graphifyy[$EXTRAS]" || pip install --user "graphifyy[$EXTRAS]"
   fi
 fi
 graphify --version
