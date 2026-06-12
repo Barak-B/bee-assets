@@ -18,6 +18,7 @@
 | Hermes skills (graphify etc.) | `C:\Users\Barak\.hermes\skills\` | graphify 0.8.36 source (`skill_dst`) |
 | Claude Code skills | `C:\Users\Barak\.claude\skills\` | graphify install output (screenshot 2026-06-10) |
 | Other BEE projects | `E:\bee-hive`, `E:\bee-build`, `E:\bee-assets`, `E:\bee-ai-watcher` | local-state README §D.3 |
+| **Obsidian vault (Q67 — solved 2026-06-13)** | `E:\Desktop\ברק\תוכנות\תכנות וAI\obsidian\Barak-v-obsidian\` (the `C:\Users\Barak\Desktop\...` spelling resolves to the same folder — Desktop is redirected). PARA structure; BEE notes in `3-Projects\BEE\`; `protocol_hive.md` synced there | verified live: both paths Test-Path=True, 3-Projects\BEE exists |
 | BEE Operations app (Drive sync) | `K:\האחסון שלי\BEE_Operations` | live cron activity-report job |
 | Desktop alias | `C:\Users\Barak\Desktop\...` may appear in docs — Desktop is redirected; canonical is `E:\Desktop\...` | AGENTS.md uses both spellings |
 
