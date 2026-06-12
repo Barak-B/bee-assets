@@ -25,9 +25,10 @@
 # NOTE: package is graphifyy (DOUBLE-Y). Other graphify* packages are typosquats.
 
 param(
-  [switch]$Full,        # include docs/PDFs/images in extraction
-  [switch]$SkipLabel,   # skip community labeling
-  [switch]$SkipHook     # skip git hook install
+  [switch]$Full,            # include docs/PDFs/images in extraction
+  [switch]$SkipLabel,       # skip community labeling
+  [switch]$SkipHook,        # skip git hook install
+  [string]$DeepSeekKey      # pass DeepSeek key inline; else auto-detected/prompted
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,6 +61,44 @@ function Get-DeepSeekKey([string]$secretsFile) {
     }
   }
   return $null
+}
+
+function Ensure-DeepSeekKey([string]$secretsFile, [string]$inlineKey) {
+  # Resolution order: -DeepSeekKey param > env var > secrets file > prompt user
+  if ($inlineKey -and $inlineKey.StartsWith("sk-")) { return $inlineKey }
+
+  $existing = Get-DeepSeekKey $secretsFile
+  if ($existing) { return $existing }
+
+  Write-Host ""
+  Write-Host "  DeepSeek API key needed for -Full extract." -ForegroundColor Yellow
+  Write-Host "  Get one at: https://platform.deepseek.com/api_keys" -ForegroundColor Yellow
+  $secure = Read-Host "  Paste DEEPSEEK_API_KEY (input hidden)" -AsSecureString
+  $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  $key = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+  [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) | Out-Null
+
+  if (-not $key -or -not $key.StartsWith("sk-")) {
+    Write-Host "  Empty or invalid key (must start with 'sk-'). Aborting." -ForegroundColor Red
+    return $null
+  }
+
+  $confirm = Read-Host "  Save to $secretsFile for future runs? [y/N]"
+  if ($confirm -match '^[Yy]') {
+    if (-not (Test-Path (Split-Path $secretsFile))) {
+      New-Item -ItemType Directory -Path (Split-Path $secretsFile) -Force | Out-Null
+    }
+    # Append (don't overwrite — secrets file holds other tokens)
+    if (Test-Path $secretsFile) {
+      Add-Content -Path $secretsFile -Value "`nDEEPSEEK_API_KEY=$key"
+    } else {
+      Set-Content -Path $secretsFile -Value "DEEPSEEK_API_KEY=$key"
+    }
+    Write-Host "  Appended to $secretsFile" -ForegroundColor Green
+  } else {
+    Write-Host "  Using key for this session only (not saved)"
+  }
+  return $key
 }
 
 function Test-AnthropicKey() {
@@ -204,16 +243,16 @@ $graphPath = Join-Path $alfredScripts "graphify-out\graph.json"
 if ($Full) {
   # -Full mode: semantic extraction needed for docs/PDFs/images.
   # Backend pick: DeepSeek (cheap + reliable) > claude-cli (subscription, but
-  # had 'claude -p exited 1' failures on binary PDFs live 2026-06-12) > error.
+  # had 'claude -p exited 1' failures on binary PDFs live 2026-06-12).
   $secretsFile = Join-Path $alfredScripts "secrets\bee-integrations.env"
-  $deepseekKey = Get-DeepSeekKey $secretsFile
+  $deepseekKey = Ensure-DeepSeekKey $secretsFile $DeepSeekKey
   if ($deepseekKey) {
     $env:DEEPSEEK_API_KEY = $deepseekKey
     $extractBackend = "deepseek"
     Write-Host "[5/7] Full extract via DeepSeek (~`$1-3 for ~250 files)..."
   } else {
     $extractBackend = "claude-cli"
-    Write-Host "[5/7] Full extract via claude-cli (no DeepSeek key found — may fail on binary PDFs)..." -ForegroundColor Yellow
+    Write-Host "[5/7] Full extract via claude-cli (no DeepSeek key — may fail on binary PDFs)..." -ForegroundColor Yellow
   }
 } else {
   # Code-only: docs ignored via .graphifyignore — pure AST, no backend needed.
@@ -256,7 +295,13 @@ if ($SkipLabel) {
 } else {
   # Try keys in priority order: DeepSeek (cheap, Barak has $96 balance) > Anthropic API > skip
   $secretsFile = Join-Path $alfredScripts "secrets\bee-integrations.env"
-  $deepseekKey = Get-DeepSeekKey $secretsFile
+  # Reuse the key from -Full if already resolved this run; else look up silently
+  # (no prompt at the label step — labels are nice-to-have, not blocking)
+  $deepseekKey = if ($env:DEEPSEEK_API_KEY -and $env:DEEPSEEK_API_KEY -notmatch "^<.*>$") {
+    $env:DEEPSEEK_API_KEY
+  } else {
+    Get-DeepSeekKey $secretsFile
+  }
   $anthropicKey = Test-AnthropicKey
 
   $labelBackend = $null
