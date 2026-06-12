@@ -88,9 +88,9 @@ research/graphify-out/                         ← גרף ה-research (code pass
 
 | # | שאלה | חוסם |
 |---|---|---|
-| Q67 | נתיב ה-Obsidian vault? | סנכרון אוטומטי של protocol_hive + graphify --obsidian |
-| חדש | DeepSeek API key ב-secrets? (כרגע אין) | -Full extract + community labels |
-| חדש | הגל הבא: בנק / n8n / CRM? | תחילת ה-LLD הבא |
+| ~~Q67~~ | ✅ **נפתר 2026-06-13** — vault ב-`E:\Desktop\ברק\תוכנות\תכנות וAI\obsidian\Barak-v-obsidian` (אומת חי; protocol_hive.md סונכרן ל-`3-Projects\BEE\`; PATHS.md עודכן) | — |
+| ~~חדש~~ | ✅ **נפתר 2026-06-13** — DeepSeek key נשמר ב-secrets; `-Full` extract רץ (2,180 nodes / 293 communities labeled); גרף שני על bee-assets (642/995/51 labeled). לקחים נצרבו ב-README של ה-deployment | — |
+| חדש | הגל הבא: בנק / n8n (=Wave 53 Unified Data Spine) / CRM? | תחילת ה-LLD הבא |
 | Q77 | deepseek-chat 169M tokens anomaly | ~$7/חודש מבוזבז — auto-discoverable מ-logs |
 
 ## 7. מצב ה-repo

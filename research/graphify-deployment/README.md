@@ -84,6 +84,12 @@ What it does (all the gotchas baked in — see commit history for live-test evid
 
 If a step fails, the script keeps going where it can — labeling gracefully falls back to `--no-label` when no API key is found.
 
+**Live-test lessons (2026-06-13, local run):**
+- **Bare `graphify` CLI reads the key ONLY from `DEEPSEEK_API_KEY` env var** — the secrets-file parsing is installer-only. For manual `extract`/`cluster-only` runs, set it process-scoped first (PowerShell): `$m = Select-String -Path E:\Desktop\OpenClawAgent\secrets\bee-integrations.env -Pattern '(?i)deepseek.*[=:]\s*["'']?(sk-[A-Za-z0-9_-]+)'; $env:DEEPSEEK_API_KEY = $m.Matches[0].Groups[1].Value`. ⚠️ Do NOT set it User-scope — provider env vars override `openclaw.json` (documented OpenClaw trap).
+- **`-Full` is silently neutralized by a code-only `.graphifyignore`** — step 4 leaves a user-managed ignore file as-is, so doc/image extension blocks from a previous code-only run survive and `-Full` finds `0 docs, 0 images`. Remove the `*.md`/`*.pdf`/`*.png`/etc. lines first, keep the safety excludes (`secrets/`, `backups/`, `**/document_cache/`, `**/credentials/`, `**/state.db`).
+- **After a full extract, communities fragment** (104 → 293 on OpenClawAgent — doc/image nodes form many small clusters); always re-run `graphify cluster-only . --backend=deepseek` to re-label.
+- Measured costs: OpenClawAgent docs+images pass (205 files) = **$0.036** · bee-assets full graph (151 files) = **$0.056** · DeepSeek's truncation auto-bisect handled one hollow chunk without intervention.
+
 ### Stage 2 — BEE app index (30 min) · `scripts/index-bee-app.sh`
 On bee-prod-1 (or wherever BEE app source lives):
 1. Code pass: `graphify extract /opt/bee-ops --no-viz` — 41 routes + 38 Prisma models, local, $0
