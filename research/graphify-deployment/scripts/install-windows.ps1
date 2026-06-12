@@ -48,12 +48,13 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 }
 
 # --- 2. graphify + extras we actually use ---
-# 'anthropic' extra is REQUIRED for the auto-detected claude backend during
-# `graphify extract` (else: "the 'anthropic' package is required for this backend").
-# Hit live by Barak 2026-06-10 — install-windows.ps1 missing [anthropic] caused
-# 12/12 semantic chunk failures on E:\Desktop\OpenClawAgent.
-Write-Host "[2/5] Installing graphifyy[office,pdf,neo4j,mcp,anthropic]..."
-uv tool install --force "graphifyy[office,pdf,neo4j,mcp,anthropic]"
+# Extras live-tested 2026-06-10/12 on E:\Desktop\OpenClawAgent:
+#   [anthropic] — needed for default 'claude' backend during extract
+#   [openai]    — needed for 'deepseek' / 'openai' / 'azure' backends
+#                 (DeepSeek is OpenAI-compatible API; falls back to label backend too)
+# Without these: "the 'X' package is required for this backend".
+Write-Host "[2/5] Installing graphifyy[office,pdf,neo4j,mcp,anthropic,openai]..."
+uv tool install --force "graphifyy[office,pdf,neo4j,mcp,anthropic,openai]"
 graphify --version
 
 # --- 3. Register skill on all 3 BEE platforms ---

@@ -20,7 +20,7 @@ echo "=== Graphify Stage 2 — index BEE app ==="
 # --- 0. install (idempotent) ---
 # 'anthropic' extra needed for the default 'claude' backend (graphify auto-detects
 # from API key). Without it: "the 'anthropic' package is required for this backend".
-EXTRAS="postgres,sql,mcp,neo4j,anthropic"
+EXTRAS="postgres,sql,mcp,neo4j,anthropic,openai"
 if ! command -v graphify >/dev/null 2>&1; then
   echo "[0/4] Installing graphifyy[$EXTRAS] (NOTE: double-y package name)..."
   if command -v uv >/dev/null 2>&1; then
