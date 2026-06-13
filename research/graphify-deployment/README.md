@@ -77,7 +77,7 @@ What it does (all the gotchas baked in — see commit history for live-test evid
 1. Installs `graphifyy[office,pdf,neo4j,mcp,anthropic,openai]` (both backend extras — DeepSeek = OpenAI-compatible)
 2. Registers skill on Claude Code (global), Alfred/OpenClaw (`C:\Users\Barak\.openclaw\workspace`), Hermes (`E:\bee-hermes` + global `~/.hermes/skills`)
 3. Writes `.graphifyignore` with every known trap: `backups/`, `**/document_cache/`, `secrets/`, `**/credentials/`, `**/state.db`, and (in default mode) all doc/image extensions
-4. Wipes stale output and extracts a fresh code-only graph (~1874 nodes / 3280 edges / 104 communities)
+4. Wipes stale output and extracts a fresh graph — measured live 2026-06-13: code-only ≈ 1,874/3,280/104 ($0) · `-Full` ≈ 2,180/3,468/293 ($0.036 via DeepSeek)
 5. Labels communities via DeepSeek (auto-reads key from `secrets\bee-integrations.env`) using the **`--backend=X` workaround** (graphify 0.8.38 bug: space-separated `--backend X` is silently ignored in `cluster-only`/`label`)
 6. Installs the git post-commit hook (auto-refresh, $0)
 7. Verifies the graph and prints sample queries

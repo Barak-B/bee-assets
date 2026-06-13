@@ -211,7 +211,7 @@ Get-Process syncthing -ErrorAction SilentlyContinue              # Syncthing (sy
 | 9 | Langfuse deploy | runbook ready |
 | 12 | Voice-action skill | shipped |
 | 13 | OpenClaw-alfred sole WhatsApp brain | shipped |
-| Graphify deploy | KG index of OpenClawAgent + research | ✅ live 2026-06-12 (1874 nodes / 3280 edges / 104 communities, $0) |
+| Graphify deploy | KG index of OpenClawAgent + bee-assets | ✅ -Full live 2026-06-13: OpenClawAgent 2,180/3,468/293 labeled ($0.036) · bee-assets 642/995/51 labeled ($0.056) |
 | **NEXT** | bank-receipts ingestion · n8n spine · CRM component | **choosing now** |
 
 ---

@@ -82,10 +82,10 @@
 
 <!-- ================= KPI ================= -->
 <div class="kpi">
-  <div><b>1,874</b><span>nodes בגרף הידע (OpenClawAgent)</span></div>
-  <div><b>3,280</b><span>edges</span></div>
-  <div><b>104</b><span>קהילות קוד</span></div>
-  <div><b>115</b><span>קבצי קוד מאונדקסים</span></div>
+  <div><b>2,180</b><span>nodes בגרף OpenClawAgent (-Full, 13.6)</span></div>
+  <div><b>3,468</b><span>edges</span></div>
+  <div><b>293</b><span>קהילות (קוד+docs+images)</span></div>
+  <div><b>642</b><span>nodes גרף bee-assets (אחר)</span></div>
   <div><b>16</b><span>cron jobs (11 פעילים)</span></div>
   <div><b>13</b><span>אינטגרציות חיות ב-Alfred</span></div>
   <div><b>84</b><span>skills ב-Hermes</span></div>
@@ -162,7 +162,7 @@
 ─────────────────────────────────────────────────────────────────
 <b>L0 — Data</b>                BEE app (PostgreSQL · 38 models)
                         workspace.db (1M הודעות · 14.6K chats)
-                        Graphify graph.json (1,874 nodes)
+                        Graphify graph.json (2,180 nodes / 293 communities labeled)
                         Obsidian vault · roster.yaml · sites/*.md
 </div>
 
@@ -181,7 +181,7 @@
 <h2>💰 שכבות עלות 0-4 — חוק השיגור</h2>
 <table>
 <tr><th>Tier</th><th>מנוע</th><th>מה רץ שם</th><th>דוגמה חיה</th></tr>
-<tr><td><span class="tier t0">0</span></td><td>קוד עירום: AST, regex, SQL</td><td>parsing, dedup keys, cursor pagination, סינון ב-DB</td><td>graphify extract = 1,874 nodes ב-$0</td></tr>
+<tr><td><span class="tier t0">0</span></td><td>קוד עירום: AST, regex, SQL</td><td>parsing, dedup keys, cursor pagination, סינון ב-DB</td><td>graphify extract code-only = 1,874 nodes ב-$0 (לפני docs)</td></tr>
 <tr><td><span class="tier t1">1</span></td><td>DeepSeek flash / Groq</td><td>חילוץ ישויות, סיווג bulk, תמלול</td><td>9,294 בקשות router/חודש</td></tr>
 <tr><td><span class="tier t2">2</span></td><td>Haiku / Sonnet / DS-pro</td><td>סריקות, refactors, קריאת קבצים</td><td>Hermes gateway היומיומי</td></tr>
 <tr><td><span class="tier t3">3</span></td><td>Sonnet</td><td>שיפוט: ליד חם? איזו הצעה? סיכום יומי</td><td>evening briefing 21:30</td></tr>
@@ -240,7 +240,7 @@
 
 <div class="card infra">
   <h4>🔵 Graphify — גרף הידע <span class="badge b-live">LIVE 12.6</span></h4>
-  <div class="meta">v0.8.38 · 1,874 nodes / 3,280 edges / 104 communities · $0</div>
+  <div class="meta">v0.8.38 · 2,180 nodes / 3,468 edges / 293 communities · -Full · $0.036</div>
   <ul>
     <li><b>מה יודע:</b> כל פונקציה, מי קורא למה, imports, קהילות קוד — עם מספרי שורות</li>
     <li><b>שאילתות:</b> <code>graphify query "..."</code> · <code>path A B</code> · <code>explain X</code></li>
@@ -504,7 +504,7 @@
 
 <div class="card lesson">
   <h4>🧹 רעש בגרף ידע</h4>
-  <div class="meta">2,390 → 1,874 nodes (-22%)</div>
+  <div class="meta">2,390 → 1,874 code-only → 2,180 -Full · ירידה אחרי ignore, עלייה עם docs</div>
   <ul>
     <li>backups/ הכפיל כל קובץ · document_cache עם ~ בנתיב שבר resolution</li>
     <li><b>חוק:</b> .graphifyignore לפני extract ראשון, לא אחרי</li>

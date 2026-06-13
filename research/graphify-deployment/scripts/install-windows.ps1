@@ -225,9 +225,27 @@ if (-not $Full) {
 }
 
 # Write if missing OR if our auto-managed header is present (safe to overwrite our own).
+# Live finding 2026-06-13: when toggling code-only → -Full, a STALE user-edited
+# ignore file with our header was kept as-is, so the doc/image extension blocks
+# from the previous code-only run silently neutralized -Full ("0 docs, 0 images").
+# Mitigation (-Full mode): ALWAYS strip the doc-extension lines (the script-managed
+# block below "# Code-only pass") regardless of header, then write fresh. Safety
+# excludes (secrets/, backups/, **/document_cache/, etc.) are preserved.
 $shouldWrite = (-not (Test-Path $ignoreFile)) -or
                ((Get-Content $ignoreFile -TotalCount 1) -match "Auto-managed by install-windows.ps1")
-if ($shouldWrite) {
+
+if ($Full -and (Test-Path $ignoreFile) -and -not $shouldWrite) {
+  # User-managed file — strip the code-only doc/image extensions IF present
+  $existing = Get-Content $ignoreFile -Raw
+  $cleaned = $existing -replace '(?ms)^# Code-only pass.*?(?=\r?\n\r?\n|$)', '' `
+                       -replace '(?m)^\*\.(md|html|pdf|docx|xlsx|png|jpg|jpeg|gif|txt|csv)\s*$', ''
+  if ($cleaned -ne $existing) {
+    Set-Content -Encoding utf8 -NoNewline $ignoreFile $cleaned
+    Write-Host "[4/7] -Full mode: stripped doc/image ignores from user-managed $ignoreFile (kept safety excludes)" -ForegroundColor Yellow
+  } else {
+    Write-Host "[4/7] $ignoreFile is user-managed — leaving as-is"
+  }
+} elseif ($shouldWrite) {
   $desiredIgnore | Out-File -Encoding utf8 -NoNewline $ignoreFile
   Write-Host "[4/7] Wrote $ignoreFile ($(if ($Full) {'full'} else {'code-only'}) mode)"
 } else {
