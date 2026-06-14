@@ -1,0 +1,27 @@
+{
+  "name": "bank-receipts-phase-a",
+  "version": "0.1.0",
+  "description": "Phase A: schema + lock + CsvSource + dry-run for bank-receipts ingestion (per LLD.md). Standalone reference impl — port src/ into BEE app, run migration via prisma migrate dev",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types tests/idempotency.test.ts",
+    "dry-run": "node --experimental-strip-types src/cli.ts ingest --account TEST --source tests/fixture-hapoalim.csv --dry-run"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
+    "ioredis": "^5.4.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "prisma": "^5.20.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

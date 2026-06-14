@@ -1,0 +1,84 @@
+// Phase A — standalone Prisma schema for bank-receipts (per LLD.md §3.2)
+// When porting into BEE app: copy these 4 models into BEE's schema.prisma,
+// keep generator + datasource as BEE has them.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model BankAccount {
+  id              String   @id @default(cuid())
+  iban            String   @unique
+  bankCode        String                                      // 12=Hapoalim 10=Leumi 11=Discount 20=Mizrahi
+  accountNumber   String
+  alias           String?
+  currency        String   @default("ILS")
+  createdAt       DateTime @default(now())
+  cursorTs        DateTime?                                   // last value_date seen (PROTOCOL §3.1)
+  cursorTxId      String?                                     // last external_tx_id at cursorTs
+  transactions    BankTransaction[]
+}
+
+model BankTransaction {
+  id                String   @id @default(cuid())
+  accountId         String
+  account           BankAccount @relation(fields: [accountId], references: [id])
+
+  // Hard idempotency keys (PROTOCOL §3.1)
+  externalTxId      String
+  valueDate         DateTime
+  bookingDate       DateTime?
+  amountCents       BigInt                                    // signed; + = inflow
+  currency          String   @default("ILS")
+  counterpartyRaw   String
+  counterpartyNorm  String                                    // post-cleanup (PROTOCOL §3.4)
+  memo              String?
+
+  // Tier-1 enrichment (filled by phase D)
+  customerId        String?
+  invoiceMavenId    String?
+  category          String?                                   // rent | payroll | customer-payment | vendor
+  anomalyScore      Float?
+
+  sourceMode        String                                    // "csv" | "scrape" | "openbanking"
+  ingestedAt        DateTime @default(now())
+  ingestRunId       String
+  validated         Boolean  @default(false)                  // PROTOCOL §4.2 read-back
+
+  @@unique([accountId, externalTxId])
+  @@index([accountId, valueDate, externalTxId])
+  @@index([counterpartyNorm])
+  @@index([customerId])
+}
+
+model IngestRun {
+  id                String   @id @default(cuid())
+  pipeline          String
+  sourceMode        String
+  accountId         String?
+  startedAt         DateTime @default(now())
+  finishedAt        DateTime?
+  status            String                                    // running | ok | fail | partial
+  rowsRead          Int      @default(0)
+  rowsInserted      Int      @default(0)
+  rowsDedupedHard   Int      @default(0)
+  rowsDedupedFuzzy  Int      @default(0)
+  errorCode         String?
+  errorMessage      String?
+
+  @@index([pipeline, startedAt(sort: Desc)])
+}
+
+model IngestionLock {
+  key         String   @id
+  holderPid   String
+  acquiredAt  DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
