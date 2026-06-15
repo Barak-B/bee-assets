@@ -26,7 +26,7 @@ phase-a/
 │   ├── cli.ts                                 ← ingest | selftest | normalize
 │   └── sources/csv.ts                         ← CsvSource (RFC-4180-ish, BOM/windows-1255-safe)
 └── tests/
-    ├── fixture-hapoalim.csv                   ← 6 rows incl. 1 fuzzy-dup pair (rows 3+4)
+    ├── fixture-mercantile.csv                   ← 6 rows incl. 1 fuzzy-dup pair (rows 3+4)
     └── idempotency.test.ts                    ← 3 tests: idempotency · lock contention · dry-run
 ```
 
@@ -52,7 +52,7 @@ export DATABASE_URL="postgresql://test:test@127.0.0.1:5432/bee_phase_a_test"
 npx prisma migrate deploy
 
 # 5. Dry-run against the fixture (no writes, idempotent)
-npx tsx src/cli.ts ingest --account TEST --source tests/fixture-hapoalim.csv --dry-run
+npx tsx src/cli.ts ingest --account TEST --source tests/fixture-mercantile.csv --dry-run
 
 # 6. Idempotency test (requires DB)
 export TEST_DATABASE_URL="$DATABASE_URL"

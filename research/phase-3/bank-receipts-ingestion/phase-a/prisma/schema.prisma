@@ -14,7 +14,7 @@ datasource db {
 model BankAccount {
   id              String   @id @default(cuid())
   iban            String   @unique
-  bankCode        String                                      // 12=Hapoalim 10=Leumi 11=Discount 20=Mizrahi
+  bankCode        String                                      // 17=Mercantile (Discount subsidiary) 11=Discount 12=Hapoalim 10=Leumi 20=Mizrahi
   accountNumber   String
   alias           String?
   currency        String   @default("ILS")

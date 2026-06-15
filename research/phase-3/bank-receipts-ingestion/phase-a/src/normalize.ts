@@ -36,7 +36,7 @@ export function cleanCounterparty(s: string): string {
   return t;
 }
 
-/** Parse a Hapoalim-style amount string ("1,234.56" or "1234.56-" suffix) → signed integer cents. */
+/** Parse an Israeli-bank amount string ("1,234.56" or "1234.56-" suffix) → signed integer cents. */
 export function parseAmountCents(raw: string): bigint {
   if (!raw) throw new Error("empty amount");
   let s = raw.trim();

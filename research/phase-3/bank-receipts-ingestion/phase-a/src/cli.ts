@@ -2,7 +2,7 @@
 //
 // Usage:
 //   node --experimental-strip-types src/cli.ts ingest --account <id> [--source <csv-dir>] [--dry-run]
-//   node --experimental-strip-types src/cli.ts selftest --source tests/fixture-hapoalim.csv
+//   node --experimental-strip-types src/cli.ts selftest --source tests/fixture-mercantile.csv
 //
 // Returns JSON for parseability + non-zero exit on failure (PROTOCOL §4.3).
 

@@ -1,6 +1,6 @@
 // CsvSource — Phase A MVP adapter (LLD.md §3.1, source-mode A)
 // Reads CSV files from a directory; one file per export. Supports:
-//   - Hapoalim default format (Hebrew columns, windows-1255 or utf-8)
+//   - Mercantile default format (Hebrew columns, utf-8 or windows-1255)
 //   - Generic format via columnMap config
 //
 // Files older than cursorTs are skipped at the directory level (fast filter).
@@ -14,7 +14,7 @@ import { parseAmountCents, parseIsraeliDate } from "../normalize.js";
 export interface CsvSourceConfig {
   /** Directory to watch. Each file is a discrete export from the bank portal. */
   watchDir: string;
-  /** File encoding (default utf-8). Hapoalim portal exports sometimes ship windows-1255. */
+  /** File encoding (default utf-8). Mercantile portal exports may ship windows-1255. */
   encoding?: "utf-8" | "windows-1255";
   /** Column-name aliases. Required: date, amount, ref. Optional: memo, bookingDate. */
   columnMap: {

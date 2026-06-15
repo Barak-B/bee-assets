@@ -88,7 +88,7 @@ Per protocol §3 — referenced by name, never value in this doc.
         │ CsvSource        │  │ ScrapeSource     │  │ OpenBankingSource    │
         │ (fallback, MVP)  │  │ Playwright login │  │ il-bank-mcp / direct │
         │ ~5 min/manual    │  │ + PSD2 fail-back │  │ PSD2 OAuth2 (BoI reg)│
-        │ Hapoalim/Leumi   │  │ ~10 min/auto     │  │ ~5 min/auto-refresh  │
+        │ Mercantile/Discount/Hapoalim/Leumi   │  │ ~10 min/auto     │  │ ~5 min/auto-refresh  │
         └──────────────────┘  └──────────────────┘  └──────────────────────┘
                               fragility   ↑              cleanliness ↑
                               risk        ↑
@@ -96,7 +96,7 @@ Per protocol §3 — referenced by name, never value in this doc.
 
 **MVP path: CsvSource.** Manual export from each bank portal (every Sun / on demand) → drop in `E:\Desktop\OpenClawAgent\bank-imports\<bank>\YYYY-MM-DD.csv`. File watcher triggers ingest. Zero auth complexity, immediate value.
 
-**Phase 2: OpenBankingSource.** Once a Bank-of-Israel-registered Open Banking aggregator is selected (candidates: Open Finance Israel, FinAPI, or direct bank API where available — Hapoalim has PSD2 endpoints).
+**Phase 2: OpenBankingSource.** Once a Bank-of-Israel-registered Open Banking aggregator is selected (candidates: Open Finance Israel, FinAPI, or direct bank API where available — Discount Group (incl. Mercantile) Open Banking endpoints — verify per-bank registration).
 
 **Phase 3 (defer):** ScrapeSource as last-resort fallback. Fragile.
 
@@ -108,7 +108,7 @@ Per protocol §3 — referenced by name, never value in this doc.
 model BankAccount {
   id              String   @id @default(cuid())
   iban            String   @unique
-  bankCode        String   // 12=Hapoalim 10=Leumi 11=Discount 20=Mizrahi ...
+  bankCode        String   // 17=Mercantile (Discount subsidiary) 11=Discount 12=Hapoalim 10=Leumi 20=Mizrahi ...
   accountNumber   String
   alias           String?
   currency        String   @default("ILS")
@@ -259,14 +259,16 @@ export interface Validator {
 ```jsonc
 // BANK_PROVIDERS_JSON — secrets only, NEVER in repo
 {
-  "hapoalim": {
+  "mercantile": {
     "mode": "csv",
-    "watchDir": "E:\\Desktop\\OpenClawAgent\\bank-imports\\hapoalim",
-    "encoding": "windows-1255",
-    "columnMap": { "date": "תאריך ערך", "amount": "סכום", "memo": "תיאור", "ref": "אסמכתא" }
+    "watchDir": "E:\\Desktop\\OpenClawAgent\\bank-imports\\mercantile",
+    "encoding": "utf-8",
+    "columnMap": { "date": "תאריך ערך", "amount": "סכום", "memo": "תיאור", "ref": "אסמכתא" },
+    "_note": "Barak's primary account. Verify column names from a real Mercantile portal export — names may be 'תאריך', 'חובה/זכות', 'פרטים', 'אסמכתא' depending on portal version."
   },
-  "leumi": { "mode": "csv", "watchDir": "...\\leumi", "encoding": "utf-8", "columnMap": {} },
-  "discount": { "mode": "openbanking", "clientId": "...", "tokenEndpoint": "..." }
+  "discount": { "mode": "csv", "watchDir": "...\\discount", "encoding": "utf-8", "columnMap": {} },
+  "leumi":    { "mode": "csv", "watchDir": "...\\leumi",    "encoding": "utf-8", "columnMap": {} },
+  "hapoalim": { "mode": "csv", "watchDir": "...\\hapoalim", "encoding": "windows-1255", "columnMap": {} }
 }
 ```
 
@@ -401,7 +403,7 @@ node -e "
 # bank-receipts/run-once.ps1 — manual invocation
 $env:DATABASE_URL = (Get-Content E:\Desktop\OpenClawAgent\secrets\bee-integrations.env |
                     Select-String "^DATABASE_URL=(.*)").Matches[0].Groups[1].Value
-node bank-receipts/cli.js ingest --account hapoalim-main
+node bank-receipts/cli.js ingest --account mercantile-main
 ```
 
 ### 4.3 Self-test + healthcheck
@@ -450,11 +452,11 @@ Every catchable failure:
 | Phase | Hours | Deliverable | Gate |
 |---|---|---|---|
 | **A. Schema + lock + dry-run** | 6h | Prisma migration, Redis lock, CsvSource against fixture CSV, all syntax-checks green | Barak `npm test` shows 100% dry-run idempotency |
-| **B. Hapoalim CSV live** | 4h | Watch dir + first real ingest of last 30 days CSV from Hapoalim | First ⚡ Barak with summary |
+| **B. Mercantile CSV live** | 4h | Watch dir + first real ingest of last 30 days CSV from Mercantile (Barak's primary, code 17) | First ⚡ Barak with summary |
 | **C. Validation circuit + err_manifest** | 3h | Read-back, alertBarak wiring | Inject fault — alert arrives |
 | **D. Tier-1 enrichment** | 6h | DeepSeek classification + customer linking + anomaly | First daily summary at 21:30 |
 | **E. Leumi + Discount adapters** | 4h | CSV format diff per bank | All 3 accounts ingesting |
-| **F. OpenBanking adapter (defer)** | 12h | PSD2 OAuth + token refresh | Hapoalim live |
+| **F. OpenBanking adapter (defer)** | 12h | PSD2 OAuth + token refresh | Mercantile live |
 | **G. Reconciliation against Invoice Maven** | 6h | Match receipts → invoices, flag mismatches | Reconciliation report ⚡ Barak |
 
 **MVP = A + B + C = ~13h.** Phases D-G layer in once MVP is live.

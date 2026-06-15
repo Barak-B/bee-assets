@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE TABLE "BankAccount" (
     "id"            TEXT PRIMARY KEY,
     "iban"          TEXT NOT NULL UNIQUE,
-    "bankCode"      TEXT NOT NULL,  -- 12=Hapoalim 10=Leumi 11=Discount 20=Mizrahi
+    "bankCode"      TEXT NOT NULL,  -- 17=Mercantile (Discount subsidiary) 11=Discount 12=Hapoalim 10=Leumi 20=Mizrahi
     "accountNumber" TEXT NOT NULL,
     "alias"         TEXT,
     "currency"      TEXT NOT NULL DEFAULT 'ILS',

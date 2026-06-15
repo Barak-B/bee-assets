@@ -7,7 +7,7 @@
     "build": "tsc",
     "check": "tsc --noEmit",
     "test": "node --test --experimental-strip-types tests/idempotency.test.ts",
-    "dry-run": "node --experimental-strip-types src/cli.ts ingest --account TEST --source tests/fixture-hapoalim.csv --dry-run"
+    "dry-run": "node --experimental-strip-types src/cli.ts ingest --account TEST --source tests/fixture-mercantile.csv --dry-run"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",

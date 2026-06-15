@@ -83,6 +83,14 @@ Large field calls (≥ 11MB):
 - Caller receives **HTTP 202 Accepted** + a `task_id`. Final result delivered via **Webhook callback** keyed on `task_id`.
 - Reassembly deterministic by `task_id` + chunk index; never time-sort post-hoc.
 
+### 3.6a Don't guess facts already known to the operator
+
+When a deliverable needs a concrete value the operator has already given or could trivially supply (bank name, vendor name, account email, file path, port number) — **ask, or grep the local-state snapshot. Never default to the "most common" Israeli choice.**
+
+> Live evidence 2026-06-15: Wave 53/A Phase A reference impl shipped with `fixture-hapoalim.csv` + `bankCode 12=Hapoalim` examples. Barak's primary bank is **Mercantile Discount (code 17, subsidiary of Discount/11)**. The "Hapoalim is the largest Israeli bank, so default to that" reasoning is exactly the kind of guess this rule forbids. Fix: rename fixture to `fixture-mercantile.csv`, lead BANK_PROVIDERS_JSON example with Mercantile, demote Hapoalim to "other banks" list. The cortex apologized and corrected, but the avoidable round-trip cost ~30 min of attention.
+
+**Rule:** for any field that maps to a specific real-world entity in Barak's life (bank, OS user, project path, customer, supplier, person), the cortex either (a) sources the value from the canonical KB (`PATHS.md`, `roster.yaml`, `local-state/`), or (b) opens an `[OPEN]` placeholder + flags it for Barak. Never invents a plausible-looking default.
+
 ### 3.6 Hybrid n8n design + context isolation
 
 - **Deterministic Explicit nodes** for: routing, heavy data pulls (bank/email), DB writes.
