@@ -43,7 +43,7 @@
 | `wire_sizing` | **0** (IEC 60364 formulas + תקנות החשמל cable tables) | none — Tier 0 is the law here | Cable sizing IS deterministic by code. NO LLM allowed in this path (§4.2 below) |
 | `protection_coordination` | **0** (selectivity tables + IEC 60898/60947 ratings) | **2** for complex topologies with multiple inverters / battery / generator | Standard radial topology is formulaic; mixed-source coordination needs reasoning |
 | `bom_generator` | **0** (lookup from `PriceBenchmark` 53/B + Excel pricebook fallback) | **1** (DeepSeek flash) only when item description is ambiguous | Pure data join — the LLM only helps when supplier called something different than canonical |
-| `performance_forecast` | **0** (Open-Meteo GHI/DNI + PVsyst-style irradiation formulas + degradation table) | **1** for shading models (vision over site photos) | Tier 0 covers >90% of cases; vision is the upgrade path |
+| `performance_forecast` | **1 + Vision** per EA-4 decision: Open-Meteo GHI/DNI + Vision-LLM (Claude Sonnet or Gemini Vision) on ≥1 site photo → per-month shading factor (12 numbers) | **2** for very-complex sites with mixed obstructions | Vision is now the default, not the upgrade. Cost ~$0.05-0.15/design, cached per `siteId × season` |
 | `fault_analysis` | **1** (DeepSeek pro reasoning over SolarEdge/Sungrow/SMA telemetry + ladder of common failures) | **2** (Sonnet) for novel symptoms not in the failure ladder | Almost always reasoning over data; rarely needs the deepest model |
 | **Orchestrator** (this LLD's runtime) | **0** | none | Pure routing + caching |
 
@@ -66,7 +66,7 @@ solar-calculator      # Sun position / GHI estimates (or custom — Open-Meteo i
 nrel-pvwatts (optional)  # NREL PVWatts API as a sanity-check alternative to local formulas — DEFER
 
 # Reference tables (committed in repo, NOT computed)
-tables/cable-il.json              # IL/IEC cable ampacity by cross-section / temperature / install method
+tables/cable-tables/<vendor>/*.json    # multi-vendor per EA-1 decision (Lapp/Prysmian/IL-vendors/_default)
 tables/breaker-curves.json        # MCB B/C/D characteristics
 tables/inverter-specs.json        # Per-model Voc/Vmpp/Isc/efficiency/MPPT for SE/Sungrow/SMA/KStar/Deye
 tables/panel-specs.json           # Per-model Pmax/Voc/Isc/temp coefficient
@@ -454,7 +454,8 @@ All `EngInputError` / `EngTableMissError` / `EngSanityError` failures:
 | **D. protection_coordination** | 6h | Breaker selection from breaker-curves.json, selectivity rules, RCD type B | Standard topology + 1 multi-source case validated |
 | **E. bom_generator + PriceBenchmark hookup (53/B link)** | 5h | Pulls live supplier prices; markup applied per customer tier | Real proposal end-to-end with current prices, off Excel pricebook |
 | **F. performance_forecast + Open-Meteo** | 4h | GHI/DNI per-site, degradation curve, 25y production | 1 real site backtest against actual SolarEdge history (last 12mo) within ±8% |
-| **G. fault_analysis (Tier 1 DeepSeek)** | 6h | Symptom → telemetry → probable causes ladder | 3 real past faults BEE solved → agent independently surfaces the same cause |
+| **G1. FaultCase seeding** (per EA-5 decision) | 3h | Barak shares 3-5 closed cases → seed `FaultCase` table as JSON fixture | Each case has: symptoms, telemetry pattern, root cause, fix, hours, cost |
+| **G. fault_analysis (Tier 1 DeepSeek + FaultCase lookup)** | 6h | Symptom → pg_trgm similarity against `FaultCase` → if hit, return grounded; if miss, escalate to DeepSeek pro | 3 real past faults → agent independently surfaces the same cause |
 | **H. designSuite chained orchestrator + 53/C integration** | 4h | One call from 53/C populates designJson/bomJson/forecastJson | First proposal end-to-end uses live engineering output, not stub |
 | **I. Validation circuit + cache TTL handling** | 3h | Read-back + drift detection + version pinning | Inject formula bug → drift detected before cache pollutes |
 
@@ -489,13 +490,15 @@ All `EngInputError` / `EngTableMissError` / `EngSanityError` failures:
 
 ## § 8 — Open questions
 
-| # | Question | Blocks |
+**Status (2026-06-16): all 5 resolved → see [`../decisions-2026-06-16.md`](../decisions-2026-06-16.md) §B.**
+
+| # | Question | Decision (link) |
 |---|---|---|
-| EA-1 | Authoritative source for `cable-il.json` — is it ת"י 1004 + תקנות החשמל, or do you use a vendor table? | wire_sizing accuracy |
-| EA-2 | DC/AC ratio policy — what's BEE's max acceptable? (industry standard 1.2-1.3; some markets push 1.4) | pv_design_calc sanity |
-| EA-3 | Preferred inverter per panel kWp range — table from your experience or first-pass try-all? | bom_generator pick |
-| EA-4 | Shading model — start with `shadingFactor` scalar (0..1) or skip ahead to per-month decomposition? | performance_forecast depth |
-| EA-5 | fault_analysis training set — can you point at 3-5 closed past tickets with the resolution to seed the failure ladder? | G accuracy |
+| EA-1 | Cable table source | ✅ **Multi-vendor.** `tables/cable-tables/<vendor>/*.json` layout; `WireSizingReq.cableVendor` required; no LLM fallback (rule unchanged). Default vendor is the conservative `_default.json`. PDFs from Barak pending → I parse into JSON. |
+| EA-2 | DC/AC ratio max | ✅ **Per-inverter-manufacturer**, not global. Move to `inverter-specs.json` row: `{dcAcRatioMax, dcAcRatioRecommended}` per model. `pv_design_calc` sanity check uses the selected inverter's spec. |
+| EA-3 | Inverter selection | ✅ **Try-all + best fit.** Iterate KStar/SolarEdge/ABB/Deye; score each candidate (DC/AC fit + string efficiency + clipping + BOM cost + brand preference bonus); return top-3 with reasons. Default to #1; proposal-generator lets Barak swap. |
+| EA-4 | Shading model | ✅ **Vision LLM from photo** (NOT scalar). `performance_forecast` upgrades to Tier 1 + Vision (Claude Sonnet or Gemini vision). Requires ≥1 site photo in `DesignSuiteReq.site.photos[]`. Cost ~$0.05-0.15/design. Cache per `siteId × season`. |
+| EA-5 | fault_analysis training set | ✅ **Barak has cases to share.** New `FaultCase` model seeded from 3-5 closed past tickets. `fault_analysis` looks up `FaultCase` via pg_trgm similarity BEFORE DeepSeek pro — accelerates AND grounds reasoning. |
 
 ---
 

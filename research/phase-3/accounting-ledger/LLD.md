@@ -66,9 +66,10 @@ pdfkit                # רו"ח-readable PDF statements per כרטסת
 |---|---|---|
 | `DATABASE_URL`, `REDIS_URL`, `DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY` | shared with 53/A-C | reuse |
 | `ACCOUNTANT_EXPORT_DIR` | config | where xlsx/pdf statements land (synced via Drive to רו"ח) |
-| `ACCOUNTANT_EMAIL` | secrets/bee-integrations.env | for monthly auto-send `[OPEN]` |
-| `VAT_PERIOD_MONTHS` | config | `2` for small biz (default) or `1` for large |
-| `INCOME_TAX_ADVANCE_PCT` | config | מקדמות rate set by פקיד שומה (varies per business — `[OPEN]` per Barak) |
+| `ACCOUNTANT_EMAIL` | secrets/bee-integrations.env | for monthly auto-send |
+| `VAT_PERIOD_MONTHS` | config | **`1`** (monthly per LD-3 decision) |
+| ~~`INCOME_TAX_ADVANCE_PCT`~~ | — | **REMOVED** per LD-2 (0% — Barak has no מקדמות obligation). |
+| `INVOICE_MAVEN_EXPORT_DIR` | config | replaces `ACCOUNTANT_EXPORT_DIR`; per LD-1 decision target is IM CSV format, not third-party software bridge. |
 
 ---
 
@@ -555,6 +556,7 @@ Same shape as A/B/C. Special note for ledger:
 
 | Phase | Hours | Deliverable | Gate |
 |---|---|---|---|
+| **A0. Opening-balance import from Invoice Maven** (per LD-5) | 3h | CLI `ledger:import-opening --source invoice-maven --file <path>`; idempotent via `IM-OPENING-${imRecordId}`; transactional rollback on partial fail; description=`"יתרת פתיחה מ-Invoice Maven (YYYY-MM-DD)"` | Re-running the import is a no-op |
 | **A. Schema + postLedgerEntry + idempotency** | 5h | Migration adds LedgerEntry, CustomerInvoice, EntityBalance, EntityAging, TaxFiling. Function + tests | Test: post twice, second is no-op |
 | **B. Wave 53/A+B+C hooks** | 5h | Modify 53/A, 53/B, 53/C ingest functions to call postLedgerEntry on relevant events | All historic transactions backfill into ledger |
 | **C. View materialization + cron */15** | 4h | refreshEntityViews per-entity + nightly full recompute | EntityBalance matches manual SUM |
@@ -597,13 +599,15 @@ Same shape as A/B/C. Special note for ledger:
 
 ## § 8 — Open questions for Barak
 
-| # | Question | Blocks |
+**Status (2026-06-16): all 5 resolved → see [`../decisions-2026-06-16.md`](../decisions-2026-06-16.md) §A.**
+
+| # | Question | Decision (link) |
 |---|---|---|
-| LD-1 | What software does your רו"ח use? (Hashavshevet / Rivhit / Priority / ספיר / other) | §3.6 export format |
-| LD-2 | מקדמות rate (%) set by your פקיד שומה? | §I cron forecast |
-| LD-3 | Bi-monthly or monthly VAT? (small biz → 2; some classes → 1) | `VAT_PERIOD_MONTHS` config |
-| LD-4 | Customer-invoice numbering scheme — sequential per year (2026-0001) or continuous (#00142)? | `CustomerInvoice.invoiceNumber` generator |
-| LD-5 | Are there opening balances per customer/supplier (from before BEE app) that need a one-time import? | Phase A backfill scope |
+| LD-1 | רו"ח software | ✅ Invoice Maven serves both invoicing AND accounting. Export adapter targets IM CSV import format. NO Hashavshevet/Rivhit/Priority bridge. |
+| LD-2 | מקדמות rate | ✅ 0%. Drop the מקדמות cron entirely. `TaxFiling.kind` enum shrinks to `vat` + `bituach-leumi`. |
+| LD-3 | VAT cadence | ✅ **Monthly**. `VAT_PERIOD_MONTHS=1`. Cron `0 9 1 * *`. |
+| LD-4 | Invoice numbering | ✅ **Continuous forever** (no year reset). Generator = `MAX(invoiceNumber) + 1`. Starting point = highest existing in Invoice Maven. |
+| LD-5 | Opening balances | ✅ **Import history from Invoice Maven** via new Phase A0 (one-time bulk load, idempotent via `IM-OPENING-${imRecordId}`). |
 
 ---
 

@@ -192,21 +192,24 @@ These are spec hours, not calendar. Calendar depends on Barak's bandwidth + whet
 
 ## § 9 — Open questions that block real builds
 
-Consolidated from the 4 LLDs' open-questions sections. Once these are answered, MVP execution can proceed in any order.
+**Status (2026-06-16):** the 10 architectural questions (LD-1..5 + EA-1..5) are **answered → see [`decisions-2026-06-16.md`](decisions-2026-06-16.md)**. Affected LLDs patched in the same commit.
 
-| # | From | Question |
+Remaining items are **artifacts Barak shares** (not architectural decisions):
+
+| # | Item | Who unblocks |
 |---|---|---|
-| LD-1 | 53/D §8 | רו"ח's software (Hashavshevet/Rivhit/Priority/אחר)? Determines export adapter. |
-| LD-2 | 53/D §8 | מקדמות rate (%) per פקיד שומה? Determines income-tax forecast accuracy. |
-| LD-3 | 53/D §8 | VAT period — bi-monthly (default) or monthly? Determines cron cadence. |
-| LD-4 | 53/D §8 | Customer-invoice numbering scheme — yearly reset (2026-0001) or continuous? Determines invoice generator. |
-| LD-5 | 53/D §8 | Opening balances import — list per customer/supplier from before the spine starts? Determines Phase A backfill scope. |
-| Z-A1 | 53/A §3.5 | Real Mercantile portal CSV column names — `תאריך ערך` / `סכום` / etc. — exact strings? `BANK_PROVIDERS_JSON` accuracy. |
-| Z-B1 | 53/B §3.5 | Watchlist approval UX — reply with `/supplier approve <id>` ok, or prefer a draft-group picker like proposals? |
-| Z-B2 | 53/B §7 | Inventory / stock tracking — Yes or skip? Most BEE installs are project-based, so leaning skip; confirm. |
-| Z-C1 | 53/C §3.5 | Authoritative template authoring — Barak in MS Word, hand off `.docx` to the engine? Confirm tooling. |
-| Z-C2 | 53/C — | First fixture customer brief: which past project should we use to validate end-to-end? |
-| Z-D1 | this doc | After A+B+C+D MVP — which is the next wave: `customer-success-agent` (already speced) or `n8n-spine` (cross-cutting automation orchestrator)? |
+| OB-1 | Vendor cable-table PDFs (EA-1 follow-up) → I parse into JSON | Barak |
+| OB-2 | Invoice Maven export sample (LD-1, LD-5) — one real period | Barak (blocks 53/D Phase A0) |
+| OB-3 | 3-5 closed fault cases (EA-5 follow-up) as JSON fixture | Barak (blocks Wave 54 Phase G) |
+| OB-4 | Real Mercantile portal CSV header strings (Z-A1) | Barak (blocks 53/A Phase B) |
+| OB-5 | Per-tier scoring weights for `CustomerHealth` (Wave 55 CS-1) | Barak (sensible defaults if not specified) |
+| Z-B1 | Watchlist approval UX — reply with `/supplier approve <id>` or drafts-group picker? | minor — Barak picks |
+| Z-B2 | Inventory tracking — leaning skip (project-based) | confirm |
+| Z-C1 | Template authoring — MS Word hand-off to engine? | confirm |
+| Z-C2 | Fixture customer brief | Barak picks one past project |
+| Z-D1 | Next wave after A+B+C+D MVP | open — likely customer-success-agent (already speced) |
+
+**These are dropoffs, not blockers.** MVP architecture is locked.
 
 ---
 
