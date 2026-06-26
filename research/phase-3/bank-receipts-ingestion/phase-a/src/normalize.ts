@@ -4,9 +4,13 @@
 
 import { fromZonedTime } from "date-fns-tz";
 
+// Multi-letter grammatical connectives that are safe to strip as standalone words.
+// NOTE: single bare letters (ה/מ/ל/ב) and ambiguous nouns (בית "house/firm of", אל "to"/El)
+// were REMOVED — as standalone tokens they destroy legitimate names
+// ("בית הספר"→"הספר", "אל על"→"על"). They are still stripped when ATTACHED as a
+// prefix (hyphen/maqaf branch below), which is the only safe case.
 const HEBREW_CONNECTIVES = [
-  "ה", "של", "מ", "מן", "אצל", "אצלו", "ל", "ב", "בית",
-  "אל", "מאת", "דרך", "בעבור", "עבור", "מטעם",
+  "של", "מן", "אצל", "אצלו", "מאת", "דרך", "בעבור", "עבור", "מטעם",
 ];
 
 /** Strip leading connectives + extra whitespace; safe for re-entry (idempotent). */
@@ -23,9 +27,9 @@ export function cleanCounterparty(s: string): string {
     }
   }
 
-  // Strip common Hebrew prefixes attached to a word with a maqaf or no space
-  // e.g. "מ-בנק" -> "בנק", "ה-לקוח" -> "לקוח"
-  t = t.replace(/^[המבלשו]־/u, "");
+  // Strip a single Hebrew prefix letter ATTACHED with a maqaf (U+05BE) or ASCII hyphen,
+  // e.g. "מ-בנק" -> "בנק", "ה-לקוח" -> "לקוח". (Both dash forms appear in bank exports.)
+  t = t.replace(/^[המבלשו][־-]\s*/u, "");
 
   // Collapse whitespace
   t = t.replace(/\s+/g, " ").trim();

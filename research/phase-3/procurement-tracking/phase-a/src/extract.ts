@@ -19,6 +19,7 @@ import type {
 } from "./types.js";
 import { parseAmountCents, parseIsraeliDate } from "./normalize.js";
 import { parseCsv } from "./sources/manual.js";
+import { logManifest } from "./survive.js";
 
 const REQUIRED_COLS = ["po_number", "supplier", "description", "qty", "unit", "unit_price", "ordered_at"];
 
@@ -47,7 +48,16 @@ export async function extractEvent(raw: RawProcurementEvent): Promise<Extraction
   }
 
   // Phase A: take the first/only PO (most manual dropoffs are single-PO CSVs).
-  // Multi-PO files are handled in Phase B (loop over .pos and emit N events).
+  // Multi-PO files are a Phase B feature (loop over .pos and emit N events). Until then,
+  // a multi-PO CSV would SILENTLY drop pos[1..]. Surface it so it's never invisible.
+  if (csvResult.pos.length > 1) {
+    await logManifest({
+      kind: "extract_multi_po_dropped",
+      stream: "procurement",
+      root_cause: "Phase A ingests only the first PO group per file",
+      context: { sourceRefId: raw.sourceRefId, poGroups: csvResult.pos.length, dropped: csvResult.pos.length - 1 },
+    });
+  }
   return { kind: "po", po: csvResult.pos[0] };
 }
 
@@ -98,7 +108,11 @@ export function tryParseManualCsv(text: string): ExtractResult {
         if (!isFinite(qty) || qty <= 0) throw new Error(`bad qty: ${row.qty}`);
         const unitPriceCents = parseAmountCents(row.unit_price);
         if (unitPriceCents < 0n) throw new Error(`negative unit_price`);
-        const lineTotalCents = BigInt(Math.round(Number(unitPriceCents) * qty));
+        // BigInt-safe line total: qty has ≤3 decimals (DB is DECIMAL(10,3)).
+        // Scale qty to milli-units, multiply in BigInt domain, round to nearest cent.
+        // (Avoids Number(bigint)*float precision loss for large prices.)
+        const qtyMilli = BigInt(Math.round(qty * 1000));
+        const lineTotalCents = (unitPriceCents * qtyMilli + 500n) / 1000n;
 
         lines.push({
           sku: row.sku?.trim() || undefined,
@@ -106,6 +120,7 @@ export function tryParseManualCsv(text: string): ExtractResult {
           qty,
           unit: row.unit.trim() || "pcs",
           unitPriceCents,
+          lineTotalCents,
         });
         totalCents += lineTotalCents;
 

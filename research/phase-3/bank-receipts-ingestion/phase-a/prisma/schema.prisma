@@ -52,7 +52,9 @@ model BankTransaction {
 
   @@unique([accountId, externalTxId])
   @@index([accountId, valueDate, externalTxId])
-  @@index([counterpartyNorm])
+  // GIN trgm index — MUST match migration.sql. A plain btree would NOT accelerate
+  // similarity() and `prisma migrate dev` would flag drift against the SQL. Needs pg_trgm.
+  @@index([counterpartyNorm(ops: raw("gin_trgm_ops"))], type: Gin)
   @@index([customerId])
 }
 

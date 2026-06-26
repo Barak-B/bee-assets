@@ -115,6 +115,9 @@ model Supplier {
 
   @@index([category])
   @@index([status])
+  // GIN trgm index for fuzzy supplier matching — MUST match migration.sql (else
+  // `prisma migrate dev` flags drift and similarity() loses its index). Needs pg_trgm.
+  @@index([nameNorm(ops: raw("gin_trgm_ops"))], type: Gin)
 }
 
 model PurchaseOrder {
@@ -163,6 +166,8 @@ model PurchaseOrderLine {
   lineTotalCents  BigInt
 
   @@index([descriptionNorm])
+  // GIN trgm — MUST match migration.sql (benchmark fuzzy join across phrasing). Needs pg_trgm.
+  @@index([descriptionNorm(ops: raw("gin_trgm_ops"))], type: Gin)
 }
 
 model SupplierInvoice {

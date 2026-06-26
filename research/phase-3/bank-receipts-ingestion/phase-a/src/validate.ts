@@ -18,10 +18,14 @@ export function makeValidator(prisma: PrismaClient): Validator {
       const foundIds = new Set(found.map((r) => r.id));
       const missing = insertedIds.filter((id) => !foundIds.has(id));
 
-      // Sanity gates — every row must have required fields populated
-      for (const r of found) {
-        if (!r.accountId || !r.externalTxId || r.amountCents === undefined || !r.valueDate) {
-          missing.push(r.id);
+      // Sanity gate — accountId/externalTxId/valueDate are NOT NULL columns so presence is
+      // guaranteed; the meaningful invariant is that the row is actually readable post-commit
+      // (the foundIds check above). We additionally assert the FK resolves to a real account.
+      if (found.length > 0) {
+        const accountIds = [...new Set(found.map((r) => r.accountId))];
+        const realAccounts = await prisma.bankAccount.count({ where: { id: { in: accountIds } } });
+        if (realAccounts !== accountIds.length) {
+          for (const r of found) missing.push(r.id);   // dangling FK → fail the whole batch
         }
       }
 

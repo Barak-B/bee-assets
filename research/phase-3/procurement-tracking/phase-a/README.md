@@ -22,7 +22,7 @@ phase-a/
 ├── src/
 │   ├── types.ts                               ← RawProcurementEvent + ExtractedPO + cursorAdvances
 │   ├── normalize.ts                           ← cleanSupplierName (corp-suffix), cleanDescription, parsers
-│   ├── lock.ts                                ← Redis primary, IngestionLock-row fallback (parity with 53/A)
+│   ├── lock.ts                                ← Redis primary, IngestionLock-row fallback (logic-equivalent to 53/A; collapse to one shared module in BEE port)
 │   ├── validate.ts                            ← PROTOCOL §4.2 read-back on inserted POs
 │   ├── survive.ts                             ← err_manifest.jsonl + alertBarak shim
 │   ├── suppliers.ts                           ← matchOrCreateSupplier + approve/merge/ignore (LLD §3.4 + §3.5)
@@ -140,9 +140,18 @@ Rules:
 - F: Weekly Tier-3 Sonnet supplier health digest.
 - G: BankTransaction ↔ SupplierInvoice reconciliation (Wave 53/A↔B link).
 
-## Cloud-session verification status (2026-06-26)
+## Cloud-session verification status (2026-06-26, post-audit)
 
-All TypeScript files pass `node --check --experimental-strip-types` AST parse.
-SQL migration parens balanced, all referenced columns + indexes consistent.
-Runtime selftests + DB tests live require `npm install` + Postgres — local Claude
-Code session executes after `git pull`.
+All TypeScript files pass `node --check --experimental-strip-types` AST parse, and the
+pure-function `selftest` logic (cleanSupplierName, cleanDescription, parseAmountCents,
+multi-row + Hebrew-quoted CSV grouping) was executed and passes 5/5. SQL migration parens
+balanced; schema↔migration columns/indexes consistent. **`node --check` only parses — it
+does not run the code.** Scripts run via **`tsx`** (bare `node --experimental-strip-types`
+cannot resolve `.js`→`.ts` imports). DB-backed `dryrun.test.ts` requires `npm install` +
+Postgres with pg_trgm — local Claude Code runs it after `git pull`.
+
+**Audit fixes applied this pass:** in-batch cursor drop fixed (both fixture POs now ingest;
+hard-key dedup is authoritative for idempotency); line totals computed once in BigInt domain
+(no float precision loss); supplier create race handled via P2002 catch + re-find;
+`guessCategory` wired into new-supplier creation; multi-PO CSV drop now logged (not silent);
+schema GIN trgm indexes match migration; Redis→PG lock fallback; `fileURLToPath` for Windows.

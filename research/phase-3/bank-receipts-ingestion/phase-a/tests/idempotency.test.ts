@@ -8,6 +8,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { CsvSource } from "../src/sources/csv.js";
 import { ingestAccount } from "../src/ingest.js";
@@ -34,7 +35,7 @@ async function seedAccount(accountId: string) {
 }
 
 const src = new CsvSource({
-  watchDir: new URL("./", import.meta.url).pathname,
+  watchDir: fileURLToPath(new URL("./", import.meta.url)),   // Windows-safe (no leading-slash /C:/...)
   columnMap: { date: "value_date", amount: "amount", ref: "ref", memo: "memo" },
 });
 

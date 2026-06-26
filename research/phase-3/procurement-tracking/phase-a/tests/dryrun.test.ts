@@ -8,8 +8,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
-import { join } from "node:path";
 import { ManualUploadSource } from "../src/sources/manual.js";
 import { ingestProcurement } from "../src/ingest.js";
 import { matchOrCreateSupplier, approveSupplier } from "../src/suppliers.js";
@@ -18,7 +18,7 @@ const dbUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
 const SKIP = !dbUrl;
 
 const prisma = new PrismaClient({ datasources: { db: { url: dbUrl ?? "" } } });
-const fixtureDir = new URL("./", import.meta.url).pathname;
+const fixtureDir = fileURLToPath(new URL("./", import.meta.url));   // Windows-safe
 
 async function clean() {
   await prisma.purchaseOrderLine.deleteMany({});

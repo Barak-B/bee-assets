@@ -1,9 +1,9 @@
-// PROTOCOL §3.2 — distributed lock providers (re-export of bank-receipts/lock.ts shape)
+// PROTOCOL §3.2 — distributed lock providers (same DESIGN as bank-receipts/lock.ts).
 //
-// Why a copy: this directory is standalone for migration + tests. When porting
-// into BEE app, point procurement at the SAME `bank-receipts/lock.ts` (single
-// source of truth). Logic here is byte-identical to that file — review parity
-// in code review.
+// Why a copy: this directory is standalone for migration + tests. It is LOGIC-EQUIVALENT
+// to bank-receipts/lock.ts but NOT byte-identical — it defines LockHandle/LockProvider
+// inline (procurement's types.ts doesn't export them). When porting into BEE app, collapse
+// both to ONE shared module (export the interfaces from a shared types.ts and import here).
 
 import { PrismaClient } from "@prisma/client";
 import Redis from "ioredis";
@@ -64,12 +64,28 @@ class PgRowLockProvider implements LockProvider {
   }
 }
 
+// Redis errors fall back to PG so a set-but-unreachable REDIS_URL degrades gracefully;
+// a clean `null` (lock genuinely held) does NOT fall back, to avoid double-acquire.
+class FallbackLockProvider implements LockProvider {
+  private redis: RedisLockProvider;
+  private pg: PgRowLockProvider;
+  constructor(redis: RedisLockProvider, pg: PgRowLockProvider) { this.redis = redis; this.pg = pg; }
+  async acquire(key: string, ttlSeconds: number): Promise<LockHandle | null> {
+    try {
+      return await this.redis.acquire(key, ttlSeconds);
+    } catch {
+      return this.pg.acquire(key, ttlSeconds);
+    }
+  }
+}
+
 let _provider: LockProvider | null = null;
 
 export function getLockProvider(prisma: PrismaClient): LockProvider {
   if (_provider) return _provider;
   const url = process.env.REDIS_URL;
-  _provider = url ? new RedisLockProvider(url) : new PgRowLockProvider(prisma);
+  const pg = new PgRowLockProvider(prisma);
+  _provider = url ? new FallbackLockProvider(new RedisLockProvider(url), pg) : pg;
   return _provider;
 }
 

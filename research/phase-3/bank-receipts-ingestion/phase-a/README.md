@@ -59,11 +59,20 @@ export TEST_DATABASE_URL="$DATABASE_URL"
 npx tsx --test tests/idempotency.test.ts
 ```
 
-> **Cloud-session verification status (2026-06-14):** all 9 TypeScript files
-> pass `node --check --experimental-strip-types` AST parse. SQL migration
-> parens balanced (28/28). JSON configs valid. Runtime selftests live require
-> `npm install` (Prisma + date-fns + ioredis) which the local Claude Code
-> session executes after `git pull`.
+> **Cloud-session verification status (2026-06-26, post-audit):** all TypeScript
+> files pass `node --check --experimental-strip-types` AST parse, and the pure-function
+> `selftest` logic (cleanCounterparty incl. Hebrew over-strip regression guards,
+> parseAmountCents, parseIsraeliDate) was executed and passes 3/3. SQL migration parens
+> balanced. **`node --check` is only an AST parse — it does NOT run the code.** The
+> `npm test` / `dry-run` / `selftest` scripts run via **`tsx`** (bare
+> `node --experimental-strip-types` cannot resolve the `.js`→`.ts` import specifiers).
+> DB-backed tests (`idempotency.test.ts`) require `npm install` + a Postgres with pg_trgm,
+> which the local Claude Code session runs after `git pull`.
+>
+> **Audit fixes applied this pass:** cursor no longer short-circuits hard-key dedup
+> (re-runs now correctly dedup — idempotency test assertion holds); maqaf/ASCII-hyphen
+> prefix strip fixed; over-stripping connectives (בית/אל/bare letters) removed; schema
+> GIN trgm index now matches migration; Redis→PG lock fallback; mtime file-skip removed.
 
 Expected `selftest` output:
 ```

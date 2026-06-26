@@ -9,7 +9,7 @@
 | Component | LLD | Phase A code |
 |---|---|---|
 | **Wave 53/A bank-receipts** | ✅ shipped (`bank-receipts-ingestion/LLD.md`) | ✅ shipped — TS+SQL+tests, cloud syntax-verified (`phase-a/` ~1,175 LOC) |
-| **Wave 53/B procurement** | ✅ shipped (`procurement-tracking/LLD.md`) | ❌ not started |
+| **Wave 53/B procurement** | ✅ shipped (`procurement-tracking/LLD.md`) | ✅ Phase A shipped — schema + ManualUpload + dry-run, cloud-verified (`procurement-tracking/phase-a/` ~1,780 LOC) |
 | **Wave 53/C proposals** | ✅ shipped (`proposal-skill-template/LLD.md`) | ❌ not started |
 | **Wave 53/D ledger** | ✅ shipped + patched per decisions (`accounting-ledger/LLD.md`) | ❌ not started |
 | **Wave 54 engineering-agent** | ✅ shipped + patched per decisions (`engineering-agent/LLD.md`) | partial — 6 sub-skill specs exist; no orchestrator code |
@@ -93,25 +93,26 @@
 | 5 | **53/D Phase A0 — opening balances** — `ledger:import-opening --source invoice-maven` CLI; idempotent; transactional rollback | 3h | cloud-cortex | Re-running import = no-op; sample IM export round-trips | OB-2 |
 | 6 | **53/D Phase A-C** — `LedgerEntry` polymorphic + `postLedgerEntry` + cron */15 + reconciler | 8h | cloud-cortex | 53/A and 53/B writes auto-post to ledger | (1), (3), (5) |
 | 7 | **53/D Phase D — כרטסת API** — `GET /api/ledger/:kind/:id?from=&to=` returns chronological + running balance | 4h | cloud-cortex | One real customer's kartset matches Invoice Maven hand-check | (6) |
-| 8 | **Wave 54 Phase A** — engineering orchestrator + reference-table layout (`cable-tables/<vendor>/*.json` + `inverter-specs.json` with per-model dcAcRatio) + bom_generator wired to PriceBenchmark | 6h | cloud-cortex | Cache round-trip works; `bom_generator` returns live prices | (3) — PriceBenchmark exists |
+| 8 | **Wave 54 Phase A** — engineering orchestrator skeleton (calls 5 stub sub-skills) + reference-table layout (`cable-tables/<vendor>/*.json` + `inverter-specs.json` with per-model dcAcRatio) | 5h | cloud-cortex | Cache round-trip works (hash → store → re-hash → cache hit) | (1) — Prisma instance only |
 | 9 | **Wave 54 Phase B — wire_sizing (strict Tier 0)** | 5h | cloud-cortex | 10 reference cases match Barak's hand calc | OB-1 (cable PDFs) |
 | 10 | **Wave 54 Phase C — pv_design_calc + try-all + sanity** | 6h | cloud-cortex | 5 fixture sites match Barak's SketchUp output | (8) — inverter-specs.json |
 | 11 | **Wave 54 Phase D — protection_coordination** | 6h | cloud-cortex | Standard + multi-source topology validated | (10) |
-| 12 | **Wave 54 Phase E — bom_generator full + PriceBenchmark integration** | 5h | cloud-cortex | Real proposal end-to-end with current prices | (8) |
+| 12 | **Wave 54 Phase E — bom_generator** (MVP: Excel pricebook fallback; live `PriceBenchmark` join lands once 53/B Phase D ships in row 20) | 5h | cloud-cortex | Real proposal BOM with pricebook prices; PriceBenchmark wired when available | (8) |
 | 13 | **Wave 54 Phase F — performance_forecast (Vision)** | 4h | cloud-cortex | 1 real site backtest within ±8% of SolarEdge actual | (10) + site photo |
-| 14 | **53/C Phase A-C — proposals MVP** — schema + 1 template + brief structuring + dry-run | 15h | cloud-cortex + Barak (template authoring in MS Word) | Fixture brief → valid PDF with correct totals | (7), (12) |
+| 14 | **53/C Phase A-C — proposals MVP** — schema + 1 template + brief structuring + dry-run | 15h | cloud-cortex + Barak (template authoring in MS Word) | Fixture brief → valid PDF with correct totals | (7), (10), (12), (13) — needs `designSuite` output (real or stub) |
 | 15 | **Coupling tests A↔B + A↔D + C→D** | 5h | cloud-cortex | One closed-loop per coupling demonstrated | (1)-(14) all green |
 | 16 | 🎯 **Spine MVP demo** — first real end-to-end run: live bank tx → reconciles to invoice → kartset updates → monthly ⚡ to Barak | — | Barak watches | All gates green | (15) |
 | 17 | Wave 55 customer-success MVP (Phases A+B+C+E) | 19h | cloud-cortex | First "Sunday digest" with real customer data | spine MVP (16) |
-| 18 | Wave 54 Phase G+G1 — fault_analysis + FaultCase seeding | 9h | cloud-cortex + Barak (3-5 cases) | 3 past faults: agent surfaces same cause | OB-3 |
+| 18 | Wave 54 Phase G1+G — FaultCase seeding then fault_analysis (G1 seeds the table G reads) | 9h | cloud-cortex + Barak (3-5 cases) | 3 past faults: agent surfaces same cause | OB-3 |
 | 19 | Wave 53/A Phases D-G — full feature parity | ~25h | cloud-cortex | per LLD §5 each | — |
 | 20 | Wave 53/B Phases D-H — full | ~25h | cloud-cortex | per LLD §5 | — |
 | 21 | Wave 53/C Phases D-H — full | ~30h | cloud-cortex + Barak | per LLD §5 | — |
 | 22 | Wave 53/D Phases E-J — full | ~28h | cloud-cortex | per LLD §5 | — |
 | 23 | Wave 55 Phases D-J — full | ~16h | cloud-cortex | per LLD §5 | — |
 
-**Spine MVP total:** rows 1-16 ≈ **~91h** focused build + Barak dropoffs (rows 0).
-**Full parity:** + rows 17-23 ≈ **~125h** more, parallelizable.
+**Spine MVP total:** rows 1-15 ≈ **87h** focused build (row 16 is the demo, 0h) + Barak dropoffs (row 0).
+Sum: 4+4+5+8+3+8+4+5+5+6+6+5+4+15+5 = **87h**.
+**Full parity:** + rows 17-23 = 19+9+25+25+30+28+16 = **152h** more, parallelizable (≈**239h** all-in).
 
 ---
 
@@ -176,13 +177,13 @@ When the folder is ready → ⚡ self-chat: `/handoff ready` → I (or next clou
 | # | Milestone | Hours-to-here | Felt by Barak as |
 |---|---|---|---|
 | M1 | First real Mercantile receipt auto-ingested + ⚡ summary | ~8h (rows 1+2) | "OK, the bank is now in the system" |
-| M2 | First supplier email auto-classified to PurchaseOrder + watchlist ⚡ | +13h ≈ 21h | "I can stop forgetting which order is from whom" |
-| M3 | First real kartset visible via API + matches Invoice Maven | +15h ≈ 36h | "I can see the customer's balance the same way the רו"ח sees it" |
-| M4 | First proposal generated end-to-end (brief → PDF → approve → send) | +35h ≈ 71h | "Quote turned around in 90 seconds, not 3 hours" |
-| M5 | Spine MVP — full closed loop with monthly executive ⚡ | +20h ≈ 91h | "I trust the books." (the audit Q7 burning layer is offloaded) |
-| M6 | Wave 55 customer-success MVP — Sunday digest + AR aging | +19h ≈ 110h | "I know which 137 customers need attention this week without remembering" |
-| M7 | Wave 54 engineering depth — `fault_analysis` with FaultCase | +9h ≈ 119h | "When a site under-produces, the diagnosis is ready before I drive there" |
-| M8 | Full parity (all phases D-J across all waves) | +125h ≈ 244h | The whole verbal layer is gone |
+| M2 | First supplier email auto-classified to PurchaseOrder + watchlist ⚡ | +13h ≈ 21h (rows 3,4) | "I can stop forgetting which order is from whom" |
+| M3 | First real kartset visible via API + matches Invoice Maven | +15h ≈ 36h (rows 5,6,7) | "I can see the customer's balance the same way the רו"ח sees it" |
+| M4 | First proposal generated end-to-end (brief → PDF → approve → send) | +46h ≈ 82h (rows 8-14) | "Quote turned around in 90 seconds, not 3 hours" |
+| M5 | Spine MVP — full closed loop with monthly executive ⚡ | +5h ≈ 87h (row 15) | "I trust the books." (the audit Q7 burning layer is offloaded) |
+| M6 | Wave 55 customer-success MVP — Sunday digest + AR aging | +19h ≈ 106h (row 17) | "I know which 137 customers need attention this week without remembering" |
+| M7 | Wave 54 engineering depth — `fault_analysis` with FaultCase | +9h ≈ 115h (row 18) | "When a site under-produces, the diagnosis is ready before I drive there" |
+| M8 | Full parity (all phases D-J across all waves) | +124h ≈ 239h (rows 19-23) | The whole verbal layer is gone |
 
 ---
 

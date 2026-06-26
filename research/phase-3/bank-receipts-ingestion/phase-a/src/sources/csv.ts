@@ -6,7 +6,7 @@
 // Files older than cursorTs are skipped at the directory level (fast filter).
 // Rows are filtered strictly inside ingest via cursorAdvances() (PROTOCOL §3.1).
 
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { BankAccountRef, Cursor, RawTx, SourceMode, TransactionSource } from "../types.js";
 import { parseAmountCents, parseIsraeliDate } from "../normalize.js";
@@ -35,13 +35,14 @@ export class CsvSource implements TransactionSource {
    * One AsyncIterable<RawTx[]> per file. Caller iterates files via cursorAdvances()
    * to skip rows ≤ cursor.
    */
-  async *next(_account: BankAccountRef, cursor: Cursor): AsyncIterable<RawTx[]> {
+  async *next(_account: BankAccountRef, _cursor: Cursor): AsyncIterable<RawTx[]> {
+    // NOTE: we intentionally do NOT skip files by mtime. File mtime and transaction
+    // value-date are unrelated (a re-saved old export can contain rows newer than the
+    // cursor), so an mtime gate could silently drop legitimate rows. Hard-key dedup
+    // (ingest.ts §3.4) makes re-reading every file cheap and correct. For very large
+    // histories, add a per-file high-water-mark index later — not needed at MVP volume.
     const files = await this.listFiles();
     for (const file of files) {
-      const fileMtime = (await stat(file)).mtime;
-      // Fast skip: file mtime < cursor.ts (1-day slack absorbs clock skew)
-      if (fileMtime.getTime() + 86_400_000 < cursor.ts.getTime()) continue;
-
       const buf = await readFile(file);
       const text = this.cfg.encoding === "windows-1255"
         ? new TextDecoder("windows-1255").decode(buf)

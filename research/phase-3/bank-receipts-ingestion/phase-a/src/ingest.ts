@@ -36,18 +36,23 @@ export async function ingestAccount(prisma: PrismaClient, opts: IngestOpts): Pro
 
   try {
     const account = await prisma.bankAccount.findUniqueOrThrow({ where: { id: accountId } });
-    const cursor = { ts: account.cursorTs ?? new Date(0), txId: account.cursorTxId ?? "" };
+    // startCursor is FROZEN for the whole run. It is a *fetch hint* to the source only —
+    // it is NOT used to filter rows. Hard-key dedup (§3.4) is the authoritative idempotency
+    // guarantee. (Earlier bug: advancing+filtering on the same cursor per-row made every
+    // re-run short-circuit before hard-dedup, so re-runs never deduped. Hard-dedup now owns it.)
+    const startCursor = { ts: account.cursorTs ?? new Date(0), txId: account.cursorTxId ?? "" };
+    const maxSeen = { ts: startCursor.ts, txId: startCursor.txId };
 
-    for await (const batch of source.next(account, cursor)) {
+    for await (const batch of source.next(account, startCursor)) {
       rowsRead += batch.length;
 
       for (const raw of batch) {
         const norm: NormalizedTx = { ...raw, counterpartyNorm: cleanCounterparty(raw.counterpartyRaw) };
 
-        // PROTOCOL §3.1 — strict cursor ordering
-        if (!cursorAdvances(cursor, norm)) continue;
+        // Track the high-water mark for persistence (used as next run's fetch hint).
+        if (cursorAdvances(maxSeen, norm)) { maxSeen.ts = norm.valueDate; maxSeen.txId = norm.externalTxId; }
 
-        // PROTOCOL §3.4 — hard-key dedup
+        // PROTOCOL §3.4 — hard-key dedup (authoritative)
         const hard = await prisma.bankTransaction.findUnique({
           where: { accountId_externalTxId: { accountId, externalTxId: norm.externalTxId } },
           select: { id: true },
@@ -69,36 +74,33 @@ export async function ingestAccount(prisma: PrismaClient, opts: IngestOpts): Pro
 
         if (dryRun) continue;    // dry-run never writes — used by tests + first run
 
-        // PROTOCOL §3.2 — atomic Unit of Work
-        const id = await prisma.$transaction(async (tx) => {
-          const created = await tx.bankTransaction.create({
-            data: {
-              accountId,
-              externalTxId: norm.externalTxId,
-              valueDate: norm.valueDate,
-              bookingDate: norm.bookingDate ?? null,
-              amountCents: norm.amountCents,
-              currency: norm.currency || "ILS",
-              counterpartyRaw: norm.counterpartyRaw,
-              counterpartyNorm: norm.counterpartyNorm,
-              memo: norm.memo ?? null,
-              sourceMode: source.mode,
-              ingestRunId: run.id,
-            },
-            select: { id: true },
-          });
-          await tx.bankAccount.update({
-            where: { id: accountId },
-            data: { cursorTs: norm.valueDate, cursorTxId: norm.externalTxId },
-          });
-          return created.id;
+        // PROTOCOL §3.2 — atomic Unit of Work (one row insert; cursor persisted once after loop)
+        const created = await prisma.bankTransaction.create({
+          data: {
+            accountId,
+            externalTxId: norm.externalTxId,
+            valueDate: norm.valueDate,
+            bookingDate: norm.bookingDate ?? null,
+            amountCents: norm.amountCents,
+            currency: norm.currency || "ILS",
+            counterpartyRaw: norm.counterpartyRaw,
+            counterpartyNorm: norm.counterpartyNorm,
+            memo: norm.memo ?? null,
+            sourceMode: source.mode,
+            ingestRunId: run.id,
+          },
+          select: { id: true },
         });
-        insertedIds.push(id);
-
-        // Advance local cursor too so the next iteration uses the latest watermark
-        cursor.ts = norm.valueDate;
-        cursor.txId = norm.externalTxId;
+        insertedIds.push(created.id);
       }
+    }
+
+    // Persist the high-water mark ONCE (next run's fetch hint). Skipped on dry-run.
+    if (!dryRun && (maxSeen.ts.getTime() !== startCursor.ts.getTime() || maxSeen.txId !== startCursor.txId)) {
+      await prisma.bankAccount.update({
+        where: { id: accountId },
+        data: { cursorTs: maxSeen.ts, cursorTxId: maxSeen.txId },
+      });
     }
 
     // PROTOCOL §4.2 — read-back validation
@@ -119,7 +121,7 @@ export async function ingestAccount(prisma: PrismaClient, opts: IngestOpts): Pro
       where: { id: run.id },
       data: {
         finishedAt: new Date(),
-        status: dryRun ? "ok" : (insertedIds.length > 0 || rowsRead > 0 ? "ok" : "ok"),
+        status: "ok",   // throws above on any failure path; reaching here = ok
         rowsRead, rowsInserted: insertedIds.length, rowsDedupedHard: hardDup, rowsDedupedFuzzy: fuzzyDup,
       },
     });

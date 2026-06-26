@@ -11,7 +11,7 @@
 // commands; in standalone Phase A we expose the helper functions).
 
 import { PrismaClient, Prisma } from "@prisma/client";
-import { cleanSupplierName } from "./normalize.js";
+import { cleanSupplierName, guessCategory } from "./normalize.js";
 
 const FUZZY_THRESHOLD = 0.85;
 
@@ -74,15 +74,29 @@ export async function matchOrCreateSupplier(
     }
   }
 
-  // 3. Miss — create in watchlist
-  const created = await prisma.supplier.create({
-    data: {
-      nameRaw,
-      nameNorm,
-      status: "watchlist",
-    },
-  });
-  return { id: created.id, nameRaw, nameNorm, status: "watchlist", justCreated: true };
+  // 3. Miss — create in watchlist. Guard against a same-batch race: two events for the
+  // same brand-new supplier both miss above, then both try to create → unique violation on
+  // nameNorm. The loser catches P2002 and re-reads, so only the winner reports justCreated
+  // (and only one ⚡ fires). guessCategory pre-fills a best-guess category (Tier 0).
+  try {
+    const created = await prisma.supplier.create({
+      data: {
+        nameRaw,
+        nameNorm,
+        status: "watchlist",
+        category: guessCategory(nameRaw) ?? undefined,
+      },
+    });
+    return { id: created.id, nameRaw, nameNorm, status: "watchlist", justCreated: true };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const winner = await prisma.supplier.findUnique({ where: { nameNorm } });
+      if (winner) {
+        return { id: winner.id, nameRaw: winner.nameRaw, nameNorm: winner.nameNorm, status: winner.status, justCreated: false };
+      }
+    }
+    throw e;
+  }
 }
 
 /**

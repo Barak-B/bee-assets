@@ -16,7 +16,7 @@
   - `[[Proposal_Generator_LLD]]` (Wave 53/C) §3.2 — calls all 5 design sub-skills to populate `Proposal.designJson` / `bomJson` / `forecastJson`
   - `[[Procurement_Tracking_LLD]]` (Wave 53/B) §3 — `bom_generator` reads `PriceBenchmark` from procurement
   - `[[Tender_Agent_LLD]]` — same engine for tender RFP responses (different template, same design depth)
-  - SolarEdge / Sungrow / SMA / Deye / KStar fleet data feeds `fault_analysis`
+  - SolarEdge / iSolarCloud / Deye / KStar / ABB fleet telemetry feeds `fault_analysis`
 - **Sub-skill specs (referenced, not duplicated here):**
   - [`sub-skills/pv_design_calc.md`](sub-skills/pv_design_calc.md)
   - [`sub-skills/wire_sizing.md`](sub-skills/wire_sizing.md)
@@ -68,7 +68,7 @@ nrel-pvwatts (optional)  # NREL PVWatts API as a sanity-check alternative to loc
 # Reference tables (committed in repo, NOT computed)
 tables/cable-tables/<vendor>/*.json    # multi-vendor per EA-1 decision (Lapp/Prysmian/IL-vendors/_default)
 tables/breaker-curves.json        # MCB B/C/D characteristics
-tables/inverter-specs.json        # Per-model Voc/Vmpp/Isc/efficiency/MPPT for SE/Sungrow/SMA/KStar/Deye
+tables/inverter-specs.json        # Per-model Voc/Vmpp/Isc/efficiency/MPPT + dcAcRatioMax/dcAcRatioRecommended (EA-2) for SolarEdge/KStar/ABB/Deye
 tables/panel-specs.json           # Per-model Pmax/Voc/Isc/temp coefficient
 ```
 
@@ -116,7 +116,9 @@ export interface DesignSuiteReq {
     usableAreaM2: number;
     azimuthDeg: number;          // 180 = south (IL)
     tiltDeg: number;
-    shadingFactor: number;       // 0..1, 0 = none
+    // EA-4: shading comes from Vision over real photos, NOT a scalar guess.
+    // performance_forecast THROWS if photos[] is empty (no inventing the number — §3.6a).
+    photos: { sha256: string; mimeType: string; path: string }[];   // ≥1 required
     annualConsumptionKwh?: number;
   };
   target: {
@@ -128,10 +130,19 @@ export interface DesignSuiteReq {
     tier: "standard" | "enterprise-large" | "enterprise-strategic" | "one-off";
   };
   preferences?: {
-    inverterBrand?: "SolarEdge" | "Sungrow" | "SMA" | "KStar" | "Deye";
+    inverterBrand?: "SolarEdge" | "KStar" | "ABB" | "Deye";   // EA-3 candidate set
     panelBrand?: string;
     includeBattery?: boolean;
   };
+}
+
+export interface InverterCandidate {
+  manufacturer: string;
+  model: string;
+  score: number;               // EA-3 scoring: DC/AC fit + string efficiency + clipping + BOM cost + brand bonus
+  reasons: string[];
+  dcAcRatio: number;
+  estCostCents: bigint;
 }
 
 export interface DesignSuiteResult {
@@ -140,8 +151,9 @@ export interface DesignSuiteResult {
   protection: ProtectionResult;
   bom: BomResult;
   forecast: ForecastResult;
+  top3InverterCandidates: InverterCandidate[];   // EA-3: try-all + best-fit; [0] is the default, Barak can swap
   artifactId: string;                       // FK to DesignArtifact (cache + audit)
-  warnings: string[];                       // Tier 0 sanity warnings (e.g. DC/AC ratio > 1.4)
+  warnings: string[];                       // Tier 0 sanity warnings (e.g. DC/AC ratio > selected inverter's dcAcRatioMax)
   shaamRequired: boolean;                   // total > SHAAM threshold → flag for 53/C
 }
 ```
@@ -193,6 +205,27 @@ model DesignArtifact {
   @@index([customerId, createdAt(sort: Desc)])
   @@index([expiresAt])
 }
+
+// EA-5: closed past faults, seeded from 3-5 Barak tickets (Phase G1), then grown
+// from confirmed repairs. fault_analysis does a pg_trgm lookup here BEFORE DeepSeek pro,
+// so reasoning is grounded in BEE's own history rather than invented.
+model FaultCase {
+  id                String   @id @default(cuid())
+  symptomText       String                       // Hebrew free-text symptom as reported
+  symptomNorm       String                       // normalized for pg_trgm similarity lookup
+  telemetryPattern  String                       // the monitoring signature (e.g. "string 2 Voc=0 daylight")
+  inverterModel     String?
+  rootCause         String
+  fixApplied        String
+  repairHours       Float
+  repairCostCents   BigInt
+  siteId            String?
+  closedAt          DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([inverterModel])
+  // pg_trgm GIN on symptomNorm (added in migration; see §4.2)
+}
 ```
 
 ### 3.3 Mermaid — orchestrator flow (DesignSuite)
@@ -212,9 +245,9 @@ flowchart TD
   pv --> wire["wire_sizing<br/>STRICT Tier 0<br/>IEC 60364 + תקנות החשמל tables<br/>NO LLM PATH"]
   wire --> prot["protection_coordination<br/>Tier 0 → escalate to 2 for<br/>multi-source topology"]
   prot --> bom["bom_generator<br/>Tier 0 — JOIN against<br/>PriceBenchmark (53/B)"]
-  bom --> fcst["performance_forecast<br/>Tier 0 GHI/DNI from Open-Meteo<br/>+ degradation curve"]
+  bom --> fcst["performance_forecast (EA-4)<br/>Tier 1 + Vision: Open-Meteo GHI/DNI<br/>+ Vision-LLM on site.photos[] → 12-month shading<br/>THROWS if photos[] empty (§3.6a)"]
 
-  fcst --> sanity["Tier 0 sanity checks:<br/>- DC/AC ratio 1.0-1.4?<br/>- string Voc < inverter Voc_max at -10°C?<br/>- voltage drop DC <2%, AC <1%?<br/>- selectivity verified?"]
+  fcst --> sanity["Tier 0 sanity checks:<br/>- DC/AC ratio ≤ selected inverter's dcAcRatioMax (EA-2, per-model)?<br/>- string Voc < inverter Voc_max at -10°C?<br/>- voltage drop DC <2%, AC <1%?<br/>- selectivity verified?"]
   sanity -->|warn| warnings["Append to warnings[]<br/>continue (warnings are not errors)"]
   sanity -->|fail| halt2["⚡⚡ Barak:<br/>'Design failed sanity — bad input or formula bug?'<br/>throw EngSanityError"]
   sanity -->|pass| persist
@@ -229,21 +262,27 @@ flowchart TD
 
 ```typescript
 // engineering-agent/wire-sizing.ts — STRICT Tier 0
-import cableTable from "../tables/cable-il.json" assert { type: "json" };
+// EA-1: multi-vendor. Load the table for the requested cableVendor; fall back to the
+// conservative _default.json. The vendor is REQUIRED on WireSizingReq.
+import { loadCableTable } from "./tables.js";   // reads tables/cable-tables/<vendor>/*.json (+ _default)
 
 export async function wireSizing(req: WireSizingReq): Promise<WireSizingResult> {
   // PROTOCOL: no LLM path. If the request can't be answered from tables + formulas,
   // throw — DO NOT escalate to a model.
-  const { current, length, ambientTempC, installMethod } = req;
+  const { current, length, ambientTempC, installMethod, cableVendor } = req;
+  if (!cableVendor) {
+    throw new EngInputError("wire_sizing: cableVendor is required (EA-1 multi-vendor). Use '_default' for the conservative table.");
+  }
 
-  // Step 1: pick base ampacity row from cable-il.json
+  // Step 1: pick base ampacity rows from the vendor's table (or _default)
+  const cableTable = loadCableTable(cableVendor);   // throws EngTableMissError if vendor dir absent
   const candidates = cableTable.filter(
     (r) => r.installMethod === installMethod &&
            r.ambientTempC >= ambientTempC,
   );
   if (candidates.length === 0) {
     throw new EngTableMissError(
-      `wire_sizing: no cable row matches installMethod=${installMethod} ambientTempC=${ambientTempC} — manual calc required (Barak escalation)`,
+      `wire_sizing: no cable row matches vendor=${cableVendor} installMethod=${installMethod} ambientTempC=${ambientTempC} — manual calc required (Barak escalation)`,
     );
   }
 
@@ -269,7 +308,7 @@ export async function wireSizing(req: WireSizingReq): Promise<WireSizingResult> 
     deratedAmpacityA: fit.ampacity * fit.deratingFactor,
     voltageDropV: vDrop,
     voltageDropPct: vDropPct,
-    sourceCitation: `cable-il.json row ${fit.id} — תקנות החשמל ${fit.standardRef ?? "ת"י 1004"}`,
+    sourceCitation: `cable-tables/${cableVendor} row ${fit.id} — תקנות החשמל ${fit.standardRef ?? "ת"י 1004"}`,
   };
 }
 ```
@@ -289,7 +328,7 @@ Failure of any → throw + `err_manifest` + ⚡⚡ Barak. Never serve a stale or
 ### 3.6 Fault-analysis flow (separate from design)
 
 `fault_analysis` is the only sub-skill that runs against **live telemetry** rather than producing a design. Inputs:
-- SolarEdge / Sungrow / SMA / Deye monitoring data (last N days)
+- SolarEdge / iSolarCloud / Deye monitoring data (last N days)
 - Symptom hint (Hebrew, free-text: "המערכת ביישוב X ייצרה חצי מהצפוי השבוע")
 - Site context (panel count, inverter model, last service date)
 
@@ -393,7 +432,9 @@ export async function designSuite(prisma: PrismaClient, req: DesignSuiteReq): Pr
     const shaamThreshold = await getShaamThresholdNow(prisma);    // from knowledge-base/il-einvoicing-shaam
     const shaamRequired = bom.totalCents >= shaamThreshold;
 
-    return { design, wireSizing: wiring, protection: prot, bom, forecast: fcst, artifactId: artifact.id, warnings, shaamRequired };
+    // EA-3: pv_design_calc tries all candidate inverters and returns scored top-3.
+    return { design, wireSizing: wiring, protection: prot, bom, forecast: fcst,
+             top3InverterCandidates: design.top3InverterCandidates ?? [], artifactId: artifact.id, warnings, shaamRequired };
 
   } catch (e: any) {
     await logManifest({ kind: "engineering_throw", root_cause: e.message ?? String(e), context: { requestHash, customerId: req.customer.id } });
@@ -411,10 +452,12 @@ export async function designSuite(prisma: PrismaClient, req: DesignSuiteReq): Pr
 # engineering-agent/install.sh
 set -euo pipefail
 npm install mathjs @turf/turf
-# Reference tables must be present
-for t in cable-il.json breaker-curves.json inverter-specs.json panel-specs.json; do
+# Reference tables must be present (EA-1: cable tables are now per-vendor)
+[[ -f "./tables/cable-tables/_default.json" ]] || { echo "missing table: cable-tables/_default.json"; exit 1; }
+for t in breaker-curves.json inverter-specs.json panel-specs.json; do
   [[ -f "./tables/$t" ]] || { echo "missing table: $t"; exit 1; }
 done
+# Migration must add the pg_trgm GIN index on FaultCase.symptomNorm (EA-5 lookup)
 npx prisma migrate dev --name engineering_v1
 echo "Engineering agent v1 ready"
 ```

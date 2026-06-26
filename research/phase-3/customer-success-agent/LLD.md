@@ -406,13 +406,18 @@ Same shape as Wave 53/A-D: structured run row, err_manifest, alertBarak, lock re
 
 ## § 8 — Open questions
 
-| # | Question | Blocks |
+**Status (2026-06-26): resolved with sensible defaults.** Per OB-5 (decisions §E), Wave 55 ships
+on defaults Barak can override later — none of these block the build. CS-1 weights are the only
+artifact Barak optionally provides (`customer-tier-weights.json`, low priority); the rest are
+defaulted below. Wave 55 is therefore NOT a hole in the "architecture locked" claim.
+
+| # | Question | Default (overridable) |
 |---|---|---|
-| CS-1 | Default tier weights per `CustomerTier` — does enterprise weight AR aging higher than standard? | health_score_calc accuracy |
-| CS-2 | SLA windows for enterprise tiers — concrete response/resolution hours per tier? | SLA timer config |
-| CS-3 | Touchpoint cadence — what's the right "silence alert" threshold per tier? (e.g. enterprise 30d, standard 60d?) | silence detection |
-| CS-4 | QBR delivery — Barak prefers meeting vs PDF-only per customer? Default to meeting for enterprise-strategic? | QBR cadence config |
-| CS-5 | Which Monday column on the CRM board is the authoritative "customer status" — do we write to that, or to a separate "auto-status" column to avoid overwriting Barak's edits? | Monday integration safety |
+| CS-1 | Tier weights per `CustomerTier` | Ship with `customer-tier-weights.json` defaults: enterprise-strategic weights AR-aging + touchpoint-recency 1.5×; standard uses flat weights. Barak's optional OB-5 file overrides. |
+| CS-2 | SLA windows per tier | Default: enterprise-strategic 4h response / 2 business-day resolution; enterprise-large 8h / 3d; standard 1 business day / 5d; one-off best-effort. Config in `cs-config.json`. |
+| CS-3 | Silence-alert threshold per tier | Default: enterprise-strategic 30d, enterprise-large 45d, standard 60d, one-off none. |
+| CS-4 | QBR delivery | Default: meeting for enterprise-strategic + enterprise-large; PDF-only for standard; none for one-off. |
+| CS-5 | Authoritative Monday column | **Write to a separate `auto-status` column** — never overwrite Barak's manual `status` column (constitutional §3.6a: don't clobber operator facts). Barak's column is read-only to the agent. |
 
 ---
 

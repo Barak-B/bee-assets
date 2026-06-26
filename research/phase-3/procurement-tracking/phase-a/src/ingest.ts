@@ -8,7 +8,6 @@ import type {
   ProcurementEventSource,
   RawProcurementEvent,
 } from "./types.js";
-import { cursorAdvances } from "./types.js";
 import { cleanDescription } from "./normalize.js";
 import { acquireLock } from "./lock.js";
 import { makeValidator } from "./validate.js";
@@ -52,14 +51,18 @@ export async function ingestProcurement(prisma: PrismaClient, opts: IngestOpts):
   const insertedPoIds: string[] = [];
 
   try {
+    // The cursor is a FETCH hint to the source only (epoch = read everything). It is NOT
+    // used to filter rows in the orchestrator — hard-key dedup on (source, sourceRefId) is
+    // the authoritative idempotency guarantee. (Earlier bug: a per-event cursorAdvances gate
+    // combined with per-event advance dropped any in-batch event whose (observedAt, sha) was
+    // not strictly increasing — e.g. files emitted in filename order with out-of-order mtimes.
+    // Hard-dedup now owns idempotency; the source still does its own coarse cursor filter.)
     const cursor: Cursor = { ts: new Date(0), refId: "" };
 
     for await (const batch of source.next(cursor)) {
       rowsRead += batch.length;
 
       for (const raw of batch) {
-        if (!cursorAdvances(cursor, raw)) continue;
-
         // §3.4 hard-key dedup
         const exists = await prisma.purchaseOrder.findUnique({
           where: { source_sourceRefId: { source: raw.source, sourceRefId: raw.sourceRefId } },
@@ -121,7 +124,7 @@ export async function ingestProcurement(prisma: PrismaClient, opts: IngestOpts):
                     qty: l.qty,
                     unit: l.unit,
                     unitPriceCents: l.unitPriceCents,
-                    lineTotalCents: BigInt(Math.round(Number(l.unitPriceCents) * l.qty)),
+                    lineTotalCents: l.lineTotalCents,   // computed once in extract.ts (BigInt-safe)
                   })),
                 },
               },
@@ -132,10 +135,6 @@ export async function ingestProcurement(prisma: PrismaClient, opts: IngestOpts):
           insertedPoIds.push(id);
         }
         // extracted.kind === "invoice" is wired in Phase B (parser stub doesn't emit it yet)
-
-        // Advance local cursor
-        cursor.ts = raw.observedAt;
-        cursor.refId = raw.sourceRefId;
       }
     }
 
@@ -207,8 +206,9 @@ export async function ingestProcurement(prisma: PrismaClient, opts: IngestOpts):
 }
 
 /**
- * Convenience overload — accepts a `RawProcurementEvent[]` array directly,
- * bypassing the source interface. Used by tests and the CLI `ingest --inline`.
+ * Convenience overload — accepts a `RawProcurementEvent[]` array directly, bypassing
+ * the source interface. Useful for tests and for the BEE-app port (e.g. feeding events
+ * straight from Gmail/WA adapters without a directory source). Not yet wired to the CLI.
  */
 export async function ingestEvents(
   prisma: PrismaClient,

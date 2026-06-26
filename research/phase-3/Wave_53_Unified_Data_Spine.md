@@ -11,11 +11,11 @@
 | Wave | One sentence | LLD | Phase A code |
 |---|---|---|---|
 | **53/A — Bank** | Idempotent, locked, validated ingestion of Mercantile bank transactions. | [`bank-receipts-ingestion/LLD.md`](bank-receipts-ingestion/LLD.md) | ✅ [`bank-receipts-ingestion/phase-a/`](bank-receipts-ingestion/phase-a/) (~1,175 LOC, TS+SQL+tests, cloud-verified) |
-| **53/B — Procurement** | Same pattern for supplier emails/WA/PDF → `Supplier`/`PurchaseOrder`/`SupplierInvoice` with a watchlist gate for new suppliers. | [`procurement-tracking/LLD.md`](procurement-tracking/LLD.md) | `[OPEN]` — reuses 53/A `lock.ts`/`normalize.ts`/`survive.ts` |
+| **53/B — Procurement** | Same pattern for supplier emails/WA/PDF → `Supplier`/`PurchaseOrder`/`SupplierInvoice` with a watchlist gate for new suppliers. | [`procurement-tracking/LLD.md`](procurement-tracking/LLD.md) | ✅ [`procurement-tracking/phase-a/`](procurement-tracking/phase-a/) (~1,780 LOC, ManualUpload+dry-run, cloud-verified) — reuses 53/A primitives |
 | **53/C — Proposals** | Brief → `engineering-agent` suite → Hebrew RTL PDF → Barak approves → customer. Emission side. | [`proposal-skill-template/LLD.md`](proposal-skill-template/LLD.md) | `[OPEN]` |
 | **53/D — Ledger** | Polymorphic `LedgerEntry` per entity → `כרטסות` + AR/AP aging + tax filings + monthly executive ⚡. The רו"ח-facing view. | [`accounting-ledger/LLD.md`](accounting-ledger/LLD.md) | `[OPEN]` |
 
-**The spine is complete on paper.** What's missing is the BEE-app port + the 5 open questions answered (most are in 53/D § 8).
+**The spine is complete on paper, and 53/A + 53/B Phase A reference code is shipped + cloud-verified.** The 10 architectural questions are answered (`decisions-2026-06-16.md`); what's left is the BEE-app port + 5 artifact dropoffs (§9).
 
 ---
 
@@ -78,20 +78,21 @@ These are concrete modules in `bank-receipts-ingestion/phase-a/src/` that every 
 ### 3.1 Bank ↔ Procurement (incoming side reconciliation)
 
 - Wave 53/A posts a `BankTransaction` outflow.
-- Wave 53/B reconciler scans open `SupplierInvoice` rows for that supplier, ±5% amount, ±60d date.
+- Wave 53/B reconciler scans open `SupplierInvoice` rows for that supplier, **±5% amount, postedAt→+90d date** (one canonical tolerance across A↔B, A↔D, and `accounting-ledger/LLD.md` §3.4/§4.2 — do not diverge).
 - On match → both rows update; ledger entry pair posts (53/D).
 - Documented: `procurement-tracking/LLD.md` §6.
 
 ### 3.2 Bank ↔ Customer-side AR (incoming inflow → invoice settled)
 
 - Wave 53/A posts a `BankTransaction` **inflow**.
-- Wave 53/D reconciler scans open `CustomerInvoice` for that customer, ±5% amount, ±90d date.
+- Wave 53/D reconciler scans open `CustomerInvoice` for that customer, ±5% amount, postedAt→+90d date.
 - On match → invoice flips to `paid`, both `LedgerEntry` rows flip `matched=true`, cross-linked.
 - Documented: `accounting-ledger/LLD.md` §3.4.
 
 ### 3.3 Proposals → Invoices → Ledger
 
 - `Proposal.status='accepted'` → fires a creator that issues `CustomerInvoice` (with SHAAM allocation if above threshold per `il-einvoicing-shaam.md`).
+- **Ownership:** the `CustomerInvoice` *model* lives in 53/D's schema (`accounting-ledger/LLD.md` §3.1); its *creation* on proposal-accept is the 53/C→53/D coupling step (build-plan row 14 + coupling). Invoice number is continuous/monotonic per LD-4. Neither LLD alone "owns" it — it is the seam.
 - `CustomerInvoice` posts a `LedgerEntry` CREDIT to the customer.
 - Now the customer's כרטסת shows the pending balance immediately.
 
@@ -103,9 +104,9 @@ These are concrete modules in `bank-receipts-ingestion/phase-a/src/` that every 
 
 ### 3.5 Tax authority as a first-class entity
 
-- `LedgerEntityKind.TAX_AUTHORITY` lets VAT and מקדמות filings appear in the ledger like any supplier.
+- `LedgerEntityKind.TAX_AUTHORITY` lets VAT (monthly, LD-3) and ביטוח-לאומי filings appear in the ledger like any supplier. (מקדמות מס הכנסה = 0% per LD-2 — no filing row.)
 - `alfred-deadlines.js` (already cron) generates `TaxFiling` rows for upcoming periods.
-- Pre-fill drafts are produced by 53/D §3.6 and dropped in the accountant pack.
+- Pre-fill drafts are produced by 53/D §3.6 and dropped in the **Invoice Maven export pack** (LD-1).
 
 ---
 
@@ -138,9 +139,9 @@ A normal week with the spine live (post-MVP, A+B+C+D Phase A-D each):
 
 **Friday.** Customer pays. Mercantile transaction posts. Wave 53/A picks it up. Wave 53/D reconciler matches it against the open invoice. כרטסת הלקוח updates. You don't see it — but if a payment was *expected* and didn't arrive: `⚡ ההצעה ל-יוסי תוקעה ב-'sent' 14 ימים, אין תזכורת — לטיוטה?`
 
-**1st of next month, 09:00.** `💰 הספרים · יוני 2026` arrives. 3 minutes to read. Top line, AR aging, AP aging, VAT due, מקדמות, רווחיות פר-פרויקט, תזרים 13 שבועות, 3 פעולות מומלצות.
+**1st of next month, 09:00.** `💰 הספרים · יוני 2026` arrives. 3 minutes to read. Top line, AR aging, AP aging, VAT due (monthly), רווחיות פר-פרויקט, תזרים 13 שבועות, 3 פעולות מומלצות. (No מקדמות line — 0% per LD-2.)
 
-**Quarterly, when you press the button.** Accountant pack drops in Drive, mail goes to ROEH_EMAIL. He responds with adjustments. You apply or push back.
+**Monthly, when you press the button.** Invoice Maven export pack (customers/suppliers/transactions CSV) drops in Drive, mail goes to ACCOUNTANT_EMAIL. The רו"ח imports into Invoice Maven, responds with adjustments. You apply or push back.
 
 Everything that **isn't** in that week — supplier follow-ups, manual aging review, weekly Monday spreadsheets — got absorbed.
 
@@ -158,11 +159,13 @@ What "MVP" means at the spine level: the minimum that ends the בעל-פה layer
 | **53/C Phases A-C** | schema + 1 template + dry-run + brief structuring | ~15h | Fixture brief → valid PDF with correct totals |
 | **53/D Phases A-D** | LedgerEntry + 53/A-C hooks + materialized views + כרטסת API | ~18h | Real customer's כרטסת matches Invoice Maven hand-check |
 | **Coupling tests** | A↔B reconcile · A↔D AR settle · C→CustomerInvoice→D | ~5h | One closed-loop per coupling |
-| **Spine MVP total** | | **~58h** | |
+| **53/A-D MVP subtotal** (engineering stubbed) | | **~58h** | |
+| Wave 54 engineering MVP (Phases A-F, real not stubbed) | feeds 53/C proposals | ~31h | per `engineering-agent/LLD.md` §5 |
 | --- | --- | --- | --- |
-| 53/A D-G, 53/B D-H, 53/C D-H, 53/D E-J | full feature parity | ~120h | per-wave gates in each LLD §5 |
+| **Spine MVP all-in** | see `mvp-build-plan.md` (authoritative roadmap) | **~87h** | rows 1-15 |
+| Full feature parity (all waves D-J + Wave 55) | | ~152h more (~239h all-in) | per-wave gates in each LLD §5 |
 
-These are spec hours, not calendar. Calendar depends on Barak's bandwidth + whether sessions push code locally vs in cloud.
+These are spec hours, not calendar. **`mvp-build-plan.md` is the authoritative roadmap** (23 rows, owners, blockers); this table is the spine-level rollup. The ~58h here is the 53/A-D slice with engineering stubbed; the build plan's ~87h adds the real Wave 54 engineering MVP that proposals depend on. Calendar depends on Barak's bandwidth + whether sessions push code locally vs in cloud.
 
 ---
 
@@ -194,20 +197,22 @@ These are spec hours, not calendar. Calendar depends on Barak's bandwidth + whet
 
 **Status (2026-06-16):** the 10 architectural questions (LD-1..5 + EA-1..5) are **answered → see [`decisions-2026-06-16.md`](decisions-2026-06-16.md)**. Affected LLDs patched in the same commit.
 
-Remaining items are **artifacts Barak shares** (not architectural decisions):
+Remaining items are **artifacts Barak shares** (not architectural decisions) — the 5 canonical dropoffs, matching `decisions-2026-06-16.md` §E and `mvp-build-plan.md` §6:
 
 | # | Item | Who unblocks |
 |---|---|---|
-| OB-1 | Vendor cable-table PDFs (EA-1 follow-up) → I parse into JSON | Barak |
+| OB-1 | Vendor cable-table PDFs (EA-1 follow-up) → I parse into JSON | Barak (blocks Wave 54 Phase B) |
 | OB-2 | Invoice Maven export sample (LD-1, LD-5) — one real period | Barak (blocks 53/D Phase A0) |
-| OB-3 | 3-5 closed fault cases (EA-5 follow-up) as JSON fixture | Barak (blocks Wave 54 Phase G) |
-| OB-4 | Real Mercantile portal CSV header strings (Z-A1) | Barak (blocks 53/A Phase B) |
-| OB-5 | Per-tier scoring weights for `CustomerHealth` (Wave 55 CS-1) | Barak (sensible defaults if not specified) |
-| Z-B1 | Watchlist approval UX — reply with `/supplier approve <id>` or drafts-group picker? | minor — Barak picks |
-| Z-B2 | Inventory tracking — leaning skip (project-based) | confirm |
-| Z-C1 | Template authoring — MS Word hand-off to engine? | confirm |
-| Z-C2 | Fixture customer brief | Barak picks one past project |
-| Z-D1 | Next wave after A+B+C+D MVP | open — likely customer-success-agent (already speced) |
+| OB-3 | 3-5 closed fault cases (EA-5 follow-up) as JSON fixture | Barak (blocks Wave 54 Phase G1) |
+| OB-4 | Real Mercantile portal CSV header strings | Barak (blocks 53/A Phase B) |
+| OB-5 | Per-tier scoring weights for `CustomerHealth` (Wave 55) | Barak (sensible defaults if not specified) |
+
+**Previously-listed "Z" soft items — now resolved in the LLD bodies** (no longer open):
+- Z-B1 watchlist UX → `/supplier approve|merge|ignore <id>` slash command (procurement `phase-a/src/suppliers.ts` + LLD §3.5). ✅
+- Z-B2 inventory → **skip** (project-based ordering); procurement LLD §7 confirms. ✅
+- Z-C1 template authoring → **MS Word hand-off** to the engine; proposal LLD §3.4 + build-plan row 14 confirm. ✅
+- Z-C2 fixture brief → folded into OB-set when Barak picks a past project (not a blocker; a stub fixture exists). ✅
+- Z-D1 next wave → **customer-success-agent (Wave 55)**, already spec'd. ✅
 
 **These are dropoffs, not blockers.** MVP architecture is locked.
 

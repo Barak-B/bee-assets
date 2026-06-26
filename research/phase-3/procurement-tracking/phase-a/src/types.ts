@@ -42,6 +42,7 @@ export interface ExtractedPOLine {
   qty: number;            // up to 3 decimal places (DB column is DECIMAL(10,3))
   unit: string;
   unitPriceCents: bigint;
+  lineTotalCents: bigint;  // computed ONCE in extract.ts (BigInt-safe); ingest reuses it
 }
 
 export interface ExtractedInvoice {

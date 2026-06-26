@@ -58,12 +58,30 @@ class PgRowLockProvider implements LockProvider {
   }
 }
 
+// When Redis is configured we still keep a PG provider so a *set-but-unreachable*
+// REDIS_URL degrades gracefully instead of hard-failing every ingest. Redis errors
+// (connection/command) fall back to PG; a clean `null` (lock genuinely held) does NOT
+// fall back — otherwise we'd double-acquire across the two backends.
+class FallbackLockProvider implements LockProvider {
+  private redis: RedisLockProvider;
+  private pg: PgRowLockProvider;
+  constructor(redis: RedisLockProvider, pg: PgRowLockProvider) { this.redis = redis; this.pg = pg; }
+  async acquire(key: string, ttlSeconds: number): Promise<LockHandle | null> {
+    try {
+      return await this.redis.acquire(key, ttlSeconds);
+    } catch {
+      return this.pg.acquire(key, ttlSeconds);
+    }
+  }
+}
+
 let _provider: LockProvider | null = null;
 
 export function getLockProvider(prisma: PrismaClient): LockProvider {
   if (_provider) return _provider;
   const url = process.env.REDIS_URL;
-  _provider = url ? new RedisLockProvider(url) : new PgRowLockProvider(prisma);
+  const pg = new PgRowLockProvider(prisma);
+  _provider = url ? new FallbackLockProvider(new RedisLockProvider(url), pg) : pg;
   return _provider;
 }
 

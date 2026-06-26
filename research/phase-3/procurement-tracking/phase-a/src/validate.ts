@@ -30,11 +30,12 @@ export function makeValidator(prisma: PrismaClient): Validator {
       const missing = insertedPoIds.filter((id) => !foundIds.has(id));
 
       for (const r of found) {
-        if (!r.supplierId || !r.source || !r.sourceRefId || r.totalCents === undefined || !r.orderedAt) {
+        // NOT-NULL columns are guaranteed present; the meaningful invariants are a
+        // positive total and at least one line (a zero/empty PO is structurally invalid).
+        if (!r.supplierId || !r.source || !r.sourceRefId || !r.orderedAt || r.totalCents <= 0n) {
           missing.push(r.id);
         }
         if (r.lines.length === 0) {
-          // A PO with zero lines is structurally invalid in our model
           missing.push(r.id);
         }
       }

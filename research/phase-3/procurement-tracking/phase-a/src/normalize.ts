@@ -7,9 +7,12 @@
 
 import { fromZonedTime } from "date-fns-tz";
 
+// Multi-letter grammatical connectives safe to strip as standalone words.
+// Single bare letters (ה/מ/ל/ב) and ambiguous nouns (בית, אל) were REMOVED — as
+// standalone tokens they destroy legitimate supplier names. They are still stripped
+// when ATTACHED as a prefix (hyphen/maqaf branch below).
 const HEBREW_CONNECTIVES = [
-  "ה", "של", "מ", "מן", "אצל", "אצלו", "ל", "ב", "בית",
-  "אל", "מאת", "דרך", "בעבור", "עבור", "מטעם",
+  "של", "מן", "אצל", "אצלו", "מאת", "דרך", "בעבור", "עבור", "מטעם",
 ];
 
 // Corporate-form suffixes — strip from END of normalized name.
@@ -45,8 +48,9 @@ export function cleanSupplierName(s: string): string {
     }
   }
 
-  // Strip prefix-attached connectives ("מ-בנק" → "בנק")
-  t = t.replace(/^[המבלשו]־/u, "");
+  // Strip a single Hebrew prefix letter ATTACHED with a maqaf (U+05BE) or ASCII hyphen
+  // ("מ-בנק" → "בנק"). Both dash forms appear in real data.
+  t = t.replace(/^[המבלשו][־-]\s*/u, "");
 
   // Strip corporate suffixes — Hebrew first (preserve boundary chars), then Latin
   for (const re of CORP_SUFFIX_HEBREW) {

@@ -6,20 +6,21 @@
   "scripts": {
     "build": "tsc",
     "check": "tsc --noEmit",
-    "selftest": "node --experimental-strip-types src/cli.ts selftest",
-    "test": "node --test --experimental-strip-types tests/dryrun.test.ts",
-    "dry-run": "node --experimental-strip-types src/cli.ts ingest --source tests --name test:dry --dry-run"
+    "selftest": "tsx src/cli.ts selftest",
+    "test": "node --import tsx --test tests/dryrun.test.ts",
+    "dry-run": "tsx src/cli.ts ingest --source tests --name test:dry --dry-run"
   },
+  "comment_scripts": "Run via tsx (not bare node --experimental-strip-types): type-stripping does NOT rewrite '.js'→'.ts' import specifiers, so bare node throws ERR_MODULE_NOT_FOUND. For production, `npm run build` then run dist/*.js.",
   "dependencies": {
     "@prisma/client": "^5.20.0",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.2.0",
-    "ioredis": "^5.4.0",
-    "zod": "^3.23.0"
+    "ioredis": "^5.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
     "prisma": "^5.20.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   },
   "engines": {
