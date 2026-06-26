@@ -47,8 +47,8 @@
        • grid outage
 
 3. Cross-reference inverter status codes:
-   - Map SolarEdge/Sungrow/SMA error codes → known causes
-   - (maintain a code→cause lookup table per brand)
+   - Map SolarEdge/iSolarCloud/Deye/KStar/ABB error codes → known causes
+   - (maintain a code→cause lookup table per brand; also pg_trgm lookup vs FaultCase per EA-5)
 
 4. Check warranty status (from KG :Equipment):
    - If component under warranty → claim, don't buy

@@ -16,7 +16,7 @@
   },
   "target_capacity_kwp": 50,
   "module_brand": "Jinko" | "Trina" | "Longi" | "LG" | "...",
-  "inverter_brand": "SolarEdge" | "Sungrow" | "SMA",
+  "inverter_brand": "SolarEdge" | "KStar" | "ABB" | "Deye",
   "shading_obstacles": [{"type": "skylight", "area_m2": 4}]
 }
 ```
@@ -31,10 +31,10 @@
      (0.85 = walkway + setback factor)
    - If doesn't fit → reduce target OR suggest higher-wattage panel
 
-2. Inverter selection:
-   - DC/AC ratio target: 1.1 - 1.25 (oversizing for clipping economics)
-   - inverter_ac_kw = target_kwp / 1.15
-   - Pick inverter model from fleet brands (SolarEdge/Sungrow/SMA)
+2. Inverter selection (EA-2 + EA-3):
+   - DC/AC ratio target is PER-INVERTER-MODEL (inverter-specs.json: dcAcRatioMax/dcAcRatioRecommended), NOT a global 1.1-1.25.
+   - inverter_ac_kw = target_kwp / selected model's dcAcRatioRecommended
+   - Try ALL fleet brands (SolarEdge/KStar/ABB/Deye), score each (DC/AC fit + string efficiency + clipping + BOM cost + brand bonus), return top-3; default to #1.
    - Single inverter if <= its max; else multiple
 
 3. String configuration (CRITICAL — voltage limits):

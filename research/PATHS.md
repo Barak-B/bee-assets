@@ -27,7 +27,7 @@
 | Wrong | Why it's wrong | Use instead |
 |---|---|---|
 | `E:\Desktop\OpenClawAgent\workspace\` | does not exist (PathNotFound, live test) | workspace → `C:\Users\Barak\.openclaw\workspace\`; scripts → `E:\Desktop\OpenClawAgent\` |
-| `E:\Desktop\OpenClawAgent\scripts\` | scripts are at repo root, no subdir | `E:\Desktop\OpenClawAgent\` |
+| `E:\Desktop\OpenClawAgent\scripts\` | scripts are at repo root, no subdir. ⚠️ This stale `\scripts\` prefix appears in `phase-1-execution-log.md` + `phase-1-final-status.md` (historical 2026-05 logs) — those references are superseded by THIS table; do not copy paths from them. | `E:\Desktop\OpenClawAgent\` |
 | `C:\Users\Barak\.openclaw\workspace\scripts\` | the workspace holds data/markdown, not the JS scripts | `E:\Desktop\OpenClawAgent\` |
 
 ## bee-prod-1 (Hetzner CX52)

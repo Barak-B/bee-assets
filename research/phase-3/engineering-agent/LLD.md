@@ -44,7 +44,7 @@
 | `protection_coordination` | **0** (selectivity tables + IEC 60898/60947 ratings) | **2** for complex topologies with multiple inverters / battery / generator | Standard radial topology is formulaic; mixed-source coordination needs reasoning |
 | `bom_generator` | **0** (lookup from `PriceBenchmark` 53/B + Excel pricebook fallback) | **1** (DeepSeek flash) only when item description is ambiguous | Pure data join — the LLM only helps when supplier called something different than canonical |
 | `performance_forecast` | **1 + Vision** per EA-4 decision: Open-Meteo GHI/DNI + Vision-LLM (Claude Sonnet or Gemini Vision) on ≥1 site photo → per-month shading factor (12 numbers) | **2** for very-complex sites with mixed obstructions | Vision is now the default, not the upgrade. Cost ~$0.05-0.15/design, cached per `siteId × season` |
-| `fault_analysis` | **1** (DeepSeek pro reasoning over SolarEdge/Sungrow/SMA telemetry + ladder of common failures) | **2** (Sonnet) for novel symptoms not in the failure ladder | Almost always reasoning over data; rarely needs the deepest model |
+| `fault_analysis` | **1** (DeepSeek pro reasoning over SolarEdge/iSolarCloud/Deye telemetry + FaultCase ladder) | **2** (Sonnet) for novel symptoms not in the failure ladder | Almost always reasoning over data; rarely needs the deepest model |
 | **Orchestrator** (this LLD's runtime) | **0** | none | Pure routing + caching |
 
 **Tier 4 (Opus)** is for *designing* this agent — never for runtime. Once a sub-skill is built it runs at ≤ Tier 2.
@@ -492,7 +492,7 @@ All `EngInputError` / `EngTableMissError` / `EngSanityError` failures:
 | Phase | Hours | Deliverable | Gate |
 |---|---|---|---|
 | **A. Schema + reference tables + orchestrator skeleton** | 5h | DesignArtifact migration, 4 JSON tables committed, orchestrator that calls 5 stub sub-skills | Cache round-trip works (hash → store → re-hash → cache hit) |
-| **B. wire_sizing (strict Tier 0)** | 5h | Real cable-il.json built from תקנות החשמל; voltage-drop formula; refuses LLM escalation | 10 reference cases match Barak's hand calc within rounding |
+| **B. wire_sizing (strict Tier 0)** | 5h | Real `cable-tables/<vendor>/*.json` built from תקנות החשמל + vendor PDFs (OB-1); voltage-drop formula; refuses LLM escalation | 10 reference cases match Barak's hand calc within rounding |
 | **C. pv_design_calc + sanity checks** | 6h | String-sizing + DC/AC ratio + Voc temperature check | 5 fixture sites (3 res / 2 commercial) match Barak's SketchUp output |
 | **D. protection_coordination** | 6h | Breaker selection from breaker-curves.json, selectivity rules, RCD type B | Standard topology + 1 multi-source case validated |
 | **E. bom_generator + PriceBenchmark hookup (53/B link)** | 5h | Pulls live supplier prices; markup applied per customer tier | Real proposal end-to-end with current prices, off Excel pricebook |

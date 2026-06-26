@@ -53,7 +53,7 @@ Legend:
 | `cash-flow-snapshot` | 🟢 ADOPT | 30/60/90 forecast w/ confidence bands. **Rewire:** QuickBooks → BEE app PostgreSQL + Invoice Maven AR data. Critical for commercial customers (137). |
 | `invoice-chase` | 🟢 ADOPT | Overdue invoice follow-up. **Rewire:** PayPal → Invoice Maven + WhatsApp send (not email). |
 | `margin-analyzer` | 🟢 ADOPT | Profit margin per project. **Rewire:** pricebook xlsx (already exists) + BEE app project data. **High value** — BEE has 9 batteries + 8 panel types + supplier prices. |
-| `month-end-prep` | 🟡 PARTIAL | Israeli tax cycle differs (VAT bi-monthly, not monthly close). Adapt to ה-תקנות הישראליות. |
+| `month-end-prep` | 🟡 PARTIAL | Israeli tax cycle: BEE files VAT **monthly** per LD-3 (`VAT_PERIOD_MONTHS=1`). Adapt to ה-תקנות הישראליות. |
 | `close-month` | 🟡 PARTIAL | Same — adapt to Israeli accounting. |
 | `tax-prep` | 🔴 SKIP | US tax — irrelevant. Israeli equivalent: `alfred-deadlines.js` already covers VAT/income/insurance per AGENTS.md. |
 | `tax-season-organizer` | 🔴 SKIP | US-specific. |

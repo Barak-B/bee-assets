@@ -18,7 +18,7 @@ Scope:
   - Gmail IMAP (two accounts — primary + `barak-barzel@barak-e.com`)
   - Phone-call transcripts (`bee-whisper`)
   - Bank receipts → master DB at `E:\bee-build`
-  - SolarEdge / Sungrow / SMA (149 inverters, 87+ sites)
+  - SolarEdge / iSolarCloud / Deye / KStar / ABB monitoring (149 inverters across 87+ inverter-monitored sites). Business totals per `knowledge-base/barak-skills-audit.md`: **137 customers, 255 sites, 18 vehicles** (monitored-site count ≠ total-site count — both are correct, different denominators).
 
 ## 2. Cost-tier dispatch model (5 tiers — never skip)
 
@@ -67,7 +67,7 @@ Long whisper transcripts, big PDFs, batch n8n flows MUST include:
 
 Before creating any `:Customer` / `:Lead` / `:BankReceipt`:
 
-1. **Normalize** the input string — strip Hebrew connectives (`ה`, `של`, `מ`, `דרך`, `אצל`, `ל`), collapse whitespace, normalize quotes.
+1. **Normalize** the input string — strip multi-letter Hebrew connectives as standalone words (`של`, `מן`, `אצל`, `מאת`, `דרך`, `בעבור`, `מטעם`), collapse whitespace, normalize quotes. **Single bare letters (`ה`/`מ`/`ל`/`ב`) and ambiguous nouns (`בית`, `אל`) are stripped ONLY when attached as a hyphen/maqaf prefix — never as standalone tokens** (else "בית הספר"→"הספר", "אל על"→"על"). Burned 2026-06-26 from the phase-a audit. JS `\b` is ASCII-only, so Hebrew boundaries need explicit `(^|\s)…(\s|$)` anchors, and both the maqaf `־` and ASCII `-` hyphen forms appear in real data.
 2. **Match on a hard key first** — phone in E.164, bank transaction id, JID, message hash.
 3. If no hard-key match, run **Levenshtein > 85%** against existing same-kind entities scoped by region/customer.
 4. If hit → **append activity to the existing entity**, never open a new one.
@@ -220,8 +220,22 @@ Get-Process syncthing -ErrorAction SilentlyContinue              # Syncthing (sy
 | 12 | Voice-action skill | shipped |
 | 13 | OpenClaw-alfred sole WhatsApp brain | shipped |
 | Graphify deploy | KG index of OpenClawAgent + bee-assets | ✅ -Full live 2026-06-13: OpenClawAgent 2,180/3,468/293 labeled ($0.036) · bee-assets 642/995/51 labeled ($0.056) |
-| **NEXT** | bank-receipts ingestion · n8n spine · CRM component | **choosing now** |
+| **53 — Unified Data Spine** | A bank · B procurement · C proposals · D ledger | ✅ all 4 LLDs shipped + decisions locked (2026-06-16). 53/A + 53/B Phase A reference code shipped + cloud-verified. Phases B+ pending BEE-app port + 5 artifact dropoffs. See `phase-3/mvp-build-plan.md`. |
+| **54 — Engineering agent** | PV-design brain (6 sub-skills) | ✅ LLD shipped + EA-1..5 decisions locked. Code pending (build-plan rows 8-13). |
+| **55 — Customer-success agent** | health + QBR + AR nudges | ✅ LLD shipped, defaults locked. Code pending (build-plan row 17). |
+
+## 10. Constitutional laws + trust tiers (referenced spine-wide)
+
+These are cited across the spine LLDs and KB; defined canonically here.
+
+- **Law #1 — Four destinations only.** Any agent-originated outbound message may go to exactly one of four places: (a) Barak's self-chat (⚡), (b) the drafts group (for Barak to pick/send), (c) a write to the BEE DB, (d) the `err_manifest`. **No agent ever sends directly to a customer/supplier/third party** without an explicit `approvedByBarakAt` gate. Enforced inside Alfred's `dispatchSend()`.
+- **Law #2 — Human picks.** When an action affects a real-world relationship (send a proposal, approve a new supplier, reply to a person), the agent produces a *draft* and a human selects. Never auto-fires. The new-supplier watchlist (§3.4) and `sendProposal` approval gate are instances.
+- **Trust tiers (L0/L1/L2)** — how much autonomy an agent has over a data class:
+  - **L0** — read-only / observe. No writes.
+  - **L1** — write to DB + draft outbound, but every outbound needs Law-#2 human pick. (Most spine agents run here.)
+  - **L2** — may auto-send within a pre-approved, narrowly-scoped envelope (e.g. an internal ⚡ to Barak). Granted explicitly, per skill.
+  - Nothing in the KB is acted on by an L1+ agent without a `[VERIFIED]` tag on the underlying fact.
 
 ---
 
-*Burned 2026-06-12 21:25 Asia/Jerusalem (v2 — Singularity refinements). Update on every architectural drift — diff this file when the truth changes.*
+*Burned 2026-06-12 21:25 Asia/Jerusalem (v2). Updated 2026-06-26 (Wave 53/54/55 status, constitutional laws + trust tiers added, normalize lesson burned from phase-a audit). Update on every architectural drift — diff this file when the truth changes.*

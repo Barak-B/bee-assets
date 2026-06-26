@@ -137,7 +137,7 @@ User invocation patterns:
 |---|---|
 | QuickBooks AR aging | Invoice Maven |
 | PayPal/Stripe settlement | BEE PG payment_received events |
-| US tax handling | N/A (Israeli VAT bi-monthly cycle, not in scope) |
+| US tax handling | N/A (Israeli VAT — monthly for BEE per LD-3, `VAT_PERIOD_MONTHS=1`; owned by 53/D, not here) |
 | English output | Hebrew RTL output |
 | Confidence ±50% default | Same |
 | `--save-to files/desktop/both` | `--save-to drive/local/both` (Israeli cloud) |
