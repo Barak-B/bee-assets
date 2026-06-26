@@ -1,0 +1,28 @@
+{
+  "name": "procurement-tracking-phase-a",
+  "version": "0.1.0",
+  "description": "Phase A: schema + lock + ManualUploadSource + dry-run for procurement-tracking ingestion (per LLD.md §5). Standalone reference impl — port src/ into BEE app, run migration via prisma migrate deploy.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "selftest": "node --experimental-strip-types src/cli.ts selftest",
+    "test": "node --test --experimental-strip-types tests/dryrun.test.ts",
+    "dry-run": "node --experimental-strip-types src/cli.ts ingest --source tests --name test:dry --dry-run"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
+    "ioredis": "^5.4.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "prisma": "^5.20.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

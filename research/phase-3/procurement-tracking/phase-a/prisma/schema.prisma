@@ -1,0 +1,222 @@
+// Phase A — standalone Prisma schema for procurement-tracking (per LLD.md §3.2)
+//
+// Self-contained schema: includes Wave 53/A models (BankAccount/BankTransaction/
+// IngestRun/IngestionLock) so this directory can be migrated and tested
+// independently. When porting into BEE app's `schema.prisma`, copy ONLY the
+// 6 new procurement models below the divider — the 53/A models are already
+// there.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// === Wave 53/A models (copied for standalone migration) ===
+// ============================================================
+
+model BankAccount {
+  id              String   @id @default(cuid())
+  iban            String   @unique
+  bankCode        String                                      // 17=Mercantile (Discount subsidiary) 11=Discount 12=Hapoalim 10=Leumi 20=Mizrahi
+  accountNumber   String
+  alias           String?
+  currency        String   @default("ILS")
+  createdAt       DateTime @default(now())
+  cursorTs        DateTime?
+  cursorTxId      String?
+  transactions    BankTransaction[]
+}
+
+model BankTransaction {
+  id                String   @id @default(cuid())
+  accountId         String
+  account           BankAccount @relation(fields: [accountId], references: [id])
+
+  externalTxId      String
+  valueDate         DateTime
+  bookingDate       DateTime?
+  amountCents       BigInt
+  currency          String   @default("ILS")
+  counterpartyRaw   String
+  counterpartyNorm  String
+  memo              String?
+
+  customerId        String?
+  invoiceMavenId    String?
+  category          String?
+  anomalyScore      Float?
+
+  sourceMode        String
+  ingestedAt        DateTime @default(now())
+  ingestRunId       String
+  validated         Boolean  @default(false)
+
+  supplierInvoices  SupplierInvoice[]                         // 53/B back-ref (Phase G)
+
+  @@unique([accountId, externalTxId])
+  @@index([accountId, valueDate, externalTxId])
+  @@index([counterpartyNorm])
+  @@index([customerId])
+}
+
+model IngestRun {
+  id                String   @id @default(cuid())
+  pipeline          String
+  sourceMode        String
+  accountId         String?
+  startedAt         DateTime @default(now())
+  finishedAt        DateTime?
+  status            String
+  rowsRead          Int      @default(0)
+  rowsInserted      Int      @default(0)
+  rowsDedupedHard   Int      @default(0)
+  rowsDedupedFuzzy  Int      @default(0)
+  errorCode         String?
+  errorMessage      String?
+
+  @@index([pipeline, startedAt(sort: Desc)])
+}
+
+model IngestionLock {
+  key         String   @id
+  holderPid   String
+  acquiredAt  DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
+
+// =================================================================
+// === Wave 53/B procurement models (the diff this Phase ships) ===
+// =================================================================
+
+model Supplier {
+  id                String   @id @default(cuid())
+  nameRaw           String                                    // first observed name
+  nameNorm          String   @unique                          // post §3.4 cleanup
+  taxId             String?                                   // ח.פ / ע.מ
+  contactEmail      String?
+  contactPhone      String?
+  waGroupJid        String?
+  paymentTermsDays  Int      @default(30)
+  avgLeadTimeDays   Float?                                    // rolling
+  category          String?                                   // pv-modules | inverters | cables | labor | ...
+  status            String   @default("watchlist")            // watchlist | active | inactive
+  notes             String?
+  createdAt         DateTime @default(now())
+
+  purchaseOrders    PurchaseOrder[]
+  invoices          SupplierInvoice[]
+
+  @@index([category])
+  @@index([status])
+}
+
+model PurchaseOrder {
+  id              String   @id @default(cuid())
+  poNumber        String?                                     // supplier-issued PO number
+  supplierId      String
+  supplier        Supplier @relation(fields: [supplierId], references: [id])
+
+  // Hard-key idempotency (§3.4)
+  source          String                                      // email | wa | manual | bee-app
+  sourceRefId     String                                      // gmail id | wa id | file sha256 | bee-app id
+
+  orderedAt       DateTime
+  expectedAt      DateTime?
+  receivedAt      DateTime?
+  totalCents      BigInt
+  currency        String   @default("ILS")
+  status          String                                      // open | partial | received | paid | cancelled
+
+  jobId           String?                                     // BEE app Job FK (string for now — full Job model lives in BEE)
+
+  rawText         String                                      // full extracted text — audit
+  ingestRunId     String
+  ingestedAt      DateTime @default(now())
+  validated       Boolean  @default(false)
+
+  lines           PurchaseOrderLine[]
+  leadTime        LeadTimeRecord?
+
+  @@unique([source, sourceRefId])
+  @@index([supplierId, orderedAt(sort: Desc)])
+  @@index([status])
+  @@index([expectedAt])
+}
+
+model PurchaseOrderLine {
+  id              String   @id @default(cuid())
+  poId            String
+  po              PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  sku             String?
+  description     String
+  descriptionNorm String                                      // for grouping + benchmarking
+  qty             Decimal  @db.Decimal(10, 3)
+  unit            String                                      // pcs | m | kg
+  unitPriceCents  BigInt
+  lineTotalCents  BigInt
+
+  @@index([descriptionNorm])
+}
+
+model SupplierInvoice {
+  id                     String   @id @default(cuid())
+  supplierId             String
+  supplier               Supplier @relation(fields: [supplierId], references: [id])
+
+  invoiceNumber          String
+  shaamAllocationNumber  String?                              // מספר הקצאה — KB.il-einvoicing-shaam.md
+  issuedAt               DateTime
+  dueAt                  DateTime
+  totalCents             BigInt
+  currency               String   @default("ILS")
+  status                 String                               // open | paid | partial | disputed
+
+  poIds                  String[]                             // covers multiple POs
+  bankTxId               String?                              // links to BankTransaction (Wave 53/A) once paid
+  bankTx                 BankTransaction? @relation(fields: [bankTxId], references: [id])
+
+  source                 String
+  sourceRefId            String
+  rawText                String
+  ingestRunId            String
+  ingestedAt             DateTime @default(now())
+  validated              Boolean  @default(false)
+
+  @@unique([source, sourceRefId])
+  @@unique([supplierId, invoiceNumber])
+  @@index([status, dueAt])
+}
+
+model PriceBenchmark {
+  id                 String   @id @default(cuid())
+  descriptionNorm    String                                   // matches PurchaseOrderLine.descriptionNorm
+  category           String
+  unit               String
+  windowStart        DateTime
+  windowEnd          DateTime
+  count              Int
+  avgUnitPriceCents  BigInt
+  stdDevCents        BigInt
+
+  @@unique([descriptionNorm, windowStart])
+  @@index([category])
+}
+
+model LeadTimeRecord {
+  id          String   @id @default(cuid())
+  supplierId  String
+  poId        String   @unique
+  po          PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  orderedAt   DateTime
+  receivedAt  DateTime
+  leadDays    Float
+
+  @@index([supplierId, orderedAt(sort: Desc)])
+}
