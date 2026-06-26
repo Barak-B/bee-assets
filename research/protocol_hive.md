@@ -171,7 +171,7 @@ Hands-on execution belongs to **(a) Claude Code running locally on Barak's machi
 ```
 
 - **Obsidian:** Hermes' #1 skill. New components get wikilink nodes (`[[Wave_45_Ingestion]]`, `[[Google_People_API]]`, `[[n8n_Automation_Spine]]`, `[[Bank_Receipts_Ingestion]]`).
-- **Graphify:** `git pull && pwsh research/graphify-deployment/scripts/install-windows.ps1` rebuilds. Auto-refresh via `graphify hook install` (active on `E:\Desktop\OpenClawAgent`).
+- **Graphify:** `git pull && pwsh research/graphify-deployment/scripts/install-windows.ps1` rebuilds. Auto-refresh via `graphify hook install` (active on `E:\Desktop\OpenClawAgent`). On **bee-assets** the loop is automated by a custom git hook — `pwsh research/scripts/install-git-hooks.ps1` (once) → every commit mirrors `research/**/*.md` into the vault + re-extracts graphify in the background. Manual run / first-time verify: `research/scripts/sync-vault-and-graphify.ps1 [-DryRun]`.
 - **protocol_hive.md:** editorial canon. Diff on every architectural drift.
 
 ## 7. Standard LLD response shape (the only shape accepted)

@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+# bee-assets post-commit hook — closes the protocol_hive.md §6 sync loop automatically.
+# After each commit: mirror research/**/*.md into the Obsidian vault + re-extract graphify.
+#
+# Runs in the BACKGROUND so it never blocks/slows the commit, and never fails it
+# (always exits 0). Installed via research/scripts/install-git-hooks.ps1 (sets
+# core.hooksPath). Disable: pwsh research/scripts/install-git-hooks.ps1 -Uninstall
+#
+# Cost note: graphify extract calls a paid LLM (DeepSeek). It runs INCREMENTALLY
+# (--update, only changed files), so it's cheap, but it is not free. To make the hook
+# vault-only (skip the paid extract):
+#     export BEE_HOOK_ARGS="-SkipPull -SkipGraphify"
+#
+REPO="$(git rev-parse --show-toplevel)"
+SCRIPT="$REPO/research/scripts/sync-vault-and-graphify.ps1"
+ARGS="${BEE_HOOK_ARGS:--SkipPull}"   # default: skip pull (we're mid-commit), do vault + graphify
+
+if [ ! -f "$SCRIPT" ]; then
+  echo "[post-commit] sync script missing ($SCRIPT) — skipping"
+  exit 0
+fi
+if ! command -v pwsh >/dev/null 2>&1; then
+  echo "[post-commit] pwsh not on PATH — skipping vault/graphify sync"
+  exit 0
+fi
+
+# Fire-and-forget: detached background process, output discarded.
+( pwsh -NoProfile -File "$SCRIPT" $ARGS >/dev/null 2>&1 & )
+echo "[post-commit] vault + graphify refresh started in background ($ARGS)"
+exit 0

@@ -191,9 +191,11 @@ graphify draw the edges and every child shows `[[BRAIN]]` in its backlinks panel
 - **Knowledge:** `[[Barak_Skills_Audit]]` · `[[il-einvoicing-shaam]]` · `[[il-pv-grid-connection]]` · `[[il-solar-regulation]]`
 - **Infra:** `[[Graphify]]` · `[[Alfred]]` · `[[Hermes]]` · `[[BEE Operations app]]`
 
-> **Sync (the §6 loop):** after any commit touching these files, re-sync the vault + re-extract
-> graphify from the local machine — `research/scripts/sync-vault-and-graphify.ps1`. The cloud
-> cortex authors but cannot reach the vault / `E:\` (protocol §5), so this step is local-only.
+> **Sync (the §6 loop):** automated on bee-assets by a git post-commit hook — run once on the
+> local machine: `pwsh research/scripts/install-git-hooks.ps1`. After that, every commit mirrors
+> `research/**/*.md` into the vault + re-extracts graphify in the background. Manual / verify:
+> `research/scripts/sync-vault-and-graphify.ps1 [-DryRun]`. The cloud cortex authors but cannot
+> reach the vault / `E:\` (protocol §5), so install + first run are local-only.
 
 ---
 
