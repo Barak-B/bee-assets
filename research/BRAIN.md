@@ -180,5 +180,22 @@ A 4-agent parallel review swept the whole corpus line-by-line. Outcome:
 
 ---
 
+## 9 — Obsidian node graph (this is the hub)
+
+`[[BRAIN]]` is the parent node of the whole project graph. Outbound wikilinks — so Obsidian +
+graphify draw the edges and every child shows `[[BRAIN]]` in its backlinks panel:
+
+- **Charter:** `[[protocol_hive]]` · `[[PATHS]]`
+- **Spine:** `[[Wave_53_Unified_Data_Spine]]` · `[[MVP_Build_Plan]]` · `[[decisions-2026-06-16]]`
+- **LLDs:** `[[Bank_Receipts_Ingestion_LLD]]` · `[[Procurement_Tracking_LLD]]` · `[[Proposal_Generator_LLD]]` · `[[Accounting_Ledger_LLD]]` · `[[Engineering_Agent_LLD]]` · `[[Customer_Success_Agent_LLD]]`
+- **Knowledge:** `[[Barak_Skills_Audit]]` · `[[il-einvoicing-shaam]]` · `[[il-pv-grid-connection]]` · `[[il-solar-regulation]]`
+- **Infra:** `[[Graphify]]` · `[[Alfred]]` · `[[Hermes]]` · `[[BEE Operations app]]`
+
+> **Sync (the §6 loop):** after any commit touching these files, re-sync the vault + re-extract
+> graphify from the local machine — `research/scripts/sync-vault-and-graphify.ps1`. The cloud
+> cortex authors but cannot reach the vault / `E:\` (protocol §5), so this step is local-only.
+
+---
+
 *Authored 2026-06-26 by cloud cortex as the project's synthesis node, after the four-reviewer audit.
 Burns: Obsidian `[[BRAIN]]` · graphify re-extract · this commit. This is the file a cold-start session reads first.*

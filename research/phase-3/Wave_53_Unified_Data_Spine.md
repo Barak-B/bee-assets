@@ -181,6 +181,7 @@ These are spec hours, not calendar. **`mvp-build-plan.md` is the authoritative r
 
 ## § 8 — Where this lives in the wider Hive
 
+- `[[BRAIN]]` — the project's synthesis node / single entry point. This spine is one of its children.
 - `[[protocol_hive]]` — the constitution. Defines the primitives the spine must use.
 - `[[Barak_Skills_Audit]]` — explains *why* this spine exists: it offloads the audit's "burning layer" (audit §A2 + Q7).
 - `[[knowledge-base/]]` — feeds the spine ground truth: SHAAM thresholds (53/D + 53/B), regulatory deadlines (53/D crons), Israeli accounting conventions (53/D §6).
