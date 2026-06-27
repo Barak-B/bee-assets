@@ -2,30 +2,40 @@
 # bee-assets post-commit hook — closes the protocol_hive.md §6 sync loop automatically.
 # After each commit: mirror research/**/*.md into the Obsidian vault + re-extract graphify.
 #
-# Runs in the BACKGROUND so it never blocks/slows the commit, and never fails it
-# (always exits 0). Installed via research/scripts/install-git-hooks.ps1 (sets
-# core.hooksPath). Disable: pwsh research/scripts/install-git-hooks.ps1 -Uninstall
+# Hardened per the 2026-06-26 sync audit:
+#   - skips during rebase / cherry-pick replay (no N-commit fan-out)
+#   - falls back to Windows powershell.exe if pwsh (7+) is absent (else sync silently never runs)
+#   - logs to .git/bee-sync.log (NOT /dev/null) so failures are visible; records exit code
+#   - the PS script itself is non-destructive to vault edits and ⚡s Barak on hard error
 #
-# Cost note: graphify extract calls a paid LLM (DeepSeek). It runs INCREMENTALLY
-# (--update, only changed files), so it's cheap. The per-commit default ALSO skips the
-# pricier cluster-only naming pass (-SkipCluster) — run that manually/periodically for a
-# fresh GRAPH_REPORT.md. To make the hook vault-only (skip graphify entirely):
-#     export BEE_HOOK_ARGS="-SkipPull -SkipGraphify"
+# Cost: per-commit runs incremental `extract` (cheap) and skips the pricier cluster pass.
+# Vault-only (skip graphify entirely):  export BEE_HOOK_ARGS="-SkipPull -SkipGraphify"
 #
-REPO="$(git rev-parse --show-toplevel)"
+GITDIR="$(git rev-parse --git-dir 2>/dev/null)" || exit 0
+REPO="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 SCRIPT="$REPO/research/scripts/sync-vault-and-graphify.ps1"
-ARGS="${BEE_HOOK_ARGS:--SkipPull -SkipCluster}"   # default: vault + incremental extract, no cluster
+ARGS="${BEE_HOOK_ARGS:--SkipPull -SkipCluster}"   # per-commit default: vault + incremental extract
+LOG="$GITDIR/bee-sync.log"
 
-if [ ! -f "$SCRIPT" ]; then
-  echo "[post-commit] sync script missing ($SCRIPT) — skipping"
+# Skip during rebase/cherry-pick/revert replay — avoids firing N times for N replayed commits.
+if [ -d "$GITDIR/rebase-merge" ] || [ -d "$GITDIR/rebase-apply" ] || [ -f "$GITDIR/CHERRY_PICK_HEAD" ]; then
   exit 0
 fi
-if ! command -v pwsh >/dev/null 2>&1; then
-  echo "[post-commit] pwsh not on PATH — skipping vault/graphify sync"
+[ -f "$SCRIPT" ] || { echo "[post-commit] sync script missing ($SCRIPT)"; exit 0; }
+
+# Pick a PowerShell: pwsh (7+) preferred; else Windows powershell.exe (5.1). Windows ships
+# 5.1 as `powershell`, NOT `pwsh` — without this fallback the hook would silently no-op forever.
+PS=""
+command -v pwsh >/dev/null 2>&1 && PS=pwsh
+[ -z "$PS" ] && command -v powershell >/dev/null 2>&1 && PS=powershell
+[ -z "$PS" ] && command -v powershell.exe >/dev/null 2>&1 && PS=powershell.exe
+if [ -z "$PS" ]; then
+  echo "[post-commit] no PowerShell (pwsh/powershell) on PATH — sync skipped" | tee -a "$LOG"
   exit 0
 fi
 
-# Fire-and-forget: detached background process, output discarded.
-( pwsh -NoProfile -File "$SCRIPT" $ARGS >/dev/null 2>&1 & )
-echo "[post-commit] vault + graphify refresh started in background ($ARGS)"
+# Fire-and-forget in the background (never blocks the commit), but capture output + exit code
+# to the log so a failed sync is visible instead of vanishing into /dev/null.
+( "$PS" -NoProfile -File "$SCRIPT" $ARGS >>"$LOG" 2>&1 ; echo "[$(date '+%Y-%m-%d %H:%M:%S')] sync exit=$? args=$ARGS" >>"$LOG" ) &
+echo "[post-commit] vault+graphify refresh started (PS=$PS) — log: $LOG"
 exit 0

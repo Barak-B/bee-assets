@@ -115,6 +115,32 @@ From `decisions-2026-06-16.md`. These are Barak's calls — treat as operator fa
 
 ---
 
+## 4b — Reality check: what actually RUNS today vs what's designed
+
+Hard line between shipped-and-working code and designed-but-unbuilt, so no one (including future
+sessions) oversells. Verified by the 2026-06-26 sync audit.
+
+**✅ REAL in code (deterministic engine — production-grade, tested):**
+- Hard-key + fuzzy dedup (pg_trgm > 0.85) — both pipelines, idempotency authoritative.
+- Distributed lock (Redis→PG fallback), atomic UoW, lock release in `finally`.
+- Read-back validation circuit (§4.2).
+- Tier-0 routing: Hebrew normalize, Israeli date/amount parsing, CSV→PurchaseOrder.
+- Anti-spam: watchlist gate, single-⚡ on new supplier, P2002 race catch, multi-PO surfaced.
+- The `parse-bank-csv.mjs` demo runs this on real data, read-only.
+
+**🟡 DESIGNED ONLY — schema/LLD exists, code does NOT yet (do not present as working):**
+- `err_manifest` **read-back** loop — write-only today; no reader (§4.1 note).
+- `PriceBenchmark` z-score anomaly detection — schema only; `anomalies` is hardcoded `0`.
+- `LeadTimeRecord` lead-time learning — schema only; no receipt event populates it.
+- `FaultCase` pg_trgm grounding (EA-5) — model in LLD; Wave 54 code unbuilt.
+- **Tier-1 LLM extraction** (email/WA/PDF → PO) — `extract.ts` is the CSV lane ONLY; unstructured input returns `kind:"other"`. So 53/B "ingests supplier emails" is *designed*, not yet running.
+
+**Takeaway:** today the system is a careful, honest **importer + normalizer + validator**. The
+"smart" layer (learning, anomaly detection, LLM extraction, fault grounding) is specced and
+schema'd but lands in later phases. Build-plan rows beyond the MVP are where it becomes "smart".
+
+---
+
 ## 5 — Status + what's next
 
 **Architecture LOCKED.** Build is mechanical execution per `mvp-build-plan.md`.
@@ -190,6 +216,24 @@ graphify draw the edges and every child shows `[[BRAIN]]` in its backlinks panel
 - **LLDs:** `[[Bank_Receipts_Ingestion_LLD]]` · `[[Procurement_Tracking_LLD]]` · `[[Proposal_Generator_LLD]]` · `[[Accounting_Ledger_LLD]]` · `[[Engineering_Agent_LLD]]` · `[[Customer_Success_Agent_LLD]]`
 - **Knowledge:** `[[Barak_Skills_Audit]]` · `[[il-einvoicing-shaam]]` · `[[il-pv-grid-connection]]` · `[[il-solar-regulation]]`
 - **Infra:** `[[Graphify]]` · `[[Alfred]]` · `[[Hermes]]` · `[[BEE Operations app]]`
+
+### 9b — Cross-brain propagation gap (the #1 finding of the 2026-06-26 sync audit)
+
+**The §6 loop is one-way.** It fans the canon OUT to the vault + graphify, but **nothing
+delivers it to the live agents** (Alfred/Hermes). No hook, no MCP, no memory-sync reads
+`protocol_hive`/`BRAIN`/`AGENT_CANON` into Alfred's `AGENTS.md` memory or Hermes' `MEMORY.md`
+at runtime. A lesson burned into the canon reaches the live brains **only if a human types it
+into both** — so they silently drift (the captured snapshots already lag the canon by ~1 month).
+
+**The fix (payload built; wiring awaits Barak's approval — it changes live agents):**
+1. ✅ **Payload:** `AGENT_CANON.md` — the one-screen digest every brain must hold. Done.
+2. ✅ **Mechanical half:** `sync-vault-and-graphify.ps1 -PushCanonToAgents` (opt-in, env-gated, non-destructive) keeps a fresh `BEE_CANON.md` in each agent's memory dir. Done, OFF by default.
+3. ⏳ **Agent-side read (needs your approval — constitutional):**
+   - **Alfred:** add ONE line to `AGENTS.md` "Session Startup": *"Also read `BEE_CANON.md` from the workspace and treat its locked facts as authoritative over local memory."* (AGENTS.md edits are constitutional per Alfred's own rule → you approve.)
+   - **Hermes:** add a startup hook (Hermes currently has none) that loads `BEE_CANON.md` into context, or merge its facts into Hermes `MEMORY.md` on each sync.
+   Once (3) is wired, every commit's sync refreshes the canon in both brains and they stop drifting.
+
+Also fix while wiring: Hermes' `bridge_port` (3000) **collides** with the port the canon assigns Alfred — move Hermes to 3100 per `protocol_hive` §1/§8.
 
 > **Sync (the §6 loop):** automated on bee-assets by a git post-commit hook — run once on the
 > local machine: `pwsh research/scripts/install-git-hooks.ps1`. After that, every commit mirrors

@@ -118,6 +118,8 @@ Every bug/crash burns a record:
 ```
 Lives at `E:\bee-build\err_manifest.json` (or wherever the canonical DB lives). The cortex reads this before designing a similar component to avoid repeating mistakes.
 
+> **Status (2026-06-26, honest):** the *write* path is real — `logManifest()` is called on every failure path in the phase-a code. The *read-back* loop is **NOT yet built**: nothing in code reads `err_manifest.jsonl` and feeds it forward, and the file currently lives **outside git** (`E:/bee-build/`), so even a human/cortex can't review it from the repo. Until a reader exists (or the manifest is captured into git), §4.1 is a *manual* discipline, not the closed mechanical loop the prose implies. Building the reader + pulling the manifest into the repo is tracked as a remediation item.
+
 ### 4.2 State Validation Circuit — never trust API success
 
 After any write, the component MUST:
@@ -228,7 +230,7 @@ Get-Process syncthing -ErrorAction SilentlyContinue              # Syncthing (sy
 
 These are cited across the spine LLDs and KB; defined canonically here.
 
-- **Law #1 — Four destinations only.** Any agent-originated outbound message may go to exactly one of four places: (a) Barak's self-chat (⚡), (b) the drafts group (for Barak to pick/send), (c) a write to the BEE DB, (d) the `err_manifest`. **No agent ever sends directly to a customer/supplier/third party** without an explicit `approvedByBarakAt` gate. Enforced inside Alfred's `dispatchSend()`.
+- **Law #1 — Four authorized outbound destinations only.** Per Alfred's `Authorized Outbound Destinations` constitutional rule (`local-state/openclaw/AGENTS.md`), an agent's WhatsApp **sends** may go to exactly four surfaces: (a) Barak's **self-chat** (`+972509554483`, the ⚡ channel), (b) the **Neri group** (scheduled cron summaries only), (c) the **drafts group** (suggestions for Barak to pick/send), (d) the **voice-transcripts group** (Barak's own voice notes). **No agent ever sends to a customer/supplier/third party** — full stop, no "more efficient workflow" overrides it. (DB writes and `err_manifest` appends are agent *side-effects*, not outbound destinations — don't conflate them with this rule, as an earlier draft of this file mistakenly did.) Enforced inside Alfred's `sendPolicy` / `dispatchSend()`.
 - **Law #2 — Human picks.** When an action affects a real-world relationship (send a proposal, approve a new supplier, reply to a person), the agent produces a *draft* and a human selects. Never auto-fires. The new-supplier watchlist (§3.4) and `sendProposal` approval gate are instances.
 - **Trust tiers (L0/L1/L2)** — how much autonomy an agent has over a data class:
   - **L0** — read-only / observe. No writes.
