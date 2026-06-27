@@ -7,13 +7,14 @@
 # core.hooksPath). Disable: pwsh research/scripts/install-git-hooks.ps1 -Uninstall
 #
 # Cost note: graphify extract calls a paid LLM (DeepSeek). It runs INCREMENTALLY
-# (--update, only changed files), so it's cheap, but it is not free. To make the hook
-# vault-only (skip the paid extract):
+# (--update, only changed files), so it's cheap. The per-commit default ALSO skips the
+# pricier cluster-only naming pass (-SkipCluster) — run that manually/periodically for a
+# fresh GRAPH_REPORT.md. To make the hook vault-only (skip graphify entirely):
 #     export BEE_HOOK_ARGS="-SkipPull -SkipGraphify"
 #
 REPO="$(git rev-parse --show-toplevel)"
 SCRIPT="$REPO/research/scripts/sync-vault-and-graphify.ps1"
-ARGS="${BEE_HOOK_ARGS:--SkipPull}"   # default: skip pull (we're mid-commit), do vault + graphify
+ARGS="${BEE_HOOK_ARGS:--SkipPull -SkipCluster}"   # default: vault + incremental extract, no cluster
 
 if [ ! -f "$SCRIPT" ]; then
   echo "[post-commit] sync script missing ($SCRIPT) — skipping"

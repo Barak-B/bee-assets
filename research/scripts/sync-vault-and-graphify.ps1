@@ -51,6 +51,7 @@ param(
   [switch]$SkipPull,
   [switch]$SkipVault,
   [switch]$SkipGraphify,
+  [switch]$SkipCluster,
   [string]$Backend = "deepseek",
   [switch]$DryRun
 )
@@ -117,6 +118,16 @@ if (-not $SkipGraphify) {
         & graphify extract . --update "--backend=$Backend" 2>&1 | ForEach-Object { "    $_" }
         if ($LASTEXITCODE -ne 0) { Warn "graphify exited $LASTEXITCODE — check the [anthropic]+[openai] extras + DEEPSEEK_API_KEY env." }
         else { Ok "graphify graph rebuilt" }
+
+        # cluster-only regenerates GRAPH_REPORT.md + names communities (a separate LLM pass
+        # that `extract` does NOT do). Pricier than incremental extract, so the per-commit
+        # hook skips it (-SkipCluster) and it runs on manual syncs. ALWAYS the '=' form.
+        if (-not $SkipCluster) {
+          Info "graphify cluster-only . --backend=$Backend   (regenerates GRAPH_REPORT.md + community names)"
+          & graphify cluster-only . "--backend=$Backend" 2>&1 | ForEach-Object { "    $_" }
+          if ($LASTEXITCODE -ne 0) { Warn "graphify cluster-only exited $LASTEXITCODE" }
+          else { Ok "GRAPH_REPORT.md + communities named" }
+        } else { Warn "skipped graphify cluster-only (run manually for a fresh GRAPH_REPORT.md)" }
       } finally { Pop-Location }
     }
   }
