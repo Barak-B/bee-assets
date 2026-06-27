@@ -1,6 +1,68 @@
 {
   "communities": {
     "0": [
+      "phase_3_procurement_tracking_phase_a_src_cli_ts_src_cli",
+      "phase_3_procurement_tracking_phase_a_src_cli_ts_src_cli_argflag",
+      "phase_3_procurement_tracking_phase_a_src_cli_ts_src_cli_main",
+      "phase_3_procurement_tracking_phase_a_src_cli_ts_src_cli_selftest",
+      "phase_3_procurement_tracking_phase_a_src_ingest_ts_src_ingest",
+      "phase_3_procurement_tracking_phase_a_src_ingest_ts_src_ingest_ingestopts",
+      "phase_3_procurement_tracking_phase_a_src_normalize_ts_src_normalize",
+      "phase_3_procurement_tracking_phase_a_src_normalize_ts_src_normalize_hebrew_connectives",
+      "phase_3_procurement_tracking_phase_a_src_normalize_ts_src_normalize_parseamountcents",
+      "phase_3_procurement_tracking_phase_a_src_normalize_ts_src_normalize_parseisraelidate",
+      "phase_3_procurement_tracking_phase_a_src_types_ts_src_types",
+      "phase_3_procurement_tracking_phase_a_src_types_ts_src_types_cursor",
+      "phase_3_procurement_tracking_phase_a_src_types_ts_src_types_cursoradvances",
+      "phase_3_procurement_tracking_phase_a_src_types_ts_src_types_ingestresult",
+      "sources_manual",
+      "sources_manual_csvrow",
+      "sources_manual_decodecsv",
+      "sources_manual_infersupplierfromfilename",
+      "sources_manual_manualuploadconfig",
+      "sources_manual_manualuploadsource",
+      "sources_manual_manualuploadsource_constructor",
+      "sources_manual_manualuploadsource_listfiles",
+      "sources_manual_manualuploadsource_next",
+      "sources_manual_parsecsv",
+      "sources_manual_parsecsvline",
+      "sources_manual_sha256",
+      "sources_manual_splitcsvlines",
+      "src_cli_replacer",
+      "src_extract",
+      "src_extract_extractevent",
+      "src_extract_extractresult",
+      "src_extract_required_cols",
+      "src_extract_tryparsemanualcsv",
+      "src_ingest_ingestevents",
+      "src_ingest_ingestprocurement",
+      "src_normalize_cleandescription",
+      "src_normalize_cleansuppliername",
+      "src_normalize_corp_suffix_hebrew",
+      "src_normalize_corp_suffix_latin",
+      "src_normalize_guesscategory",
+      "src_suppliers",
+      "src_suppliers_approvesupplier",
+      "src_suppliers_ignoresupplier",
+      "src_suppliers_matchorcreatesupplier",
+      "src_suppliers_mergesupplier",
+      "src_suppliers_resolveopts",
+      "src_suppliers_supplierresolution",
+      "src_types_attachment",
+      "src_types_extractedinvoice",
+      "src_types_extractedpo",
+      "src_types_extractedpoline",
+      "src_types_extractionresult",
+      "src_types_procurementeventkind",
+      "src_types_procurementeventsource",
+      "src_types_procurementsource",
+      "src_types_rawprocurementevent",
+      "tests_dryrun_test",
+      "tests_dryrun_test_clean",
+      "tests_dryrun_test_fixturedir",
+      "tests_dryrun_test_prisma"
+    ],
+    "1": [
       "tender_tracker_mvp_deadline_watcher",
       "tender_tracker_mvp_deadline_watcher_buildmessage",
       "tender_tracker_mvp_deadline_watcher_daysuntil",
@@ -45,7 +107,50 @@
       "tender_tracker_mvp_monday_board_sync_mondaygql",
       "tender_tracker_mvp_monday_board_sync_synctomonday"
     ],
-    "1": [
+    "2": [
+      "phase_1_alfred_inbound_watcher",
+      "phase_1_alfred_inbound_watcher_allowed",
+      "phase_1_alfred_inbound_watcher_archiveartifacts",
+      "phase_1_alfred_inbound_watcher_archivevoice",
+      "phase_1_alfred_inbound_watcher_argv",
+      "phase_1_alfred_inbound_watcher_bridge_url",
+      "phase_1_alfred_inbound_watcher_dispatchsend",
+      "phase_1_alfred_inbound_watcher_failed_file",
+      "phase_1_alfred_inbound_watcher_fs",
+      "phase_1_alfred_inbound_watcher_handle",
+      "phase_1_alfred_inbound_watcher_ledgerfinalize",
+      "phase_1_alfred_inbound_watcher_ledgerrecord",
+      "phase_1_alfred_inbound_watcher_ledgerstep",
+      "phase_1_alfred_inbound_watcher_log",
+      "phase_1_alfred_inbound_watcher_log_dir",
+      "phase_1_alfred_inbound_watcher_lookslikeownpost",
+      "phase_1_alfred_inbound_watcher_loop",
+      "phase_1_alfred_inbound_watcher_main",
+      "phase_1_alfred_inbound_watcher_mapeventtomessage",
+      "phase_1_alfred_inbound_watcher_markseen",
+      "phase_1_alfred_inbound_watcher_memgraphingest",
+      "phase_1_alfred_inbound_watcher_normalizets",
+      "phase_1_alfred_inbound_watcher_own_post_prefixes",
+      "phase_1_alfred_inbound_watcher_path",
+      "phase_1_alfred_inbound_watcher_persistfailed",
+      "phase_1_alfred_inbound_watcher_pollonce",
+      "phase_1_alfred_inbound_watcher_processevent",
+      "phase_1_alfred_inbound_watcher_processvoice",
+      "phase_1_alfred_inbound_watcher_processvoiceevent",
+      "phase_1_alfred_inbound_watcher_requesterkind",
+      "phase_1_alfred_inbound_watcher_resolveoutbound",
+      "phase_1_alfred_inbound_watcher_resolvetargetjid",
+      "phase_1_alfred_inbound_watcher_resolvevoiceoutbound",
+      "phase_1_alfred_inbound_watcher_schedulenext",
+      "phase_1_alfred_inbound_watcher_seen",
+      "phase_1_alfred_inbound_watcher_selftest",
+      "phase_1_alfred_inbound_watcher_send_mode",
+      "phase_1_alfred_inbound_watcher_shutdown",
+      "phase_1_alfred_inbound_watcher_target_jid",
+      "phase_1_alfred_inbound_watcher_transcribeaudio",
+      "phase_1_alfred_intake_eventtomessage"
+    ],
+    "3": [
       "commands_friday_brief",
       "commands_friday_brief_dry_run",
       "commands_friday_brief_formatcash",
@@ -84,50 +189,51 @@
       "shared_data_aggregator_mcpcall",
       "shared_data_aggregator_runshellhelper",
       "shared_format_brief",
+      "shared_format_brief_formatbrief",
       "shared_format_brief_sendtoselfchat"
     ],
-    "2": [
-      "phase_1_alfred_inbound_watcher",
-      "phase_1_alfred_inbound_watcher_allowed",
-      "phase_1_alfred_inbound_watcher_archiveartifacts",
-      "phase_1_alfred_inbound_watcher_archivevoice",
-      "phase_1_alfred_inbound_watcher_argv",
-      "phase_1_alfred_inbound_watcher_bridge_url",
-      "phase_1_alfred_inbound_watcher_dispatchsend",
-      "phase_1_alfred_inbound_watcher_failed_file",
-      "phase_1_alfred_inbound_watcher_fs",
-      "phase_1_alfred_inbound_watcher_handle",
-      "phase_1_alfred_inbound_watcher_isalloweddestination",
-      "phase_1_alfred_inbound_watcher_ledgerfinalize",
-      "phase_1_alfred_inbound_watcher_ledgerrecord",
-      "phase_1_alfred_inbound_watcher_ledgerstep",
-      "phase_1_alfred_inbound_watcher_log",
-      "phase_1_alfred_inbound_watcher_log_dir",
-      "phase_1_alfred_inbound_watcher_lookslikeownpost",
-      "phase_1_alfred_inbound_watcher_loop",
-      "phase_1_alfred_inbound_watcher_main",
-      "phase_1_alfred_inbound_watcher_mapeventtomessage",
-      "phase_1_alfred_inbound_watcher_markseen",
-      "phase_1_alfred_inbound_watcher_memgraphingest",
-      "phase_1_alfred_inbound_watcher_normalizets",
-      "phase_1_alfred_inbound_watcher_own_post_prefixes",
-      "phase_1_alfred_inbound_watcher_path",
-      "phase_1_alfred_inbound_watcher_persistfailed",
-      "phase_1_alfred_inbound_watcher_pollonce",
-      "phase_1_alfred_inbound_watcher_processevent",
-      "phase_1_alfred_inbound_watcher_processvoice",
-      "phase_1_alfred_inbound_watcher_processvoiceevent",
-      "phase_1_alfred_inbound_watcher_requesterkind",
-      "phase_1_alfred_inbound_watcher_resolvevoiceoutbound",
-      "phase_1_alfred_inbound_watcher_schedulenext",
-      "phase_1_alfred_inbound_watcher_seen",
-      "phase_1_alfred_inbound_watcher_selftest",
-      "phase_1_alfred_inbound_watcher_send_mode",
-      "phase_1_alfred_inbound_watcher_shutdown",
-      "phase_1_alfred_inbound_watcher_target_jid",
-      "phase_1_alfred_inbound_watcher_transcribeaudio"
+    "4": [
+      "phase_3_bank_receipts_ingestion_phase_a_src_cli_ts_src_cli",
+      "phase_3_bank_receipts_ingestion_phase_a_src_cli_ts_src_cli_argflag",
+      "phase_3_bank_receipts_ingestion_phase_a_src_cli_ts_src_cli_main",
+      "phase_3_bank_receipts_ingestion_phase_a_src_cli_ts_src_cli_selftest",
+      "phase_3_bank_receipts_ingestion_phase_a_src_ingest_ts_src_ingest",
+      "phase_3_bank_receipts_ingestion_phase_a_src_ingest_ts_src_ingest_ingestopts",
+      "phase_3_bank_receipts_ingestion_phase_a_src_normalize_ts_src_normalize",
+      "phase_3_bank_receipts_ingestion_phase_a_src_normalize_ts_src_normalize_hebrew_connectives",
+      "phase_3_bank_receipts_ingestion_phase_a_src_normalize_ts_src_normalize_parseamountcents",
+      "phase_3_bank_receipts_ingestion_phase_a_src_normalize_ts_src_normalize_parseisraelidate",
+      "phase_3_bank_receipts_ingestion_phase_a_src_types_ts_src_types",
+      "phase_3_bank_receipts_ingestion_phase_a_src_types_ts_src_types_cursor",
+      "phase_3_bank_receipts_ingestion_phase_a_src_types_ts_src_types_cursoradvances",
+      "phase_3_bank_receipts_ingestion_phase_a_src_types_ts_src_types_ingestresult",
+      "phase_3_bank_receipts_ingestion_phase_a_src_validate_ts_src_validate",
+      "phase_3_bank_receipts_ingestion_phase_a_src_validate_ts_src_validate_makevalidator",
+      "sources_csv",
+      "sources_csv_csvsource",
+      "sources_csv_csvsource_constructor",
+      "sources_csv_csvsource_listfiles",
+      "sources_csv_csvsource_maprows",
+      "sources_csv_csvsource_next",
+      "sources_csv_csvsourceconfig",
+      "sources_csv_parsecsv",
+      "sources_csv_parsecsvline",
+      "sources_csv_splitcsvlines",
+      "src_ingest_ingestaccount",
+      "src_normalize_cleancounterparty",
+      "src_types_bankaccountref",
+      "src_types_normalizedtx",
+      "src_types_rawtx",
+      "src_types_sourcemode",
+      "src_types_transactionsource",
+      "src_types_validator",
+      "tests_idempotency_test",
+      "tests_idempotency_test_clean",
+      "tests_idempotency_test_prisma",
+      "tests_idempotency_test_seedaccount",
+      "tests_idempotency_test_src"
     ],
-    "3": [
+    "5": [
       "tender_tracker_mvp_config_example",
       "tender_tracker_mvp_config_example_alert_thresholds_days",
       "tender_tracker_mvp_config_example_alfred",
@@ -165,37 +271,7 @@
       "tender_tracker_mvp_config_example_polling_user_agent",
       "tender_tracker_mvp_config_example_sources"
     ],
-    "4": [
-      "phase_1_alfred_inbound_watcher_resolveoutbound",
-      "phase_1_alfred_inbound_watcher_resolvetargetjid",
-      "phase_1_alfred_intake",
-      "phase_1_alfred_intake_argv",
-      "phase_1_alfred_intake_bridge_url",
-      "phase_1_alfred_intake_dispatchsend",
-      "phase_1_alfred_intake_eventtomessage",
-      "phase_1_alfred_intake_fromcron",
-      "phase_1_alfred_intake_fromgmail",
-      "phase_1_alfred_intake_frommanual",
-      "phase_1_alfred_intake_fs",
-      "phase_1_alfred_intake_getarg",
-      "phase_1_alfred_intake_handle",
-      "phase_1_alfred_intake_ledgerfinalize",
-      "phase_1_alfred_intake_ledgerrecord",
-      "phase_1_alfred_intake_ledgerstep",
-      "phase_1_alfred_intake_log",
-      "phase_1_alfred_intake_log_dir",
-      "phase_1_alfred_intake_main",
-      "phase_1_alfred_intake_makeevent",
-      "phase_1_alfred_intake_os",
-      "phase_1_alfred_intake_path",
-      "phase_1_alfred_intake_processevent",
-      "phase_1_alfred_intake_requesterkind",
-      "phase_1_alfred_intake_selftest",
-      "phase_1_alfred_intake_send_mode",
-      "phase_1_alfred_intake_sources",
-      "phase_1_alfred_intake_watcher"
-    ],
-    "5": [
+    "6": [
       "phase_1_alfred_memory_graph",
       "phase_1_alfred_memory_graph_addrelation",
       "phase_1_alfred_memory_graph_arg",
@@ -225,7 +301,87 @@
       "phase_1_alfred_memory_graph_upsertentity",
       "phase_1_alfred_memory_graph_workspace"
     ],
-    "6": [
+    "7": [
+      "phase_1_alfred_inbound_watcher_isalloweddestination",
+      "phase_1_alfred_intake",
+      "phase_1_alfred_intake_argv",
+      "phase_1_alfred_intake_bridge_url",
+      "phase_1_alfred_intake_dispatchsend",
+      "phase_1_alfred_intake_fromcron",
+      "phase_1_alfred_intake_fromgmail",
+      "phase_1_alfred_intake_frommanual",
+      "phase_1_alfred_intake_fs",
+      "phase_1_alfred_intake_getarg",
+      "phase_1_alfred_intake_handle",
+      "phase_1_alfred_intake_ledgerfinalize",
+      "phase_1_alfred_intake_ledgerrecord",
+      "phase_1_alfred_intake_ledgerstep",
+      "phase_1_alfred_intake_log",
+      "phase_1_alfred_intake_log_dir",
+      "phase_1_alfred_intake_main",
+      "phase_1_alfred_intake_makeevent",
+      "phase_1_alfred_intake_os",
+      "phase_1_alfred_intake_path",
+      "phase_1_alfred_intake_processevent",
+      "phase_1_alfred_intake_requesterkind",
+      "phase_1_alfred_intake_selftest",
+      "phase_1_alfred_intake_send_mode",
+      "phase_1_alfred_intake_sources",
+      "phase_1_alfred_intake_watcher"
+    ],
+    "8": [
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_comment_scripts",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_dependencies",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_dependencies_date_fns",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_dependencies_date_fns_tz",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_dependencies_ioredis",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_dependencies_prisma_client",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_description",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_devdependencies",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_devdependencies_prisma",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_devdependencies_tsx",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_devdependencies_types_node",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_devdependencies_typescript",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_engines",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_engines_node",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_name",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_scripts",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_scripts_build",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_scripts_check",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_scripts_dry_run",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_scripts_selftest",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_scripts_test",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_type",
+      "phase_3_bank_receipts_ingestion_phase_a_package_json_phase_a_package_version"
+    ],
+    "9": [
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_comment_scripts",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_dependencies",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_dependencies_date_fns",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_dependencies_date_fns_tz",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_dependencies_ioredis",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_dependencies_prisma_client",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_description",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_devdependencies",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_devdependencies_prisma",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_devdependencies_tsx",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_devdependencies_types_node",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_devdependencies_typescript",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_engines",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_engines_node",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_name",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_scripts",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_scripts_build",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_scripts_check",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_scripts_dry_run",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_scripts_selftest",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_scripts_test",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_type",
+      "phase_3_procurement_tracking_phase_a_package_json_phase_a_package_version"
+    ],
+    "10": [
       "phase_1_alfred_archive",
       "phase_1_alfred_archive_addindex",
       "phase_1_alfred_archive_appendconversation",
@@ -250,7 +406,7 @@
       "phase_1_alfred_archive_stats",
       "phase_1_alfred_archive_type_dir"
     ],
-    "7": [
+    "11": [
       "phase_1_alfred_work_ledger",
       "phase_1_alfred_work_ledger_active_stuck",
       "phase_1_alfred_work_ledger_crypto",
@@ -275,7 +431,7 @@
       "phase_1_alfred_work_ledger_transition",
       "phase_1_alfred_work_ledger_workspace"
     ],
-    "8": [
+    "12": [
       "phase_1_alfred_enrich",
       "phase_1_alfred_enrich_bee",
       "phase_1_alfred_enrich_enrich",
@@ -298,7 +454,7 @@
       "phase_1_alfred_swarm_selftest",
       "phase_1_alfred_swarm_summary"
     ],
-    "9": [
+    "13": [
       "phase_1_bridge_supervisor",
       "phase_1_bridge_supervisor_allow_unpaired",
       "phase_1_bridge_supervisor_bridge_err",
@@ -320,7 +476,7 @@
       "phase_1_bridge_supervisor_spawnbridge",
       "phase_1_bridge_supervisor_sup_log"
     ],
-    "10": [
+    "14": [
       "bee_mcp_server_skeleton_server",
       "bee_mcp_server_skeleton_server_alltools",
       "bee_mcp_server_skeleton_server_ctx",
@@ -341,7 +497,7 @@
       "tools_sites",
       "tools_sites_sitetools"
     ],
-    "11": [
+    "15": [
       "tender_tracker_mvp_firecrawl_fallback",
       "tender_tracker_mvp_firecrawl_fallback_fetchwithfirecrawlfallback",
       "tender_tracker_mvp_firecrawl_fallback_firecrawlcrawlfortenders",
@@ -361,7 +517,7 @@
       "tender_tracker_mvp_tender_detail_fetcher_target_id",
       "tender_tracker_mvp_tender_detail_fetcher_verbose"
     ],
-    "12": [
+    "16": [
       "phase_1_alfred_identity_roster_patch",
       "phase_1_alfred_identity_roster_patch_categories",
       "phase_1_alfred_identity_roster_patch_fs",
@@ -379,7 +535,43 @@
       "phase_1_alfred_identity_roster_patch_roster_file",
       "phase_1_alfred_identity_roster_patch_workspace"
     ],
-    "13": [
+    "17": [
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_allowimportingtsextensions",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_esmoduleinterop",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_forceconsistentcasinginfilenames",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_lib",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_module",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_moduleresolution",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_noemit",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_outdir",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_rootdir",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_skiplibcheck",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_strict",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_target",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_exclude",
+      "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_include"
+    ],
+    "18": [
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_allowimportingtsextensions",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_esmoduleinterop",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_forceconsistentcasinginfilenames",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_lib",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_module",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_moduleresolution",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_noemit",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_outdir",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_rootdir",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_skiplibcheck",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_strict",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions_target",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_exclude",
+      "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_include"
+    ],
+    "19": [
       "bee_mcp_server_skeleton_package",
       "bee_mcp_server_skeleton_package_dependencies",
       "bee_mcp_server_skeleton_package_dependencies_dotenv",
@@ -396,7 +588,7 @@
       "bee_mcp_server_skeleton_package_type",
       "bee_mcp_server_skeleton_package_version"
     ],
-    "14": [
+    "20": [
       "tender_tracker_mvp_package",
       "tender_tracker_mvp_package_dependencies",
       "tender_tracker_mvp_package_dependencies_better_sqlite3",
@@ -413,7 +605,39 @@
       "tender_tracker_mvp_package_scripts_test_alerts",
       "tender_tracker_mvp_package_version"
     ],
-    "15": [
+    "21": [
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_acquirelock",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_fallbacklockprovider",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_fallbacklockprovider_acquire",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_fallbacklockprovider_constructor",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_getlockprovider",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_pgrowlockprovider",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_pgrowlockprovider_acquire",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_pgrowlockprovider_constructor",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_redislockprovider",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_redislockprovider_acquire",
+      "phase_3_bank_receipts_ingestion_phase_a_src_lock_ts_src_lock_redislockprovider_constructor",
+      "src_types_lockhandle",
+      "src_types_lockprovider"
+    ],
+    "22": [
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_acquirelock",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_fallbacklockprovider",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_fallbacklockprovider_acquire",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_fallbacklockprovider_constructor",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_getlockprovider",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_pgrowlockprovider",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_pgrowlockprovider_acquire",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_pgrowlockprovider_constructor",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_redislockprovider",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_redislockprovider_acquire",
+      "phase_3_procurement_tracking_phase_a_src_lock_ts_src_lock_redislockprovider_constructor",
+      "src_lock_lockhandle",
+      "src_lock_lockprovider"
+    ],
+    "23": [
       "phase_1_alfred_ledger_sweep",
       "phase_1_alfred_ledger_sweep_deliver",
       "phase_1_alfred_ledger_sweep_fmtitem",
@@ -426,7 +650,7 @@
       "phase_1_alfred_ledger_sweep_runsweep",
       "phase_1_alfred_ledger_sweep_selftest"
     ],
-    "16": [
+    "24": [
       "neo4j_seed_from_roster",
       "neo4j_seed_from_roster_load_roster",
       "neo4j_seed_from_roster_main",
@@ -438,7 +662,7 @@
       "neo4j_seed_from_roster_seed_self",
       "neo4j_seed_from_roster_seed_suppliers"
     ],
-    "17": [
+    "25": [
       "sites_mapping_generate_mapping",
       "sites_mapping_generate_mapping_args",
       "sites_mapping_generate_mapping_dirname",
@@ -448,7 +672,7 @@
       "sites_mapping_generate_mapping_parseargs",
       "sites_mapping_generate_mapping_scorematch"
     ],
-    "18": [
+    "26": [
       "phase_1_heartbeat_watcher",
       "phase_1_heartbeat_watcher_check",
       "phase_1_heartbeat_watcher_database",
@@ -457,110 +681,169 @@
       "phase_1_heartbeat_watcher_path",
       "phase_1_heartbeat_watcher_sendalert"
     ],
-    "19": [
+    "27": [
+      "e_desktop_bee_assets_research_gitnexus_deployment_scripts_smoke_test_sh__entry",
       "gitnexus_deployment_scripts_smoke_test_sh_scripts_smoke_test",
       "gitnexus_deployment_scripts_smoke_test_sh_scripts_smoke_test_check",
       "home_user_bee_assets_research_gitnexus_deployment_scripts_smoke_test_sh__entry",
       "scripts_smoke_test_warn"
     ],
-    "20": [
+    "28": [
+      "scripts_install_windows",
+      "scripts_install_windows_ensure_deepseekkey",
+      "scripts_install_windows_find_firstpath",
+      "scripts_install_windows_get_deepseekkey",
+      "scripts_install_windows_test_anthropickey"
+    ],
+    "29": [
+      "e_desktop_bee_assets_research_graphify_deployment_scripts_index_bee_app_sh__entry",
+      "graphify_deployment_scripts_index_bee_app_sh_scripts_index_bee_app",
+      "home_user_bee_assets_research_graphify_deployment_scripts_index_bee_app_sh__entry",
+      "scripts_index_bee_app_graphify_query_log_disable"
+    ],
+    "30": [
+      "e_desktop_bee_assets_research_graphify_deployment_scripts_smoke_test_sh__entry",
+      "graphify_deployment_scripts_smoke_test_sh_scripts_smoke_test",
+      "graphify_deployment_scripts_smoke_test_sh_scripts_smoke_test_check",
+      "home_user_bee_assets_research_graphify_deployment_scripts_smoke_test_sh__entry"
+    ],
+    "31": [
       "phase_1_alfred_router_patched",
       "phase_1_alfred_router_patched_classifytask",
       "phase_1_alfred_router_patched_pickprovider",
       "phase_1_alfred_router_patched_provider_priority"
     ],
-    "21": [
+    "32": [
+      "phase_3_bank_receipts_ingestion_phase_a_src_survive_ts_src_survive",
+      "phase_3_bank_receipts_ingestion_phase_a_src_survive_ts_src_survive_alertbarak",
+      "phase_3_bank_receipts_ingestion_phase_a_src_survive_ts_src_survive_logmanifest",
+      "phase_3_bank_receipts_ingestion_phase_a_src_survive_ts_src_survive_manifestentry"
+    ],
+    "33": [
+      "phase_3_procurement_tracking_phase_a_src_survive_ts_src_survive",
+      "phase_3_procurement_tracking_phase_a_src_survive_ts_src_survive_alertbarak",
+      "phase_3_procurement_tracking_phase_a_src_survive_ts_src_survive_logmanifest",
+      "phase_3_procurement_tracking_phase_a_src_survive_ts_src_survive_manifestentry"
+    ],
+    "34": [
+      "scripts_sync_vault_and_graphify",
+      "scripts_sync_vault_and_graphify_info",
+      "scripts_sync_vault_and_graphify_ok",
+      "scripts_sync_vault_and_graphify_warn"
+    ],
+    "35": [
       "sites_mapping_mapping_example",
       "sites_mapping_mapping_example_120363409665555113_g_us",
       "sites_mapping_mapping_example_comment",
       "sites_mapping_mapping_example_example_only_120000000000000001_g_us"
     ],
-    "22": [
-      "graphify_deployment_scripts_index_bee_app_sh_scripts_index_bee_app",
-      "home_user_bee_assets_research_graphify_deployment_scripts_index_bee_app_sh__entry",
-      "scripts_index_bee_app_graphify_query_log_disable"
-    ],
-    "23": [
-      "graphify_deployment_scripts_smoke_test_sh_scripts_smoke_test",
-      "graphify_deployment_scripts_smoke_test_sh_scripts_smoke_test_check",
-      "home_user_bee_assets_research_graphify_deployment_scripts_smoke_test_sh__entry"
-    ],
-    "24": [
-      "gitnexus_deployment_scripts_index_bee_app_sh_scripts_index_bee_app",
-      "home_user_bee_assets_research_gitnexus_deployment_scripts_index_bee_app_sh__entry"
-    ],
-    "25": [
+    "36": [
+      "e_desktop_bee_assets_research_gitnexus_deployment_scripts_deploy_sh__entry",
       "home_user_bee_assets_research_gitnexus_deployment_scripts_deploy_sh__entry",
       "scripts_deploy"
     ],
-    "26": [
+    "37": [
+      "e_desktop_bee_assets_research_gitnexus_deployment_scripts_index_bee_app_sh__entry",
+      "gitnexus_deployment_scripts_index_bee_app_sh_scripts_index_bee_app",
+      "home_user_bee_assets_research_gitnexus_deployment_scripts_index_bee_app_sh__entry"
+    ],
+    "38": [
+      "e_desktop_bee_assets_research_gitnexus_deployment_scripts_prepare_fork_sh__entry",
       "home_user_bee_assets_research_gitnexus_deployment_scripts_prepare_fork_sh__entry",
       "scripts_prepare_fork"
     ],
-    "27": [
+    "39": [
+      "e_desktop_bee_assets_research_gitnexus_deployment_scripts_rollback_sh__entry",
       "home_user_bee_assets_research_gitnexus_deployment_scripts_rollback_sh__entry",
       "scripts_rollback"
     ],
-    "28": [
+    "40": [
+      "e_desktop_bee_assets_research_gitnexus_deployment_scripts_verify_network_egress_sh__entry",
       "home_user_bee_assets_research_gitnexus_deployment_scripts_verify_network_egress_sh__entry",
       "scripts_verify_network_egress"
     ],
-    "29": [
+    "41": [
+      "e_desktop_bee_assets_research_graphify_deployment_scripts_serve_mcp_sh__entry",
       "home_user_bee_assets_research_graphify_deployment_scripts_serve_mcp_sh__entry",
       "scripts_serve_mcp"
     ],
-    "30": [
+    "42": [
+      "e_desktop_bee_assets_research_phase_1_cron_restore_sh__entry",
       "home_user_bee_assets_research_phase_1_cron_restore_sh__entry",
       "phase_1_cron_restore"
     ],
-    "31": [
-      "scripts_install_windows"
+    "43": [
+      "phase_2_healthcheck_windows",
+      "phase_2_healthcheck_windows_probe_port",
+      "phase_2_healthcheck_windows_result"
+    ],
+    "44": [
+      "phase_3_procurement_tracking_phase_a_src_validate_ts_src_validate",
+      "phase_3_procurement_tracking_phase_a_src_validate_ts_src_validate_makevalidator",
+      "src_validate_validator"
+    ],
+    "45": [
+      "scripts_install_git_hooks"
     ]
   },
   "cohesion": {
-    "0": 0.08859357696567,
-    "1": 0.13225371120107962,
-    "2": 0.11605937921727395,
-    "3": 0.05873015873015873,
-    "4": 0.15343915343915343,
-    "5": 0.17724867724867724,
-    "6": 0.17786561264822134,
-    "7": 0.17391304347826086,
-    "8": 0.15714285714285714,
-    "9": 0.13157894736842105,
-    "10": 0.13450292397660818,
-    "11": 0.16993464052287582,
-    "12": 0.19166666666666668,
-    "13": 0.13333333333333333,
-    "14": 0.13333333333333333,
-    "15": 0.34545454545454546,
-    "16": 0.3111111111111111,
-    "17": 0.35714285714285715,
-    "18": 0.38095238095238093,
-    "19": 0.8333333333333334,
-    "20": 0.6666666666666666,
-    "21": 0.5,
-    "22": 0.6666666666666666,
-    "23": 1.0,
-    "24": 1.0,
-    "25": 1.0,
-    "26": 1.0,
-    "27": 1.0,
-    "28": 1.0,
-    "29": 1.0,
-    "30": 1.0,
-    "31": 1.0
+    "0": 0.060451977401129946,
+    "1": 0.08859357696567,
+    "2": 0.10975609756097561,
+    "3": 0.13205128205128205,
+    "4": 0.08502024291497975,
+    "5": 0.05873015873015873,
+    "6": 0.17724867724867724,
+    "7": 0.16307692307692306,
+    "8": 0.08333333333333333,
+    "9": 0.08333333333333333,
+    "10": 0.17786561264822134,
+    "11": 0.17391304347826086,
+    "12": 0.15714285714285714,
+    "13": 0.13157894736842105,
+    "14": 0.13450292397660818,
+    "15": 0.16993464052287582,
+    "16": 0.19166666666666668,
+    "17": 0.125,
+    "18": 0.125,
+    "19": 0.13333333333333333,
+    "20": 0.13333333333333333,
+    "21": 0.23076923076923078,
+    "22": 0.1978021978021978,
+    "23": 0.34545454545454546,
+    "24": 0.3111111111111111,
+    "25": 0.35714285714285715,
+    "26": 0.38095238095238093,
+    "27": 0.8,
+    "28": 0.5,
+    "29": 0.5,
+    "30": 0.8333333333333334,
+    "31": 0.6666666666666666,
+    "32": 0.6666666666666666,
+    "33": 0.6666666666666666,
+    "34": 0.5,
+    "35": 0.5,
+    "36": 0.6666666666666666,
+    "37": 0.6666666666666666,
+    "38": 0.6666666666666666,
+    "39": 0.6666666666666666,
+    "40": 0.6666666666666666,
+    "41": 0.6666666666666666,
+    "42": 0.6666666666666666,
+    "43": 1.0,
+    "44": 0.6666666666666666,
+    "45": 1.0
   },
   "gods": [
     {
       "id": "commands_friday_brief_main",
       "label": "main()",
-      "degree": 16
+      "degree": 17
     },
     {
       "id": "commands_monday_brief_main",
       "label": "main()",
-      "degree": 16
+      "degree": 17
     },
     {
       "id": "phase_1_alfred_inbound_watcher_log",
@@ -571,6 +854,16 @@
       "id": "phase_1_alfred_inbound_watcher_processevent",
       "label": "processEvent()",
       "degree": 14
+    },
+    {
+      "id": "phase_3_bank_receipts_ingestion_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 13
+    },
+    {
+      "id": "phase_3_procurement_tracking_phase_a_tsconfig_json_phase_a_tsconfig_compileroptions",
+      "label": "compilerOptions",
+      "degree": 13
     },
     {
       "id": "phase_1_alfred_inbound_watcher_processvoiceevent",
@@ -591,16 +884,6 @@
       "id": "phase_1_alfred_memory_graph_selftest",
       "label": "selfTest()",
       "degree": 11
-    },
-    {
-      "id": "shared_data_aggregator_mcpcall",
-      "label": "mcpCall()",
-      "degree": 11
-    },
-    {
-      "id": "phase_1_alfred_inbound_watcher_selftest",
-      "label": "selfTest()",
-      "degree": 10
     }
   ],
   "surprises": [
@@ -614,28 +897,6 @@
       "confidence": "INFERRED",
       "relation": "calls",
       "why": "inferred connection - not explicitly stated in source"
-    },
-    {
-      "source": "dispatchSend()",
-      "target": "isAllowedDestination()",
-      "source_files": [
-        "phase-1/alfred-intake.js",
-        "phase-1/alfred-inbound-watcher.js"
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "calls",
-      "why": "bridges separate communities"
-    },
-    {
-      "source": "eventToMessage()",
-      "target": "normalizeTs()",
-      "source_files": [
-        "phase-1/alfred-intake.js",
-        "phase-1/alfred-inbound-watcher.js"
-      ],
-      "confidence": "EXTRACTED",
-      "relation": "calls",
-      "why": "bridges separate communities"
     },
     {
       "source": "makeEvent()",
@@ -657,7 +918,29 @@
       ],
       "confidence": "EXTRACTED",
       "relation": "calls",
-      "why": "cross-file semantic connection"
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "selfTest()",
+      "target": "resolveOutbound()",
+      "source_files": [
+        "phase-1/alfred-intake.js",
+        "phase-1/alfred-inbound-watcher.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "main()",
+      "target": "ingestAccount()",
+      "source_files": [
+        "phase-3/bank-receipts-ingestion/phase-a/src/cli.ts",
+        "phase-3/bank-receipts-ingestion/phase-a/src/ingest.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source"
     }
   ],
   "tokens": {
