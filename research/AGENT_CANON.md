@@ -37,4 +37,4 @@ Reduce → summarize → escalate only when synthesis quality dominates cost.
 - Ports: Alfred ≈3000 · Hermes ≈3100 · n8n 5678 · Redis 6379.
 
 ## Honest capability line (don't oversell)
-Today the spine is a **deterministic importer/normalizer/validator** (dedup, locks, validation, Tier-0 — all REAL in code). The **smart layer** (price-anomaly z-scores, lead-time learning, fault grounding, err_manifest read-back, LLM extraction of email/WA/PDF) is **designed + schema'd but NOT yet coded** — it lands in later build-plan phases. See `[[BRAIN]]` §4b.
+Today the spine is a **deterministic importer/normalizer/validator** (dedup, locks, validation, Tier-0 — all REAL in code), plus the **first smart-layer piece now coded + tested**: the price-anomaly detector (`procurement .../src/benchmark.ts`, z-score, 7/7 pure tests). The **rest of the smart layer** (lead-time learning, fault grounding, err_manifest read-back, LLM extraction of email/WA/PDF) is **designed + schema'd but NOT yet coded** — it lands in later build-plan phases. See `[[BRAIN]]` §4b.

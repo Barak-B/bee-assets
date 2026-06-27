@@ -8,6 +8,7 @@
     "check": "tsc --noEmit",
     "selftest": "tsx src/cli.ts selftest",
     "test": "node --import tsx --test tests/dryrun.test.ts",
+    "test:pure": "node --import tsx --test tests/benchmark.test.ts",
     "dry-run": "tsx src/cli.ts ingest --source tests --name test:dry --dry-run"
   },
   "comment_scripts": "Run via tsx (not bare node --experimental-strip-types): type-stripping does NOT rewrite '.js'→'.ts' import specifiers, so bare node throws ERR_MODULE_NOT_FOUND. For production, `npm run build` then run dist/*.js.",

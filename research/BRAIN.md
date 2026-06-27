@@ -126,11 +126,15 @@ sessions) oversells. Verified by the 2026-06-26 sync audit.
 - Read-back validation circuit (§4.2).
 - Tier-0 routing: Hebrew normalize, Israeli date/amount parsing, CSV→PurchaseOrder.
 - Anti-spam: watchlist gate, single-⚡ on new supplier, P2002 race catch, multi-PO surfaced.
-- The `parse-bank-csv.mjs` demo runs this on real data, read-only.
+- **Price-anomaly detector (`src/benchmark.ts`)** — first piece of the *smart layer*, now CODED + TESTED.
+  Tier-0 z-score (over- AND under-charge), `insufficient_data` guard, stdDev==0 special-case, warn→⚡alert
+  escalation. 7/7 pure tests pass (`npm run test:pure`, zero infra). Demo: `node research/demos/price-anomaly-demo.mjs`.
+  Remaining to fully close: call `checkLineAnomaly` from `ingest.ts` (replace the hardcoded `anomalies: 0`)
+  and schedule `rebuildBenchmarks` — both are wiring, the math is done.
+- The `parse-bank-csv.mjs` demo runs the bank lane on real data, read-only.
 
 **🟡 DESIGNED ONLY — schema/LLD exists, code does NOT yet (do not present as working):**
 - `err_manifest` **read-back** loop — write-only today; no reader (§4.1 note).
-- `PriceBenchmark` z-score anomaly detection — schema only; `anomalies` is hardcoded `0`.
 - `LeadTimeRecord` lead-time learning — schema only; no receipt event populates it.
 - `FaultCase` pg_trgm grounding (EA-5) — model in LLD; Wave 54 code unbuilt.
 - **Tier-1 LLM extraction** (email/WA/PDF → PO) — `extract.ts` is the CSV lane ONLY; unstructured input returns `kind:"other"`. So 53/B "ingests supplier emails" is *designed*, not yet running.
