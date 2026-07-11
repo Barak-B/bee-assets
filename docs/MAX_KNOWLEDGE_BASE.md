@@ -1,239 +1,235 @@
-# בסיס ידע למקס — Max Onboarding Canon
+# בסיס ידע למקס — התמונה הברורה
 
-> **למי:** מקס (Cursor Cloud / Grok cortex) וכל סשן עתידי שצריך להתחבר לעניינים מא' עד ת'.
-> **מתי לקרוא:** בתחילת כל סשן. זה ה-digest. הפרטים המלאים חיים ב-branch
-> `claude/capability-extensions-collection-JjV2s` תחת `research/` — במיוחד `BRAIN.md`.
-> **עודכן:** 2026-07-11 · ריצת ענן `bc-df5ef7ee-734d-4460-b339-aa78c363634e` ("בסיס ידע למקס").
+> **תפקיד:** נקודת כניסה לסשן. לא מחליף את `research/BRAIN.md` על branch Claude — מסכם אותו מדויק.
+> **עודכן:** 2026-07-11 · אחרי סקירה מחדש של PR #2, MVP plan, decisions, protocol, Cloud agents.
 
 ---
 
-## 0 — מי זה מי
+## א. במשפט אחד
 
-| | |
+אנחנו בונים **עמוד שדרה תפעולי-פיננסי ל-B.E.E** שמחליף את השכבה שברק מנהל מהראש + WhatsApp + Gmail + Monday + Invoice Maven + פורטל Mercantile — בלי לאבד שליטה (כל שליחה החוצה = טיוטה שהוא מאשר).
+
+**הארכיטקטורה נעולה (2026-06-16).** השלב הבא הוא ביצוע מכני לפי `mvp-build-plan.md` + 5 קבצים מברק.
+
+---
+
+## ב. מי ומה
+
+| | עובדה |
 |---|---|
-| **ברק ברזל** | בעלים · `barak-barzel@barak-e.com` · B.E.E (Barak Electric Engineering) |
-| **העסק** | קבלנות חשמל + סולאר בישראל: ~137 לקוחות · 255 אתרים · 18 רכבים · 149 ממירים ב-87+ אתרים מנוטרים |
-| **בנק** | Mercantile Discount — **קוד 17** (לא הפועלים — שיעור שנצרב) |
-| **חשבוניות/הנה״ח** | Invoice Maven בלבד (אין Hashavshevet/Rivhit/Priority) |
-| **שפה** | עברית ב-WhatsApp / UI · אנגלית בקונסולה (RTL נשבר בטרמינל) |
-| **סגנון** | ישיר, בלי מילוי · לחקור לפני שמציעים · הנדסה קודם (לא רק ניהול) |
-| **מקס** | ה-cortex הזה (Cursor Cloud). ריצה נוכחית: [בסיס ידע למקס](https://cursor.com/agents/bc-df5ef7ee-734d-4460-b339-aa78c363634e) |
+| ברק ברזל | בעלים · `barak-barzel@barak-e.com` |
+| B.E.E | קבלנות חשמל + סולאר · ~137 לקוחות · 255 אתרים · 18 רכבים · 149 ממירים |
+| בנק | Mercantile Discount **קוד 17** (לא הפועלים) |
+| חשבוניות/הנה״ח | Invoice Maven בלבד |
+| מע״מ | חודשי · מקדמות מס = 0% |
+| צי ניטור | SolarEdge / iSolarCloud / Deye / KStar / ABB |
+| מקס | Cursor Cloud cortex (הריצה הזו) |
+| Claude (מקומי/ענן) | כתב את רוב הקנון ב-PR #2 |
+| Alfred | OpenClaw — persona + WhatsApp + חוקה |
+| Hermes | כלים כבדים (browser/code/memory/kanban) |
 
 ---
 
-## 1 — חוקים חוקתיים (לא לדרוס)
+## ג. שלושה עידנים של עבודה (מה היה → מה נשאר)
 
-1. **Law #1 — 4 יעדי WhatsApp בלבד:** self-chat של ברק (`+972509554483`) · קבוצת Neri (סיכומים מתוזמנים) · קבוצת drafts · קבוצת voice-transcripts. **אסור לשלוח ללקוח/ספק/צד ג׳.**
-2. **Law #2 — אדם בוחר.** כל פעולה שנוגעת ביחסים אמיתיים = טיוטה שברק מאשר. לא auto-fire.
-3. **§3.6a — לא להמציא עובדות מפעיל.** בנק, נתיב, ספק, סף, פורט — מהקנון או `[OPEN]` + שאלה.
-4. **Trust tiers:** L0 קריאה · L1 כתיבת DB + טיוטה · L2 שליחה אוטומטית צרה ומאושרת מראש. רוב הסוכנים = L1.
-5. **Tier-0 בטיחות:** `wire_sizing` + `protection_coordination` — **בלי LLM לעולם.** הזיה על גודל כבל = שריפה.
+### עידן 1 — פדרציה Alfred↔Hermes (מאי 2026)
+**מטרה:** לבטל כפילויות (2 Baileys, 2 cron, firecrawl כפול) ולחלק עבודה.
 
----
+**מה נשאר רלוונטי:**
+- Alfred = WhatsApp voice + `dispatchSend()` (Law #1)
+- Hermes = tools · memory · MoA
+- תיקוני באגים שזוהו (router fallback הפוך, memory 97% err, 70 skills רדומים)
+- Phase 1 patches / tender MVP / bridge recovery — חומר ייחוס, לא מוצר סופי
 
-## 2 — איפה האמת חיה (סדר קריאה)
+**מה לא המיקוד עכשיו:** מחקר federation רחב, 55-capability matrix, רשימות MCP להתקנה. זה היה שלב מיפוי.
 
-ה-repo `bee-assets` על `main` הוא **נכסים ציבוריים** (לוגואים + דוח מלאי). הידע האמיתי נמצא ב-branch המחקר:
+### עידן 2 — חוקה + Graphify + נתיבים (יוני מוקדם)
+**מטרה:** להפסיק לנחש. לכתוב חוקה. לבנות גרף ידע.
 
-**Branch קנוני:** `claude/capability-extensions-collection-JjV2s` · **PR #2** (OPEN)
-
-| קובץ | תפקיד |
+| תוצר | סטטוס |
 |---|---|
-| `research/BRAIN.md` | **נקודת הכניסה** — מפת כל הפרויקט, סטטוס, פגמים, מה הבא |
-| `research/AGENT_CANON.md` | Digest חד-מסך לכל המוחות (Alfred/Hermes/Claude/Max) |
-| `research/protocol_hive.md` | חוקת הכוורת v2 — Tiers, locks, LLD shape §7 |
-| `research/PATHS.md` | טופולוגיית המכונה — **לעולם לא לנחש נתיב** |
-| `research/phase-3/decisions-2026-06-16.md` | 10 החלטות נעולות (LD-1..5, EA-1..5) |
-| `research/phase-3/mvp-build-plan.md` | Roadmap סמכותי — שורות, שעות, חוסמים |
-| `research/phase-3/Wave_53_Unified_Data_Spine.md` | מפת העמוד השדרה 53/A–D + 54/55 |
-| `research/knowledge-base/` | רגולציה ישראלית — כל טענה עם VERIFIED/OPEN |
-| `research/session-handoff*.md` | העברות סשן (מאי–יוני 2026) |
+| `protocol_hive.md` v2 | ✅ חוקה חיה |
+| `PATHS.md` | ✅ נתיבים קנוניים (אחרי PathNotFound חי) |
+| Graphify על מכונת ברק | ✅ אלפי nodes; DeepSeek backend |
+| Obsidian vault path (Q67) | ✅ נפתר · `3-Projects\BEE\` |
+| Sync git→vault→graphify | ✅ סקריפטים + hooks · מקומי בלבד |
+| Canon → Alfred/Hermes runtime | ⏳ payload מוכן · wiring ממתין לאישור ברק |
 
-**קריאה מהירה בסשן חדש:**
-```
-git show origin/claude/capability-extensions-collection-JjV2s:research/BRAIN.md
-git show origin/claude/capability-extensions-collection-JjV2s:research/AGENT_CANON.md
-git show origin/claude/capability-extensions-collection-JjV2s:research/PATHS.md
-```
+### עידן 3 — Unified Data Spine (יוני אמצע–סוף) ← **כאן אנחנו**
+**מטרה:** עמוד שדרה אחד: בנק → רכש → הצעות → הנה״ח + מוח הנדסי + CS.
 
----
-
-## 3 — ארכיטקטורת הכוורת (במשפט)
-
-```
-WhatsApp (טלפון אחד)
-    → Layer 1 TRANSPORT (Hermes bridge, port ~3100)
-        → Layer 2 PERSONA — Alfred/OpenClaw (WhatsApp voice, AGENTS.md, cron, drafts)
-        → Layer 3 BRAIN — Hermes (tools כבדים, MoA, memory, kanban)
-            ↔ MCP bus משותף (Monday, Google, Israeli MCPs)
-```
-
-**Alfred** = persona + שליחה חוקתית · **Hermes** = כלים כבדים · כל פלט WA עובר דרך Alfred.
-
-### סוכנים / גלים
-
-| Wave | רכיב | LLD | קוד | הערה |
-|---|---|---|---|---|
-| 53/A | bank-receipts (Mercantile) | ✅ | ✅ Phase A | importer אמיתי |
-| 53/B | procurement-tracking | ✅ | ✅ Phase A + price-anomaly | anomaly detector נבדק 7/7 |
-| 53/C | proposal-generator | ✅ | ❌ | |
-| 53/D | accounting-ledger | ✅ | ❌ | כרטסות/AR-AP/VAT חודשי |
-| 54 | engineering-agent (PV brain) | ✅ | partial specs | wire/protection = Tier-0 |
-| 55 | customer-success | ✅ | ❌ | |
-| — | regulatory / tender | skill | חי / spec | |
-| — | Alfred + Hermes | — | חי | |
-
-**קו כנות:** היום המערכת היא **importer + normalizer + validator** דטרמיניסטי + price-anomaly. שכבת ה-"חכם" (LLM extraction, lead-time learning, fault grounding) = מתוכננת, לא מקודדת.
-
----
-
-## 4 — החלטות נעולות (לא לפתוח מחדש)
-
-| ID | החלטה |
-|---|---|
-| LD-1 | Invoice Maven = חשבוניות + הנה״ח. בלי גשר למערכות אחרות |
-| LD-2 | מקדמות מס הכנסה = **0%** |
-| LD-3 | מע״מ = **חודשי** |
-| LD-4 | מספור חשבוניות רציף, בלי איפוס שנתי |
-| LD-5 | יתרות פתיחה מ-IM (idempotent `IM-OPENING-${id}`) |
-| EA-1 | טבלאות כבלים multi-vendor |
-| EA-2 | יחס DC/AC לפי דגם ממיר |
-| EA-3 | בחירת ממיר = try-all + top-3 |
-| EA-4 | הצללה = Vision LLM על תמונות אתר (≥1 חובה) |
-| EA-5 | fault_analysis מעוגן ב-`FaultCase` (pg_trgm לפני DeepSeek) |
-
----
-
-## 5 — מכונת ברק (נתיבים קנוניים)
-
-| מה | נתיב |
-|---|---|
-| Alfred scripts (`alfred-*.js`) | `E:\Desktop\OpenClawAgent\` (שורש — **אין** `scripts\` / `workspace\`) |
-| OpenClaw workspace | `C:\Users\Barak\.openclaw\workspace\` |
-| Hermes repo | `E:\bee-hermes\` |
-| Hermes state | `C:\Users\Barak\AppData\Local\hermes\` |
-| Secrets | `E:\Desktop\OpenClawAgent\secrets\bee-integrations.env` |
-| Obsidian vault | `E:\Desktop\ברק\תוכנות\תכנות וAI\obsidian\Barak-v-obsidian\` · BEE ב-`3-Projects\BEE\` |
-| פרויקטים | `E:\bee-hive`, `E:\bee-build`, `E:\bee-assets`, `E:\bee-ai-watcher` |
-| BEE app (Drive) | `K:\האחסון שלי\BEE_Operations` |
-| bee-prod-1 | `/opt/bee-ops` (Hetzner CX52) |
-
-**נתיבים שגויים ידועים:** כל וריאציה של `OpenClawAgent\workspace\` או `OpenClawAgent\scripts\` — לא קיימים.
-
-**פורטים:** Alfred ≈3000 · Hermes ≈3100 · n8n 5678 · Redis 6379.
-
----
-
-## 6 — ריצות Cloud Agents (נכון ל-2026-07-11)
-
-| bcId | שם | סטטוס | מה קרה |
+| רכיב | LLD | קוד ייחוס | ב-BEE app חי? |
 |---|---|---|---|
-| `bc-df5ef7ee-...` | בסיס ידע למקס | RUNNING | הריצה הזו — איסוף זיכרון + מסמך זה |
-| `bc-68ffc151-...` | מידול תלת-ממדי רחפן | IDLE | Design-first; ממתין לאישור מלווה ויזואלי; **אין קוד** |
+| 53/A bank-receipts | ✅ | ✅ Phase A (~1,175 LOC) | ❌ עדיין לא port |
+| 53/B procurement + price-anomaly | ✅ | ✅ Phase A (~1,780 LOC) + benchmark | ❌ |
+| 53/C proposals | ✅ | ❌ | ❌ |
+| 53/D ledger | ✅ | ❌ | ❌ |
+| 54 engineering (PV) | ✅ + 6 sub-skills | skeleton חסר | ❌ |
+| 55 customer-success | ✅ | ❌ | ❌ |
+| Shared primitives (lock/normalize/validate/survive) | — | ✅ ב-53/A | — |
 
-סביבה: Personal `Barak-B/bee-assets` · egress פתוח · Notion/Monday/GitLab MCP = **needsAuth** (לא מחוברים עדיין).
-
----
-
-## 7 — ענפים ו-PRs פעילים
-
-| PR | Branch | מצב | תוכן |
-|---|---|---|---|
-| #2 | `claude/capability-extensions-collection-JjV2s` | OPEN | **הקנון המלא** — ~224 קבצי research, LLDs, phase-a, graphify |
-| #1 | `claude/electron-chat-integration-5VtHN` | DRAFT | `master-plan.html` scaffold |
-| #3 | `cursor/folder-inventory-html-436d` | MERGED | דוח מלאי RTL → `main` |
-| #4 | אותו branch | OPEN | גרסה self-contained + docs/index |
-| #5 | `cursor/brain-obsidian-bridge-436d` | DRAFT | חיבור BRAIN↔Obsidian + sync hardening |
-| #6 | `cursor/setup-dev-environment-7dda` | DRAFT | `AGENTS.md` ל-Cursor Cloud |
+**אודיט 2026-06-26:** 2 באגים CRITICAL ב-idempotency תוקנו · 9 HIGH · החלטות הוזרמו לגופי ה-LLD.
 
 ---
 
-## 8 — מה באמת רץ מול מה מתוכנן
+## ד. התמונה התפעולית (איך זה אמור לזרום)
 
-**✅ אמיתי בקוד (נבדק):**
-- Dedup קשיח + fuzzy (pg_trgm > 0.85)
-- Distributed lock Redis→PG, UoW אטומי
-- Validation circuit, Hebrew normalize, CSV→PO
+```
+Mercantile CSV          ספק (מייל/WA/PDF)              ליד (WA/Gmail)
+      │                        │                            │
+      ▼                        ▼                            ▼
+   53/A BANK              53/B PROCUREMENT ──▶ 54 ENGINEERING ──▶ 53/C PROPOSALS
+      │                        │                 (PV brain)           │
+      │                        │                                      ▼
+      └────────────┬───────────┘                              CustomerInvoice
+                   ▼                                              │
+              53/D LEDGER ◀───────────────────────────────────────┘
+           כרטסות · AR/AP · מע״מ חודשי · ⚡ לברק
+                   │
+                   ▼
+              55 CUSTOMER-SUCCESS (digest / AR nudges)
+```
+
+**חוקים שמחזיקים את הכל:**
+1. רק 4 יעדי WhatsApp מורשים · אף לקוח/ספק ישירות
+2. אדם בוחר — טיוטות, לא auto-send
+3. לא ממציאים עובדות מפעיל (§3.6a)
+4. `wire_sizing` + `protection` = Tier-0 בלי LLM לעולם
+
+---
+
+## ה. קו הכנות — מה אמיתי היום
+
+**✅ אמיתי (קוד/מערכת שעובדים):**
+- Importer + normalizer + validator + locks + dedup (53/A, 53/B Phase A)
 - Price-anomaly detector (z-score, 7/7 pure tests)
-- Demo: `parse-bank-csv.mjs` (read-only על דאטה אמיתי)
-- Graphify על מכונת ברק (אלפי nodes; DeepSeek backend)
+- Demo bank CSV (read-only)
 - Alfred + Hermes חיים על Windows
+- Graphify + Obsidian sync על המכונה של ברק
+- כל 6 ה-LLDs + 10 החלטות נעולות
 
-**🟡 מתוכנן בלבד:**
-- LLM extraction מאימייל/WA/PDF → PO
+**🟡 מתוכנן / schema בלבד (אל תמכור כעובד):**
+- LLM extraction מאימייל/WA/PDF
 - err_manifest read-back
-- LeadTimeRecord learning
+- Lead-time learning
 - FaultCase grounding
-- 53/C, 53/D, Wave 55 code
-- Canon → Alfred/Hermes runtime sync (payload מוכן; wiring ממתין לאישור ברק)
+- 53/C, 53/D, 55 בקוד
+- Port של phase-a לתוך BEE Operations app
+
+**המשפט הנכון:** היום יש לנו **מנוע ייבוא דטרמיניסטי מוקפד + תחילת שכבה חכמה**. לא "מערכת AI שרצה על העסק".
 
 ---
 
-## 9 — חוסמים אצל ברק (artifact dropoffs)
+## ו. איפה האמת יושבת ב-git
 
-| # | קובץ | משחרר |
+| מקום | תפקיד |
+|---|---|
+| `main` | נכסים ציבוריים בלבד (לוגואים, דוח מלאי) — **לא** הקנון |
+| **PR #2** `claude/capability-extensions-collection-JjV2s` | **הקנון** · ~69K שורות · 221 קבצים · OPEN |
+| PR #5 `cursor/brain-obsidian-bridge-436d` | חיזוק sync BRAIN↔Obsidian + `CLOUD_CORTEX_TOOLING` |
+| PR #7 `cursor/max-knowledge-base-634e` | המסמך הזה |
+| PR #1 | master-plan.html scaffold (צדדי) |
+| PR #4/#6 | inventory HTML / AGENTS.md (תשתיות קלות) |
+
+**קריאה חובה בסשן חדש (מה-branch הקנוני):**
+1. `research/BRAIN.md`
+2. `research/AGENT_CANON.md`
+3. `research/PATHS.md`
+4. `research/phase-3/mvp-build-plan.md` — השורה הבאה לבנות
+
+---
+
+## ז. מה חוסם ומה פתוח עכשיו
+
+### חוסמים מברק (`bee-handoff/2026-06-16/`)
+| קובץ | עדיפות | משחרר |
 |---|---|---|
-| OB-1 | PDFs טבלאות כבלים | Wave 54 Phase B |
-| OB-2 | דוגמת export מ-Invoice Maven | 53/D opening balances |
-| OB-3 | 3–5 מקרי תקלה סגורים | Wave 54 FaultCase seed |
-| OB-4 | כותרות CSV אמיתיות מ-Mercantile | 53/A live bank |
-| OB-5 | משקלות health (אופציונלי) | Wave 55 |
+| `mercantile-sample.csv` | גבוה | 53/A חי |
+| `invoice-maven-export-sample.csv` | גבוה | 53/D opening balances |
+| `vendor-cable-tables/*.pdf` | בינוני | wire_sizing |
+| `fault-cases/*` (3–5) | בינוני | fault_analysis |
+| `customer-tier-weights.json` | נמוך | Wave 55 (יש defaults) |
+
+### מה cloud יכול לבנות בלי dropoffs
+- **Row 8:** Wave 54 engineering orchestrator skeleton + מבנה טבלאות ייחוס  
+  (דורש Prisma instance של BEE app — או להמשיך כ-reference כמו 53/A)
+
+### מה דורש מכונה מקומית
+- Port phase-a → BEE app (row 1)
+- Mercantile live (row 2)
+- Gmail OAuth (row 4)
+- כל דבר שנוגע ב-`E:\` / Obsidian / Tailscale
+
+### כלי Cloud שחסרים (P0)
+- Monday MCP — needsAuth
+- Graphify HTTP MCP — לא רשום כאן
+- Cursor Environment שמור — לא קיים (`environment: null` בעבר; עכשיו Personal env בסיסי)
 
 ---
 
-## 10 — פערים שמקס צריך לדעת
+## ח. מפת אבני דרך (מה ברק אמור להרגיש)
 
-1. **`main` ≠ הקנון.** הקנון על branch Claude / PR #2. אל תבנה על `main` כאילו יש שם research.
-2. **Cloud לא מגיע ל-`E:\` / Obsidian.** כתיבה מקומית = סשן מקומי או הנחיות לברק.
-3. **MCP חיצוניים:** Notion / Monday / GitLab דורשים auth מהמשתמש ב-Cursor.
-4. **Canon drift:** `AGENT_CANON` + sync script קיימים, אבל Alfred/Hermes עדיין לא קוראים אותם ב-startup (ממתין לאישור חוקתי).
-5. **Hermes bridge_port 3000** מתנגש עם Alfred — להעביר ל-3100 לפי protocol.
-6. ריצת "מידול רחפן" פתוחה וממתינה — לא לערבב עם עבודת הכוורת בלי בקשה מפורשת.
+| # | אבן דרך | תחושה |
+|---|---|---|
+| M1 | בנק נכנס למערכת | "הבנק בפנים" |
+| M2 | מייל ספק → PO | "אני מפסיק לשכוח הזמנות" |
+| M3 | כרטסת תואמת IM | "אני רואה יתרה כמו הרו״ח" |
+| M4 | הצעה E2E | "הצעה ב-90 שניות במקום 3 שעות" |
+| M5 | Spine MVP | "אני סומך על הספרים" |
+| M6 | Sunday digest | "יודע מי מתוך 137 צריך תשומת לב" |
+| M7 | fault_analysis | "אבחון לפני הנסיעה לאתר" |
+
+Spine MVP ≈ **87h** build ממוקד · Full parity ≈ **+152h**.
 
 ---
 
-## 11 — איך מקס עובד מכאן
+## ט. חלוקת אחריות
+
+| מי | מה |
+|---|---|
+| **ברק** | dropoffs · אישורים · ולידציה על דאטה אמיתי · תבניות Word |
+| **Cloud cortex (מקס/קלוד)** | LLDs · קוד ייחוס · בדיקות · KB · החלטות |
+| **Local Claude Code** | OAuth · port ל-BEE app · ריצות על `E:\` |
+| **bee-prod-1** | runtime: app + Postgres (+ Redis) |
+
+---
+
+## י. נתיבים קנוניים (תמצית — פרטים ב-PATHS.md)
+
+| מה | איפה |
+|---|---|
+| Alfred scripts | `E:\Desktop\OpenClawAgent\` (שורש!) |
+| OpenClaw workspace | `C:\Users\Barak\.openclaw\workspace\` |
+| Hermes | `E:\bee-hermes\` |
+| Secrets | `E:\Desktop\OpenClawAgent\secrets\bee-integrations.env` |
+| Obsidian | `E:\Desktop\ברק\תוכנות\תכנות וAI\obsidian\Barak-v-obsidian\` |
+| bee-assets מקומי | `E:\bee-assets` |
+| פורטים | Alfred≈3000 · Hermes≈3100 · n8n 5678 · Redis 6379 |
+
+**אסור:** `OpenClawAgent\workspace\` או `\scripts\` — לא קיימים.
+
+---
+
+## יא. מסלולים צדדיים (לא לערבב עם ה-spine בלי בקשה)
+
+| מסלול | מצב |
+|---|---|
+| מידול תלת־ממדי מרחפן | ריצת Cloud IDLE · design-first · אין קוד |
+| Folder inventory HTML | ב-`main` (PR #3 merged) |
+| master-plan.html (bee-build) | PR #1 draft |
+
+---
+
+## יב. כלל הפעלה למקס
 
 1. קרא את הקובץ הזה → אחר כך `BRAIN.md` מה-branch הקנוני.
-2. לפני כל נתיב מקומי → `PATHS.md`. לפני ledger/הנדסה → `decisions-2026-06-16.md`.
-3. לפני עיצוב רכיב → `protocol_hive.md` §7 (צורת LLD מחייבת).
-4. אל תמכור יכולת שלא בקוד — ראה §8 ו-`BRAIN` §4b.
-5. שינוי ארכיטקטוני → עדכן `BRAIN.md` + ה-LLD באותו commit; graphify extract מקומי.
-6. עדיפות build (כשאין dropoffs): **mvp-build-plan row 8** — skeleton של Wave 54 orchestrator.
-7. העדפת ברק: סוכני **הנדסה** (חישובים, PV, תקנים, BOM) לפני סוכני ניטור עסקי.
+2. דבר על המציאות לפי §ה (קו הכנות).
+3. לפני נתיב → `PATHS.md`. לפני ledger/הנדסה → decisions.
+4. לפני עיצוב רכיב → `protocol_hive` §7.
+5. אל תפתח מחדש החלטות נעולות (LD/EA).
+6. העדפת ברק: **הנדסה** לפני ניטור עסקי.
+7. שינוי ארכיטקטורה → עדכון `BRAIN` + LLD באותו commit.
 
 ---
 
-## 12 — זיכרון אישי של ברק (מה-USER.md של Hermes)
-
-- עדיפויות כפולות: לגדל את העסק **וגם** לבנות את BEE SaaS.
-- WhatsApp מפוענח (~890MB, מאי 2026) — רוצה Obsidian לתיעוד/צ׳אטים.
-- V2.0 של משהו הושלם (דירוג 9/10).
-- מחקר לפני הצעה במשימות מורכבות.
-- על WhatsApp — עברית כברירת מחדל.
-
----
-
-## 13 — מפת תוכן המחקר (על branch Claude)
-
-```
-research/
-  BRAIN.md, AGENT_CANON.md, protocol_hive.md, PATHS.md
-  phase-1/          ← Alfred scripts, tender MVP, bridge recovery, commands
-  phase-2/          ← Neo4j, bee-mcp-server skeleton, sites mapping
-  phase-3/          ← LLDs 53/A-D + 54 + 55, decisions, MVP plan, spine
-  knowledge-base/   ← IL solar/regulation/einvoicing + skills audit
-  graphify-deployment/ + graphify-out/
-  gitnexus-deployment/
-  local-state/      ← snapshots חיים של Alfred + Hermes (redacted)
-  demos/            ← parse-bank-csv, price-anomaly
-  scripts/          ← sync vault/graphify, hooks, connect-brain-to-obsidian
-  *.html            ← מפות ויזואליות (hive, architecture, inventory, learning)
-```
-
-~224 קבצים · עשרות אלפי שורות מחקר + קוד ייחוס.
-
----
-
-*מסמך זה נכתב ע״י מקס ב-2026-07-11 כחלק מפתיחת ה-cortex למקסימום הקשר.
-כשהקנון על branch Claude מתעדכן — עדכן גם את הסעיפים כאן, או הפנה במפורש ל-`BRAIN.md` כמקור סטטוס.*
+*סקירה מחודשת 2026-07-11. מקור הסטטוס המפורט נשאר `research/BRAIN.md` על PR #2.*
