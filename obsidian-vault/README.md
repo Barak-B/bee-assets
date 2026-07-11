@@ -23,14 +23,20 @@ git (research/**/*.md)  →  Obsidian vault (wikilinks)  →  Graphify (research
 ### אפשרות A — vault הקיים (מומלץ)
 
 1. ודא שה־vault נפתח באובסידיאן בנתיב מ־`PATHS.md`.
-2. מתוך clone של `bee-assets`:
+2. **אל תריץ מ־`C:\Users\Barak`** — הסקריפטים חיים בתוך ה־clone. נתיב קנוני: `E:\bee-assets`.
 
 ```powershell
-cd E:\bee-assets   # או הנתיב האמיתי של ה-clone
+# מכל מקום — סקריפט חד־פעמי:
+pwsh -File E:\bee-assets\research\scripts\connect-brain-to-obsidian.ps1
+
+# או ידני מתוך ה-clone:
+cd E:\bee-assets
+git fetch origin
+git checkout cursor/brain-obsidian-bridge-436d
 git pull
-pwsh research/scripts/sync-vault-and-graphify.ps1 -DryRun   # בדיקה
-pwsh research/scripts/sync-vault-and-graphify.ps1 -SkipGraphify
-pwsh research/scripts/install-git-hooks.ps1                  # סנכרון אוטומטי אחרי כל commit
+pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 -DryRun -SkipGraphify
+pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 -SkipGraphify
+pwsh -File .\research\scripts\install-git-hooks.ps1
 ```
 
 3. באובסידיאן: חפש `BRAIN` / `מוח` → פתח את הערה → זה ה־MOC.
