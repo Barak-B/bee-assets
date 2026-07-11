@@ -1,0 +1,434 @@
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl resolved=~/.agents\skills\firecrawl
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-agent resolved=~/.agents\skills\firecrawl-agent
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-build-interact resolved=~/.agents\skills\firecrawl-build-interact
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-build-onboarding resolved=~/.agents\skills\firecrawl-build-onboarding
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-build-scrape resolved=~/.agents\skills\firecrawl-build-scrape
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-build-search resolved=~/.agents\skills\firecrawl-build-search
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-crawl resolved=~/.agents\skills\firecrawl-crawl
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-download resolved=~/.agents\skills\firecrawl-download
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-interact resolved=~/.agents\skills\firecrawl-interact
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-map resolved=~/.agents\skills\firecrawl-map
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-parse resolved=~/.agents\skills\firecrawl-parse
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-scrape resolved=~/.agents\skills\firecrawl-scrape
+[skills] Skipping escaped skill path outside its configured root: source=openclaw-managed root=~/.openclaw\skills reason=symlink-escape requested=~/.openclaw\skills\firecrawl-search resolved=~/.agents\skills\firecrawl-search
+Skills (31/76 ready)
++---------------+-------------------------------------+---------------------------------------+------------------------+
+| Status        | Skill                               | Description                           | Source                 |
++---------------+-------------------------------------+---------------------------------------+------------------------+
+| ⏸ disabled   | 🔐 1password                        | Set up and use 1Password CLI for      | openclaw-bundled       |
+|               |                                     | sign-in, desktop integration, and     |                        |
+|               |                                     | reading or injecting secrets.         |                        |
+| ✓ ready       | 🔌 api-dev                          | Scaffold, test, document, and debug   | openclaw-workspace     |
+|               |                                     | REST and GraphQL APIs. Use when the   |                        |
+|               |                                     | user needs to create API endpoints,   |                        |
+|               |                                     | write integration tests, generate     |                        |
+|               |                                     | OpenAPI specs, test with curl, mock   |                        |
+|               |                                     | APIs, or troubleshoot HTTP issues.    |                        |
+| ⏸ disabled   | 📝 apple-notes                      | Create, view, edit, delete, search,   | openclaw-bundled       |
+|               |                                     | move, or export Apple Notes via the   |                        |
+|               |                                     | memo CLI on macOS.                    |                        |
+| ⏸ disabled   | ⏰ apple-reminders                  | List, add, edit, complete, or delete  | openclaw-bundled       |
+|               |                                     | Apple Reminders and reminder lists    |                        |
+|               |                                     | via remindctl.                        |                        |
+| ✓ ready       | 📦 auto                             | Helps automate repetitive tasks with  | openclaw-workspace     |
+|               |                                     | scripts, scheduled jobs, and simple   |                        |
+|               |                                     | workflows. Use when the user wants    |                        |
+|               |                                     | to script an action, run something    |                        |
+|               |                                     | on a schedule (cron, Task             |                        |
+|               |                                     | Scheduler), automate builds or        |                        |
+|               |                                     | deploys, or reduce manual steps in a  |                        |
+|               |                                     | workflow.                             |                        |
+| ⏸ disabled   | 🐻 bear-notes                       | Create, search, and manage Bear       | openclaw-bundled       |
+|               |                                     | notes via grizzly CLI.                |                        |
+| ⏸ disabled   | 📰 blogwatcher                      | Monitor blogs and RSS/Atom feeds for  | openclaw-bundled       |
+|               |                                     | updates using the blogwatcher CLI.    |                        |
+| ⏸ disabled   | 🫐 blucli                           | BluOS CLI (blu) for discovery,        | openclaw-bundled       |
+|               |                                     | playback, grouping, and volume.       |                        |
+| ⏸ disabled   | 🫧 bluebubbles                      | Send and manage iMessages via         | openclaw-bundled       |
+|               |                                     | BlueBubbles, including attachments,   |                        |
+|               |                                     | tapbacks, edits, replies, and groups. |                        |
+| ✓ ready       | 📦 browser-automation               | Use when controlling web pages with   | openclaw-extra         |
+|               |                                     | the OpenClaw browser tool,            |                        |
+|               |                                     | especially multi-step flows, login    |                        |
+|               |                                     | checks, tab management, or recovery   |                        |
+|               |                                     | from stale refs/timeouts.             |                        |
+| ✓ ready       | 📦 calendar-agent                   | Specialist sub-agent for the 3        | openclaw-workspace     |
+|               |                                     | Google Calendars (personal, tasks-    |                        |
+|               |                                     | neri, tasks-shlomi-solar). Conflict   |                        |
+|               |                                     | detection, optimal slot suggestion,   |                        |
+|               |                                     | weather-aware scheduling for outdoor  |                        |
+|               |                                     | work.                                 |                        |
+| ⏸ disabled   | 📸 camsnap                          | Capture frames or clips from RTSP/    | openclaw-bundled       |
+|               |                                     | ONVIF cameras.                        |                        |
+| ⏸ disabled   | 📦 clawhub                          | Search, install, update, sync, or     | openclaw-bundled       |
+|               |                                     | publish agent skills with the         |                        |
+|               |                                     | ClawHub CLI and registry.             |                        |
+| ⏸ disabled   | 🧩 coding-agent                     | Delegate coding tasks to Codex,       | openclaw-bundled       |
+|               |                                     | Claude Code, OpenCode, or Pi agents   |                        |
+|               |                                     | via immediate background processes.   |                        |
+|               |                                     | Use when: (1) building or creating    |                        |
+|               |                                     | features/apps, (2) reviewing PRs in   |                        |
+|               |                                     | a temp clone/worktree, (3)            |                        |
+|               |                                     | refactoring large codebases, (4)      |                        |
+|               |                                     | iterative coding that needs file      |                        |
+|               |                                     | exploration. NOT for: simple one-     |                        |
+|               |                                     | line fixes (just edit), reading code  |                        |
+|               |                                     | (use read tool), thread-bound ACP     |                        |
+|               |                                     | harness requests in chat (use         |                        |
+|               |                                     | sessions_spawn with runtime:"acp"),   |                        |
+|               |                                     | or any work in ~/clawd workspace      |                        |
+|               |                                     | (never spawn agents here). All        |                        |
+|               |                                     | coding-agent runs start with          |                        |
+|               |                                     | background:true immediately. Claude   |                        |
+|               |                                     | Code: use --print --permission-mode   |                        |
+|               |                                     | bypassPermissions (no PTY). Codex/Pi/ |                        |
+|               |                                     | OpenCode: pty:true required.          |                        |
+|               |                                     | Completion notification must use      |                        |
+|               |                                     | openclaw message send, not system     |                        |
+|               |                                     | event/heartbeat.                      |                        |
+| ⏸ disabled   | 🎮 discord                          | Discord ops via the message tool      | openclaw-bundled       |
+|               |                                     | (channel=discord).                    |                        |
+| ⏸ disabled   | 🛌 eightctl                         | Control Eight Sleep pods (status,     | openclaw-bundled       |
+|               |                                     | temperature, alarms, schedules).      |                        |
+| ✓ ready       | 📦 firecrawl                        | Search, scrape, and interact with     | agents-skills-personal |
+|               |                                     | the web via the Firecrawl CLI. Use    |                        |
+|               |                                     | this skill whenever the user wants    |                        |
+|               |                                     | to search the web, find articles,     |                        |
+|               |                                     | research a topic, look something up   |                        |
+|               |                                     | online, scrape a webpage, grab        |                        |
+|               |                                     | content from a URL, get data from a   |                        |
+|               |                                     | website, crawl documentation,         |                        |
+|               |                                     | download a site, or interact with     |                        |
+|               |                                     | pages that need clicks or logins.     |                        |
+|               |                                     | Also use when they say "fetch this    |                        |
+|               |                                     | page", "pull the content from", "get  |                        |
+|               |                                     | the page at https://", or reference   |                        |
+|               |                                     | external websites. This provides      |                        |
+|               |                                     | real-time web search with full page   |                        |
+|               |                                     | content and interact capabilities —   |                        |
+|               |                                     | beyond what Claude can do natively    |                        |
+|               |                                     | with built-in tools. Do NOT trigger   |                        |
+|               |                                     | for local file operations, git        |                        |
+|               |                                     | commands, deployments, or code        |                        |
+|               |                                     | editing tasks.                        |                        |
+| ✓ ready       | 📦 firecrawl-agent                  | AI-powered autonomous data            | agents-skills-personal |
+|               |                                     | extraction that navigates complex     |                        |
+|               |                                     | sites and returns structured JSON.    |                        |
+|               |                                     | Use this skill when the user wants    |                        |
+|               |                                     | structured data from websites, needs  |                        |
+|               |                                     | to extract pricing tiers, product     |                        |
+|               |                                     | listings, directory entries, or any   |                        |
+|               |                                     | data as JSON with a schema. Triggers  |                        |
+|               |                                     | on "extract structured data", "get    |                        |
+|               |                                     | all the products", "pull pricing      |                        |
+|               |                                     | info", "extract as JSON", or when     |                        |
+|               |                                     | the user provides a JSON schema for   |                        |
+|               |                                     | website data. More powerful than      |                        |
+|               |                                     | simple scraping for multi-page        |                        |
+|               |                                     | structured extraction.                |                        |
+| ✓ ready       | 📦 firecrawl-build-interact         | Integrate Firecrawl `/interact` into  | agents-skills-personal |
+|               |                                     | product code for dynamic pages and    |                        |
+|               |                                     | browser actions after scraping. Use   |                        |
+|               |                                     | when a feature needs clicks, form     |                        |
+|               |                                     | fills, pagination, authentication-    |                        |
+|               |                                     | aware flows, or other multi-step      |                        |
+|               |                                     | interactions that plain `/scrape`     |                        |
+|               |                                     | cannot complete.                      |                        |
+| ✓ ready       | 📦 firecrawl-build-onboarding       | Get Firecrawl credentials and SDK     | agents-skills-personal |
+|               |                                     | setup into a project. Use when an     |                        |
+|               |                                     | application needs `FIRECRAWL_API_     |                        |
+|               |                                     | KEY`, when an agent should add        |                        |
+|               |                                     | Firecrawl to `.env`, when the user    |                        |
+|               |                                     | wants to authenticate Firecrawl for   |                        |
+|               |                                     | app code, or when choosing the first  |                        |
+|               |                                     | SDK and docs for a new Firecrawl      |                        |
+|               |                                     | integration. This skill includes its  |                        |
+|               |                                     | own browser auth flow, so it does     |                        |
+|               |                                     | not depend on the website onboarding  |                        |
+|               |                                     | skill.                                |                        |
+| ✓ ready       | 📦 firecrawl-build-scrape           | Integrate Firecrawl `/scrape` into    | agents-skills-personal |
+|               |                                     | product code for single-page          |                        |
+|               |                                     | extraction. Use when an app already   |                        |
+|               |                                     | has a URL and needs markdown, HTML,   |                        |
+|               |                                     | links, screenshots, metadata, or      |                        |
+|               |                                     | structured page output. Prefer this   |                        |
+|               |                                     | skill over broader crawl patterns     |                        |
+|               |                                     | when the feature is page-level.       |                        |
+| ✓ ready       | 📦 firecrawl-build-search           | Integrate Firecrawl `/search` into    | agents-skills-personal |
+|               |                                     | product code and agent workflows.     |                        |
+|               |                                     | Use when an app needs discovery       |                        |
+|               |                                     | before extraction, when the feature   |                        |
+|               |                                     | starts with a query instead of a      |                        |
+|               |                                     | URL, or when the system should        |                        |
+|               |                                     | search the web and optionally         |                        |
+|               |                                     | hydrate result content.               |                        |
+| ✓ ready       | 📦 firecrawl-crawl                  | Bulk extract content from an entire   | agents-skills-personal |
+|               |                                     | website or site section. Use this     |                        |
+|               |                                     | skill when the user wants to crawl a  |                        |
+|               |                                     | site, extract all pages from a docs   |                        |
+|               |                                     | section, bulk-scrape multiple pages   |                        |
+|               |                                     | following links, or says "crawl",     |                        |
+|               |                                     | "get all the pages", "extract         |                        |
+|               |                                     | everything under /docs", "bulk        |                        |
+|               |                                     | extract", or needs content from many  |                        |
+|               |                                     | pages on the same site. Handles       |                        |
+|               |                                     | depth limits, path filtering, and     |                        |
+|               |                                     | concurrent extraction.                |                        |
+| ✓ ready       | 📦 firecrawl-download               | Download an entire website as local   | agents-skills-personal |
+|               |                                     | files — markdown, screenshots, or     |                        |
+|               |                                     | multiple formats per page. Use this   |                        |
+|               |                                     | skill when the user wants to save a   |                        |
+|               |                                     | site locally, download documentation  |                        |
+|               |                                     | for offline use, bulk-save pages as   |                        |
+|               |                                     | files, or says "download the site",   |                        |
+|               |                                     | "save as local files", "offline       |                        |
+|               |                                     | copy", "download all the docs", or    |                        |
+|               |                                     | "save for reference". Combines site   |                        |
+|               |                                     | mapping and scraping into organized   |                        |
+|               |                                     | local directories.                    |                        |
+| ✓ ready       | 📦 firecrawl-interact               | Control and interact with a live      | agents-skills-personal |
+|               |                                     | browser session on any scraped page   |                        |
+|               |                                     | — click buttons, fill forms,          |                        |
+|               |                                     | navigate flows, and extract data      |                        |
+|               |                                     | using natural language prompts or     |                        |
+|               |                                     | code. Use when the user needs to      |                        |
+|               |                                     | interact with a webpage beyond        |                        |
+|               |                                     | simple scraping: logging into a       |                        |
+|               |                                     | site, submitting forms, clicking      |                        |
+|               |                                     | through pagination, handling          |                        |
+|               |                                     | infinite scroll, navigating multi-    |                        |
+|               |                                     | step checkout or wizard flows, or     |                        |
+|               |                                     | when a regular scrape failed because  |                        |
+|               |                                     | content is behind JavaScript          |                        |
+|               |                                     | interaction. Also useful for          |                        |
+|               |                                     | authenticated scraping via profiles.  |                        |
+|               |                                     | Triggers on "interact", "click",      |                        |
+|               |                                     | "fill out the form", "log in to",     |                        |
+|               |                                     | "sign in", "submit", "paginated",     |                        |
+|               |                                     | "next page", "infinite scroll",       |                        |
+|               |                                     | "interact with the page", "navigate   |                        |
+|               |                                     | to", "open a session", or "scrape     |                        |
+|               |                                     | failed".                              |                        |
+| ✓ ready       | 📦 firecrawl-map                    | Discover and list all URLs on a       | agents-skills-personal |
+|               |                                     | website, with optional search         |                        |
+|               |                                     | filtering. Use this skill when the    |                        |
+|               |                                     | user wants to find a specific page    |                        |
+|               |                                     | on a large site, list all URLs, see   |                        |
+|               |                                     | the site structure, find where        |                        |
+|               |                                     | something is on a domain, or says     |                        |
+|               |                                     | "map the site", "find the URL for",   |                        |
+|               |                                     | "what pages are on", or "list all     |                        |
+|               |                                     | pages". Essential when the user       |                        |
+|               |                                     | knows which site but not which exact  |                        |
+|               |                                     | page.                                 |                        |
+| ✓ ready       | 📦 firecrawl-parse                  | Efficiently extract and convert the   | agents-skills-personal |
+|               |                                     | contents of any local file—such as    |                        |
+|               |                                     | PDF, DOCX, DOC, ODT, RTF, XLSX, XLS,  |                        |
+|               |                                     | or HTML—into clean, well-formatted    |                        |
+|               |                                     | markdown saved to disk. Use this      |                        |
+|               |                                     | skill whenever the user requests to   |                        |
+|               |                                     | parse, read, or extract information   |                        |
+|               |                                     | from a file on their computer,        |                        |
+|               |                                     | including phrases like “parse this    |                        |
+|               |                                     | PDF”, “convert this document”, “read  |                        |
+|               |                                     | this file”, “extract text from”, or   |                        |
+|               |                                     | when a local file path (not a URL)    |                        |
+|               |                                     | is provided. This skill offers        |                        |
+|               |                                     | advanced options like generating AI-  |                        |
+|               |                                     | powered summaries and answering       |                        |
+|               |                                     | questions based on the file's         |                        |
+|               |                                     | content. Prefer this tool over        |                        |
+|               |                                     | `scrape` when handling local files    |                        |
+|               |                                     | to deliver precise, structured        |                        |
+|               |                                     | outputs for downstream tasks.         |                        |
+| ✓ ready       | 📦 firecrawl-scrape                 | Extract clean markdown from any URL,  | agents-skills-personal |
+|               |                                     | including JavaScript-rendered SPAs.   |                        |
+|               |                                     | Use this skill whenever the user      |                        |
+|               |                                     | provides a URL and wants its          |                        |
+|               |                                     | content, says "scrape", "grab",       |                        |
+|               |                                     | "fetch", "pull", "get the page",      |                        |
+|               |                                     | "extract from this URL", or "read     |                        |
+|               |                                     | this webpage". Handles JS-rendered    |                        |
+|               |                                     | pages, multiple concurrent URLs, and  |                        |
+|               |                                     | returns LLM-optimized markdown. Use   |                        |
+|               |                                     | this instead of WebFetch for any      |                        |
+|               |                                     | webpage content extraction.           |                        |
+| ✓ ready       | 📦 firecrawl-search                 | Web search with full page content     | agents-skills-personal |
+|               |                                     | extraction. Use this skill whenever   |                        |
+|               |                                     | the user asks to search the web,      |                        |
+|               |                                     | find articles, research a topic,      |                        |
+|               |                                     | look something up, find recent news,  |                        |
+|               |                                     | discover sources, or says "search     |                        |
+|               |                                     | for", "find me", "look up", "what     |                        |
+|               |                                     | are people saying about", or "find    |                        |
+|               |                                     | articles about". Returns real search  |                        |
+|               |                                     | results with optional full-page       |                        |
+|               |                                     | markdown — not just snippets.         |                        |
+|               |                                     | Provides capabilities beyond          |                        |
+|               |                                     | Claude's built-in WebSearch.          |                        |
+| ⏸ disabled   | ✨ gemini                           | Gemini CLI for one-shot Q&A,          | openclaw-bundled       |
+|               |                                     | summaries, and generation.            |                        |
+| ✓ ready       | 📦 gh-issues                        | Fetch GitHub issues, delegate fixes   | openclaw-bundled       |
+|               |                                     | to subagents, open PRs, watch         |                        |
+|               |                                     | reviews, or run /gh-issues workflows. |                        |
+| ⏸ disabled   | 🧲 gifgrep                          | Search GIF providers with CLI/TUI,    | openclaw-bundled       |
+|               |                                     | download results, and extract stills/ |                        |
+|               |                                     | sheets.                               |                        |
+| ✓ ready       | 📦 github                           | Interact with GitHub using the `gh`   | openclaw-workspace     |
+|               |                                     | CLI. Use `gh issue`, `gh pr`, `gh     |                        |
+|               |                                     | run`, and `gh api` for issues, PRs,   |                        |
+|               |                                     | CI runs, and advanced queries.        |                        |
+| ⏸ disabled   | 🎮 gog                              | Google Workspace CLI for Gmail,       | openclaw-bundled       |
+|               |                                     | Calendar, Drive, Contacts, Sheets,    |                        |
+|               |                                     | and Docs.                             |                        |
+| △ needs setup | 🧠 google-calendar                  | Google Calendar API integration with  | openclaw-workspace     |
+|               |                                     | managed OAuth. Create events, list    |                        |
+|               |                                     | calendars, check availability, and    |                        |
+|               |                                     | manage schedules. Use this skill      |                        |
+|               |                                     | when users want to interact with      |                        |
+|               |                                     | Google Calendar. For other third      |                        |
+|               |                                     | party apps, use the api-gateway       |                        |
+|               |                                     | skill (https://clawhub.ai/byungkyu/   |                        |
+|               |                                     | api-gateway).                         |                        |
+| ⏸ disabled   | 📍 goplaces                         | Query Google Places for text search,  | openclaw-bundled       |
+|               |                                     | place details, resolve, reviews, or   |                        |
+|               |                                     | scriptable JSON via goplaces.         |                        |
+| ✓ ready       | 📦 healthcheck                      | Audit and harden hosts running        | openclaw-bundled       |
+|               |                                     | OpenClaw for SSH, firewall, updates,  |                        |
+|               |                                     | exposure, cron checks, and risk       |                        |
+|               |                                     | posture.                              |                        |
+| ⏸ disabled   | 📧 himalaya                         | Use himalaya to list, read, search,   | openclaw-bundled       |
+|               |                                     | compose, reply, forward, and          |                        |
+|               |                                     | organize IMAP/SMTP email.             |                        |
+| ⏸ disabled   | 📨 imsg                             | iMessage/SMS CLI for listing chats,   | openclaw-bundled       |
+|               |                                     | history, and sending messages via     |                        |
+|               |                                     | Messages.app.                         |                        |
+| ✓ ready       | 📦 mcp-builder                      | Guide for creating high-quality MCP   | openclaw-workspace     |
+|               |                                     | (Model Context Protocol) servers      |                        |
+|               |                                     | that enable LLMs to interact with     |                        |
+|               |                                     | external services through well-       |                        |
+|               |                                     | designed tools. Use when building     |                        |
+|               |                                     | MCP servers to integrate external     |                        |
+|               |                                     | APIs or services, whether in Python   |                        |
+|               |                                     | (FastMCP) or Node/TypeScript (MCP     |                        |
+|               |                                     | SDK).                                 |                        |
+| ⏸ disabled   | 📦 mcporter                         | List, configure, authenticate, call,  | openclaw-bundled       |
+|               |                                     | and inspect MCP servers/tools with    |                        |
+|               |                                     | mcporter over HTTP or stdio.          |                        |
+| ⏸ disabled   | 📊 model-usage                      | Summarize CodexBar local cost logs    | openclaw-bundled       |
+|               |                                     | by model for Codex or Claude,         |                        |
+|               |                                     | including current or full breakdowns. |                        |
+| ✓ ready       | 📦 n8n-workflow-automation          | Designs and outputs n8n workflow      | openclaw-workspace     |
+|               |                                     | JSON with robust triggers,            |                        |
+|               |                                     | idempotency, error handling,          |                        |
+|               |                                     | logging, retries, and human-in-the-   |                        |
+|               |                                     | loop review queues. Use when you      |                        |
+|               |                                     | need an auditable automation that     |                        |
+|               |                                     | won’t silently fail.                  |                        |
+| ⏸ disabled   | 📄 nano-pdf                         | Edit PDFs with natural-language       | openclaw-bundled       |
+|               |                                     | instructions using the nano-pdf CLI.  |                        |
+| ✓ ready       | 📦 node-connect                     | Diagnose OpenClaw Android, iOS, or    | openclaw-bundled       |
+|               |                                     | macOS node pairing, QR/setup code,    |                        |
+|               |                                     | route, auth, and connection failures. |                        |
+| ⏸ disabled   | 📝 notion                           | Notion API for creating and managing  | openclaw-bundled       |
+|               |                                     | pages, databases, and blocks.         |                        |
+| ⏸ disabled   | 💎 obsidian                         | Work with Obsidian vaults (plain      | openclaw-bundled       |
+|               |                                     | Markdown notes) and automate via      |                        |
+|               |                                     | obsidian-cli.                         |                        |
+| ⏸ disabled   | 🎤 openai-whisper                   | Local speech-to-text with the         | openclaw-bundled       |
+|               |                                     | Whisper CLI (no API key).             |                        |
+| ⏸ disabled   | 🌐 openai-whisper-api               | Transcribe audio via OpenAI Audio     | openclaw-bundled       |
+|               |                                     | Transcriptions API (Whisper).         |                        |
+| ✓ ready       | 📦 openclaw-security-guard          | Security guard for OpenClaw users.    | openclaw-workspace     |
+|               |                                     | Audit configs, scan secrets, manage   |                        |
+|               |                                     | access, and generate security         |                        |
+|               |                                     | reports.                              |                        |
+| ⏸ disabled   | 💡 openhue                          | Control Philips Hue lights and        | openclaw-bundled       |
+|               |                                     | scenes via the OpenHue CLI.           |                        |
+| ⏸ disabled   | 🧿 oracle                           | Use oracle CLI to bundle prompts and  | openclaw-bundled       |
+|               |                                     | files for second-model debugging,     |                        |
+|               |                                     | refactor, design, or review checks.   |                        |
+| ⏸ disabled   | 🛵 ordercli                         | Foodora-only CLI for checking past    | openclaw-bundled       |
+|               |                                     | orders and active order status        |                        |
+|               |                                     | (Deliveroo WIP).                      |                        |
+| ⏸ disabled   | 👀 peekaboo                         | Capture and automate macOS UI with    | openclaw-bundled       |
+|               |                                     | the Peekaboo CLI.                     |                        |
+| ✓ ready       | 📦 regulatory-agent                 | Specialist sub-agent for Israeli      | openclaw-workspace     |
+|               |                                     | electrical regulation, IEC permits,   |                        |
+|               |                                     | Ministry of Energy rules, electrical  |                        |
+|               |                                     | inspector requirements. Activate on   |                        |
+|               |                                     | `regulatory` intent or compliance     |                        |
+|               |                                     | questions.                            |                        |
+| ⏸ disabled   | 🔊 sag                              | ElevenLabs text-to-speech with mac-   | openclaw-bundled       |
+|               |                                     | style say UX.                         |                        |
+| ✓ ready       | 🧠 Self-Improving + Proactive Agent | Self-reflection + Self-criticism +    | openclaw-workspace     |
+|               |                                     | Self-learning + Self-organizing       |                        |
+|               |                                     | memory. Agent evaluates its own       |                        |
+|               |                                     | work, catches mistakes, and improves  |                        |
+|               |                                     | permanently. Use when (1) a command,  |                        |
+|               |                                     | tool, API, or operation fails; (2)    |                        |
+|               |                                     | the user corrects you or rejects      |                        |
+|               |                                     | your work; (3) you realize your       |                        |
+|               |                                     | knowledge is outdated or incorrect;   |                        |
+|               |                                     | (4) you discover a better approach;   |                        |
+|               |                                     | (5) the user explicitly installs or   |                        |
+|               |                                     | references the skill for the current  |                        |
+|               |                                     | task.                                 |                        |
+| ⏸ disabled   | 📜 session-logs                     | Search and analyze your own session   | openclaw-bundled       |
+|               |                                     | logs (older/parent conversations)     |                        |
+|               |                                     | using jq.                             |                        |
+| ⏸ disabled   | 🔉 sherpa-onnx-tts                  | Local text-to-speech via sherpa-onnx  | openclaw-bundled       |
+|               |                                     | (offline, no cloud)                   |                        |
+| ✓ ready       | 📦 skill-creator                    | Create, edit, improve, tidy, review,  | openclaw-bundled       |
+|               |                                     | audit, or restructure AgentSkills     |                        |
+|               |                                     | and SKILL.md files.                   |                        |
+| ⏸ disabled   | 💬 slack                            | Use the Slack tool to react, pin/     | openclaw-bundled       |
+|               |                                     | unpin, send, edit, delete messages,   |                        |
+|               |                                     | or fetch Slack member info.           |                        |
+| ✓ ready       | 📦 solar-agent                      | Specialist sub-agent for solar PV     | openclaw-workspace     |
+|               |                                     | monitoring + diagnostics. Activate    |                        |
+|               |                                     | when intent is `client-fault`,        |                        |
+|               |                                     | `client-status` for a known PV site,  |                        |
+|               |                                     | or any production-related query.      |                        |
+| ⏸ disabled   | 🌊 songsee                          | Generate spectrograms and feature-    | openclaw-bundled       |
+|               |                                     | panel visualizations from audio with  |                        |
+|               |                                     | the songsee CLI.                      |                        |
+| ⏸ disabled   | 🔊 sonoscli                         | Control Sonos speakers (discover/     | openclaw-bundled       |
+|               |                                     | status/play/volume/group).            |                        |
+| ⏸ disabled   | 🎵 spotify-player                   | Terminal Spotify playback/search via  | openclaw-bundled       |
+|               |                                     | spogo (preferred) or spotify_player.  |                        |
+| ⏸ disabled   | 🧾 summarize                        | Summarize URLs or files with the      | openclaw-workspace     |
+|               |                                     | summarize CLI (web, PDFs, images,     |                        |
+|               |                                     | audio, YouTube).                      |                        |
+| ✓ ready       | 🪝 taskflow                         | Coordinate multi-step detached tasks  | openclaw-bundled       |
+|               |                                     | as one durable TaskFlow job with      |                        |
+|               |                                     | owner context, state, waits, and      |                        |
+|               |                                     | child tasks.                          |                        |
+| ✓ ready       | 📥 taskflow-inbox-triage            | Example TaskFlow pattern for inbox    | openclaw-bundled       |
+|               |                                     | triage, intent routing, waiting on    |                        |
+|               |                                     | replies, and later summaries.         |                        |
+| ⏸ disabled   | ✅ things-mac                       | Add, update, list, search, or         | openclaw-bundled       |
+|               |                                     | inspect Things 3 todos, inbox,        |                        |
+|               |                                     | today, projects, areas, and tags on   |                        |
+|               |                                     | macOS.                                |                        |
+| ⏸ disabled   | 🧵 tmux                             | Remote-control tmux sessions for      | openclaw-bundled       |
+|               |                                     | interactive CLIs by sending           |                        |
+|               |                                     | keystrokes and scraping pane output.  |                        |
+| ⏸ disabled   | 📋 trello                           | Manage Trello boards, lists, and      | openclaw-bundled       |
+|               |                                     | cards via the Trello REST API.        |                        |
+| ⏸ disabled   | 🎬 video-frames                     | Extract frames or short clips from    | openclaw-bundled       |
+|               |                                     | videos using ffmpeg.                  |                        |
+| ⏸ disabled   | 📞 voice-call                       | Start voice calls via the OpenClaw    | openclaw-bundled       |
+|               |                                     | voice-call plugin.                    |                        |
+| ⏸ disabled   | 📱 wacli                            | Send third-party WhatsApp messages    | openclaw-bundled       |
+|               |                                     | or sync/search WhatsApp history via   |                        |
+|               |                                     | wacli, not normal active chats.       |                        |
+| ✓ ready       | ☔ weather                          | Get current weather, rain,            | openclaw-bundled       |
+|               |                                     | temperature, and forecasts for        |                        |
+|               |                                     | locations or travel planning.         |                        |
+| ⏸ disabled   | 🐦 xurl                             | Use xurl for authenticated X API      | openclaw-bundled       |
+|               |                                     | posts, replies, search, DMs, media    |                        |
+|               |                                     | upload, followers, or raw v2 calls.   |                        |
++---------------+-------------------------------------+---------------------------------------+------------------------+
+
+Tip: use `openclaw skills search`, `openclaw skills install`, and `openclaw skills update` for ClawHub-backed skills.

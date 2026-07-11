@@ -1,0 +1,137 @@
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Scheduled Jobs                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  cec41867380f [active]
+    Name:      morning-urgent-digest
+    Schedule:  0 10 * * *
+    Repeat:    ∞
+    Next run:  2026-05-25T10:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-24T10:11:15.340745+03:00  error: RuntimeError: Request timed out.
+
+  072a4c8d1d93 [active]
+    Name:      evening-urgent-digest
+    Schedule:  0 22 * * *
+    Repeat:    ∞
+    Next run:  2026-05-24T22:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-22T22:00:55.317162+03:00  ok
+
+  6c8a3b4126cd [active]
+    Name:      morning-activity-neri
+    Schedule:  0 10 * * *
+    Repeat:    ∞
+    Next run:  2026-05-25T10:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-24T10:15:58.837896+03:00  ok
+
+  96b2fcaad3e2 [active]
+    Name:      evening-activity-neri
+    Schedule:  0 22 * * *
+    Repeat:    ∞
+    Next run:  2026-05-24T22:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-22T22:04:16.341942+03:00  ok
+
+  96b741beb276 [active]
+    Name:      evening-tomorrow-schedule
+    Schedule:  30 21 * * *
+    Repeat:    ∞
+    Next run:  2026-05-24T21:30:00+03:00
+    Deliver:   local
+    Last run:  2026-05-22T21:34:47.289966+03:00  ok
+
+  d83c31bf97c4 [active]
+    Name:      monday-morning-digest
+    Schedule:  0 7 * * *
+    Repeat:    ∞
+    Next run:  2026-05-25T07:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-21T07:00:15.026570+03:00  error: RuntimeError: HTTP 402: Insufficient Balance
+
+  581973d5e123 [active]
+    Name:      gmail-morning-digest
+    Schedule:  0 8 * * *
+    Repeat:    ∞
+    Next run:  2026-05-25T08:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-24T08:02:07.015154+03:00  ok
+
+  f4f308c53650 [active]
+    Name:      morning-weather-scan
+    Schedule:  30 6 * * *
+    Repeat:    ∞
+    Next run:  2026-05-25T06:30:00+03:00
+    Deliver:   local
+    Last run:  2026-05-21T06:30:51.927837+03:00  error: RuntimeError: HTTP 402: Insufficient Balance
+
+  61779a5cfa73 [active]
+    Name:      morning-deadlines
+    Schedule:  0 7 * * *
+    Repeat:    ∞
+    Next run:  2026-05-25T07:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-21T07:00:15.365245+03:00  error: RuntimeError: HTTP 402: Insufficient Balance
+
+  4082f4043d38 [active]
+    Name:      morning-gov-regulations
+    Schedule:  30 9 * * *
+    Repeat:    ∞
+    Next run:  2026-05-25T09:30:00+03:00
+    Deliver:   local
+    Last run:  2026-05-24T09:37:08.783712+03:00  ok
+
+  31b404c23bbf [active]
+    Name:      weekly-self-review
+    Schedule:  0 9 * * 0
+    Repeat:    ∞
+    Next run:  2026-05-31T09:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-24T09:20:51.909462+03:00  ok
+
+  2b913d38f296 [active]
+    Name:      bee-db-snapshot-refresh
+    Schedule:  5 6 * * *
+    Repeat:    ∞
+    Next run:  2026-05-25T06:05:00+03:00
+    Deliver:   local
+    Last run:  2026-05-21T06:05:29.971982+03:00  error: RuntimeError: HTTP 402: Insufficient Balance
+
+  0c6ef7510ae8 [active]
+    Name:      clarification-reprompt
+    Schedule:  0 * * * *
+    Repeat:    ∞
+    Next run:  2026-05-24T19:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-24T18:00:41.889885+03:00  ok
+
+  dc90530a96ce [active]
+    Name:      general-heartbeat
+    Schedule:  */30 7-21 * * *
+    Repeat:    ∞
+    Next run:  2026-05-24T19:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-24T18:32:32.373689+03:00  ok
+
+  de2847e35821 [active]
+    Name:      daily-cost-alert
+    Schedule:  30 23 * * *
+    Repeat:    ∞
+    Next run:  2026-05-24T23:30:00+03:00
+    Deliver:   local
+    Last run:  2026-05-22T23:38:54.263585+03:00  ok
+
+  03364a02edf8 [active]
+    Name:      bee-snapshot-live-refresh
+    Schedule:  */15 * * * *
+    Repeat:    ∞
+    Next run:  2026-05-24T19:00:00+03:00
+    Deliver:   local
+    Last run:  2026-05-24T18:46:28.565544+03:00  ok
+
+  ⚠  Gateway is not running — jobs won't fire automatically.
+     Start it with: hermes gateway install
+                    sudo hermes gateway install --system  # Linux servers
+

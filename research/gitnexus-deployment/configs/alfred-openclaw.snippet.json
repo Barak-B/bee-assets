@@ -1,0 +1,61 @@
+{
+  "_comment_paste_into": "~/.openclaw/openclaw.json under mcpServers key",
+  "_comment_safety": "BEFORE editing: cp ~/.openclaw/openclaw.json ~/.openclaw/openclaw.json.bak-pre-gitnexus",
+  "_comment_after": "Restart Alfred after editing. Verify with: openclaw mcp list",
+
+  "mcpServers": {
+    "gitnexus": {
+      "type": "stdio",
+      "_comment_command": "Two options below — pick A (direct, recommended) or B (via SSH if Alfred not on bee-prod-1)",
+
+      "_option_A_direct": {
+        "_use_if": "Alfred runs on the same host as gitnexus (bee-prod-1) OR you've copied the source to E:\\",
+        "command": "node",
+        "args": [
+          "/opt/gitnexus-source/gitnexus/dist/cli.js",
+          "mcp"
+        ]
+      },
+
+      "_option_B_ssh_tunnel": {
+        "_use_if": "Alfred runs on Barak's Windows PC + gitnexus runs on bee-prod-1 over Tailscale",
+        "_note": "Replace the actual mcpServers.gitnexus entry to use SSH",
+        "command": "ssh",
+        "args": [
+          "-T",
+          "-o", "ServerAliveInterval=30",
+          "-o", "ServerAliveCountMax=3",
+          "barak@bee-prod-1",
+          "node /opt/gitnexus-source/gitnexus/dist/cli.js mcp"
+        ]
+      },
+
+      "allowed_tools": [
+        "list_repos",
+        "query",
+        "context",
+        "impact",
+        "route_map",
+        "tool_map",
+        "shape_check",
+        "api_impact",
+        "detect_changes",
+        "group_list"
+      ],
+
+      "_disabled_tools_with_reason": {
+        "rename": "Can mass-rewrite files when dry_run=false (audit §3.1). Re-enable only if BEE adds confirm gate.",
+        "cypher": "Allows arbitrary Cypher queries. Trusted-operator-only — not for autonomous LLM (audit §2.1).",
+        "group_sync": "Writes contracts.json. Not needed for BEE single-repo use (audit §2.2)."
+      },
+
+      "env": {
+        "_comment": "These env vars override defaults. UNDERSTAND_QUICKLY_TOKEN is INTENTIONALLY NOT SET.",
+        "GITNEXUS_REGISTRY": "/home/barak/.gitnexus/registry.json"
+      },
+
+      "timeout_ms": 15000,
+      "_comment_timeout": "Per-tool-call timeout. Longer than typical (5s) since impact/cypher can be slow on first run."
+    }
+  }
+}

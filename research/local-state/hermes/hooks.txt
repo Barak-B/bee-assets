@@ -1,0 +1,4 @@
+No shell hooks configured in ~/.hermes/config.yaml.
+See `hermes hooks --help` or
+    website/docs/user-guide/features/hooks.md
+for the config schema and worked examples.

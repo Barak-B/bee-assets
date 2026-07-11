@@ -1,0 +1,29 @@
+{
+  "name": "bank-receipts-phase-a",
+  "version": "0.1.0",
+  "description": "Phase A: schema + lock + CsvSource + dry-run for bank-receipts ingestion (per LLD.md). Standalone reference impl — port src/ into BEE app, run migration via prisma migrate dev",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "selftest": "tsx src/cli.ts selftest",
+    "test": "node --import tsx --test tests/idempotency.test.ts",
+    "dry-run": "tsx src/cli.ts ingest --account TEST --source tests/fixture-mercantile.csv --dry-run"
+  },
+  "comment_scripts": "Run via tsx (not bare node --experimental-strip-types): Node's type-stripping does NOT rewrite '.js' import specifiers to '.ts' sources, so bare node throws ERR_MODULE_NOT_FOUND. tsx resolves them. For production, `npm run build` then run dist/*.js.",
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
+    "ioredis": "^5.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "prisma": "^5.20.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

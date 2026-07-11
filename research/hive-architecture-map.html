@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הכוורת — מפת הסוכנים החיה (Alfred ⚡ Hermes)</title>
+<style>
+  :root{
+    --bg:#0f1419; --bg-2:#1a2027; --bg-3:#232b35; --line:#2d3742;
+    --text:#e8edf2; --text-dim:#9aa5b1;
+    --accent:#ffb547; --blue:#4dabf7; --green:#34c77b; --yellow:#ffd166;
+    --red:#ef5350; --purple:#b388ff; --pink:#f06292; --teal:#2dd4bf;
+    --alfred:#b388ff; --hermes:#ffb547;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"Segoe UI","Heebo","Assistant",-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;}
+  header{background:linear-gradient(135deg,#1a2027,#0f1419);border-bottom:2px solid var(--accent);padding:14px 22px;}
+  header h1{font-size:1.45em;display:flex;align-items:center;gap:10px;}
+  header h1 .a{color:var(--alfred);} header h1 .h{color:var(--hermes);}
+  header .sub{color:var(--text-dim);font-size:.85em;margin-top:3px;}
+  .toolbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:12px;}
+  .ctrl{display:flex;flex-direction:column;gap:3px;}
+  .ctrl label{font-size:.7em;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+  .ctrl select{background:var(--bg-3);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:.85em;font-family:inherit;min-width:160px;cursor:pointer;}
+  .ctrl select:focus{outline:none;border-color:var(--accent);}
+  .btn{background:var(--bg-3);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 14px;font-size:.82em;cursor:pointer;font-family:inherit;transition:.15s;}
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .stat-strip{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:.78em;color:var(--text-dim);}
+  .stat-strip b{color:var(--text);}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:.74em;}
+  .legend span{display:flex;align-items:center;gap:5px;color:var(--text-dim);}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block;}
+
+  #stage{position:relative;width:100vw;height:calc(100vh - 196px);overflow:hidden;cursor:grab;
+    background-image:radial-gradient(circle,#1c242e 1px,transparent 1px);background-size:26px 26px;}
+  #stage.grabbing{cursor:grabbing;}
+  #world{position:absolute;top:0;right:auto;left:0;transform-origin:0 0;direction:ltr;}
+  svg#edges{position:absolute;top:0;left:0;overflow:visible;pointer-events:none;}
+  .edge{fill:none;stroke:var(--line);stroke-width:1.6;transition:stroke .25s,opacity .25s,stroke-width .25s;}
+  .edge.hive{stroke:var(--accent);stroke-width:2.2;stroke-dasharray:6 5;}
+  .edge.act{stroke:var(--accent);stroke-width:2.4;opacity:1;}
+  .edge.dim{opacity:.07;}
+  .particle{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--blue);left:0;top:0;
+    offset-rotate:0deg;box-shadow:0 0 6px var(--blue);animation:flow 3.4s linear infinite;pointer-events:none;}
+  .particle.dim{opacity:0;}
+  @keyframes flow{from{offset-distance:0%}to{offset-distance:100%}}
+
+  .node{position:absolute;width:198px;min-height:62px;background:var(--bg-2);border:1px solid var(--line);
+    border-radius:11px;padding:10px 12px 10px 14px;cursor:pointer;transition:transform .15s,box-shadow .2s,opacity .25s;
+    border-left:4px solid var(--accent);direction:rtl;}
+  .node:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.5);}
+  .node.dim{opacity:.13;}
+  .node.act{box-shadow:0 0 0 2px var(--accent),0 6px 20px rgba(255,181,71,.18);}
+  .node .ic{font-size:1.15em;}
+  .node .ttl{font-size:.92em;font-weight:700;display:flex;align-items:center;gap:7px;}
+  .node .sub{font-size:.72em;color:var(--text-dim);margin-top:3px;line-height:1.35;}
+  .node.big{width:212px;min-height:74px;background:var(--bg-3);}
+  .node.big .ttl{font-size:1.05em;}
+  .node[data-cat=source]{border-left-color:var(--blue);}
+  .node[data-cat=transport]{border-left-color:var(--green);}
+  .node[data-cat=alfred]{border-left-color:var(--alfred);}
+  .node[data-cat=hermes]{border-left-color:var(--hermes);}
+  .node[data-cat=route]{border-left-color:var(--pink);}
+  .node[data-cat=sub]{border-left-color:var(--teal);}
+  .node[data-cat=output]{border-left-color:var(--yellow);}
+
+  #panel{position:fixed;top:206px;left:14px;width:330px;max-height:calc(100vh - 230px);overflow:auto;
+    background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:20px;
+    transform:translateX(-380px);transition:transform .28s cubic-bezier(.2,.8,.2,1);z-index:30;box-shadow:0 12px 40px rgba(0,0,0,.55);direction:rtl;}
+  #panel.open{transform:translateX(0);}
+  #panel .pclose{position:absolute;top:12px;left:14px;cursor:pointer;color:var(--text-dim);font-size:1.3em;border:none;background:none;}
+  #panel .pcat{display:inline-block;font-size:.7em;padding:3px 9px;border-radius:20px;font-weight:700;margin-bottom:8px;}
+  #panel h2{font-size:1.2em;margin-bottom:4px;display:flex;gap:8px;align-items:center;}
+  #panel .prole{color:var(--text);font-size:.9em;line-height:1.6;margin:10px 0;}
+  #panel .ptech{background:var(--bg-3);border-radius:7px;padding:8px 10px;font-family:"Cascadia Code","Consolas",monospace;
+    font-size:.76em;color:var(--blue);margin:10px 0;word-break:break-all;direction:ltr;text-align:left;}
+  #panel .ptags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  #panel .ptags .tg{font-size:.68em;background:var(--bg-3);border:1px solid var(--line);border-radius:20px;padding:3px 9px;color:var(--text-dim);}
+  #panel .pgrp{font-size:.7em;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-top:14px;margin-bottom:5px;}
+
+  #zoomctl{position:fixed;bottom:18px;left:18px;display:flex;gap:6px;z-index:30;}
+  #zoomctl button{width:38px;height:38px;border-radius:9px;background:var(--bg-2);border:1px solid var(--line);color:var(--text);font-size:1.1em;cursor:pointer;}
+  #zoomctl button:hover{border-color:var(--accent);color:var(--accent);}
+  #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,20,25,.95);z-index:99;padding:40px;text-align:center;color:var(--red);font-family:monospace;}
+  .hint{position:fixed;bottom:20px;right:20px;font-size:.74em;color:var(--text-dim);z-index:20;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="a">⚡ Alfred</span> <span style="color:var(--text-dim)">×</span> <span class="h">⚕ Hermes</span> &nbsp;— הכוורת החיה</h1>
+  <div class="sub">שני סוכנים-על מפעילים תתי-סוכנים לפי מקור הקלט · סוג הבקשה · מי המבקש. קלט → עיבוד → עריכה → פלט.</div>
+  <div class="toolbar">
+    <div class="ctrl"><label>מקור קלט</label><select id="fSource"></select></div>
+    <div class="ctrl"><label>סוג בקשה</label><select id="fType"></select></div>
+    <div class="ctrl"><label>מי מבקש</label><select id="fReq"></select></div>
+    <button class="btn" id="reset">איפוס סינון</button>
+    <button class="btn" id="fit">מרכוז תצוגה</button>
+  </div>
+  <div class="stat-strip" id="stats"></div>
+  <div class="legend">
+    <span><i style="background:var(--blue)"></i>מקור</span>
+    <span><i style="background:var(--green)"></i>תחבורה/קליטה</span>
+    <span><i style="background:var(--alfred)"></i>Alfred (מוח)</span>
+    <span><i style="background:var(--hermes)"></i>Hermes (צינור+כלים)</span>
+    <span><i style="background:var(--pink)"></i>סיווג/ניתוב</span>
+    <span><i style="background:var(--teal)"></i>תת-סוכן/עיבוד</span>
+    <span><i style="background:var(--yellow)"></i>פלט</span>
+  </div>
+</header>
+
+<div id="stage">
+  <div id="world">
+    <svg id="edges"></svg>
+  </div>
+</div>
+
+<aside id="panel">
+  <button class="pclose" id="pclose">✕</button>
+  <span class="pcat" id="pcat"></span>
+  <h2 id="ptitle"></h2>
+  <div class="prole" id="prole"></div>
+  <div class="ptech" id="ptech"></div>
+  <div class="pgrp">משתתף ב־</div>
+  <div class="ptags" id="ptags"></div>
+</aside>
+
+<div id="zoomctl">
+  <button id="zin">+</button>
+  <button id="zout">−</button>
+</div>
+<div class="hint">גרור לתזוזה · גלגל לזום · לחיצה על צומת לפרטים</div>
+<div id="err"></div>
+
+<script>
+"use strict";
+try{
+
+/*DATA-START*/
+// Dimension vocabularies (the 3 axes Barak asked for)
+const SOURCES = {wa:"WhatsApp",email:"אימייל / Gmail",voice:"הודעה קולית",cal:"יומן",cron:"מתוזמן / Cron",manual:"ידני / CLI"};
+const TYPES = {"client-status":"סטטוס מלקוח","client-fault":"תקלה מלקוח","client-quote":"בקשת הצעת מחיר","client-payment":"תשלום/חשבונית",vendor:"ספק",regulatory:"רגולציה","internal-task":"משימה אישית","internal-idea":"רעיון","internal-meeting":"פגישה",noise:"רעש"};
+const REQS = {barak:"ברק (עצמי)",client:"לקוח",team:"צוות (נרי/יוסף/…)",vendor:"ספק",regulator:"רגולטור"};
+
+// 33 nodes across 6 flow stages. tags: s=sources, t=types, r=requesters ('*' = universal).
+const NODES = [
+  // col0 — sources
+  {id:"wa",col:0,row:0,cat:"source",ic:"💬",t:"WhatsApp",sub:"טקסט · תמונה · PDF · קול · ציטוט-תגובה · סיור שטח",role:"ערוץ הקלט הראשי. הודעות, תמונות חשבונית, סיורי שטח, הקלטות קוליות וכל ציטוט-תגובה נכנסים דרכו.",tech:"Baileys → bridge.js :3000",s:["wa"],ty:["*"],r:["barak","client","team","vendor"]},
+  {id:"email",col:0,row:1,cat:"source",ic:"📧",t:"אימייל / Gmail",sub:"הצעות מחיר · חשבוניות · רגולציה",role:"קלט אימייל — לדוגמה הצעת מחיר מספק או דרישת תשלום. נכנס דרך Gmail OAuth.",tech:"Gmail API (OAuth)",s:["email"],ty:["client-quote","client-payment","vendor","regulatory"],r:["client","vendor","regulator","team"]},
+  {id:"voice",col:0,row:2,cat:"source",ic:"🎤",t:"הודעה קולית",sub:"מֶמוֹ קולי → תמלול",role:"הקלטות קוליות. מתומללות (Whisper) ומטופלות כאילו הוקלדו כטקסט.",tech:"Groq Whisper large-v3",s:["voice"],ty:["*"],r:["barak"]},
+  {id:"cal",col:0,row:3,cat:"source",ic:"📅",t:"יומן",sub:"אירועים · זמינות",role:"קלט יומן — אירועים קיימים והצעת זמנים, מזין החלטות פגישה.",tech:"Google Calendar / MCP",s:["cal"],ty:["internal-meeting"],r:["barak","team"]},
+  {id:"cron",col:0,row:4,cat:"source",ic:"⏰",t:"מתוזמן / Cron",sub:"דוח בוקר · מכרזים · heartbeat",role:"טריגרים מתוזמנים (~16-18 ג'ובים): דוח בוקר, מעקב מכרזים, בדיקת דופק.",tech:"openclaw cron · jobs.json",s:["cron"],ty:["regulatory","internal-task"],r:["barak"]},
+  {id:"manual",col:0,row:5,cat:"source",ic:"⌨️",t:"ידני / CLI",sub:"הזרקה ידנית · בדיקות",role:"קלט ידני דרך CLI/stdin — לבדיקות ולהזרקת משימות.",tech:"alfred-handle.js --text",s:["manual"],ty:["*"],r:["barak"]},
+
+  // col1 — transport & ingest
+  {id:"bridge",col:1,row:0,cat:"transport",ic:"🌉",t:"Hermes Bridge",sub:"WhatsApp transport · :3000",role:"גשר ה-WhatsApp (Baileys). מתור ההודעות /messages (drain) ל-/send. עכשיו צינור בלבד.",tech:"bridge.js · GET /messages · POST /send",s:["*"],ty:["*"],r:["*"]},
+  {id:"watcher",col:1,row:1,cat:"alfred",ic:"🔄",t:"inbound-watcher",sub:"לב המיגרציה · drain → handle",role:"מושך מ-/messages, ממפה ל-handle(), מנתב פלט ל-4 היעדים החוקתיים בלבד.",tech:"alfred-inbound-watcher.js",s:["*"],ty:["*"],r:["*"]},
+  {id:"intake",col:1,row:2,cat:"alfred",ic:"🚪",t:"Intake — כל מקור",sub:"Gmail/יומן/Cron/ידני → pipeline אחיד",role:"שער הקלט המאוחד: מנרמל אירוע מכל מקור (לא רק WhatsApp), רושם ב-Work Ledger, מריץ handle ומנתב ל-4 היעדים החוקתיים. Gmail קריאה-בלבד.",tech:"alfred-intake.js · fromGmail/fromCron/fromManual",s:["email","cal","cron","manual"],ty:["*"],r:["*"]},
+  {id:"media",col:1,row:3,cat:"alfred",ic:"🖼️",t:"Media Preprocess",sub:"Vision · PDF · Whisper",role:"קדם-עיבוד מדיה: OCR לתמונות (Gemini), חילוץ PDF (pdfjs+vision), תמלול קול.",tech:"alfred-vision.js · alfred-pdf.js",s:["wa","email","voice"],ty:["*"],r:["*"]},
+
+  // col2 — the two brains
+  {id:"alfred",col:2,row:1,cat:"alfred",ic:"⚡",t:"Alfred (OpenClaw)",sub:"המוח · persona · אורקסטרטור",role:"הסוכן-העל הראשי. מהיר ומקצועי. מתזמר את כל ה-alfred-* pipeline ומחליט מי מהתתי-סוכנים פועל. הוא המוח היחיד שעונה ל-WhatsApp.",tech:"OpenClaw 2026.5.2 · alfred-handle.js",s:["*"],ty:["*"],r:["*"],big:1},
+  {id:"hermes",col:2,row:3,cat:"hermes",ic:"⚕",t:"Hermes Agent",sub:"צינור · כלים כבדים · זיכרון",role:"הסוכן-העל השני. תחבורה (גשר WhatsApp), כלי-עומק (MCP), וזיכרון הולוגרפי. עובד בצמוד ל-Alfred — חלוקת עבודה כוורתית.",tech:"Hermes v0.13 · Python gateway + Node bridge",s:["*"],ty:["*"],r:["*"],big:1},
+
+  // col3 — classify & route
+  {id:"router",col:3,row:0,cat:"route",ic:"🧭",t:"Router",sub:"סיווג 10 כוונות · ניתוב ספקים",role:"מסווג כל הודעה לאחת מ-10 כוונות, בוחר שרשרת ספקי-LLM (DeepSeek→Google→Anthropic), וצורך הקשר ציטוט-תגובה ומדיה.",tech:"alfred-router.js · router-2026-05-26-wave12.3",s:["*"],ty:["*"],r:["*"]},
+  {id:"ident",col:3,row:1,cat:"route",ic:"👤",t:"Requester Identity",sub:"ברק / לקוח / צוות / ספק",role:"מזהה מי המבקש (עצמי, לקוח, צוות, ספק, רגולטור) — קובע הרשאות ועדיפות.",tech:"roster.yaml · JID normalize",s:["*"],ty:["*"],r:["*"]},
+  {id:"correct",col:3,row:2,cat:"route",ic:"🔧",t:"Correction Detector",sub:"לולאת למידה פסיבית",role:"מזהה כשברק מתקן טיוטה של Alfred (חלון 30 דק'), שומר זוג העדפה ולומד.",tech:"alfred-correction-detector.js · decisions.sqlite",s:["*"],ty:["*"],r:["barak"]},
+  {id:"clarify",col:3,row:3,cat:"route",ic:"❓",t:"Clarify",sub:"לשאול / להוסיף / לדלג",role:"מחליט אם לשאול את ברק להבהרה, להוסיף משימה אוטומטית, או לדלג.",tech:"alfred-clarify.js",s:["*"],ty:["*"],r:["*"]},
+  {id:"swarm",col:3,row:4,cat:"route",ic:"🐝",t:"Swarm Plan",sub:"חלוקת-עבודה (15 מול 2)",role:"חוזה חלוקת-העבודה: plan(intent) מחזיר צעדים מסודרים, לכל צעד הסוכן הבעלים. יישור-מציאות 2026-05-27 — Alfred מחזיק 15 יכולות (שפה/חשיבה/מדיה + מודולי דאטא alfred-*.js: ניטור/Monday/Google/יומן), Hermes מחזיק 2 (זיכרון הולוגרפי + curator) ותחבורת WhatsApp.",tech:"alfred-swarm.js · plan()/route()",s:["*"],ty:["*"],r:["*"]},
+
+  // col4 — sub-agents / processing
+  {id:"enrich",col:4,row:0,cat:"sub",ic:"📊",t:"Enrich",sub:"DB · ניטור · יומן (במקביל)",role:"שולף הקשר במקביל: לקוח/אתר מה-DB, ניטור חי (SolarEdge/Sungrow), התראות, יומן.",tech:"alfred-enrich.js",s:["*"],ty:["*"],r:["*"]},
+  {id:"compose",col:4,row:1,cat:"sub",ic:"✍️",t:"Compose",sub:"רינדור טיוטות מתבניות",role:"מחבר טיוטת תשובה מתבנית לפי הכוונה (סטטוס/תקלה/הצעה/תשלום).",tech:"alfred-compose.js",s:["*"],ty:["client-status","client-fault","client-quote","client-payment"],r:["client"]},
+  {id:"calagent",col:4,row:2,cat:"sub",ic:"📆",t:"Calendar Agent",sub:"יצירת אירועים",role:"יוצר אירועי יומן (tasks-neri / personal) מתוך פגישות שזוהו.",tech:"calendar MCP",s:["cal","wa","voice"],ty:["internal-meeting"],r:["barak","team"]},
+  {id:"tender",col:4,row:3,cat:"sub",ic:"📋",t:"Tender Tracker",sub:"מעקב מכרזים",role:"עוקב אחרי מכרזים (קריית גת ועוד), מתוזמן יומי.",tech:"tender-tracker-mvp",s:["cron"],ty:["regulatory"],r:["regulator"]},
+  {id:"invoice",col:4,row:4,cat:"sub",ic:"🧾",t:"Invoice Maven",sub:"חשבוניות · תשלומים",role:"מטפל בהפקת/קריאת חשבוניות ודרישות תשלום.",tech:"alfred-invoice-maven.js",s:["wa","email"],ty:["client-payment","client-quote"],r:["client"]},
+  {id:"heartbeat",col:4,row:5,cat:"sub",ic:"❤️",t:"Heartbeat Watcher",sub:"שמירת בריאות מערכת",role:"שומר מפני נפילה שקטה ומפני רגרסיית מודל מחוץ-לרשימה.",tech:"heartbeat-watcher.js · cron 23:55",s:["cron"],ty:["internal-task"],r:["barak"]},
+  {id:"memory",col:4,row:6,cat:"hermes",ic:"🧠",t:"Holographic Memory",sub:"זיכרון מקומי · 0 תלויות",role:"זיכרון הולוגרפי של Hermes — שולף ושומר הקשר לאורך זמן.",tech:"Hermes holographic · SQLite",s:["*"],ty:["*"],r:["*"]},
+  {id:"curator",col:4,row:7,cat:"hermes",ic:"🗂️",t:"Curator",sub:"אצירת זיכרון",role:"אוצֵר וזיקוק זיכרון — מה לשמור, מה לתמצת.",tech:"Hermes curator.enabled",s:["*"],ty:["*"],r:["*"]},
+  {id:"tools",col:4,row:8,cat:"sub",ic:"🛠️",t:"כלי דאטא/אינטגרציה",sub:"ניטור · Monday · Google · Tracer (alfred-*.js)",role:"מודולי דאטא/אינטגרציה שרצים בצד Alfred: alfred-solaredge / alfred-monday / alfred-calendar / alfred-gmail / alfred-tracer. תוקנו מ-Hermes ל-Alfred ביישור-מציאות (2026-05-27) — Hermes אינו מוגדר עם MCP עבורם.",tech:"alfred-solaredge/monday/calendar/gmail/tracer.js",s:["*"],ty:["*"],r:["*"]},
+  {id:"ledger",col:4,row:9,cat:"sub",ic:"📒",t:"Work Ledger",sub:"מעקב קלט→פלט · כל בקשה נרשמת",role:"מנהל המשימות של הכוורת: כל בקשה מכל מקור נרשמת ועוברת received→processing→drafted→awaiting_barak→done. מוודא ששום דבר לא נופל; sweep מציף משימות תקועות לצ'אט האישי.",tech:"alfred-work-ledger.js · work-ledger.db (better-sqlite3)",s:["*"],ty:["*"],r:["*"]},
+  {id:"sweep",col:4,row:10,cat:"sub",ic:"🔔",t:"Ledger Sweep",sub:"מציף תקועים → צ'אט אישי",role:"שומר 'שום דבר לא נופל': cron מריץ sweep על ה-Work Ledger, מזהה משימות תקועות ומציף סיכום לצ'אט האישי בלבד.",tech:"alfred-ledger-sweep.js · cron · self-chat בלבד",s:["cron"],ty:["*"],r:["barak"]},
+  {id:"memgraph",col:4,row:11,cat:"sub",ic:"🕸️",t:"Memory Graph",sub:"גרף ידע מקומי · לקוחות↔אתרים↔תשלומים",role:"גרף ידע מקומי (SQLite + FTS5): ישויות + קשרים זמניים. נבנה אוטומטית מ-entityHints של הראוטר; ה-enrich מושך ממנו הקשר לכל לקוח (אתרים/תקלות/תשלומים/מי טיפל). אפס egress. נגזר מ-KLSGG/agent-memory-graph (MIT) ונכתב מחדש לעברית+B.E.E.",tech:"alfred-memory-graph.js · memory-graph.db",s:["*"],ty:["*"],r:["*"]},
+
+  // col5 — outputs
+  {id:"selfchat",col:5,row:0,cat:"output",ic:"📥",t:"צ'אט אישי",sub:"972…483@s.whatsapp.net",role:"יעד חוקתי #1 — סיכומים והבהרות לברק בלבד.",tech:"self-chat",s:["*"],ty:["*"],r:["barak"]},
+  {id:"drafts",col:5,row:1,cat:"output",ic:"📝",t:"קבוצת Drafts",sub:"120363407758194119@g.us",role:"יעד חוקתי #2 — טיוטות לבדיקה. ברק מעביר ידנית ללקוח (Alfred לעולם לא שולח ישירות ללקוח).",tech:"drafts-group",s:["*"],ty:["client-status","client-fault","client-quote","client-payment"],r:["client"]},
+  {id:"voicegrp",col:5,row:2,cat:"output",ic:"🎧",t:"קבוצת תמלולים",sub:"120363409101459201@g.us",role:"יעד חוקתי #3 — תמלולי קול + הצעת פעולה.",tech:"voice-group",s:["voice"],ty:["*"],r:["barak"]},
+  {id:"neri",col:5,row:3,cat:"output",ic:"🤝",t:"Neri sync",sub:"120363425994041413@g.us",role:"יעד חוקתי #4 — תיאום מול נרי.",tech:"neri-sync",s:["*"],ty:["*"],r:["team"]},
+  {id:"emailout",col:5,row:4,cat:"output",ic:"✉️",t:"טיוטות אימייל",sub:"בעברית · 'בתודה ובברכה'",role:"טיוטת תשובת אימייל (הצעה/תשלום/ספק) — לבדיקה לפני שליחה.",tech:"Gmail draft",s:["email"],ty:["client-quote","client-payment","vendor","regulatory"],r:["client","vendor","regulator"]},
+  {id:"calout",col:5,row:5,cat:"output",ic:"🗓️",t:"אירועי יומן",sub:"tasks-neri / personal",role:"אירוע יומן שנוצר (לאחר אישור).",tech:"Calendar event",s:["cal","wa","voice"],ty:["internal-meeting"],r:["barak","team"]},
+  {id:"tasks",col:5,row:6,cat:"output",ic:"✅",t:"TASKS.md",sub:"משימות במעקב",role:"שורת משימה שנוספה למעקב.",tech:"TASKS.md",s:["*"],ty:["internal-task"],r:["barak"]},
+  {id:"memout",col:5,row:7,cat:"output",ic:"💾",t:"כתיבת זיכרון",sub:"החלטות · העדפות · few-shot",role:"כתיבה לזיכרון: תיקונים, העדפות, דוגמאות few-shot לראוטר.",tech:"decisions.sqlite · task-examples.md",s:["*"],ty:["*"],r:["*"]},
+  {id:"archive",col:5,row:8,cat:"output",ic:"🗄️",t:"Archive — bee-data",sub:"כל ארטיפקט מאורגן + index",role:"אחסון קר מסודר של כל הדאטא של החברה: images / pdfs / voice+תמלול / conversations / summaries תחת E:/bee-data + index.jsonl לחיפוש. מקומי בלבד.",tech:"alfred-archive.js · E:/bee-data",s:["*"],ty:["*"],r:["*"]},
+];
+
+// Edges — main data flows (from → to). cat 'hive' = the two-brain coordination link.
+const EDGES = [
+  ["wa","bridge"],["voice","bridge"],["email","intake"],["cron","intake"],["manual","intake"],["cal","hermes"],
+  ["bridge","watcher"],["bridge","media"],["media","watcher"],["watcher","alfred"],
+  ["intake","alfred"],["hermes","alfred","hive"],["alfred","hermes","hive"],
+  ["alfred","router"],["router","ident"],["router","correct"],["router","clarify"],["router","enrich"],
+  ["enrich","compose"],["compose","clarify"],
+  ["router","calagent"],["router","invoice"],["cron","tender"],["cron","heartbeat"],
+  ["enrich","tools"],["enrich","memory"],["hermes","memory"],["hermes","curator"],["hermes","tools"],
+  ["clarify","selfchat"],["compose","drafts"],["compose","emailout"],["media","voicegrp"],
+  ["calagent","calout"],["clarify","tasks"],["correct","memout"],["curator","memout"],["memory","memout"],
+  ["watcher","ledger"],["ledger","sweep"],["sweep","selfchat"],
+  ["router","swarm"],["swarm","enrich"],["swarm","tools"],
+  ["media","archive"],["clarify","archive"],
+  ["watcher","memgraph"],["memgraph","enrich"],
+  ["alfred","neri","hive"],
+];
+/*DATA-END*/
+
+// ---------- layout ----------
+const COL_W=252, ROW_H=98, NODE_W=198, OFF_X=40, OFF_Y=40;
+const nodeById={};
+NODES.forEach(n=>{
+  n.s=n.s||["*"]; n.ty=n.ty||["*"]; n.r=n.r||["*"];
+  n.x=OFF_X+n.col*COL_W;
+  n.y=OFF_Y+n.row*ROW_H;
+  n.w=n.big?212:NODE_W;
+  n.h=n.big?74:62;
+  nodeById[n.id]=n;
+});
+const maxCol=Math.max(...NODES.map(n=>n.col));
+const maxRow=Math.max(...NODES.map(n=>n.row));
+const WORLD_W=OFF_X*2+maxCol*COL_W+220;
+const WORLD_H=OFF_Y*2+maxRow*ROW_H+60;
+
+const world=document.getElementById("world");
+const svg=document.getElementById("edges");
+world.style.width=WORLD_W+"px"; world.style.height=WORLD_H+"px";
+svg.setAttribute("width",WORLD_W); svg.setAttribute("height",WORLD_H);
+svg.setAttribute("viewBox","0 0 "+WORLD_W+" "+WORLD_H);
+
+// ---------- build edges ----------
+function edgePath(a,b){
+  const x1=a.x+a.w, y1=a.y+a.h/2;          // right side of source (LTR flow)
+  let x2=b.x, y2=b.y+b.h/2;                // left side of target
+  if(b.col<a.col){ x2=b.x+b.w; }           // back-edge: enter from right side
+  if(b.col===a.col){                        // same column (hive link): side loop
+    const dir=b.y>a.y?1:-1;
+    const mx=Math.max(x1,b.x+b.w)+70;
+    return "M"+x1+","+y1+" C"+(x1+70)+","+y1+" "+mx+","+((y1+y2)/2)+" "+(b.x+b.w)+","+y2;
+  }
+  const dx=Math.abs(x2-x1)*0.45;
+  return "M"+x1+","+y1+" C"+(x1+dx)+","+y1+" "+(x2-dx)+","+y2+" "+x2+","+y2;
+}
+const edgeEls=[];
+EDGES.forEach((e,i)=>{
+  const a=nodeById[e[0]], b=nodeById[e[1]];
+  if(!a||!b) return;
+  const d=edgePath(a,b);
+  const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+  p.setAttribute("d",d);
+  p.setAttribute("class","edge"+(e[2]==="hive"?" hive":""));
+  svg.appendChild(p);
+  // flow particle (CSS offset-path)
+  const part=document.createElement("div");
+  part.className="particle";
+  part.style.offsetPath="path('"+d+"')";
+  part.style.animationDelay=(-(i%5)*0.7)+"s";
+  if(e[2]==="hive") part.style.background="var(--accent)", part.style.boxShadow="0 0 6px var(--accent)";
+  world.appendChild(part);
+  edgeEls.push({from:e[0],to:e[1],pathEl:p,partEl:part});
+});
+
+// ---------- build nodes ----------
+const CATCOLOR={source:"--blue",transport:"--green",alfred:"--alfred",hermes:"--hermes",route:"--pink",sub:"--teal",output:"--yellow"};
+const nodeEls={};
+NODES.forEach(n=>{
+  const el=document.createElement("div");
+  el.className="node"+(n.big?" big":"");
+  el.setAttribute("data-cat",n.cat);
+  el.style.left=n.x+"px"; el.style.top=n.y+"px"; el.style.width=n.w+"px";
+  el.innerHTML="<div class='ttl'><span class='ic'>"+n.ic+"</span>"+n.t+"</div><div class='sub'>"+n.sub+"</div>";
+  el.addEventListener("click",ev=>{ev.stopPropagation();openPanel(n);});
+  world.appendChild(el);
+  nodeEls[n.id]=el;
+});
+
+// ---------- filters ----------
+function fill(sel,obj,allLabel){
+  let h="<option value='all'>"+allLabel+"</option>";
+  for(const k in obj) h+="<option value='"+k+"'>"+obj[k]+"</option>";
+  sel.innerHTML=h;
+}
+const fSource=document.getElementById("fSource"),fType=document.getElementById("fType"),fReq=document.getElementById("fReq");
+fill(fSource,SOURCES,"כל המקורות");
+fill(fType,TYPES,"כל סוגי הבקשה");
+fill(fReq,REQS,"כל המבקשים");
+
+function dimMatch(arr,val){ return val==="all"||arr.indexOf("*")>=0||arr.indexOf(val)>=0; }
+function applyFilter(){
+  const fs=fSource.value,ft=fType.value,fr=fReq.value;
+  const allOff=(fs==="all"&&ft==="all"&&fr==="all");
+  const active={};
+  NODES.forEach(n=>{
+    const on=allOff||(dimMatch(n.s,fs)&&dimMatch(n.ty,ft)&&dimMatch(n.r,fr));
+    active[n.id]=on;
+    nodeEls[n.id].classList.toggle("dim",!allOff&&!on);
+    nodeEls[n.id].classList.toggle("act",!allOff&&on);
+  });
+  edgeEls.forEach(e=>{
+    const on=allOff||(active[e.from]&&active[e.to]);
+    e.pathEl.classList.toggle("dim",!allOff&&!on);
+    e.pathEl.classList.toggle("act",!allOff&&on);
+    e.partEl.classList.toggle("dim",!allOff&&!on);
+  });
+}
+[fSource,fType,fReq].forEach(s=>s.addEventListener("change",applyFilter));
+document.getElementById("reset").addEventListener("click",()=>{fSource.value="all";fType.value="all";fReq.value="all";applyFilter();});
+
+// ---------- detail panel ----------
+const panel=document.getElementById("panel");
+function tagList(n){
+  const out=[];
+  const named=(arr,dict)=>arr.filter(x=>x!=="*").map(x=>dict[x]||x);
+  if(n.s.indexOf("*")<0) named(n.s,SOURCES).forEach(x=>out.push(["מקור",x]));
+  if(n.ty.indexOf("*")<0) named(n.ty,TYPES).forEach(x=>out.push(["סוג",x]));
+  if(n.r.indexOf("*")<0) named(n.r,REQS).forEach(x=>out.push(["מבקש",x]));
+  if(!out.length) out.push(["","אוניברסלי — בכל זרימה"]);
+  return out;
+}
+const CATNAME={source:"מקור קלט",transport:"תחבורה/קליטה",alfred:"Alfred — מוח",hermes:"Hermes — צינור+כלים",route:"סיווג/ניתוב",sub:"תת-סוכן/עיבוד",output:"פלט"};
+function openPanel(n){
+  document.getElementById("ptitle").innerHTML="<span>"+n.ic+"</span>"+n.t;
+  const cat=document.getElementById("pcat");
+  cat.textContent=CATNAME[n.cat];
+  const col=getComputedStyle(document.documentElement).getPropertyValue(CATCOLOR[n.cat]);
+  cat.style.background=col; cat.style.color="#0f1419";
+  document.getElementById("prole").textContent=n.role;
+  document.getElementById("ptech").textContent=n.tech;
+  const tg=document.getElementById("ptags"); tg.innerHTML="";
+  tagList(n).forEach(([k,v])=>{const s=document.createElement("span");s.className="tg";s.textContent=(k?k+": ":"")+v;tg.appendChild(s);});
+  panel.classList.add("open");
+}
+document.getElementById("pclose").addEventListener("click",()=>panel.classList.remove("open"));
+
+// ---------- pan / zoom ----------
+const stage=document.getElementById("stage");
+let zoom=1,panX=0,panY=0,drag=false,sx=0,sy=0;
+function apply(){world.style.transform="translate("+panX+"px,"+panY+"px) scale("+zoom+")";}
+function fit(){
+  const r=stage.getBoundingClientRect();
+  zoom=Math.min((r.width-40)/WORLD_W,(r.height-40)/WORLD_H,1);
+  if(!isFinite(zoom)||zoom<=0) zoom=0.75;
+  panX=(r.width-WORLD_W*zoom)/2; panY=20;
+  apply();
+}
+stage.addEventListener("mousedown",e=>{if(e.target.closest(".node"))return;drag=true;stage.classList.add("grabbing");sx=e.clientX-panX;sy=e.clientY-panY;});
+window.addEventListener("mousemove",e=>{if(!drag)return;panX=e.clientX-sx;panY=e.clientY-sy;apply();});
+window.addEventListener("mouseup",()=>{drag=false;stage.classList.remove("grabbing");});
+stage.addEventListener("click",e=>{if(!e.target.closest(".node"))panel.classList.remove("open");});
+stage.addEventListener("wheel",e=>{
+  e.preventDefault();
+  const r=stage.getBoundingClientRect(),cx=e.clientX-r.left,cy=e.clientY-r.top;
+  const f=e.deltaY<0?1.1:0.9, nz=Math.min(Math.max(zoom*f,0.3),2.5), k=nz/zoom;
+  panX=cx-(cx-panX)*k; panY=cy-(cy-panY)*k; zoom=nz; apply();
+},{passive:false});
+function zoomBtn(f){const r=stage.getBoundingClientRect(),cx=r.width/2,cy=r.height/2,nz=Math.min(Math.max(zoom*f,0.3),2.5),k=nz/zoom;panX=cx-(cx-panX)*k;panY=cy-(cy-panY)*k;zoom=nz;apply();}
+document.getElementById("zin").addEventListener("click",()=>zoomBtn(1.2));
+document.getElementById("zout").addEventListener("click",()=>zoomBtn(0.8));
+document.getElementById("fit").addEventListener("click",fit);
+
+// ---------- stats ----------
+const nSrc=NODES.filter(n=>n.cat==="source").length;
+const nOut=NODES.filter(n=>n.cat==="output").length;
+document.getElementById("stats").innerHTML=
+  "<span><b>2</b> סוכנים-על</span><span><b>"+NODES.length+"</b> צמתים</span><span><b>"+nSrc+"</b> מקורות קלט</span><span><b>10</b> סוגי בקשה</span><span><b>"+EDGES.length+"</b> זרימות</span><span><b>"+nOut+"</b> יעדי פלט</span><span><b>4</b> יעדי WhatsApp חוקתיים</span>";
+
+fit();
+
+}catch(err){
+  const e=document.getElementById("err");
+  e.style.display="flex";
+  e.textContent="שגיאת רינדור: "+err.message+"\n"+(err.stack||"");
+}
+</script>
+</body>
+</html>

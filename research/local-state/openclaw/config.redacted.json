@@ -1,0 +1,395 @@
+{
+  "gateway": {
+    "auth": {
+      "mode": "token",
+      "token": "<REDACTED>"
+    },
+    "mode": "local"
+  },
+  "meta": {
+    "lastTouchedVersion": "2026.5.2",
+    "lastTouchedAt": "2026-05-04T19:09:39.289Z"
+  },
+  "models": {
+    "providers": {
+      "perplexity": {
+        "api": "openai-completions",
+        "baseUrl": "https://api.perplexity.ai",
+        "apiKey": "<REDACTED>",
+        "models": [
+          {
+            "id": "sonar-pro",
+            "name": "Perplexity Sonar Pro",
+            "contextWindow": 200000,
+            "maxTokens": 8192,
+            "input": [
+              "text"
+            ],
+            "reasoning": false
+          }
+        ]
+      },
+      "anthropic": {
+        "api": "anthropic-messages",
+        "baseUrl": "https://api.anthropic.com",
+        "apiKey": "<REDACTED>",
+        "models": [
+          {
+            "id": "claude-opus-4-7",
+            "name": "Claude Opus 4.7",
+            "contextWindow": 200000,
+            "maxTokens": 16000,
+            "input": [
+              "text",
+              "image"
+            ],
+            "reasoning": true
+          },
+          {
+            "id": "claude-sonnet-4-6",
+            "name": "Claude Sonnet 4.6",
+            "contextWindow": 200000,
+            "maxTokens": 16000,
+            "input": [
+              "text",
+              "image"
+            ],
+            "reasoning": true
+          }
+        ]
+      },
+      "deepseek": {
+        "api": "openai-completions",
+        "baseUrl": "https://api.deepseek.com",
+        "apiKey": "<REDACTED>",
+        "models": [
+          {
+            "id": "deepseek-chat",
+            "name": "DeepSeek Chat (V3.2)",
+            "contextWindow": 128000,
+            "maxTokens": 8192,
+            "input": [
+              "text"
+            ],
+            "reasoning": false
+          },
+          {
+            "id": "deepseek-reasoner",
+            "name": "DeepSeek Reasoner (R1)",
+            "contextWindow": 128000,
+            "maxTokens": 8192,
+            "input": [
+              "text"
+            ],
+            "reasoning": true
+          }
+        ]
+      },
+      "google": {
+        "api": "google-generative-ai",
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+        "apiKey": "<REDACTED>",
+        "models": [
+          {
+            "id": "gemini-2.5-flash",
+            "name": "Gemini 2.5 Flash",
+            "contextWindow": 1048576,
+            "maxTokens": 65536,
+            "input": [
+              "text",
+              "image"
+            ],
+            "reasoning": true
+          },
+          {
+            "id": "gemini-2.5-pro",
+            "name": "Gemini 2.5 Pro",
+            "contextWindow": 1048576,
+            "maxTokens": 65536,
+            "input": [
+              "text",
+              "image"
+            ],
+            "reasoning": true
+          }
+        ]
+      }
+    }
+  },
+  "skills": {
+    "entries": {
+      "1password": {
+        "enabled": false
+      },
+      "apple-notes": {
+        "enabled": false
+      },
+      "apple-reminders": {
+        "enabled": false
+      },
+      "bear-notes": {
+        "enabled": false
+      },
+      "blogwatcher": {
+        "enabled": false
+      },
+      "blucli": {
+        "enabled": false
+      },
+      "bluebubbles": {
+        "enabled": false
+      },
+      "camsnap": {
+        "enabled": false
+      },
+      "clawhub": {
+        "enabled": false
+      },
+      "coding-agent": {
+        "enabled": false
+      },
+      "discord": {
+        "enabled": false
+      },
+      "eightctl": {
+        "enabled": false
+      },
+      "gemini": {
+        "enabled": false
+      },
+      "gifgrep": {
+        "enabled": false
+      },
+      "gog": {
+        "enabled": false
+      },
+      "goplaces": {
+        "enabled": false
+      },
+      "himalaya": {
+        "enabled": false
+      },
+      "imsg": {
+        "enabled": false
+      },
+      "mcporter": {
+        "enabled": false
+      },
+      "model-usage": {
+        "enabled": false
+      },
+      "nano-pdf": {
+        "enabled": false
+      },
+      "notion": {
+        "enabled": false
+      },
+      "obsidian": {
+        "enabled": false
+      },
+      "openai-whisper": {
+        "enabled": false
+      },
+      "openai-whisper-api": {
+        "enabled": false
+      },
+      "openhue": {
+        "enabled": false
+      },
+      "oracle": {
+        "enabled": false
+      },
+      "ordercli": {
+        "enabled": false
+      },
+      "peekaboo": {
+        "enabled": false
+      },
+      "sag": {
+        "enabled": false
+      },
+      "session-logs": {
+        "enabled": false
+      },
+      "sherpa-onnx-tts": {
+        "enabled": false
+      },
+      "slack": {
+        "enabled": false
+      },
+      "songsee": {
+        "enabled": false
+      },
+      "sonoscli": {
+        "enabled": false
+      },
+      "spotify-player": {
+        "enabled": false
+      },
+      "summarize": {
+        "enabled": false
+      },
+      "things-mac": {
+        "enabled": false
+      },
+      "tmux": {
+        "enabled": false
+      },
+      "trello": {
+        "enabled": false
+      },
+      "video-frames": {
+        "enabled": false
+      },
+      "voice-call": {
+        "enabled": false
+      },
+      "wacli": {
+        "enabled": false
+      },
+      "xurl": {
+        "enabled": false
+      },
+      "google-calendar-api": {
+        "enabled": false
+      }
+    }
+  },
+  "wizard": {
+    "lastRunAt": "2026-05-04T06:28:38.093Z",
+    "lastRunVersion": "2026.5.2",
+    "lastRunCommand": "doctor",
+    "lastRunMode": "local"
+  },
+  "plugins": {
+    "entries": {
+      "whatsapp": {
+        "enabled": true
+      },
+      "anthropic": {
+        "enabled": true
+      },
+      "deepseek": {
+        "enabled": true
+      },
+      "google": {
+        "enabled": true
+      }
+    }
+  },
+  "channels": {
+    "whatsapp": {
+      "enabled": true,
+      "accounts": {
+        "default": {
+          "enabled": true,
+          "selfChatMode": true
+        }
+      },
+      "dmPolicy": "open",
+      "groupPolicy": "open",
+      "allowFrom": [
+        "+972509554483"
+      ],
+      "groups": {
+        "*": {
+          "requireMention": false
+        }
+      },
+      "historyLimit": 500,
+      "dmHistoryLimit": 500
+    }
+  },
+  "agents": {
+    "defaults": {
+      "userTimezone": "Asia/Jerusalem",
+      "envelopeTimezone": "user",
+      "timeFormat": "24",
+      "model": {
+        "primary": "deepseek/deepseek-chat",
+        "fallbacks": [
+          "google/gemini-2.5-flash",
+          "anthropic/claude-sonnet-4-6"
+        ]
+      },
+      "models": {
+        "anthropic/claude-opus-4-7": {},
+        "anthropic/claude-sonnet-4-6": {},
+        "deepseek/deepseek-chat": {},
+        "deepseek/deepseek-reasoner": {},
+        "google/gemini-2.5-flash": {},
+        "google/gemini-2.5-pro": {}
+      },
+      "workspace": "C:\\Users\\Barak\\.openclaw\\workspace",
+      "bootstrapMaxChars": 40000,
+      "bootstrapTotalMaxChars": 120000
+    }
+  },
+  "session": {
+    "sendPolicy": {
+      "default": "deny",
+      "rules": [
+        {
+          "action": "allow",
+          "match": {
+            "channel": "whatsapp",
+            "chatType": "direct"
+          }
+        },
+        {
+          "action": "allow",
+          "match": {
+            "channel": "whatsapp",
+            "chatType": "group",
+            "rawKeyPrefix": "whatsapp:default:120363425994041413"
+          }
+        },
+        {
+          "action": "allow",
+          "match": {
+            "channel": "whatsapp",
+            "chatType": "group",
+            "rawKeyPrefix": "whatsapp:default:120363407758194119"
+          }
+        },
+        {
+          "action": "allow",
+          "match": {
+            "channel": "whatsapp",
+            "chatType": "group",
+            "rawKeyPrefix": "whatsapp:default:120363409101459201"
+          }
+        }
+      ]
+    }
+  },
+  "env": {
+    "vars": {
+      "GROQ_API_KEY": "<REDACTED>"
+    }
+  },
+  "tools": {
+    "media": {
+      "audio": {
+        "enabled": true,
+        "models": [
+          {
+            "provider": "groq",
+            "model": "whisper-large-v3",
+            "capabilities": [
+              "audio"
+            ],
+            "type": "provider"
+          }
+        ]
+      }
+    }
+  },
+  "update": {
+    "checkOnStart": false,
+    "auto": {
+      "enabled": false
+    }
+  }
+}
+

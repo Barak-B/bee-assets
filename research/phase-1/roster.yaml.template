@@ -1,0 +1,250 @@
+# roster.yaml — Phase 1 Action #4
+#
+# SOURCE: master-plan-v1-v20.md v9 Step 19 + v15 12.B Action #4
+# PURPOSE: Single source of truth for every human in BEE's orbit.
+#          Unblocks entity resolution across alfred-router, alfred-clarify,
+#          alfred-customer360, KG (Phase 2), and all downstream agents.
+#
+# HOW TO APPLY:
+#   1. Copy this file to: C:\Users\Barak\.openclaw\workspace\roster.yaml (matches alfred-identity-roster-patch.js WORKSPACE)
+#   2. Fill in TODOs (phone, email, license numbers) — Barak provides
+#   3. Wire into alfred-identity.js (see snippet at bottom)
+#   4. Test: send a WhatsApp containing "ארז" — should resolve to Erez Cohen
+#
+# MAINTENANCE:
+#   - Update whenever team changes
+#   - Auto-sync to KG :Person nodes (Phase 2)
+#   - Backup before edit
+
+version: 1
+updated: 2026-05-26
+updated_by: barak
+
+# ============================================================
+# INTERNAL TEAM (BEE employees + principals)
+# ============================================================
+employees:
+  - id: barak
+    name_he: "ברק ברזל"
+    name_en: "Barak Barzel"
+    role: principal
+    title: "Owner, Electrical Engineer"
+    phone: "+972509554483"
+    email: barak@bee.co.il          # TODO: confirm primary
+    email_secondary: barak-barzel@barak-e.com  # confirmed v17 14.A.1
+    calendars: [personal, tasks-neri, tasks-shlomi-solar]
+    licenses:
+      - electrical_contractor  # confirmed by alfred-deadlines.js tracking
+      - electrical_inspector   # רישיון בודק חשמל — TODO confirm class + expiry
+    notes: "Self-chat JID for Alfred routing."
+
+  - id: shlomi_shirazi
+    name_he: "שלמי שיראזי"
+    name_en: "Shlomi Shirazi"
+    role: sales_ops_solar
+    title: "Sales + Operations (Solar)"
+    phone: ""           # TODO
+    email: ""           # TODO — needed for tasks-shlomi-solar calendar share
+    calendars: [tasks-shlomi-solar]
+    skills: [sales, solar-design, quotes, customer-relations]
+    notes: "Owns solar sales pipeline + customer-facing."
+
+  - id: neri_lederberg
+    name_he: "נרי לדרברג"
+    name_en: "Neri Lederberg"
+    role: ai_collaboration
+    title: "AI Collaboration"
+    phone: ""           # TODO
+    email: lederbergneri@gmail.com  # confirmed in AGENTS.md L557
+    calendars: [tasks-neri]
+    skills: [ai-integration, automation, dev]
+    notes: "Co-author of Alfred + Hermes integrations."
+
+  - id: yosef
+    name_he: "יוסף"
+    name_en: ""
+    role: employee
+    phone: ""           # TODO
+    email: ""           # TODO
+    skills: []          # TODO
+
+  - id: vladimir
+    name_he: "ולדימיר"
+    name_en: "Vladimir"
+    role: employee
+    phone: ""           # TODO
+    skills: [electrical, install]
+
+  - id: layan
+    name_he: "ליאן"
+    name_en: "Layan"
+    role: employee
+    phone: ""           # TODO
+
+# ============================================================
+# CONTRACTORS (sub-contractor partners)
+# ============================================================
+contractors:
+  - id: roni
+    name_he: "רוני"
+    company: ""
+    phone: ""           # TODO
+    skills: [electrical-install]
+
+  - id: haitam_bigsol
+    name_he: "הייתם / Bigsol"
+    company: "Bigsol"
+    phone: ""           # TODO
+    skills: [electrical-install, solar-install]
+
+  - id: fares
+    name_he: "פארס"
+    phone: ""           # TODO
+
+  - id: avraham
+    name_he: "אברהם"
+    phone: ""
+
+  - id: slava
+    name_he: "סלאבה"
+    phone: ""
+
+  - id: shahar
+    name_he: "שחר"
+    phone: ""
+
+  - id: vicky
+    name_he: "ויקי"
+    phone: ""
+
+  - id: shlomi_t
+    name_he: "שלמי ת'"
+    phone: ""
+    notes: "Distinct from Shlomi Shirazi (sales)."
+
+  - id: dror
+    name_he: "דרור"
+    phone: ""
+
+# ============================================================
+# EXTERNAL INSPECTORS (electrical inspection authority)
+# ============================================================
+external_inspectors:
+  - id: erez_cohen
+    name_he: "ארז כהן"
+    name_en: "Erez Cohen"
+    role: licensed_electrical_inspector
+    phone: ""              # TODO
+    license_number: ""     # TODO
+    authority: "המשרד לכלכלה / רשות החשמל"
+    common_sites: []       # populated over time
+
+# ============================================================
+# SUPPLIERS
+# ============================================================
+suppliers:
+  - id: prime_energy
+    name: "Prime Energy"
+    role: contractor_supplier
+    contact: ""            # TODO
+    payment_terms_days: 30 # TODO confirm
+    typical_items: [panels, inverters]
+    notes: "Active install partner — Kfar Yuval project group."
+
+# ============================================================
+# KEY CUSTOMERS (commercial / enterprise)
+# Top 5 per v14 BEE picture. Many more — sync from BEE app later.
+# ============================================================
+key_customers:
+  - id: rafael_solar
+    name_he: "Rafael Solar"
+    type: enterprise
+    sites_count: 27
+    total_capacity_mw: 10.7
+    portal_access: true      # Q73 confirmed partial portal — assume enterprise yes
+    sla_tier: tier_1
+    primary_contact: ""      # TODO
+    notes: "Largest customer by capacity."
+
+  - id: palar
+    name_he: "Palar"
+    type: enterprise
+    sites_count: 28
+    total_capacity_mw: 5.6
+    portal_access: true
+    sla_tier: tier_1
+    primary_contact: ""
+
+  - id: hakal_sdrot
+    name_he: "חכל שדרות"
+    type: enterprise
+    sites_count: 48
+    total_capacity_mw: 2.6
+    portal_access: true
+    sla_tier: tier_1
+    primary_contact: ""
+    notes: "Highest site count."
+
+  - id: aguda_lemaan_hahayil
+    name_he: "האגודה למען החייל"
+    type: nonprofit
+    sites_count: 13
+    total_capacity_mw: 1.3
+    portal_access: true
+    sla_tier: tier_2
+    primary_contact: ""
+
+  - id: tzruyah
+    name_he: "צרויה"
+    type: enterprise
+    sites_count: 11
+    total_capacity_mw: 2.5
+    portal_access: true
+    sla_tier: tier_1
+    primary_contact: ""
+
+# ============================================================
+# AI / TECH COLLABORATORS (bee-hive future, bee-ai-watcher external reviewer)
+# ============================================================
+ai_collaborators:
+  - id: bee_ai_watcher_reviewer
+    name: "bee-ai-watcher external reviewer"
+    role: "Idea/AI feed review (E:\\bee-ai-watcher\\scan.js)"
+    notes: "Currently not running (Q75 confirmed). Reactivate as Hermes-side skill v17 14.D Action #16."
+
+# ============================================================
+# WIRING SNIPPET — paste into alfred-identity.js
+# ============================================================
+#
+# import fs from 'fs';
+# import yaml from 'js-yaml';
+# import path from 'path';
+#
+# const ROSTER = yaml.load(
+#   fs.readFileSync(path.join(workspace, 'roster.yaml'), 'utf-8')
+# );
+#
+# export function resolvePerson(text) {
+#   const lower = text.toLowerCase();
+#   for (const category of ['employees', 'contractors', 'external_inspectors', 'suppliers']) {
+#     for (const p of ROSTER[category] || []) {
+#       if (p.name_he && lower.includes(p.name_he.toLowerCase())) {
+#         return { ...p, category };
+#       }
+#       if (p.name_en && p.name_en && lower.toLowerCase().includes(p.name_en.toLowerCase())) {
+#         return { ...p, category };
+#       }
+#     }
+#   }
+#   return null;
+# }
+#
+# export function resolveCustomer(text) {
+#   const lower = text.toLowerCase();
+#   for (const c of ROSTER.key_customers || []) {
+#     if (c.name_he && lower.includes(c.name_he.toLowerCase())) {
+#       return c;
+#     }
+#   }
+#   return null;
+# }

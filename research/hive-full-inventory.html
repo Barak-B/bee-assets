@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B.E.E Hive — מלאי מלא: כלים · ארכיטקטורה · סוכנים · לקחים</title>
+<style>
+  :root{
+    --bg:#0f1419; --bg-2:#1a2027; --bg-3:#232b35; --line:#2d3742;
+    --text:#e8edf2; --text-dim:#9aa5b1;
+    --accent:#ffb547; --blue:#4dabf7; --green:#34c77b; --yellow:#ffd166;
+    --red:#ef5350; --purple:#b388ff; --pink:#f06292; --teal:#2dd4bf;
+    --alfred:#b388ff; --hermes:#ffb547;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"Segoe UI","Heebo","Assistant",-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;}
+  header{background:linear-gradient(135deg,#1a2027,#0f1419);border-bottom:2px solid var(--accent);padding:22px 28px;position:sticky;top:0;z-index:50;}
+  header h1{font-size:1.5em;}
+  header h1 .a{color:var(--alfred);} header h1 .h{color:var(--hermes);}
+  header .sub{color:var(--text-dim);font-size:.85em;margin-top:4px;}
+  nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  nav a{color:var(--text-dim);text-decoration:none;font-size:.8em;background:var(--bg-3);border:1px solid var(--line);border-radius:7px;padding:5px 12px;transition:.15s;}
+  nav a:hover{border-color:var(--accent);color:var(--accent);}
+  main{max-width:1180px;margin:0 auto;padding:26px 22px 80px;}
+  section{margin-top:42px;}
+  h2{font-size:1.3em;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:18px;display:flex;gap:10px;align-items:center;}
+  h3{font-size:1.05em;margin:20px 0 10px;color:var(--blue);}
+  p.lead{color:var(--text-dim);font-size:.92em;margin-bottom:14px;}
+  table{width:100%;border-collapse:collapse;font-size:.86em;margin:10px 0 18px;}
+  th{background:var(--bg-3);color:var(--accent);text-align:right;padding:8px 10px;border:1px solid var(--line);font-weight:600;}
+  td{padding:7px 10px;border:1px solid var(--line);vertical-align:top;}
+  tr:nth-child(even) td{background:var(--bg-2);}
+  code{background:var(--bg-3);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:.88em;direction:ltr;display:inline-block;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;}
+  .card{background:var(--bg-2);border:1px solid var(--line);border-radius:11px;padding:14px 16px;border-right:4px solid var(--accent);}
+  .card.alfred{border-right-color:var(--alfred);}
+  .card.hermes{border-right-color:var(--hermes);}
+  .card.spec{border-right-color:var(--teal);}
+  .card.infra{border-right-color:var(--blue);}
+  .card.lesson{border-right-color:var(--red);}
+  .card h4{font-size:.98em;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+  .card .meta{font-size:.74em;color:var(--text-dim);margin-bottom:8px;}
+  .card ul{padding-right:18px;font-size:.84em;}
+  .card li{margin:3px 0;}
+  .badge{display:inline-block;font-size:.68em;border-radius:5px;padding:2px 8px;font-weight:600;}
+  .b-live{background:#123524;color:var(--green);border:1px solid var(--green);}
+  .b-spec{background:#2d2030;color:var(--purple);border:1px solid var(--purple);}
+  .b-plan{background:#332b14;color:var(--yellow);border:1px solid var(--yellow);}
+  .b-defer{background:#2a2024;color:var(--text-dim);border:1px solid var(--line);}
+  .tier{display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:var(--bg-3);border:1px solid var(--line);font-size:.78em;font-weight:700;}
+  .t0{color:var(--green);border-color:var(--green);}
+  .t1{color:var(--teal);border-color:var(--teal);}
+  .t2{color:var(--blue);border-color:var(--blue);}
+  .t3{color:var(--purple);border-color:var(--purple);}
+  .t4{color:var(--accent);border-color:var(--accent);}
+  .arch{background:var(--bg-2);border:1px solid var(--line);border-radius:11px;padding:20px;direction:ltr;font-family:Consolas,monospace;font-size:.78em;white-space:pre;overflow-x:auto;color:var(--text-dim);}
+  .arch b{color:var(--accent);}
+  .arch .al{color:var(--alfred);} .arch .he{color:var(--hermes);} .arch .gr{color:var(--green);} .arch .bl{color:var(--blue);}
+  .kpi{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0;}
+  .kpi div{background:var(--bg-2);border:1px solid var(--line);border-radius:9px;padding:10px 18px;text-align:center;}
+  .kpi b{display:block;font-size:1.5em;color:var(--accent);}
+  .kpi span{font-size:.72em;color:var(--text-dim);}
+  footer{text-align:center;color:var(--text-dim);font-size:.75em;margin-top:60px;border-top:1px solid var(--line);padding-top:18px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>🐝 B.E.E Hive — <span class="a">Alfred</span> ⚡ <span class="h">Hermes</span> — המלאי המלא</h1>
+  <div class="sub">כלים · ארכיטקטורה · סוכנים לפרטי-פרטים · לקחים צרובים — נכון ל-12.6.2026 · נבנה מ-55 commits על PR #2</div>
+  <nav>
+    <a href="#tools">🧰 כלים</a>
+    <a href="#arch">🏛️ ארכיטקטורה</a>
+    <a href="#tiers">💰 שכבות עלות</a>
+    <a href="#agents-live">🤖 סוכנים חיים</a>
+    <a href="#agents-built">📦 רכיבים שבנינו</a>
+    <a href="#agents-spec">📐 סוכנים מתוכננים</a>
+    <a href="#lessons">🔥 לקחים</a>
+    <a href="#sync">🔄 סנכרון ידע</a>
+  </nav>
+</header>
+<main>
+
+<!-- ================= KPI ================= -->
+<div class="kpi">
+  <div><b>2,180</b><span>nodes בגרף OpenClawAgent (-Full, 13.6)</span></div>
+  <div><b>3,468</b><span>edges</span></div>
+  <div><b>293</b><span>קהילות (קוד+docs+images)</span></div>
+  <div><b>642</b><span>nodes גרף bee-assets (אחר)</span></div>
+  <div><b>16</b><span>cron jobs (11 פעילים)</span></div>
+  <div><b>13</b><span>אינטגרציות חיות ב-Alfred</span></div>
+  <div><b>84</b><span>skills ב-Hermes</span></div>
+  <div><b>~570M</b><span>tokens/חודש DeepSeek ($23)</span></div>
+</div>
+
+<!-- ================= TOOLS ================= -->
+<section id="tools">
+<h2>🧰 הכלים שאנחנו משתמשים בהם — בפועל</h2>
+
+<h3>מנועי AI (לפי שכבת עלות)</h3>
+<table>
+<tr><th>כלי</th><th>Tier</th><th>תפקיד</th><th>עלות בפועל</th></tr>
+<tr><td><b>DeepSeek v4-flash</b></td><td><span class="tier t1">1</span></td><td>סיווג bulk, חילוץ ישויות, ניקוי, תמצות docs</td><td>~$0.04/M tokens · 403M tok/חודש</td></tr>
+<tr><td><b>DeepSeek v4-pro</b></td><td><span class="tier t2">2</span></td><td>reasoning בינוני, מוח ה-Hermes gateway</td><td>166M tok/חודש · $96 balance</td></tr>
+<tr><td><b>Claude Sonnet</b></td><td><span class="tier t3">3</span></td><td>שיפוט קוגניטיבי: כוונות ליד, הצעות, סינתזה</td><td>API + subscription</td></tr>
+<tr><td><b>Claude Opus (cortex)</b></td><td><span class="tier t4">4</span></td><td>החלטות ארכיטקטוניות, briefs אטומיים בלבד</td><td>סשנים כמו זה</td></tr>
+<tr><td><b>Groq Whisper</b></td><td><span class="tier t1">1</span></td><td>תמלול עברית של voice memos</td><td>$0.04/שעה</td></tr>
+<tr><td><b>Gemini</b></td><td><span class="tier t2">2</span></td><td>vision + drafting (כולל ניסוח ה-protocol)</td><td>API</td></tr>
+</table>
+
+<h3>תשתית + פלטפורמות</h3>
+<table>
+<tr><th>כלי</th><th>איפה</th><th>תפקיד</th><th>סטטוס</th></tr>
+<tr><td><b>OpenClaw (Alfred)</b></td><td><code>E:\Desktop\OpenClawAgent</code> + <code>~/.openclaw/workspace</code></td><td>המוח הראשי: WhatsApp, crons, 13 אינטגרציות</td><td><span class="badge b-live">LIVE</span></td></tr>
+<tr><td><b>Hermes Agent</b></td><td><code>E:\bee-hermes</code> + <code>~/AppData/Local/hermes</code></td><td>Transport + bulk (16.5K הודעות/14 יום, 704 צ'אטים)</td><td><span class="badge b-live">LIVE</span></td></tr>
+<tr><td><b>Claude Code</b></td><td>מקומי + ענן</td><td>פיתוח, ביצוע סקריפטים, סשנים כמו זה</td><td><span class="badge b-live">LIVE</span></td></tr>
+<tr><td><b>Graphify 0.8.38</b></td><td><code>E:\Desktop\OpenClawAgent\graphify-out</code></td><td>גרף ידע: קוד+docs+PDF→queryable · git hook אוטומטי</td><td><span class="badge b-live">LIVE 12.6</span></td></tr>
+<tr><td><b>BEE Operations app</b></td><td>Hetzner + PostgreSQL 16</td><td>SaaS שלנו: 41 routes, 38 Prisma models, 137 לקוחות, 255 אתרים</td><td><span class="badge b-live">LIVE</span></td></tr>
+<tr><td><b>Monday.com</b></td><td>cloud</td><td>100 boards דרך GraphQL</td><td><span class="badge b-live">LIVE</span></td></tr>
+<tr><td><b>n8n</b></td><td>מתוכנן :5678</td><td>עמוד שדרה דטרמיניסטי לאוטומציות</td><td><span class="badge b-plan">NEXT</span></td></tr>
+<tr><td><b>Neo4j Community</b></td><td>מתוכנן :7474</td><td>KG ישויות עסקיות (לקוח/אתר/עבודה)</td><td><span class="badge b-plan">PLAN</span></td></tr>
+<tr><td><b>GitNexus</b></td><td>kit מוכן</td><td>impact analysis לקוד — נדחה עד צורך יומי</td><td><span class="badge b-defer">DEFER</span></td></tr>
+<tr><td><b>Tailscale</b></td><td>mesh</td><td>רשת PC ↔ bee-prod-1 ↔ אתרים</td><td><span class="badge b-live">LIVE</span></td></tr>
+<tr><td><b>Obsidian</b></td><td>vault אצל ברק</td><td>זיכרון ארוך-טווח — Hermes skill #1 (35 calls/14d)</td><td><span class="badge b-live">LIVE</span></td></tr>
+<tr><td><b>Langfuse</b></td><td>runbook מוכן (wave 9)</td><td>observability ל-LLM calls</td><td><span class="badge b-plan">READY</span></td></tr>
+<tr><td><b>Redis</b></td><td>מתוכנן :6379</td><td>distributed locks (protocol §3.2)</td><td><span class="badge b-plan">PLAN</span></td></tr>
+</table>
+
+<h3>אינטגרציות נתונים חיות (Alfred)</h3>
+<table>
+<tr><th>מקור</th><th>היקף</th><th>שימוש</th></tr>
+<tr><td>Google Calendar ×3</td><td>personal + tasks-neri + tasks-shlomi-solar</td><td>תיאום, evening digest 21:30</td></tr>
+<tr><td>Gmail</td><td>56K הודעות (OAuth) + חשבון משני barak-e.com</td><td>triage (cron מושבת — OAuth issue)</td></tr>
+<tr><td>SolarEdge</td><td>87 אתרים מנוטרים</td><td>התראות, סטטוס ייצור</td></tr>
+<tr><td>Sungrow + SMA</td><td>55 + 24 ממירים</td><td>דרך BEE app</td></tr>
+<tr><td>Tracer GPS</td><td>18 רכבים</td><td>מיקומי טכנאים, גנרטורים</td></tr>
+<tr><td>Open-Meteo</td><td>תחזית GHI/DNI 16 יום</td><td>תכנון עבודות שטח לפי מזג אוויר</td></tr>
+<tr><td>gov.il RSS</td><td>30 מילות מפתח</td><td>רגולציה: משרד האנרגיה + רשות החשמל</td></tr>
+<tr><td>Govmap</td><td>חלקה/גוש, ITM↔WGS84</td><td>איתור אתרים</td></tr>
+<tr><td>Invoice Maven</td><td>חי (cron מושבת)</td><td>חשבוניות</td></tr>
+<tr><td>דדליינים ישראליים</td><td>מע"מ, ארנונה, ביטוח</td><td>cron יומי 07:00 + 09:30</td></tr>
+</table>
+</section>
+
+<!-- ================= ARCHITECTURE ================= -->
+<section id="arch">
+<h2>🏛️ הארכיטקטורה — 4 רמות (Hermes 4-Levels)</h2>
+<p class="lead">לפי shannholmberg reference. רמות 1-2 חיות, רמה 3 בתכנון (bee-hive), רמה 4 עתידית.</p>
+<div class="arch">
+<b>L4 — Task Bus</b>            inbox → working → outbox → done            <span style="color:var(--text-dim)">[0% — עתידי]</span>
+─────────────────────────────────────────────────────────────────
+<b>L3 — Orchestrator</b>        <span class="bl">bee-hive</span> — מנתב משימות לסוכן הנכון      <span style="color:var(--text-dim)">[0% — spec בלבד]</span>
+─────────────────────────────────────────────────────────────────
+<b>L2 — Specialists</b>         <span class="al">Alfred</span> (solar/electrical specialist)     <span class="gr">[חי]</span>
+                        + skills: calendar, solar, regulatory,
+                          weather, monday, customer360...
+                        + מתוכננים: engineering-agent,
+                          tender-agent, customer-success
+─────────────────────────────────────────────────────────────────
+<b>L1 — Transport</b>           <span class="he">Hermes</span> — WhatsApp bridge (Baileys :3000)  <span class="gr">[חי]</span>
+                        DeepSeek gateway · state.db 167MB
+                        1,454 sessions · 280M tokens/14d
+─────────────────────────────────────────────────────────────────
+<b>L0 — Data</b>                BEE app (PostgreSQL · 38 models)
+                        workspace.db (1M הודעות · 14.6K chats)
+                        Graphify graph.json (2,180 nodes / 293 communities labeled)
+                        Obsidian vault · roster.yaml · sites/*.md
+</div>
+
+<h3>חוקי יסוד (constitutional)</h3>
+<table>
+<tr><th>#</th><th>חוק</th><th>פירוש</th></tr>
+<tr><td>1</td><td><b>4 destinations only</b></td><td>Alfred שולח רק ל: self-chat של ברק · קבוצת טיוטות · קבוצת תמלולים · קבוצת נרי. <b>אסור</b> לקבוצות אתרים (read-only) או ללקוחות ישירות</td></tr>
+<tr><td>2</td><td><b>Drafts pattern</b></td><td>איש קשר לא-מורשה כותב → Alfred מנסח טיוטה → ברק בוחר. אין auto-reply</td></tr>
+<tr><td>3</td><td><b>BEE app = source of truth</b></td><td>כל סוכן קורא context מה-app וכותב outputs חזרה אליו (פרדיגמת Q78). ה-AI לא חי לצד — הוא מזין</td></tr>
+<tr><td>4</td><td><b>Tier dispatch</b></td><td>Opus לא נוגע בדאטה גולמי גדל. פירוק → שיגור לנחיל → אסקלציה רק לסינתזה</td></tr>
+</table>
+</section>
+
+<!-- ================= TIERS ================= -->
+<section id="tiers">
+<h2>💰 שכבות עלות 0-4 — חוק השיגור</h2>
+<table>
+<tr><th>Tier</th><th>מנוע</th><th>מה רץ שם</th><th>דוגמה חיה</th></tr>
+<tr><td><span class="tier t0">0</span></td><td>קוד עירום: AST, regex, SQL</td><td>parsing, dedup keys, cursor pagination, סינון ב-DB</td><td>graphify extract code-only = 1,874 nodes ב-$0 (לפני docs)</td></tr>
+<tr><td><span class="tier t1">1</span></td><td>DeepSeek flash / Groq</td><td>חילוץ ישויות, סיווג bulk, תמלול</td><td>9,294 בקשות router/חודש</td></tr>
+<tr><td><span class="tier t2">2</span></td><td>Haiku / Sonnet / DS-pro</td><td>סריקות, refactors, קריאת קבצים</td><td>Hermes gateway היומיומי</td></tr>
+<tr><td><span class="tier t3">3</span></td><td>Sonnet</td><td>שיפוט: ליד חם? איזו הצעה? סיכום יומי</td><td>evening briefing 21:30</td></tr>
+<tr><td><span class="tier t4">4</span></td><td>Opus</td><td>ארכיטקטורה, briefs, החלטות שכשלו למטה</td><td>הסשן הזה</td></tr>
+</table>
+</section>
+
+<!-- ================= LIVE AGENTS ================= -->
+<section id="agents-live">
+<h2>🤖 הסוכנים החיים — מה כל אחד יודע לבצע, לפרטים</h2>
+
+<div class="grid">
+<div class="card alfred">
+  <h4>🟣 Alfred — OpenClaw <span class="badge b-live">LIVE</span></h4>
+  <div class="meta">E:\Desktop\OpenClawAgent (115 קבצי JS) · ~/.openclaw/workspace (חוקה 52KB)</div>
+  <ul>
+    <li><b>קלט:</b> WhatsApp (ערוץ יחיד פעיל), Gmail, Calendar, crons</li>
+    <li><b>סיווג:</b> 8 intents — internal-task / internal-meeting / client-status / client-fault / client-quote / client-payment / regulatory / vendor</li>
+    <li><b>Router:</b> <code>pickProviderChain()</code> — PROVIDER_PRIORITY עם classify ל-Anthropic/DeepSeek/Google + few-shot מ-task-examples.md</li>
+    <li><b>Voice:</b> תמלול memos (Groq) → סיווג task/event/site-note/idea → קבוצת תמלולים</li>
+    <li><b>Drafts:</b> מנסח תשובות לאנשי קשר לא-מורשים → קבוצת טיוטות → ברק בוחר</li>
+    <li><b>Site dossiers:</b> מאזין לקבוצות אתרים (כפר יובל +), מעדכן sites/*.md, לעולם לא עונה שם</li>
+    <li><b>Customer360:</b> חיתוך לקוח: Monday + Calendar + BEE app + היסטוריה</li>
+    <li><b>Dashboard:</b> port 8765, 7 פאנלים (inbox/WA/examples/contacts/sites/health/capability)</li>
+  </ul>
+</div>
+
+<div class="card alfred">
+  <h4>🟣 Alfred — 16 Cron Jobs <span class="badge b-live">11 פעילים</span></h4>
+  <div class="meta">המקצב היומי של העסק</div>
+  <ul>
+    <li><code>*/15</code> — bee-snapshot-live-refresh (BEE app DB sync)</li>
+    <li><code>*/30 7-21</code> — general-heartbeat</li>
+    <li><code>07:00</code> — morning-deadlines (מע"מ, ביטוח, רישוי)</li>
+    <li><code>09:30</code> — morning-gov-regulations (RSS משרד האנרגיה)</li>
+    <li><code>בוקר</code> — morning-weather-scan (תכנון שטח)</li>
+    <li><code>בוקר</code> — monday-morning-digest</li>
+    <li><code>21:30</code> — evening-tomorrow-schedule ✅ verified e2e</li>
+    <li><code>12h</code> — activity-report: git log ב-K:\BEE_Operations + E:\OpenClawAgent + Claude sessions → סיכום עברית לקבוצה</li>
+    <li>מושבתים: gmail-morning-digest (OAuth), weekly-self-review +2</li>
+  </ul>
+</div>
+
+<div class="card hermes">
+  <h4>🟠 Hermes — Transport + Bulk <span class="badge b-live">LIVE</span></h4>
+  <div class="meta">Node bridge (Baileys :3000) ⇄ Python gateway (DeepSeek) · state.db 167MB</div>
+  <ul>
+    <li><b>היקף:</b> 16,532 הודעות / 14 יום · 1,454 sessions · 704 צ'אטים פעילים</li>
+    <li><b>מוח:</b> DeepSeek V4 Pro (ראשי) + Anthropic/Gemini/Groq/Perplexity fallback</li>
+    <li><b>Persona:</b> alfred (אותה פרסונה, engine שני) — ⚡ *טקסט* פורמט</li>
+    <li><b>Skills פעילים:</b> 84 — המובילים: obsidian (35), google-workspace (21), whatsapp-crypt15-extract (10), barak-business-integrations, barak-activity-reporting, regulatory-rss-monitor</li>
+    <li><b>כלים:</b> Firecrawl (14 תתי-skills), FAL, GitHub</li>
+    <li><b>עתידי:</b> /send pipeline — 20 msg/sec עם backoff, priority lanes (Alfred מנסח → Hermes משגר)</li>
+  </ul>
+</div>
+
+<div class="card infra">
+  <h4>🔵 Graphify — גרף הידע <span class="badge b-live">LIVE 12.6</span></h4>
+  <div class="meta">v0.8.38 · 2,180 nodes / 3,468 edges / 293 communities · -Full · $0.036</div>
+  <ul>
+    <li><b>מה יודע:</b> כל פונקציה, מי קורא למה, imports, קהילות קוד — עם מספרי שורות</li>
+    <li><b>שאילתות:</b> <code>graphify query "..."</code> · <code>path A B</code> · <code>explain X</code></li>
+    <li><b>רשום על:</b> Claude Code (PreToolUse hook!) + Alfred (AGENTS.md) + Hermes (skill)</li>
+    <li><b>רענון:</b> git post-commit hook — אוטומטי, $0</li>
+    <li><b>גילויים מהגרף:</b> מחזור ה-work-ledger כולו ב-inbound-watcher (record→step→finalize→archive), enrich() קורא ל-plan() של swarm</li>
+    <li><b>הרחבות מוכנות:</b> --neo4j-push, --obsidian export, --postgres introspection, MCP server :8090</li>
+  </ul>
+</div>
+</div>
+</section>
+
+<!-- ================= BUILT COMPONENTS ================= -->
+<section id="agents-built">
+<h2>📦 מה בנינו — רכיבים מוכנים לפריסה (phase-1)</h2>
+<p class="lead">קוד כתוב + self-tested, ממתין להעתקה ל-E:\Desktop\OpenClawAgent והפעלה. כל אחד עם נתיב מתוקן לפי PATHS.md.</p>
+
+<div class="grid">
+<div class="card">
+  <h4>📒 alfred-work-ledger.js</h4>
+  <div class="meta">SQLite: ~/.openclaw/workspace/work-ledger.db</div>
+  <ul>
+    <li>כל בקשה נרשמת: input → state transitions → output</li>
+    <li>API: record() / transition() / get() / stats() / stuck() / sweep()</li>
+    <li>夜מזהה משימות תקועות (stuck &gt;90 דק')</li>
+    <li>44/44 self-tests עוברים</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>🧠 alfred-memory-graph.js</h4>
+  <div class="meta">SQLite: memory-graph.db · גרף ישויות עברי</div>
+  <ul>
+    <li>upsertEntity / addRelation / neighbors / search</li>
+    <li>ingestText — חילוץ ישויות מטקסט עברי</li>
+    <li>מחובר ל-watcher (ingest) ול-enrich (recall)</li>
+    <li>zero-egress — הכל לוקאלי</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>👁️ alfred-inbound-watcher.js</h4>
+  <div class="meta">ה-brain loop המרכזי · 44/44 self-test · dry-run e2e ✅</div>
+  <ul>
+    <li>Poll /messages → classify → route → dispatch ל-4 destinations</li>
+    <li>בעלים של מחזור ledger: record→step→finalize→archive</li>
+    <li>processVoiceEvent — תמלול+סיווג קוליות</li>
+    <li>isAllowedDestination — אכיפת חוק יסוד #1</li>
+    <li>memgraphIngest + spawnObsidianSync + spawnBackup</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>🌉 bridge-supervisor.js</h4>
+  <div class="meta">משגיח על bridge.js (WhatsApp Baileys)</div>
+  <ul>
+    <li>מחזיק את ה-bridge חי standalone · restart בטוח</li>
+    <li>עוצר על logout (לא נלחם בסשן פג)</li>
+    <li>pre-flight refusal אם session לא רשום</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>💓 heartbeat-watcher.js</h4>
+  <div class="meta">cron 23:55 — מונע הפסקות שקטות</div>
+  <ul>
+    <li>0 tokens ב-24 שעות → ⚡ לברק מיד</li>
+    <li>הלקח מההפסקה השקטה של 3 ימים (DeepSeek 402)</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>📋 tender-tracker-mvp</h4>
+  <div class="meta">tenders.db · ה-fix לאשקלון+קרית-גת שפוספסו (₪800K-3M)</div>
+  <ul>
+    <li>cron 07:00 — סריקת gov.il למכרזי חשמל/סולאר</li>
+    <li>התראות T-30/14/7/3/1</li>
+    <li>אסקלציה אם אין הגשה מאושרת</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>🔀 alfred-intake.js + alfred-swarm.js</h4>
+  <div class="meta">unified intake + חלוקת עבודה לנחיל</div>
+  <ul>
+    <li>intake: נירמול אירועים מכל המקורות לפורמט אחיד</li>
+    <li>swarm: plan() מפרק משימות לתתי-עבודות</li>
+    <li>ledger-sweep: ניקוי משימות ישנות (cron 90 דק')</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>👥 roster + identity patch</h4>
+  <div class="meta">roster.yaml.populated — מ-team.json + bee-ops snapshot</div>
+  <ul>
+    <li>15 אנשים: ברק, שלמה שירזי, נרי לדרברג, יוסף, ולדימיר, ליאן + 10 קבלנים</li>
+    <li>resolvePerson("ארז") → ארז כהן, בודק מוסמך</li>
+    <li>resolvePhone — E.164 normalization</li>
+  </ul>
+</div>
+
+<div class="card infra">
+  <h4>🚀 graphify-deployment kit</h4>
+  <div class="meta">one-shot installer — כל הגאצ'ות אפויות</div>
+  <ul>
+    <li>install-windows.ps1: discovery נתיבים, extras נכונים, .graphifyignore, extract, label (--backend= עם שווה!), git hook, אימות</li>
+    <li>index-bee-app.sh + serve-mcp.sh (systemd, Tailscale+key) + smoke-test.sh</li>
+    <li>snippets ל-Alfred + Hermes MCP</li>
+  </ul>
+</div>
+
+<div class="card infra">
+  <h4>🔐 gitnexus-deployment kit <span class="badge b-defer">DEFER</span></h4>
+  <div class="meta">מוכן במלואו — מופעל כש-impact analysis יהיה צורך יומי</div>
+  <ul>
+    <li>fork פנימי + סניטציה (@scarf הוסר) + audit</li>
+    <li>whitelist 10 כלים read-only (rename/cypher חסומים)</li>
+    <li>prepare-fork / deploy / verify-egress / smoke / rollback</li>
+  </ul>
+</div>
+</div>
+</section>
+
+<!-- ================= SPEC AGENTS ================= -->
+<section id="agents-spec">
+<h2>📐 סוכנים מתוכננים — SKILL.md מלאים, ממתינים לבנייה</h2>
+
+<div class="grid">
+<div class="card spec">
+  <h4>⚡ engineering-agent <span class="badge b-spec">SPEC · 50h</span></h4>
+  <div class="meta">ה-separator של BEE — הנדסת PV · 6 תתי-skills · ROI 20×/שנה</div>
+  <ul>
+    <li><b>pv_design_calc:</b> מידות גג + הספק יעד → strings, modules/string, DC/AC ratio</li>
+    <li><b>wire_sizing:</b> חתכי כבלים לפי תקנות החשמל + IEC 60364, voltage drop &lt;2%</li>
+    <li><b>protection_coordination:</b> מא"זים, נתיכים, RCD type B, הגנת ברק</li>
+    <li><b>bom_generator:</b> BOM xlsx עברית + מחירי ספקים + markup לפי tier לקוח</li>
+    <li><b>performance_forecast:</b> ייצור שנתי/חודשי, degradation, CO2</li>
+    <li><b>fault_analysis:</b> אבחון תקלה מנתוני SolarEdge 7 ימים → סיבות מדורגות + חלקים</li>
+    <li><b>כותב חזרה ל-BEE app</b> (פרדיגמת Q78) — לא קבצים צד</li>
+  </ul>
+</div>
+
+<div class="card spec">
+  <h4>🏆 tender-agent <span class="badge b-spec">SPEC · 32h</span></h4>
+  <div class="meta">ROI הגבוה ביותר — מכרז אחד = החזר מלא</div>
+  <ul>
+    <li><b>tender_ingest:</b> gov.il RSS + email RFP + WA forward + ידני → :Tender</li>
+    <li><b>deadline_watcher:</b> cron 07:00, התראות מדורגות עד "הגשנו??"</li>
+    <li><b>document_aggregator:</b> איסוף מסמכים נדרשים, יצירת חסרים</li>
+    <li><b>draft_preparer:</b> טיוטת מענה עברית ממכרזים דומים שזכינו</li>
+    <li><b>submission_tracker:</b> זכייה → project אוטומטי ב-BEE app</li>
+    <li>Monday board "Tenders" + 10 test scenarios</li>
+  </ul>
+</div>
+
+<div class="card spec">
+  <h4>🤝 customer-success-agent <span class="badge b-spec">SPEC · 30h</span></h4>
+  <div class="meta">ללקוחות enterprise: רפאל סולאר 10.7MW, פלאר 5.6MW...</div>
+  <ul>
+    <li><b>SLA tiers:</b> P1 השבתה 2h/8h · P2 ירידת ייצור 8h/24h · P3 שגרה 24h/5d</li>
+    <li><b>SLA timer:</b> 50% מהזמן → ⚡ ברק · חריגה → critical</li>
+    <li><b>Account health:</b> ייצור מול תחזית + תקלות + תשלומים → ציון שבועי</li>
+    <li><b>QBR generator:</b> דוח רבעוני אוטומטי ללקוח (עברית, docx)</li>
+    <li>משתלב ב-customer portal הקיים ב-BEE app</li>
+  </ul>
+</div>
+
+<div class="card spec">
+  <h4>📄 proposal-skill + cash-flow + customer-pulse <span class="badge b-spec">SPEC</span></h4>
+  <div class="meta">3 skills משלימים</div>
+  <ul>
+    <li><b>proposal:</b> design מ-engineering-agent → הצעת מחיר עברית RTL חתומה (~30h, חוסך 15h/שבוע)</li>
+    <li><b>cash-flow-snapshot:</b> תמונת תזרים מ-receipts + invoices</li>
+    <li><b>customer-pulse:</b> דופק לקוח מצטבר מכל המגעים</li>
+  </ul>
+</div>
+
+<div class="card spec">
+  <h4>🐝 bee-hive — L3 Orchestrator <span class="badge b-plan">תכנון בלבד</span></h4>
+  <div class="meta">אין קוד עדיין (Q76) · נדחה ל-Phase 4 בכוונה</div>
+  <ul>
+    <li>inbox → working → outbox → done</li>
+    <li>מנתב משימות לסוכן הנכון לפי intent + עומס</li>
+    <li>נבנה רק אחרי שיש 3+ סוכנים specialized — לא לפני</li>
+  </ul>
+</div>
+
+<div class="card spec">
+  <h4>🏦 הגל הבא: bank-receipts · n8n spine · CRM <span class="badge b-plan">NEXT</span></h4>
+  <div class="meta">לפי protocol_hive — בחירה עכשיו · המלצה: בנק קודם</div>
+  <ul>
+    <li>cursor tuple (updated_at, id) + lookback 5 דק'</li>
+    <li>distributed lock + transactional UoW</li>
+    <li>fuzzy dedup: ניקוי מיליות עברית + Levenshtein &gt;85%</li>
+    <li>validation read-back — לא סומכים על 200 OK</li>
+  </ul>
+</div>
+</div>
+</section>
+
+<!-- ================= LESSONS ================= -->
+<section id="lessons">
+<h2>🔥 הלקחים שנצרבו — מתועדים ב-protocol_hive.md + err_manifest</h2>
+
+<div class="grid">
+<div class="card lesson">
+  <h4>🔁 לולאת שכפול — יעקב מוסקוביץ'</h4>
+  <div class="meta">10.6.2026 · 4 התראות זהות ב-75 דקות</div>
+  <ul>
+    <li><b>סיבת שורש:</b> watcher פלט מחדש על כל תת-שינוי סטטוס בלי content-hash gate</li>
+    <li><b>תיקון:</b> tuple (entity, hash, state) — emit רק על שינוי אמיתי</li>
+    <li><b>חוק:</b> כל ingest = אינקרמנטלי + אידמפוטנטי + fuzzy keys</li>
+  </ul>
+</div>
+
+<div class="card lesson">
+  <h4>🗺️ נתיבים מומצאים</h4>
+  <div class="meta">PathNotFound חי אצל ברק · 9 קבצים תוקנו</div>
+  <ul>
+    <li><b>טעות:</b> סשנים המציאו E:\...\workspace\scripts — לא קיים</li>
+    <li><b>אמת:</b> סקריפטים בשורש OpenClawAgent · workspace ב-.openclaw</li>
+    <li><b>תיקון מערכתי:</b> PATHS.md קנוני + auto-discovery בסקריפטים</li>
+  </ul>
+</div>
+
+<div class="card lesson">
+  <h4>📦 extras חסרים בהתקנות</h4>
+  <div class="meta">12/12 chunks failed פעמיים</div>
+  <ul>
+    <li>backend claude → צריך [anthropic] · backend deepseek → צריך [openai]</li>
+    <li><b>חוק:</b> installer כולל את כל ה-extras מראש, לא מגלים בריצה</li>
+  </ul>
+</div>
+
+<div class="card lesson">
+  <h4>🐛 --backend= עם שווה בלבד</h4>
+  <div class="meta">graphify 0.8.38 · __main__.py:3122</div>
+  <ul>
+    <li>cluster-only/label מתעלמים בשקט מ---backend עם רווח → נופל ל-Anthropic</li>
+    <li><b>חוק:</b> כשפקודה "לא מקשיבה" — קוראים את הסורס, לא מנחשים</li>
+  </ul>
+</div>
+
+<div class="card lesson">
+  <h4>⏱️ timeout קבוע על אודיו משתנה</h4>
+  <div class="meta">Unexpected end of JSON</div>
+  <ul>
+    <li><b>תיקון:</b> timeout לפי MB + chunks 60s/10s overlap + webhook 202 async</li>
+    <li>ffmpeg upsample 8→16kHz לפני תמלול עברית</li>
+  </ul>
+</div>
+
+<div class="card lesson">
+  <h4>💸 fallback עיוור → הפסקה שקטה</h4>
+  <div class="meta">3 ימים של 0 tokens (DeepSeek 402)</div>
+  <ul>
+    <li><b>תיקון:</b> smart routing לפי סוג משימה + heartbeat-watcher 23:55</li>
+    <li>169M tokens deepseek-chat ללא הסבר — anomaly hunt פתוח</li>
+  </ul>
+</div>
+
+<div class="card lesson">
+  <h4>🧹 רעש בגרף ידע</h4>
+  <div class="meta">2,390 → 1,874 code-only → 2,180 -Full · ירידה אחרי ignore, עלייה עם docs</div>
+  <ul>
+    <li>backups/ הכפיל כל קובץ · document_cache עם ~ בנתיב שבר resolution</li>
+    <li><b>חוק:</b> .graphifyignore לפני extract ראשון, לא אחרי</li>
+  </ul>
+</div>
+
+<div class="card lesson">
+  <h4>📍 מכרזים שאבדו — אשקלון + קרית גת</h4>
+  <div class="meta">deadlines 12-13.5 עברו בלי הגשה · ₪800K-3M</div>
+  <ul>
+    <li><b>סיבת שורש:</b> מעקב מכרזים היה רק בזיכרון אנושי</li>
+    <li><b>תיקון:</b> tender-tracker-mvp + tender-agent מלא ב-spec</li>
+  </ul>
+</div>
+</div>
+</section>
+
+<!-- ================= SYNC ================= -->
+<section id="sync">
+<h2>🔄 לולאת סנכרון הידע — 3 משטחים</h2>
+<div class="arch">
+              ┌──────────────────────────┐
+              │   git commit / PR #2     │   55 commits · המקור הקנוני
+              └────────────┬─────────────┘
+                           │
+        ┌──────────────────┼───────────────────────┐
+        ▼                  ▼                       ▼
+┌───────────────┐  ┌────────────────┐  ┌─────────────────────────┐
+│   <b>Obsidian</b>    │  │   <b>Graphify</b>     │  │  <b>protocol_hive.md</b>       │
+│ vault wikilinks│  │ graph.json     │  │  הנרטיב הקנוני          │
+│ ❌ ידני עדיין │  │ ✅ git hook     │  │  ✅ נצרב 12.6           │
+└───────────────┘  └────────────────┘  └─────────────────────────┘
+</div>
+<table>
+<tr><th>משטח</th><th>סטטוס</th><th>מה חסר</th></tr>
+<tr><td>Git (bee-assets)</td><td>✅ מסונכרן</td><td>—</td></tr>
+<tr><td>Graphify (OpenClawAgent)</td><td>✅ חי + git hook</td><td>להוסיף את bee-assets כגרף שני</td></tr>
+<tr><td>Obsidian vault</td><td>❌ ידני</td><td>נתיב ה-vault לא מתועד (Q67) — ברגע שיימסר, ייכנס ל-PATHS.md + סנכרון אוטומטי</td></tr>
+</table>
+</section>
+
+<footer>
+  B.E.E Operations Hive · נבנה בסשן ענן 12.6.2026 · מקורות: protocol_hive.md · PATHS.md · master-plan v1-v20 · local-state snapshot · graphify live runs<br>
+  הקובץ הזה הוא snapshot — האמת החיה בגרף: <code>graphify query "..."</code>
+</footer>
+</main>
+</body>
+</html>
