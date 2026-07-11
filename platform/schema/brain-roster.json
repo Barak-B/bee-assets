@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-11T17:32:00Z",
+  "updatedAt": "2026-07-11T19:57:00Z",
   "canonSource": {
     "repo": "github.com/Barak-B/bee-assets",
     "branch": "cursor/hive-cortex-platform-634e",
@@ -27,10 +27,10 @@
       "trustTier": "L1",
       "canonPath": "C:\\Users\\Barak\\.hermes\\bee-canon\\BEE_CANON.md",
       "migration": {
-        "status": "in_progress",
-        "lastVerifiedAt": "2026-07-11T19:46:00Z",
-        "blocker": "Run complete-hermes-wire.ps1 then restart Hermes; verify Q&A",
-        "notes": "connect-local OK 2026-07-11: BEE_CANON.md copied to bee-canon/"
+        "status": "migrated",
+        "lastVerifiedAt": "2026-07-11T19:57:00Z",
+        "blocker": null,
+        "notes": "complete-hermes-wire OK: external_dirs bee-canon + char_limit 4096 + port 3100; restart gateway then Q&A"
       }
     },
     {
