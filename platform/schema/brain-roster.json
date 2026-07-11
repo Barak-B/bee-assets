@@ -28,9 +28,9 @@
       "canonPath": "C:\\Users\\Barak\\.hermes\\bee-canon\\BEE_CANON.md",
       "migration": {
         "status": "in_progress",
-        "lastVerifiedAt": null,
-        "blocker": "connect-local.ps1 + external_dirs + bridge_port 3100",
-        "notes": "Cloud published BEE_CANON.md; local wire package ready 2026-07-11"
+        "lastVerifiedAt": "2026-07-11T19:46:00Z",
+        "blocker": "Run complete-hermes-wire.ps1 then restart Hermes; verify Q&A",
+        "notes": "connect-local OK 2026-07-11: BEE_CANON.md copied to bee-canon/"
       }
     },
     {
