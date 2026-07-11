@@ -211,6 +211,7 @@ A 4-agent parallel review swept the whole corpus line-by-line. Outcome:
 
 | Commit | What |
 |---|---|
+| `2026-07-11b` | Dynamic brain hardening: content-hash sync, `-ForceCanon`, vault `SYNC_STATUS` heartbeat, `verify-brain-sync.ps1`, hook defaults to ForceCanon |
 | `2026-07-11` | Obsidian brain bridge: portable `obsidian-vault/` kit, bash sync twin, post-commit PS→bash fallback, BRAIN/PATHS frontmatter + `BEE_VAULT_BEE_DIR` docs |
 | `dd94654` | Audit cleanup: 2 CRIT code fixes + propagate locked decisions into LLD bodies + foundational-doc coherence |
 | `48bf564` | Wave 53/B Phase A procurement reference impl |
@@ -236,11 +237,15 @@ A 4-agent parallel review swept the whole corpus line-by-line. Outcome:
 `[[BRAIN]]` is the parent node of the whole project graph. Outbound wikilinks — so Obsidian +
 graphify draw the edges and every child shows `[[BRAIN]]` in its backlinks panel:
 
-- **Charter:** `[[protocol_hive]]` · `[[PATHS]]`
+- **Charter:** `[[protocol_hive]]` · `[[PATHS]]` · `[[SYNC_STATUS]]` (heartbeat — last sync time)
 - **Spine:** `[[Wave_53_Unified_Data_Spine]]` · `[[MVP_Build_Plan]]` · `[[decisions-2026-06-16]]`
 - **LLDs:** `[[Bank_Receipts_Ingestion_LLD]]` · `[[Procurement_Tracking_LLD]]` · `[[Proposal_Generator_LLD]]` · `[[Accounting_Ledger_LLD]]` · `[[Engineering_Agent_LLD]]` · `[[Customer_Success_Agent_LLD]]`
 - **Knowledge:** `[[Barak_Skills_Audit]]` · `[[il-einvoicing-shaam]]` · `[[il-pv-grid-connection]]` · `[[il-solar-regulation]]`
 - **Infra:** `[[Graphify]]` · `[[Alfred]]` · `[[Hermes]]` · `[[BEE Operations app]]`
+
+**Verify the dynamic loop on Barak's PC:**
+`pwsh -File research/scripts/verify-brain-sync.ps1`
+Re-sync hub from git: `pwsh -File research/scripts/sync-vault-and-graphify.ps1 -SkipPull -ForceCanon`
 
 ### 9b — Cross-brain propagation gap (the #1 finding of the 2026-06-26 sync audit)
 

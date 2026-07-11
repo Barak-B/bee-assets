@@ -71,8 +71,9 @@ tags:
 | **Source of truth** | this repo `research/**/*.md` (hub = `[[BRAIN]]`) |
 | **Live vault target** | `<vault>\3-Projects\BEE\` (canonical vault path above) |
 | **Portable vault kit** | repo-root `obsidian-vault/` (`.obsidian` config + Hebrew start note) |
-| **Windows sync** | `pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 [-DryRun]` |
+| **Windows sync** | `pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 [-DryRun] [-ForceCanon]` |
 | **Windows one-shot (from anywhere)** | `pwsh -File E:\bee-assets\research\scripts\connect-brain-to-obsidian.ps1` |
+| **Healthcheck** | `pwsh -File .\research\scripts\verify-brain-sync.ps1` |
 | **Bash / WSL / Linux sync** | `bash research/scripts/sync-vault-and-graphify.sh [--dry-run]` |
 | **Auto after every commit** | `pwsh research/scripts/install-git-hooks.ps1` (once, on Barak's PC) |
 | **Cloud caveat** | cloud cortex authors docs but cannot reach `E:\` / the vault (`protocol_hive` §5) — install + first sync are local-only |

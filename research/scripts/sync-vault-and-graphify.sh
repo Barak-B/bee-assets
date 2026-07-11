@@ -6,7 +6,7 @@
 # Cloud cortex can dry-run against a local mirror; live E:\ vault sync is Barak's PC only.
 #
 # Usage:
-#   bash research/scripts/sync-vault-and-graphify.sh [--dry-run] [--skip-pull] [--skip-vault] [--skip-graphify] [--skip-cluster]
+#   bash research/scripts/sync-vault-and-graphify.sh [--dry-run] [--skip-pull] [--skip-vault] [--skip-graphify] [--skip-cluster] [--force-canon] [--force-all]
 # Env:
 #   BEE_VAULT_BEE_DIR   — override vault BEE folder (required on non-Windows unless default exists)
 #   BEE_REPO_ROOT       — override repo root
@@ -18,6 +18,8 @@ SKIP_PULL=0
 SKIP_VAULT=0
 SKIP_GRAPHIFY=0
 SKIP_CLUSTER=0
+FORCE_CANON=0
+FORCE_ALL=0
 BACKEND="${GRAPHIFY_BACKEND:-deepseek}"
 
 for arg in "$@"; do
@@ -27,6 +29,8 @@ for arg in "$@"; do
     --skip-vault) SKIP_VAULT=1 ;;
     --skip-graphify) SKIP_GRAPHIFY=1 ;;
     --skip-cluster) SKIP_CLUSTER=1 ;;
+    --force-canon) FORCE_CANON=1 ;;
+    --force-all) FORCE_ALL=1 ;;
     --backend=*) BACKEND="${arg#*=}" ;;
     -h|--help)
       sed -n '2,16p' "$0"
@@ -84,6 +88,19 @@ else
 fi
 
 # Step 2: mirror research/**/*.md into the vault
+sha_of() { sha256sum "$1" 2>/dev/null | awk '{print $1}'; }
+is_canon() {
+  case "$(basename "$1")" in
+    BRAIN.md|PATHS.md|protocol_hive.md|AGENT_CANON.md|SYNC_STATUS.md) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+copied=0; kept=0; identical=0; forced=0
+GRAPHIFY_STATUS="skipped"
+BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+COMMIT="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || true)"
+
 if [[ "$SKIP_VAULT" -eq 0 ]]; then
   info "mirroring research/**/*.md -> $VAULT_BEE_DIR"
   vault_parent="$(dirname "$VAULT_BEE_DIR")"
@@ -91,8 +108,6 @@ if [[ "$SKIP_VAULT" -eq 0 ]]; then
     warn "vault parent '$vault_parent' not found — is the Obsidian vault path correct? (see PATHS.md). Skipping vault mirror."
     warn "Tip: export BEE_VAULT_BEE_DIR=/path/to/vault/3-Projects/BEE"
   else
-    copied=0
-    kept=0
     total=0
     while IFS= read -r -d '' f; do
       total=$((total + 1))
@@ -103,21 +118,29 @@ if [[ "$SKIP_VAULT" -eq 0 ]]; then
         echo "    would copy $rel"
         continue
       fi
-      if [[ -f "$dest" && "$dest" -nt "$f" ]]; then
-        warn "vault copy newer than repo — KEEPING vault edit, not overwriting: $rel"
+      if [[ -f "$dest" ]] && [[ "$(sha_of "$dest")" == "$(sha_of "$f")" ]]; then
+        identical=$((identical + 1))
+        continue
+      fi
+      force_this=0
+      if [[ "$FORCE_ALL" -eq 1 ]] || { [[ "$FORCE_CANON" -eq 1 ]] && is_canon "$rel"; }; then
+        force_this=1
+      fi
+      if [[ "$force_this" -eq 0 && -f "$dest" && "$dest" -nt "$f" ]]; then
+        warn "vault copy newer + different — KEEPING vault edit: $rel"
         kept=$((kept + 1))
         continue
       fi
       mkdir -p "$dest_dir"
       cp -f "$f" "$dest"
-      copied=$((copied + 1))
+      if [[ "$force_this" -eq 1 ]]; then forced=$((forced + 1)); else copied=$((copied + 1)); fi
     done < <(find "$RESEARCH_DIR" -type f -name '*.md' -print0)
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
       ok "$total markdown files (dry-run)"
     else
-      ok "$total markdown files ($copied copied, $kept vault-newer kept)"
-      [[ "$kept" -gt 0 ]] && warn "$kept vault file(s) were newer and preserved — reconcile those edits back into git."
+      ok "$total markdown files ($copied copied, $forced forced, $identical identical, $kept vault-newer kept)"
+      [[ "$kept" -gt 0 ]] && warn "$kept vault file(s) were newer and preserved — reconcile those edits back into git (or --force-all)."
     fi
   fi
 else
@@ -128,24 +151,66 @@ fi
 if [[ "$SKIP_GRAPHIFY" -eq 0 ]]; then
   if ! command -v graphify >/dev/null 2>&1; then
     warn "graphify not on PATH. Install: pip install 'graphifyy[anthropic,openai]' (PyPI pkg is 'graphifyy')."
+    GRAPHIFY_STATUS="missing-cli"
   else
     info "graphify extract . --update --backend=$BACKEND"
     if [[ "$DRY_RUN" -eq 0 ]]; then
-      (
-        cd "$RESEARCH_DIR"
-        graphify extract . --update "--backend=$BACKEND" || warn "graphify extract failed"
-        if [[ "$SKIP_CLUSTER" -eq 0 ]]; then
-          info "graphify cluster-only . --backend=$BACKEND"
-          graphify cluster-only . "--backend=$BACKEND" || warn "graphify cluster-only failed"
-        else
-          warn "skipped graphify cluster-only"
-        fi
-      )
+      pushd "$RESEARCH_DIR" >/dev/null
+      if graphify extract . --update "--backend=$BACKEND"; then
+        GRAPHIFY_STATUS="extract-ok"
+      else
+        warn "graphify extract failed"
+        GRAPHIFY_STATUS="extract-failed"
+      fi
+      if [[ "$SKIP_CLUSTER" -eq 0 ]]; then
+        info "graphify cluster-only . --backend=$BACKEND"
+        graphify cluster-only . "--backend=$BACKEND" || warn "graphify cluster-only failed"
+      else
+        warn "skipped graphify cluster-only"
+      fi
+      popd >/dev/null
       ok "graphify step finished"
+    else
+      GRAPHIFY_STATUS="dry-run"
     fi
   fi
 else
   warn "skipped graphify extract"
+  GRAPHIFY_STATUS="skipped"
+fi
+
+# Step 4: SYNC_STATUS heartbeat in vault
+if [[ "$SKIP_VAULT" -eq 0 && "$DRY_RUN" -eq 0 && -d "$VAULT_BEE_DIR" ]]; then
+  NOW="$(date '+%Y-%m-%d %H:%M:%S')"
+  HOOKS="$(git -C "$REPO_ROOT" config --get core.hooksPath 2>/dev/null || true)"
+  cat >"$VAULT_BEE_DIR/SYNC_STATUS.md" <<EOF
+---
+aliases:
+  - SYNC_STATUS
+  - סטטוס סנכרון
+tags:
+  - bee
+  - sync
+  - status
+---
+
+# \`[[SYNC_STATUS]]\` — dynamic brain heartbeat
+
+> Auto-written by sync-vault-and-graphify.sh. Do not hand-edit.
+> Hub: \`[[BRAIN]]\`
+
+| Field | Value |
+|---|---|
+| **Last sync** | $NOW |
+| **Branch** | \`$BRANCH\` |
+| **Commit** | \`$COMMIT\` |
+| **Copied / forced / identical / kept** | $copied / $forced / $identical / $kept |
+| **Graphify** | $GRAPHIFY_STATUS |
+| **Hooks path** | \`$HOOKS\` |
+
+Verify: \`pwsh -File research/scripts/verify-brain-sync.ps1\`
+EOF
+  ok "wrote vault SYNC_STATUS.md (heartbeat)"
 fi
 
 echo

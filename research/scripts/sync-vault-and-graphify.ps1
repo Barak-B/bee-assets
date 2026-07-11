@@ -38,11 +38,19 @@
   '--backend=X' equals form, which is the only one that works.
 .PARAMETER DryRun
   Show what would happen without copying or extracting.
+.PARAMETER ForceCanon
+  Always overwrite hub canon files in the vault even if vault copy is newer:
+  BRAIN.md, PATHS.md, protocol_hive.md, AGENT_CANON.md, SYNC_STATUS.md.
+  Use this to keep the dynamic brain authoritative from git.
+.PARAMETER ForceAll
+  Overwrite EVERY vault markdown from git (destructive to Obsidian hand-edits).
 
 .EXAMPLE
   pwsh research/scripts/sync-vault-and-graphify.ps1
 .EXAMPLE
   pwsh research/scripts/sync-vault-and-graphify.ps1 -SkipPull -DryRun
+.EXAMPLE
+  pwsh research/scripts/sync-vault-and-graphify.ps1 -SkipPull -ForceCanon
 #>
 [CmdletBinding()]
 param(
@@ -53,6 +61,8 @@ param(
   [switch]$SkipGraphify,
   [switch]$SkipCluster,
   [switch]$PushCanonToAgents,   # OPT-IN: also push AGENT_CANON.md into the live agents' memory dirs
+  [switch]$ForceCanon,
+  [switch]$ForceAll,
   [string]$Backend = "deepseek",
   [switch]$DryRun
 )
@@ -102,6 +112,21 @@ if (-not $SkipPull) {
 } else { Warn "skipped git pull" }
 
 # ── Step 2: mirror research/**/*.md into the vault ─────────────────────────
+$canonNames = @("BRAIN.md", "PATHS.md", "protocol_hive.md", "AGENT_CANON.md", "SYNC_STATUS.md")
+$copied = 0; $kept = 0; $identical = 0; $forced = 0
+$graphifyStatus = "skipped"
+$branch = ""; $commit = ""
+try {
+  Push-Location $RepoRoot
+  $branch = (git rev-parse --abbrev-ref HEAD 2>$null)
+  $commit = (git rev-parse --short HEAD 2>$null)
+} finally { Pop-Location }
+
+function Get-Sha([string]$p) {
+  if (-not (Test-Path $p)) { return $null }
+  return (Get-FileHash -Algorithm SHA256 -Path $p).Hash
+}
+
 if (-not $SkipVault) {
   Info "mirroring research/**/*.md -> $VaultBeeDir"
   $vaultParent = Split-Path $VaultBeeDir -Parent
@@ -109,26 +134,34 @@ if (-not $SkipVault) {
     Warn "vault parent '$vaultParent' not found — is the Obsidian vault path correct? (see PATHS.md). Skipping vault mirror."
   } else {
     $mdFiles = Get-ChildItem -Path $researchDir -Recurse -Filter *.md -File
-    $copied = 0; $kept = 0
     foreach ($f in $mdFiles) {
       $rel = $f.FullName.Substring($researchDir.Length).TrimStart('\','/')
       $dest = Join-Path $VaultBeeDir $rel
       $destDir = Split-Path $dest -Parent
+      $base = Split-Path $rel -Leaf
+      $isCanon = $canonNames -contains $base
       if ($DryRun) { Write-Host "    would copy $rel"; continue }
-      # NON-DESTRUCTIVE: if the vault copy is NEWER than the repo file, Barak edited it in
-      # Obsidian — do NOT clobber his work. Skip + warn. (git remains source of truth, but we
-      # never silently destroy a hand-edit; reconcile it back into git manually.)
-      if ((Test-Path $dest) -and ((Get-Item $dest).LastWriteTime -gt $f.LastWriteTime)) {
-        Warn "vault copy newer than repo — KEEPING vault edit, not overwriting: $rel"
+
+      # Content-hash: if identical, skip (Obsidian often bumps mtime without edits).
+      if ((Test-Path $dest) -and ((Get-Sha $dest) -eq (Get-Sha $f.FullName))) {
+        $identical++; continue
+      }
+
+      $forceThis = $ForceAll -or ($ForceCanon -and $isCanon)
+      if (-not $forceThis -and (Test-Path $dest) -and ((Get-Item $dest).LastWriteTime -gt $f.LastWriteTime)) {
+        # Conflict: different content AND vault newer — keep vault (non-destructive),
+        # except ForceCanon hubs which stay under git authority.
+        Warn "vault copy newer + different — KEEPING vault edit: $rel"
         $kept++; continue
       }
+
       if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
       Copy-Item -Path $f.FullName -Destination $dest -Force
-      $copied++
+      if ($forceThis) { $forced++ } else { $copied++ }
     }
-    $status = if ($DryRun) { "(dry-run)" } else { "($copied copied, $kept vault-newer kept)" }
+    $status = if ($DryRun) { "(dry-run)" } else { "($copied copied, $forced forced, $identical identical, $kept vault-newer kept)" }
     Ok "$($mdFiles.Count) markdown files $status"
-    if ($kept -gt 0) { Warn "$kept vault file(s) were newer and preserved — reconcile those edits back into git." }
+    if ($kept -gt 0) { Warn "$kept vault file(s) were newer and preserved — reconcile those edits back into git (or -ForceAll)." }
   }
 } else { Warn "skipped vault mirror" }
 
@@ -137,6 +170,7 @@ if (-not $SkipGraphify) {
   $graphify = Get-Command graphify -ErrorAction SilentlyContinue
   if (-not $graphify) {
     Warn "graphify not on PATH. Install: pip install 'graphifyy[anthropic,openai]'  (PyPI pkg is 'graphifyy' — double y; CLI is 'graphify')."
+    $graphifyStatus = "missing-cli"
   } else {
     # ALWAYS the equals form — '--backend $Backend' (space) is silently ignored by 0.8.38.
     Info "graphify extract . --update --backend=$Backend   (output -> research/graphify-out/)"
@@ -144,8 +178,13 @@ if (-not $SkipGraphify) {
       Push-Location $researchDir
       try {
         & graphify extract . --update "--backend=$Backend" 2>&1 | ForEach-Object { "    $_" }
-        if ($LASTEXITCODE -ne 0) { Warn "graphify exited $LASTEXITCODE — check the [anthropic]+[openai] extras + DEEPSEEK_API_KEY env." }
-        else { Ok "graphify graph rebuilt" }
+        if ($LASTEXITCODE -ne 0) {
+          Warn "graphify exited $LASTEXITCODE — check the [anthropic]+[openai] extras + DEEPSEEK_API_KEY env."
+          $graphifyStatus = "extract-failed"
+        } else {
+          Ok "graphify graph rebuilt"
+          $graphifyStatus = "extract-ok"
+        }
 
         # cluster-only regenerates GRAPH_REPORT.md + names communities (a separate LLM pass
         # that `extract` does NOT do). Pricier than incremental extract, so the per-commit
@@ -153,13 +192,15 @@ if (-not $SkipGraphify) {
         if (-not $SkipCluster) {
           Info "graphify cluster-only . --backend=$Backend   (regenerates GRAPH_REPORT.md + community names)"
           & graphify cluster-only . "--backend=$Backend" 2>&1 | ForEach-Object { "    $_" }
-          if ($LASTEXITCODE -ne 0) { Warn "graphify cluster-only exited $LASTEXITCODE" }
-          else { Ok "GRAPH_REPORT.md + communities named" }
+          if ($LASTEXITCODE -ne 0) { Warn "graphify cluster-only exited $LASTEXITCODE"; $graphifyStatus = "cluster-failed" }
+          else { Ok "GRAPH_REPORT.md + communities named"; $graphifyStatus = "extract+cluster-ok" }
         } else { Warn "skipped graphify cluster-only (run manually for a fresh GRAPH_REPORT.md)" }
       } finally { Pop-Location }
+    } else {
+      $graphifyStatus = "dry-run"
     }
   }
-} else { Warn "skipped graphify extract" }
+} else { Warn "skipped graphify extract"; $graphifyStatus = "skipped" }
 
 # ── Step 4 (OPT-IN): push AGENT_CANON.md into the live agents' memory dirs ──────────────
 # The §6 loop is otherwise one-way (git -> vault/graph) and never reaches Alfred/Hermes, so
@@ -185,8 +226,62 @@ if ($PushCanonToAgents) {
   }
 } elseif (-not $DryRun) { Info "canon push to agents: OFF (use -PushCanonToAgents once the agent-side read is wired — BRAIN §10)" }
 
+# ── Step 5: write SYNC_STATUS.md into the vault (dynamic brain heartbeat) ──
+if (-not $SkipVault -and -not $DryRun -and (Test-Path $VaultBeeDir)) {
+  $now = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+  $graphAge = "n/a"
+  $gj = Join-Path $researchDir "graphify-out\graph.json"
+  if (Test-Path $gj) {
+    $graphAge = "{0:N1}h" -f (((Get-Date) - (Get-Item $gj).LastWriteTime).TotalHours)
+  }
+  $hooks = ""
+  try { Push-Location $RepoRoot; $hooks = (git config --get core.hooksPath 2>$null) } finally { Pop-Location }
+  $statusBody = @"
+---
+aliases:
+  - SYNC_STATUS
+  - סטטוס סנכרון
+tags:
+  - bee
+  - sync
+  - status
+---
+
+# ``[[SYNC_STATUS]]`` — dynamic brain heartbeat
+
+> Auto-written by ``sync-vault-and-graphify.ps1``. Do not hand-edit (next sync overwrites).
+> Hub: ``[[BRAIN]]``
+
+| Field | Value |
+|---|---|
+| **Last sync** | $now |
+| **Branch** | ``$branch`` |
+| **Commit** | ``$commit`` |
+| **Vault target** | ``$VaultBeeDir`` |
+| **Copied / forced / identical / kept** | $copied / $forced / $identical / $kept |
+| **Graphify** | $graphifyStatus (graph.json age: $graphAge) |
+| **Hooks path** | ``$hooks`` |
+| **ForceCanon** | $ForceCanon |
+| **PushCanonToAgents** | $PushCanonToAgents |
+
+## Loop
+
+``````
+git (research/**/*.md)  →  Obsidian vault (wikilinks)  →  Graphify (research/graphify-out/)
+``````
+
+Verify: ``pwsh -File research/scripts/verify-brain-sync.ps1``
+"@
+  # Use single backticks in the written file — fix the double-backtick escaping above
+  $statusBody = $statusBody -replace '``', '`'
+  $statusPath = Join-Path $VaultBeeDir "SYNC_STATUS.md"
+  Set-Content -Path $statusPath -Value $statusBody -Encoding utf8
+  Ok "wrote vault SYNC_STATUS.md (heartbeat)"
+}
+
 # Release the single-runner lock (stale locks self-heal after 30min if the script crashed).
 if (-not $DryRun -and (Test-Path $lockFile)) { Remove-Item $lockFile -Force -ErrorAction SilentlyContinue }
 
 Write-Host ""
 Write-Host "Done. Commit research/graphify-out/ if it changed, so the graph stays in git too (§6 loop)." -ForegroundColor White
+Write-Host "Verify: pwsh -File research/scripts/verify-brain-sync.ps1" -ForegroundColor Cyan

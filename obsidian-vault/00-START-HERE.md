@@ -9,61 +9,54 @@ tags:
   - obsidian
 ---
 
-# התחל כאן — חיבור המוח לאובסידיאן
+# התחל כאן — מוח דינמי (BRAIN → Obsidian → Graphify)
 
-זה דף הכניסה לחבילת הגשר. **המוח עצמו** הוא הערה `[[BRAIN]]`.
+המוח: `[[BRAIN]]` · דופק סנכרון: `[[SYNC_STATUS]]`
 
-## חשוב
+## מצב נוכחי אצלך (אחרי ההתקנה)
 
-1. **לא מ־`C:\Users\Barak`** — הסקריפטים בתוך `E:\bee-assets`.
-2. אם `git checkout` נכשל בגלל שינויים מקומיים — קודם **stash**, אחר כך checkout.
+✅ vault mirror רץ · ✅ hook מותקן · 🟡 Graphify דולג בריצה הראשונה (`-SkipGraphify`)
 
-## אם אתה תקוע עכשיו (העתק־הדבק את כל הבלוק)
+## ודא שהלולאה חיה (העתק־הדבק)
 
 ```powershell
 cd E:\bee-assets
+git pull
 
-# שומר את השינויים המקומיים בצד (graphify-out / protocol_hive וכו')
-git stash push -u -m "pre-brain-obsidian"
+# כפיית קבצי קנון (BRAIN/PATHS/protocol_hive/AGENT_CANON) + heartbeat
+pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 -SkipPull -ForceCanon
 
-# עובר לענף עם הגשר + המוח
-git fetch origin
-git checkout cursor/brain-obsidian-bridge-436d
-git pull origin cursor/brain-obsidian-bridge-436d
-
-# מסנכרן ל־vault ומתקין hook
-pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 -SkipPull -SkipGraphify
-pwsh -File .\research\scripts\install-git-hooks.ps1
+# בדיקת בריאות מלאה (PASS/WARN/FAIL)
+pwsh -File .\research\scripts\verify-brain-sync.ps1
 ```
 
-אחרי זה באובסידיאן: חפש **`BRAIN`** או **`מוח`**.
+באובסידיאן: פתח `BRAIN`, ואז `SYNC_STATUS` — אמור להראות זמן סנכרון אחרון.
 
-לבדוק מה נשמר ב־stash:
+## Graphify (החלק החסר בלולאה)
+
+אם `verify` אומר ש־graphify חסר / ישן:
 
 ```powershell
-git stash list
-# אם תרצה להחזיר (זהירות — עלול להתנגש):
-# git stash pop
+pip install "graphifyy[anthropic,openai]"
+# הגדר DEEPSEEK_API_KEY לסשן (לא User-scope — ראה graphify-deployment README)
+pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 -SkipPull -ForceCanon
+# בלי -SkipGraphify → extract אינקרמנטלי
 ```
 
-## אחרי שהענף כבר אצלך
+ברירת המחדל של ה־hook אחרי commit: vault + graphify extract + `-ForceCanon` (בלי cluster היקר).
+
+Vault-only (אם רוצים לחסוך API):
 
 ```powershell
-pwsh -File E:\bee-assets\research\scripts\connect-brain-to-obsidian.ps1
+setx BEE_HOOK_ARGS "-SkipPull -SkipGraphify -ForceCanon"
 ```
 
-## מה זה הסנכרון?
+## סוכנים חיים (Alfred / Hermes) — אופציונלי
 
-| מקור | יעד |
-|---|---|
-| `bee-assets/research/**/*.md` | vault → `3-Projects/BEE/` |
-| `[[BRAIN]]` | hub / MOC |
-| Graphify | `research/graphify-out/` (אופציונלי) |
-
-פרטים: [[README]] · [[PATHS]] · [[protocol_hive]]
+עדיין OFF כברירת מחדל. פירוט: `research/scripts/WIRE_AGENTS_TO_CANON.md`
 
 ## אל תעשה
 
-- אל תריץ מ־home בלי `cd E:\bee-assets`
-- אל תדביק מילולית `<הנתיב-שמצאת>` — זה היה placeholder
-- אל תריץ `graphify hook install` על הריפו הזה — יש `install-git-hooks.ps1`
+- אל תדביק פלט שגיאות / באנרים של PowerShell חזרה לטרמינל
+- אל תריץ מ־`C:\Users\Barak` בלי `cd E:\bee-assets`
+- אל תריץ `graphify hook install` על הריפו — יש `install-git-hooks.ps1`

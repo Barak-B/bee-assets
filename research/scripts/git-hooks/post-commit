@@ -31,7 +31,7 @@ command -v pwsh >/dev/null 2>&1 && PS=pwsh
 [ -z "$PS" ] && command -v powershell.exe >/dev/null 2>&1 && PS=powershell.exe
 
 if [ -n "$PS" ] && [ -f "$PS_SCRIPT" ]; then
-  ARGS="${BEE_HOOK_ARGS:--SkipPull -SkipCluster}"
+  ARGS="${BEE_HOOK_ARGS:--SkipPull -SkipCluster -ForceCanon}"
   ( "$PS" -NoProfile -File "$PS_SCRIPT" $ARGS >>"$LOG" 2>&1 ; echo "[$(date '+%Y-%m-%d %H:%M:%S')] sync exit=$? runner=$PS args=$ARGS" >>"$LOG" ) &
   echo "[post-commit] vault+graphify refresh started (PS=$PS) — log: $LOG"
   exit 0
@@ -39,7 +39,7 @@ fi
 
 # Bash fallback (WSL / Linux / macOS / cloud dry-run machines).
 if [ -f "$SH_SCRIPT" ]; then
-  ARGS="${BEE_HOOK_ARGS:---skip-pull --skip-cluster}"
+  ARGS="${BEE_HOOK_ARGS:---skip-pull --skip-cluster --force-canon}"
   ( bash "$SH_SCRIPT" $ARGS >>"$LOG" 2>&1 ; echo "[$(date '+%Y-%m-%d %H:%M:%S')] sync exit=$? runner=bash args=$ARGS" >>"$LOG" ) &
   echo "[post-commit] vault+graphify refresh started (bash) — log: $LOG"
   exit 0
