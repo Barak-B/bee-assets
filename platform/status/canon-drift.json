@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-07-11T17:32:05.811Z",
+  "loop": "collect.canon-drift",
+  "canonFile": "/workspace/platform/canon/BEE_CANON.md",
+  "factResults": [
+    {
+      "id": "bank_mercantile_17",
+      "present": true
+    },
+    {
+      "id": "vat_monthly",
+      "present": true
+    },
+    {
+      "id": "law1_four_destinations",
+      "present": true
+    },
+    {
+      "id": "law2_human_picks",
+      "present": true
+    },
+    {
+      "id": "invoice_maven",
+      "present": true
+    },
+    {
+      "id": "no_invent_facts",
+      "present": true
+    }
+  ],
+  "missingFacts": [],
+  "brainIssues": [
+    {
+      "id": "alfred",
+      "severity": "high",
+      "msg": "live brain not migrated (in_progress): Run platform/connections/connect-local.ps1 then AGENTS.md step 5"
+    },
+    {
+      "id": "hermes",
+      "severity": "high",
+      "msg": "live brain not migrated (in_progress): connect-local.ps1 + external_dirs + bridge_port 3100"
+    }
+  ],
+  "critical": true,
+  "recommendation": "Run platform/connections/connect-local.ps1 on Barak PC; re-run connect-cloud.mjs after"
+}

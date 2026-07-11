@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-11T17:10:00Z",
+  "updatedAt": "2026-07-11T17:32:00Z",
   "canonSource": {
     "repo": "github.com/Barak-B/bee-assets",
-    "branch": "claude/capability-extensions-collection-JjV2s",
-    "path": "research/AGENT_CANON.md"
+    "branch": "cursor/hive-cortex-platform-634e",
+    "path": "platform/canon/AGENT_CANON.md"
   },
   "brains": [
     {
@@ -16,8 +16,8 @@
       "migration": {
         "status": "in_progress",
         "lastVerifiedAt": null,
-        "blocker": "Needs WIRE_AGENTS_TO_CANON Step 1 (AGENTS.md startup) on Barak PC",
-        "notes": "PushCanonToAgents script exists; constitutional edit awaits Barak"
+        "blocker": "Run platform/connections/connect-local.ps1 then AGENTS.md step 5",
+        "notes": "Cloud published BEE_CANON.md; local wire package ready 2026-07-11"
       }
     },
     {
@@ -29,8 +29,8 @@
       "migration": {
         "status": "in_progress",
         "lastVerifiedAt": null,
-        "blocker": "Needs external_dirs + bridge_port 3100",
-        "notes": "Same wire runbook Step 2–3"
+        "blocker": "connect-local.ps1 + external_dirs + bridge_port 3100",
+        "notes": "Cloud published BEE_CANON.md; local wire package ready 2026-07-11"
       }
     },
     {
@@ -38,12 +38,12 @@
       "runtime": "cursor-cloud",
       "role": "Cloud cortex — architecture, reference code, orchestration design",
       "trustTier": "L0",
-      "canonPath": "docs/HIVE_CORTEX_PLATFORM.md + docs/MAX_KNOWLEDGE_BASE.md",
+      "canonPath": "platform/canon/BEE_CANON.md",
       "migration": {
         "status": "migrated",
-        "lastVerifiedAt": "2026-07-11T17:10:00Z",
+        "lastVerifiedAt": "2026-07-11T17:32:00Z",
         "blocker": null,
-        "notes": "Bootstrapped this session; still cannot reach E:\\ vault"
+        "notes": "Cloud connections suite green for canon publish; E:\\ still unreachable"
       }
     },
     {

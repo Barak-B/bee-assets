@@ -10,7 +10,8 @@
       "costTier": 0,
       "trustTier": "L0",
       "enabled": true,
-      "description": "Compare brain-roster expected canon facts vs live agent answers / file mtimes"
+      "entrypoint": "platform/connections/collect-canon-drift.mjs",
+      "description": "Compare published canon facts + roster migration status (cloud-safe)"
     },
     {
       "name": "collect.bank",

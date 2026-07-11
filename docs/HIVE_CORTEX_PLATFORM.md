@@ -196,12 +196,14 @@ brain-roster.json מוודא מי עלה / מי נסחף
 
 ---
 
-## 10 — הצעד הבא המיידי
+## 10 — סטטוס חיבורים (התחיל 2026-07-11)
 
-1. לאשר את האמנה הזו (המסמך)  
-2. **P0 על המכונה:** להריץ `WIRE_AGENTS_TO_CANON` (Alfred + Hermes)  
-3. **P0 בענן:** roster + job schema (כבר ב-`platform/`)  
-4. **P1:** supervisor מינימלי + `collect.canon-drift`  
-5. במקביל: dropoffs OB ל-spine (בנק/IM) כדי ש-Collect/Dispatch יהיו על דאטה אמיתי
+**ענן — חי:** canon publish · drift loop · connection suite · Trust Gate · Max migrated.  
+פרטים: [`CONNECTIONS_STATUS.md`](./CONNECTIONS_STATUS.md)
+
+**ממתין לברק:**
+1. `platform/connections/connect-local.ps1` על Windows → Alfred + Hermes  
+2. Auth ל-Monday MCP ב-Cursor Desktop  
+3. (אופציונלי) Notion · sync Obsidian מ-PR #2  
 
 פירוט ביצוע: [`plans/2026-07-11-hive-cortex-platform.md`](./plans/2026-07-11-hive-cortex-platform.md)

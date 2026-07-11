@@ -9,12 +9,20 @@ Control plane for **brain migration** + **autonomous Collect → Edit → Dispat
 | `schema/loops.json` | Declared loops + Trust Gate |
 | `loops/supervisor-stub.mjs` | Dry-run supervisor (no side effects) |
 
-## Quick check
+## Quick check / start connections
 
 ```bash
+node platform/connections/connect-all.mjs
 node platform/loops/supervisor-stub.mjs
-node platform/loops/supervisor-stub.mjs --json
 ```
+
+Local Alfred/Hermes wire (Barak PC):
+
+```powershell
+pwsh -File platform\connections\connect-local.ps1
+```
+
+See `connections/README.md` and `docs/CONNECTIONS_STATUS.md`.
 
 ## Canon
 
