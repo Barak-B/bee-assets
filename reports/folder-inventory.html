@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>B.E.E Assets — דוח חקירת תיקייה</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0f1a2e;
+      --ink-soft: #3a465c;
+      --paper: #f7f4ef;
+      --panel: #ffffff;
+      --line: #d8d2c8;
+      --accent: #c45c26;
+      --navy: #0b1f3a;
+      --green: #1f7a4d;
+      --blue: #1a5f9e;
+      --shadow: 0 18px 40px rgba(15, 26, 46, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Assistant", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse 80% 50% at 100% 0%, rgba(196, 92, 38, 0.08), transparent 50%),
+        radial-gradient(ellipse 60% 40% at 0% 100%, rgba(26, 95, 158, 0.07), transparent 45%),
+        linear-gradient(180deg, #ebe6de 0%, var(--paper) 28%, #f3efe8 100%);
+      line-height: 1.65;
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+
+    header.hero {
+      padding: 2.25rem 0 1.75rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 2rem;
+      animation: rise 0.7s ease-out both;
+    }
+
+    .kicker {
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+    }
+
+    h1 {
+      font-family: "Frank Ruhl Libre", serif;
+      font-size: clamp(2rem, 4vw, 2.85rem);
+      line-height: 1.15;
+      margin: 0 0 0.75rem;
+      color: var(--navy);
+    }
+
+    .lede {
+      font-size: 1.1rem;
+      color: var(--ink-soft);
+      max-width: 42rem;
+      margin: 0;
+    }
+
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      margin-top: 1.25rem;
+      font-size: 0.92rem;
+      color: var(--ink-soft);
+    }
+
+    .meta-bar strong { color: var(--ink); font-weight: 700; }
+
+    nav.toc {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      animation: rise 0.7s ease-out 0.08s both;
+    }
+
+    nav.toc h2 {
+      font-family: "Frank Ruhl Libre", serif;
+      font-size: 1.25rem;
+      margin: 0 0 0.75rem;
+    }
+
+    nav.toc ol {
+      margin: 0;
+      padding-inline-start: 1.25rem;
+      columns: 2;
+      gap: 1.5rem;
+    }
+
+    nav.toc a {
+      color: var(--blue);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    nav.toc a:hover { text-decoration: underline; color: var(--accent); }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      padding: 1.5rem 1.6rem 1.75rem;
+      margin-bottom: 1.5rem;
+      animation: rise 0.65s ease-out both;
+    }
+
+    section:nth-of-type(2) { animation-delay: 0.12s; }
+    section:nth-of-type(3) { animation-delay: 0.16s; }
+    section:nth-of-type(4) { animation-delay: 0.2s; }
+    section:nth-of-type(5) { animation-delay: 0.24s; }
+    section:nth-of-type(6) { animation-delay: 0.28s; }
+    section:nth-of-type(7) { animation-delay: 0.32s; }
+    section:nth-of-type(8) { animation-delay: 0.36s; }
+
+    h2 {
+      font-family: "Frank Ruhl Libre", serif;
+      font-size: 1.55rem;
+      margin: 0 0 0.85rem;
+      color: var(--navy);
+      padding-bottom: 0.55rem;
+      border-bottom: 2px solid #efe8de;
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      margin: 1.35rem 0 0.55rem;
+      color: var(--ink);
+    }
+
+    p { margin: 0.55rem 0; }
+
+    .tree {
+      font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+      font-size: 0.88rem;
+      background: #0f1a2e;
+      color: #e8e2d6;
+      padding: 1.1rem 1.25rem;
+      overflow-x: auto;
+      direction: ltr;
+      text-align: left;
+      line-height: 1.55;
+      white-space: pre;
+    }
+
+    .tree .dir { color: #7ec8ff; }
+    .tree .file { color: #f0e6d2; }
+    .tree .bin { color: #ffb86b; }
+    .tree .size { color: #9aa7bd; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+      margin: 0.75rem 0 0.25rem;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.65rem 0.75rem;
+      text-align: right;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f3eee6;
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    tr:nth-child(even) td { background: #fbf9f6; }
+
+    code, .mono {
+      font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+      font-size: 0.86em;
+      direction: ltr;
+      unicode-bidi: embed;
+    }
+
+    .hash {
+      word-break: break-all;
+      font-size: 0.82rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      border: 1px solid var(--line);
+      background: #f3eee6;
+      color: var(--ink-soft);
+    }
+
+    .badge.ok { background: #e6f4ec; color: var(--green); border-color: #b7dfc7; }
+    .badge.warn { background: #fff3e6; color: var(--accent); border-color: #f0c9a8; }
+    .badge.info { background: #e8f1fa; color: var(--blue); border-color: #b7d0ea; }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    @media (min-width: 760px) {
+      .preview-grid { grid-template-columns: 1fr 1fr; }
+      nav.toc ol { columns: 2; }
+    }
+
+    @media (max-width: 759px) {
+      nav.toc ol { columns: 1; }
+    }
+
+    .preview {
+      border: 1px solid var(--line);
+      overflow: hidden;
+      background: #111;
+    }
+
+    .preview.light { background: #fff; }
+
+    .preview figcaption {
+      padding: 0.7rem 0.9rem;
+      background: #f3eee6;
+      font-size: 0.9rem;
+      border-top: 1px solid var(--line);
+      color: var(--ink-soft);
+    }
+
+    .preview img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    .stat {
+      background: linear-gradient(160deg, #faf7f2, #f0ebe3);
+      border: 1px solid var(--line);
+      padding: 0.9rem 1rem;
+    }
+
+    .stat .num {
+      font-family: "Frank Ruhl Libre", serif;
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.1;
+    }
+
+    .stat .lbl {
+      font-size: 0.85rem;
+      color: var(--ink-soft);
+      margin-top: 0.2rem;
+    }
+
+    ul.clean {
+      margin: 0.4rem 0 0;
+      padding-inline-start: 1.2rem;
+    }
+
+    ul.clean li { margin: 0.3rem 0; }
+
+    footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--ink-soft);
+      font-size: 0.9rem;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <p class="kicker">חקירת מאגר · Inventory Report</p>
+      <h1>B.E.E Public Assets</h1>
+      <p class="lede">
+        דוח מפורט של כל תוכן התיקייה הנוכחית (<span class="mono">/workspace</span> · ענף
+        <span class="mono">main</span>), כולל מטא־דאטה של קבצים, מבנה Git, ותמונת מצב של ענפים מרוחקים במאגר.
+      </p>
+      <div class="meta-bar">
+        <span><strong>תאריך סריקה:</strong> 2026-07-11 11:44 UTC</span>
+        <span><strong>מאגר:</strong> <span class="mono">Barak-B/bee-assets</span></span>
+        <span><strong>HEAD:</strong> <span class="mono">1cd12fb</span></span>
+        <span><strong>נפח כולל:</strong> ~11 MB</span>
+      </div>
+    </header>
+
+    <nav class="toc" aria-label="תוכן עניינים">
+      <h2>תוכן עניינים</h2>
+      <ol>
+        <li><a href="#summary">סיכום מנהלים</a></li>
+        <li><a href="#tree">עץ קבצים</a></li>
+        <li><a href="#readme">README.md</a></li>
+        <li><a href="#assets">נכסי החתימה (GIF)</a></li>
+        <li><a href="#preview">תצוגה מקדימה</a></li>
+        <li><a href="#git">מידע Git</a></li>
+        <li><a href="#branches">ענפים מרוחקים</a></li>
+        <li><a href="#conclusion">מסקנות</a></li>
+      </ol>
+    </nav>
+
+    <section id="summary">
+      <h2>1. סיכום מנהלים</h2>
+      <p>
+        המאגר <span class="mono">bee-assets</span> בענף <span class="mono">main</span> הוא
+        <strong>מאגר נכסים ציבוריים</strong> של מותג <strong>B.E.E.</strong> —
+        לוגו/כרטיס חתימה למייל ולשימוש חיצוני. התוכן על <span class="mono">main</span> מינימלי וממוקד:
+      </p>
+      <div class="stat-row">
+        <div class="stat"><div class="num">3</div><div class="lbl">קבצים בענף main</div></div>
+        <div class="stat"><div class="num">~4.8 MB</div><div class="lbl">גודל קבצי נכסים</div></div>
+        <div class="stat"><div class="num">1200×480</div><div class="lbl">רזולוציית הלוגואים</div></div>
+        <div class="stat"><div class="num">110</div><div class="lbl">פריימים בכל GIF</div></div>
+        <div class="stat"><div class="num">2</div><div class="lbl">ענפים מרוחקים נוספים</div></div>
+        <div class="stat"><div class="num">224</div><div class="lbl">קבצים בענף המחקר</div></div>
+      </div>
+      <p>
+        <span class="badge ok">מטרה</span>
+        נכסים ציבוריים לחתימות אימייל ושימוש חיצוני — לפי README.
+      </p>
+      <p>
+        <span class="badge info">הקשר עסקי</span>
+        B.E.E. הוא מותג/עסק של Barak Barzel בתחום אנרגיה סולארית וחשמל בישראל
+        (מה שנלמד מענף המחקר במאגר). הסלוגן על הלוגו:
+        <em>Innovating matter · Generating power</em>.
+      </p>
+    </section>
+
+    <section id="tree">
+      <h2>2. עץ קבצים (ענף main — checkout נוכחי)</h2>
+      <p>מבנה התיקייה לאחר סריקה מלאה (ללא <span class="mono">.git</span>):</p>
+      <div class="tree" role="img" aria-label="עץ קבצים"><span class="dir">/workspace/</span>
+├── <span class="file">README.md</span>                          <span class="size">75 B</span>
+├── <span class="bin">bee-signature-card-dark.gif</span>   <span class="size">2.66 MB</span>
+└── <span class="bin">bee-signature-card-light.gif</span>  <span class="size">2.15 MB</span></div>
+      <h3>פירוט לפי סוג</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>קובץ</th>
+            <th>סוג</th>
+            <th>גודל</th>
+            <th>תפקיד</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="mono">README.md</span></td>
+            <td>Markdown / טקסט</td>
+            <td>75 בתים</td>
+            <td>תיאור קצר של המאגר</td>
+          </tr>
+          <tr>
+            <td><span class="mono">bee-signature-card-dark.gif</span></td>
+            <td>GIF89a מונפש</td>
+            <td>2,786,724 בתים (2.66 MB)</td>
+            <td>כרטיס חתימה — גרסת רקע כהה</td>
+          </tr>
+          <tr>
+            <td><span class="mono">bee-signature-card-light.gif</span></td>
+            <td>GIF89a מונפש</td>
+            <td>2,256,998 בתים (2.15 MB)</td>
+            <td>כרטיס חתימה — גרסת רקע בהיר</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:1rem">
+        <span class="badge warn">הערה</span>
+        אין תיקיות משנה, אין קוד מקור, אין package.json / CI / תלויות בענף הנוכחי.
+      </p>
+    </section>
+
+    <section id="readme">
+      <h2>3. תוכן README.md</h2>
+      <p>תוכן מלא (2 שורות):</p>
+      <div class="tree"># B.E.E Public Assets
+Public assets for email signatures and external use.</div>
+      <table>
+        <thead>
+          <tr><th>שדה</th><th>ערך</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>כותרת</td><td>B.E.E Public Assets</td></tr>
+          <tr><td>תיאור</td><td>Public assets for email signatures and external use.</td></tr>
+          <tr><td>קידוד</td><td>ASCII text</td></tr>
+          <tr><td>MD5</td><td><span class="mono hash">9ba3f10bd09a3fd4261f756cc5320dcd</span></td></tr>
+          <tr><td>SHA-256</td><td><span class="mono hash">78d833a5938e0c970b756c0d284dafae1d383731fd6546f707b16ee83a598bf4</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="assets">
+      <h2>4. נכסי החתימה — ניתוח מפורט</h2>
+      <p>
+        שני הקבצים הם לוגואים מונפשים בפורמט GIF לשימוש ככרטיס חתימה (signature card).
+        העיצוב זהה בתוכן הגרפי והטקסט; ההבדל הוא רקע כהה מול רקע בהיר.
+      </p>
+
+      <h3>4.1 תכונות משותפות</h3>
+      <table>
+        <thead>
+          <tr><th>מאפיין</th><th>ערך</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>פורמט</td><td>GIF89a</td></tr>
+          <tr><td>מימדים</td><td>1200 × 480 פיקסלים (יחס ~2.5:1, באנר אופקי)</td></tr>
+          <tr><td>טבלת צבעים גלובלית</td><td>כן · 256 צבעים · עומק צבע 8 ביט</td></tr>
+          <tr><td>מספר פריימים</td><td>110 בכל קובץ</td></tr>
+          <tr><td>משך פריים</td><td>5 centiseconds (≈ 50ms) לפריים</td></tr>
+          <tr><td>משך לולאה משוער</td><td>≈ 5.5 שניות (110 × 50ms)</td></tr>
+          <tr><td>טקסט על הלוגו</td><td><strong>B.E.E.</strong> · Innovating matter · Generating power</td></tr>
+          <tr><td>אייקון</td><td>מצפן/כוכב 8 קודקודים + גרעין אטומי + מסלולי אלקטרונים</td></tr>
+          <tr><td>צבעי קודקודי המצפן</td><td>צפון אדום · מזרח כתום · דרום כחול · מערב ירוק</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.2 bee-signature-card-dark.gif</h3>
+      <table>
+        <thead>
+          <tr><th>שדה</th><th>ערך</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>רקע</td><td>כחול-נייבי כהה</td></tr>
+          <tr><td>טקסט</td><td>לבן</td></tr>
+          <tr><td>גודל</td><td>2,786,724 בתים (2.66 MB)</td></tr>
+          <tr><td>MD5</td><td><span class="mono hash">358e303160fdf5355b4d7bf01e0caabd</span></td></tr>
+          <tr><td>SHA-256</td><td><span class="mono hash">186d4a7c6a425360d8aa2b1bf96fecfbb75c608a45e84645773b6cfba242c89c</span></td></tr>
+          <tr><td>שימוש מומלץ</td><td>חתימות / רקעים כהים, תבניות מייל כהות</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.3 bee-signature-card-light.gif</h3>
+      <table>
+        <thead>
+          <tr><th>שדה</th><th>ערך</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>רקע</td><td>לבן</td></tr>
+          <tr><td>טקסט</td><td>שחור</td></tr>
+          <tr><td>גודל</td><td>2,256,998 בתים (2.15 MB)</td></tr>
+          <tr><td>MD5</td><td><span class="mono hash">666c539b69ac407c3927aa8e03ebaffb</span></td></tr>
+          <tr><td>SHA-256</td><td><span class="mono hash">6591be82c6977f3b648a64bd58504ec6d135416de174f5b5f569792b4c9bae05</span></td></tr>
+          <tr><td>שימוש מומלץ</td><td>חתימות / רקעים בהירים, מסמכים לבנים</td></tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:1rem">
+        <span class="badge warn">הערה טכנית</span>
+        גודל הקבצים (~2–2.7 MB) גבוה יחסית לחתימת מייל טיפוסית. חלק מלקוחות מייל חוסמים או מדחסים GIF כבדים —
+        כדאי לשקול גרסת PNG סטטית או GIF דחוס יותר לשימוש יומיומי.
+      </p>
+    </section>
+
+    <section id="preview">
+      <h2>5. תצוגה מקדימה</h2>
+      <div class="preview-grid">
+        <figure class="preview">
+          <img src="../bee-signature-card-dark.gif" alt="B.E.E. signature card — dark version" width="1200" height="480" />
+          <figcaption><span class="mono">bee-signature-card-dark.gif</span> — גרסה כהה · 1200×480 · 110 פריימים</figcaption>
+        </figure>
+        <figure class="preview light">
+          <img src="../bee-signature-card-light.gif" alt="B.E.E. signature card — light version" width="1200" height="480" />
+          <figcaption><span class="mono">bee-signature-card-light.gif</span> — גרסה בהירה · 1200×480 · 110 פריימים</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="git">
+      <h2>6. מידע Git</h2>
+      <table>
+        <thead>
+          <tr><th>שדה</th><th>ערך</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Remote</td><td><span class="mono">github.com/Barak-B/bee-assets</span></td></tr>
+          <tr><td>ענף נוכחי (בסריקה)</td><td><span class="mono">main</span> (מסונכרן עם <span class="mono">origin/main</span>)</td></tr>
+          <tr><td>קומיטים בענף main</td><td>1</td></tr>
+          <tr><td>קומיט HEAD</td><td><span class="mono">1cd12fb490f80d11955515ff07577cf9d33f3c40</span> — <em>Add B.E.E signature logos</em></td></tr>
+          <tr><td>מחבר</td><td>Barak Barzel &lt;barak-barzel@barak-e.com&gt;</td></tr>
+          <tr><td>תאריך קומיט</td><td>Thu May 7 02:56:21 2026 +0300</td></tr>
+          <tr><td>קבצים בקומיט</td><td>README.md + שני קבצי GIF</td></tr>
+          <tr><td>מצב working tree</td><td>נקי בעת תחילת הסריקה</td></tr>
+        </tbody>
+      </table>
+      <p>
+        הערה: ה-hash המלא של HEAD הוא
+        <span class="mono hash">1cd12fb490f80d11955515ff07577cf9d33f3c40</span>.
+      </p>
+    </section>
+
+    <section id="branches">
+      <h2>7. ענפים מרוחקים (לא ב-checkout הנוכחי)</h2>
+      <p>
+        בנוסף ל-<span class="mono">main</span>, במאגר קיימים שני ענפי עבודה מרוחקים עם תוכן משמעותי.
+        הם <strong>אינם</strong> חלק מעץ הקבצים של הענף הנוכחי, אך הם חלק מהמאגר כולו.
+      </p>
+
+      <h3>7.1 <span class="mono">claude/capability-extensions-collection-JjV2s</span></h3>
+      <p>
+        <span class="badge info">~224 קבצים</span>
+        <span class="badge info">~86 קומיטים</span>
+        ענף מחקר/תפעול עשיר של פרויקט BEE — תיעוד, LLD, reference code, knowledge base,
+        ומפות HTML אינטראקטיביות.
+      </p>
+      <ul class="clean">
+        <li><strong>research/BRAIN.md</strong> — נקודת כניסה קנונית לפרויקט (עודכן ~2026-06-26)</li>
+        <li><strong>research/protocol_hive.md</strong> — "חוקת" הארכיטקטורה (Tiers, LLD shape)</li>
+        <li><strong>research/phase-1 / phase-2 / phase-3</strong> — גלי פיתוח (בנק, רכש, הצעות, ledger, engineering, CS)</li>
+        <li><strong>research/knowledge-base/</strong> — רגולציה ישראלית (סולאר, חיבור רשת, חשבוניות)</li>
+        <li><strong>research/local-state/</strong> — snapshots של OpenClaw (Alfred) ו-Hermes</li>
+        <li><strong>research/graphify-*</strong> + <strong>gitnexus-*</strong> — ערכות פריסה וגרפי ידע</li>
+        <li><strong>research/hive-*.html</strong> — מפות ארכיטקטורה ואינוונטר בעברית</li>
+        <li><strong>demos/</strong> — למשל parse-bank-csv, price-anomaly</li>
+      </ul>
+      <p>התפלגות סוגי קבצים (משוערת לפי סיומות):</p>
+      <table>
+        <thead>
+          <tr><th>סיומת</th><th>כמות</th><th>הערות</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="mono">.md</span></td><td>88</td><td>תיעוד, LLD, תוכניות</td></tr>
+          <tr><td><span class="mono">.js</span></td><td>29</td><td>סקריפטים / reference</td></tr>
+          <tr><td><span class="mono">.ts</span></td><td>22</td><td>TypeScript (phase-a)</td></tr>
+          <tr><td><span class="mono">.txt</span></td><td>19</td><td>snapshots של local-state</td></tr>
+          <tr><td><span class="mono">.json</span></td><td>17</td><td>קונפיגים / גרפים</td></tr>
+          <tr><td><span class="mono">.sh</span></td><td>10</td><td>סקריפטי פריסה</td></tr>
+          <tr><td><span class="mono">.html</span></td><td>9</td><td>מפות ויזואליות</td></tr>
+          <tr><td><span class="mono">.ps1</span></td><td>4</td><td>התקנה ל-Windows</td></tr>
+          <tr><td>אחר</td><td>~26</td><td>yaml, sql, prisma, gif, mjs…</td></tr>
+        </tbody>
+      </table>
+
+      <h3>7.2 <span class="mono">claude/electron-chat-integration-5VtHN</span></h3>
+      <p>
+        <span class="badge info">4 קבצים</span>
+        כולל את נכסי main + קובץ אחד נוסף:
+      </p>
+      <ul class="clean">
+        <li><span class="mono">web/public/master-plan.html</span> — scaffold למפת צי (fleet atlas) של bee-build</li>
+      </ul>
+    </section>
+
+    <section id="conclusion">
+      <h2>8. מסקנות</h2>
+      <ol>
+        <li>
+          <strong>ענף main הוא מאגר נכסים ציבוריים בלבד</strong> —
+          README קצר + שני כרטיסי חתימה מונפשים (כהה/בהיר) למותג B.E.E.
+        </li>
+        <li>
+          <strong>אין אפליקציה או קוד בענף הנוכחי</strong> —
+          אין תלויות, אין בנייה, אין בדיקות על main.
+        </li>
+        <li>
+          <strong>המאגר כולו רחב יותר</strong> —
+          ענף <span class="mono">capability-extensions-collection</span> מכיל תיעוד ותשתית מחקרית/תפעולית
+          של מערכת הסוכנים של BEE (Hive / Alfred / Hermes / waves 53–55).
+        </li>
+        <li>
+          <strong>הלוגואים מוכנים לשימוש חיצוני</strong>, אך כבדים יחסית לחתימת מייל;
+          מומלץ לשקול גרסאות קלות יותר אם יש בעיות טעינה אצל נמענים.
+        </li>
+      </ol>
+      <h3>קבצים שנוצרו בדוח זה</h3>
+      <p>
+        קובץ HTML זה נשמר ב־
+        <span class="mono">reports/folder-inventory.html</span>
+        ומציג את כל המידע שנאסף בסריקה.
+      </p>
+    </section>
+
+    <footer>
+      נוצר אוטומטית מסריקת תיקיית המאגר · Barak-B/bee-assets · 2026-07-11 ·
+      נתיבים יחסיים לתמונות: <span class="mono">../bee-signature-card-*.gif</span>
+    </footer>
+  </div>
+</body>
+</html>
