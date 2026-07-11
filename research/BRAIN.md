@@ -55,6 +55,7 @@ code** (standalone TS+SQL+tests, cloud-verified), then ported into the BEE app b
 | **`phase-3/mvp-build-plan.md`** | **Authoritative roadmap** — 23 rows, hours, owners, blockers, milestones, calendar. | To know what to build next. |
 | **`phase-3/Wave_53_Unified_Data_Spine.md`** | Master map of how 53/A-D + Wave 54/55 connect. | To understand the architecture as a whole. |
 | **`knowledge-base/`** | Israeli regulatory/domain facts, every claim tagged VERIFIED/SECONDARY/CONFLICT/OPEN. | Before surfacing any regulatory number. Cite the source line. |
+| **`CLOUD_CORTEX_TOOLING.md`** | Permanent MCP/tooling checklist for cloud cortex (what must be auth'd). | Before assuming Monday/Graphify/Obsidian reachability. |
 | **`BRAIN.md`** (this file) | Index + status + defect register + changelog. | First. |
 
 **Sync loop (`protocol_hive.md §6`):** every architectural change burns back to three places —
@@ -237,7 +238,7 @@ A 4-agent parallel review swept the whole corpus line-by-line. Outcome:
 `[[BRAIN]]` is the parent node of the whole project graph. Outbound wikilinks — so Obsidian +
 graphify draw the edges and every child shows `[[BRAIN]]` in its backlinks panel:
 
-- **Charter:** `[[protocol_hive]]` · `[[PATHS]]` · `[[SYNC_STATUS]]` (heartbeat — last sync time)
+- **Charter:** `[[protocol_hive]]` · `[[PATHS]]` · `[[SYNC_STATUS]]` · `[[CLOUD_CORTEX_TOOLING]]`
 - **Spine:** `[[Wave_53_Unified_Data_Spine]]` · `[[MVP_Build_Plan]]` · `[[decisions-2026-06-16]]`
 - **LLDs:** `[[Bank_Receipts_Ingestion_LLD]]` · `[[Procurement_Tracking_LLD]]` · `[[Proposal_Generator_LLD]]` · `[[Accounting_Ledger_LLD]]` · `[[Engineering_Agent_LLD]]` · `[[Customer_Success_Agent_LLD]]`
 - **Knowledge:** `[[Barak_Skills_Audit]]` · `[[il-einvoicing-shaam]]` · `[[il-pv-grid-connection]]` · `[[il-solar-regulation]]`
