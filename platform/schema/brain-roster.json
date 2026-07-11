@@ -14,10 +14,10 @@
       "trustTier": "L1",
       "canonPath": "C:\\Users\\Barak\\.openclaw\\workspace\\BEE_CANON.md",
       "migration": {
-        "status": "in_progress",
-        "lastVerifiedAt": null,
-        "blocker": "Run platform/connections/connect-local.ps1 then AGENTS.md step 5",
-        "notes": "Cloud published BEE_CANON.md; local wire package ready 2026-07-11"
+        "status": "migrated",
+        "lastVerifiedAt": "2026-07-11T19:56:00Z",
+        "blocker": null,
+        "notes": "repair-alfred-wire OK: step-5 headers=1; BEE_CANON on disk; pending live Q&A confirm with Alfred"
       }
     },
     {
