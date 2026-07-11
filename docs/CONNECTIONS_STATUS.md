@@ -1,35 +1,28 @@
-# Connections status — 2026-07-11 (updated after Barak local wire)
+# Connections status — after fix-hermes-all PASS (2026-07-12)
 
-## מה חובר
+## Green
 
-| חיבור | מצב |
+| Item | Status |
 |---|---|
-| Canon publish (`BEE_CANON.md`) | ✅ |
-| `connect-local` copy → Alfred + Hermes dirs | ✅ |
-| Alfred `AGENTS.md` step 5 (repaired, headers=1) | ✅ |
-| Hermes `external_dirs` + char_limit 4096 + port 3100 | ✅ |
-| Max brain | ✅ migrated |
-| Trust Gate · GitHub · cursor-cloud | ✅ |
+| Hermes `config.yaml` parses | ✅ YAML_OK + `hermes config` clean |
+| `external_dirs` bee-canon (indented) | ✅ |
+| `memory_char_limit` 4096 | ✅ |
+| Alfred `AGENTS.md` step-5 ×1 | ✅ |
+| `BEE_CANON.md` in Alfred + Hermes dirs | ✅ |
+| `concurrent-log-handler` | ✅ |
 
-## אימות חי (ברק — עכשיו)
+## You do now
 
-1. **הפעל מחדש Hermes gateway** (כדי ש-config ייטען)
-2. שאל את **Alfred** (openclaw main / WhatsApp self-chat):  
+1. **New PowerShell window** (leave open):
+   ```powershell
+   hermes gateway run
+   ```
+2. Other window:
+   ```powershell
+   Get-NetTCPConnection -LocalPort 3100 -ErrorAction SilentlyContinue
+   ```
+3. Ask **Alfred** (OpenClaw / WA self-chat):  
    `what bank does BEE use and VAT cadence?`  
-   צפוי: Mercantile code 17 / monthly
-3. שאל את **Hermes** אותו דבר
-4. (אופציונלי P0) Cursor Desktop → MCP → Authenticate **Monday**
+   Expect: Mercantile code 17 / monthly
 
-## עדיין פתוח
-
-| חיבור | פעולה |
-|---|---|
-| Monday MCP | Desktop OAuth |
-| Obsidian/graphify sync script | על branch עם `research/` (PR #2 / bridge) |
-| Live Q&A confirm | שלח תשובות Alfred+Hermes לכאן |
-
-## פקודות
-
-```bash
-node platform/connections/connect-all.mjs
-```
+Paste Alfred's answer (+ whether 3100 is Listen).
