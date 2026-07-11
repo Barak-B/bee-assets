@@ -62,7 +62,8 @@ tags:
 | `BEE_VAULT_BEE_DIR` | Obsidian BEE folder (ASCII-safe override for Hebrew path) | `E:\Desktop\ברק\תוכנות\תכנות וAI\obsidian\Barak-v-obsidian\3-Projects\BEE` |
 | `BEE_ALFRED_WORKSPACE` | Alfred workspace for `-PushCanonToAgents` | (unset — skip) |
 | `BEE_HERMES_MEMORY_DIR` | Hermes memory dir for `-PushCanonToAgents` | (unset — skip) |
-| `BEE_HOOK_ARGS` | Args passed by the post-commit hook | `-SkipPull -SkipCluster` |
+| `BEE_HOOK_ARGS` | Args passed by the post-commit hook | `-SkipPull -SkipCluster -ForceCanon` |
+| `BEE_SECRETS_ENV` | Optional override for `bee-integrations.env` (DeepSeek key auto-load) | `E:\Desktop\OpenClawAgent\secrets\bee-integrations.env` |
 
 ## Obsidian brain bridge (git → vault)
 

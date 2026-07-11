@@ -118,6 +118,21 @@ if ($graphify) {
   Warn "graphify not on PATH — vault sync works, but §6 graph rebuild is inactive. Install: pip install 'graphifyy[anthropic,openai]'"
 }
 
+$keyOk = $false
+if ($env:DEEPSEEK_API_KEY -and $env:DEEPSEEK_API_KEY.StartsWith("sk-")) {
+  Pass "DEEPSEEK_API_KEY set (process scope)"
+  $keyOk = $true
+} else {
+  $sf = "E:\Desktop\OpenClawAgent\secrets\bee-integrations.env"
+  if (Test-Path $sf) {
+    $m = Select-String -Path $sf -Pattern '(?i)DEEPSEEK' -ErrorAction SilentlyContinue
+    if ($m) { Pass "DEEPSEEK key present in secrets file (sync script will auto-load)"; $keyOk = $true }
+    else { Warn "no DEEPSEEK entry in $sf — graphify docs extract will fail" }
+  } else {
+    Warn "DEEPSEEK_API_KEY unset and secrets file missing — graphify docs extract will fail"
+  }
+}
+
 $graphJson = Join-Path $research "graphify-out\graph.json"
 $graphHtml = Join-Path $research "graphify-out\graph.html"
 $graphReport = Join-Path $research "graphify-out\GRAPH_REPORT.md"

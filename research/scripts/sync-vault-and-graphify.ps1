@@ -81,6 +81,31 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 # source-encoding fragility: setx BEE_VAULT_BEE_DIR "E:\...\3-Projects\BEE"
 if ($env:BEE_VAULT_BEE_DIR) { $VaultBeeDir = $env:BEE_VAULT_BEE_DIR }
 
+# Load DEEPSEEK_API_KEY for graphify without User-scope pollution (OpenClaw trap).
+# Canonical secrets file: PATHS.md → E:\Desktop\OpenClawAgent\secrets\bee-integrations.env
+function Ensure-DeepSeekKey {
+  if ($env:DEEPSEEK_API_KEY -and $env:DEEPSEEK_API_KEY.StartsWith("sk-")) {
+    Info "DEEPSEEK_API_KEY already set (process scope)"
+    return $true
+  }
+  $candidates = @(
+    $env:BEE_SECRETS_ENV,
+    "E:\Desktop\OpenClawAgent\secrets\bee-integrations.env",
+    (Join-Path $env:USERPROFILE ".openclaw\secrets\bee-integrations.env")
+  ) | Where-Object { $_ } | Select-Object -Unique
+  foreach ($sf in $candidates) {
+    if (-not (Test-Path $sf)) { continue }
+    $m = Select-String -Path $sf -Pattern '(?i)(?:DEEPSEEK[_-]?API[_-]?KEY)\s*[=:]\s*["'']?(sk-[A-Za-z0-9_-]+)' -ErrorAction SilentlyContinue
+    if ($m -and $m.Matches.Count -gt 0) {
+      $env:DEEPSEEK_API_KEY = $m.Matches[0].Groups[1].Value
+      Ok "loaded DEEPSEEK_API_KEY from secrets file (process scope only)"
+      return $true
+    }
+  }
+  Warn "DEEPSEEK_API_KEY not set and not found in secrets — graphify docs pass will fail"
+  return $false
+}
+
 # Single-runner lock (§3.2 — the sync pipeline must obey the same rule it mandates elsewhere).
 # Two commits in quick succession would otherwise race on graphify-out/ + the vault copy.
 $lockFile = Join-Path ([System.IO.Path]::GetTempPath()) "bee-sync.lock"
@@ -167,6 +192,7 @@ if (-not $SkipVault) {
 
 # ── Step 3: graphify extract ───────────────────────────────────────────────
 if (-not $SkipGraphify) {
+  $null = Ensure-DeepSeekKey
   $graphify = Get-Command graphify -ErrorAction SilentlyContinue
   if (-not $graphify) {
     Warn "graphify not on PATH. Install: pip install 'graphifyy[anthropic,openai]'  (PyPI pkg is 'graphifyy' — double y; CLI is 'graphify')."
@@ -179,7 +205,7 @@ if (-not $SkipGraphify) {
       try {
         & graphify extract . --update "--backend=$Backend" 2>&1 | ForEach-Object { "    $_" }
         if ($LASTEXITCODE -ne 0) {
-          Warn "graphify exited $LASTEXITCODE — check the [anthropic]+[openai] extras + DEEPSEEK_API_KEY env."
+          Warn "graphify exited $LASTEXITCODE — need process-scoped DEEPSEEK_API_KEY (script auto-loads from bee-integrations.env when present)."
           $graphifyStatus = "extract-failed"
         } else {
           Ok "graphify graph rebuilt"
