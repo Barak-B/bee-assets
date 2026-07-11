@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
-  Fixed Hermes wire: ensure bee-canon is in memory.external_dirs; bump char limit; port 3100.
+  Hermes wire v3: bee-canon in external_dirs with YAML-safe SINGLE-QUOTED Windows paths.
+  (Double-quoted "C:\Users\..." breaks YAML — \U is a unicode escape.)
 
 .EXAMPLE
   pwsh -File platform\connections\complete-hermes-wire.ps1
@@ -17,7 +18,18 @@ function Info($m){ Write-Host "  $m" -ForegroundColor Cyan }
 function Ok($m){ Write-Host "  OK  $m" -ForegroundColor Green }
 function Warn($m){ Write-Host "  !!  $m" -ForegroundColor Yellow }
 
-Write-Host "`nBEE Hive Cortex — complete-hermes-wire (v2)`n" -ForegroundColor White
+Write-Host "`nBEE Hive Cortex — complete-hermes-wire (v3 — YAML-safe paths)`n" -ForegroundColor White
+
+# If config already broken, route through fix script first
+$fix = Join-Path $PSScriptRoot "fix-hermes-yaml.ps1"
+$defaultCfg = "C:\Users\Barak\AppData\Local\hermes\config.yaml"
+if ((Test-Path $defaultCfg) -and (Test-Path $fix)) {
+  $probe = Get-Content -Raw -Encoding UTF8 $defaultCfg
+  if ($probe -match 'external_dirs:[\s\S]{0,300}"C:\\Users') {
+    Warn "detected double-quoted C:\Users under external_dirs — running fix-hermes-yaml first"
+    if (-not $DryRun) { & $fix }
+  }
+}
 
 if (-not $ConfigPath) {
   $candidates = @(
@@ -32,17 +44,14 @@ if (-not $ConfigPath) { throw "Hermes config.yaml not found" }
 Info "config: $ConfigPath"
 
 $text = Get-Content -Raw -Encoding UTF8 $ConfigPath
-$canonYaml = ($HermesCanonDir -replace '\\', '/')  # YAML-friendly; Hermes accepts either
-$canonWin = $HermesCanonDir
+$entry = "    - '$HermesCanonDir'"   # SINGLE quotes — required
 $changed = $false
 
-# Ensure canon dir exists
 if (-not (Test-Path $HermesCanonDir)) {
   if (-not $DryRun) { New-Item -ItemType Directory -Force $HermesCanonDir | Out-Null }
   Ok "ensured $HermesCanonDir"
 }
 
-# memory_char_limit
 if ($text -match 'memory_char_limit:\s*(\d+)') {
   $cur = [int]$Matches[1]
   if ($cur -lt 4096) {
@@ -52,7 +61,6 @@ if ($text -match 'memory_char_limit:\s*(\d+)') {
   } else { Ok "memory_char_limit already $cur" }
 }
 
-# bridge_port
 if ($text -match 'bridge_port:\s*3000') {
   $text = $text -replace 'bridge_port:\s*3000', 'bridge_port: 3100'
   $changed = $true
@@ -63,55 +71,43 @@ if ($text -match 'bridge_port:\s*3000') {
   Warn "bridge_port not found — check messaging section"
 }
 
-# external_dirs — several shapes
-$already = ($text -match [regex]::Escape($HermesCanonDir)) -or ($text -match 'bee-canon')
-if ($already) {
-  Ok "external_dirs already references bee-canon"
+# Safe presence check: single-quoted entry
+$safePresent = $text -match [regex]::Escape("'$HermesCanonDir'")
+$unsafePresent = $text -match 'bee-canon' -and $text -match '"C:\\Users'
+
+if ($unsafePresent) {
+  Warn "unsafe double-quoted bee-canon still present — use fix-hermes-yaml.ps1"
+}
+if ($safePresent) {
+  Ok "external_dirs already has safe single-quoted bee-canon"
 } elseif ($text -match 'external_dirs:\s*\[\s*\]') {
-  $text = $text -replace 'external_dirs:\s*\[\s*\]', "external_dirs:`r`n    - `"$canonWin`""
+  $text = $text -replace 'external_dirs:\s*\[\s*\]', "external_dirs:`r`n$entry"
   $changed = $true
-  Ok "external_dirs [] → bee-canon"
+  Ok "external_dirs [] → safe bee-canon"
 } elseif ($text -match '(?m)^(\s*)external_dirs:\s*$') {
-  # block form — insert as first list item under the key
   $text = [regex]::Replace($text, '(?m)^(\s*)external_dirs:\s*$', {
       param($m)
       $pad = $m.Groups[1].Value
-      "$pad" + "external_dirs:`r`n$pad  - `"$canonWin`""
+      "${pad}external_dirs:`r`n${pad}  - '$HermesCanonDir'"
     }, 1)
   $changed = $true
-  Ok "prepended bee-canon under external_dirs block"
-} elseif ($text -match '(?m)^(\s*)external_dirs:\s*\r?\n(\s*)-') {
-  # already a list — prepend our entry after the key
+  Ok "wrote safe bee-canon under empty external_dirs key"
+} elseif ($text -match '(?m)^(\s*)external_dirs:\s*\r?\n') {
   $text = [regex]::Replace($text, '(?m)^(\s*)external_dirs:\s*\r?\n', {
       param($m)
       $pad = $m.Groups[1].Value
-      "$pad" + "external_dirs:`r`n$pad  - `"$canonWin`"`r`n"
+      "${pad}external_dirs:`r`n${pad}  - '$HermesCanonDir'`r`n"
     }, 1)
   $changed = $true
-  Ok "prepended bee-canon to existing external_dirs list"
-} elseif ($text -match '(?m)^(\s*)memory:\s*$') {
-  $text = [regex]::Replace($text, '(?m)^(\s*)memory:\s*$', {
-      param($m)
-      $pad = $m.Groups[1].Value
-      "$pad" + "memory:`r`n$pad  external_dirs:`r`n$pad    - `"$canonWin`""
-    }, 1)
-  $changed = $true
-  Ok "added external_dirs under memory:"
+  Ok "prepended safe bee-canon to external_dirs list"
 } else {
-  Warn "could not locate external_dirs — appending memory.external_dirs at EOF"
-  $text = $text.TrimEnd() + "`r`n`r`nmemory:`r`n  external_dirs:`r`n    - `"$canonWin`"`r`n"
+  $text = $text.TrimEnd() + "`r`n`r`n# BEE Hive Cortex`r`nmemory:`r`n  external_dirs:`r`n    - '$HermesCanonDir'`r`n"
   $changed = $true
+  Warn "appended memory.external_dirs at EOF"
 }
 
-if ($DryRun) {
-  Info "[DryRun] changed=$changed — no write"
-  exit 0
-}
-
-if (-not $changed) {
-  Ok "no file changes needed"
-  exit 0
-}
+if ($DryRun) { Info "[DryRun] changed=$changed"; exit 0 }
+if (-not $changed) { Ok "no file changes needed"; exit 0 }
 
 $backup = "$ConfigPath.bak-bee-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 Copy-Item -Force $ConfigPath $backup
@@ -119,9 +115,8 @@ Ok "backup → $backup"
 Set-Content -Path $ConfigPath -Value $text -Encoding UTF8 -NoNewline
 Ok "wrote $ConfigPath"
 
-# Proof
 Select-String -Path $ConfigPath -Pattern 'bee-canon|bridge_port|memory_char_limit' | ForEach-Object {
   Info $_.Line.Trim()
 }
 
-Write-Host "`nRestart Hermes gateway, then ask: what bank / VAT cadence?`n" -ForegroundColor Yellow
+Write-Host "`nNext: fix YAML if needed, then in a NORMAL PowerShell (not hermes chat):`n  hermes gateway run`n" -ForegroundColor Yellow
