@@ -1,56 +1,35 @@
-# Connections status — 2026-07-11
+# Connections status — 2026-07-11 (updated after Barak local wire)
 
-## מה חובר מהענן (עכשיו)
+## מה חובר
 
 | חיבור | מצב |
 |---|---|
-| Canon publish (`AGENT_CANON` → `BEE_CANON.md`) | ✅ |
-| PATHS + wire runbook ב-repo | ✅ |
-| Trust Gate על loops | ✅ |
-| GitHub | ✅ |
-| cursor-cloud MCP | ✅ |
-| Cloudflare-docs MCP | ✅ |
-| `collect.canon-drift` runnable | ✅ |
+| Canon publish (`BEE_CANON.md`) | ✅ |
+| `connect-local` copy → Alfred + Hermes dirs | ✅ |
+| Alfred `AGENTS.md` step 5 (repaired, headers=1) | ✅ |
+| Hermes `external_dirs` + char_limit 4096 + port 3100 | ✅ |
 | Max brain | ✅ migrated |
+| Trust Gate · GitHub · cursor-cloud | ✅ |
 
-## מה מחכה לך (לחיצה / מכונה מקומית)
+## אימות חי (ברק — עכשיו)
+
+1. **הפעל מחדש Hermes gateway** (כדי ש-config ייטען)
+2. שאל את **Alfred** (openclaw main / WhatsApp self-chat):  
+   `what bank does BEE use and VAT cadence?`  
+   צפוי: Mercantile code 17 / monthly
+3. שאל את **Hermes** אותו דבר
+4. (אופציונלי P0) Cursor Desktop → MCP → Authenticate **Monday**
+
+## עדיין פתוח
 
 | חיבור | פעולה |
 |---|---|
-| **Alfred + Hermes Brain Bus** | ראה בלוק PowerShell למטה |
-| **Monday MCP** | Cursor Desktop → Settings → MCP → Authenticate **Monday** (P0 ל-`collect.monday`) |
-| Notion MCP | אופציונלי |
-| Obsidian / Graphify sync | אחרי שאתה על branch עם `research/`: `sync-vault-and-graphify.ps1 -PushCanonToAgents` |
-
-### PowerShell — מעבר ל-branch + חיבור (העתק-הדבק)
-
-אם `git checkout` נכשל בגלל שינויים ב-`research/graphify-out/*` (פלט graphify מקומי) — **stash** ואז checkout:
-
-```powershell
-cd E:\bee-assets
-git fetch origin
-
-# שמור פלט graphify מקומי בצד (לא נמחק)
-git stash push -m "local-graphify-out" -- research/graphify-out/
-
-git checkout cursor/hive-cortex-platform-634e
-git pull origin cursor/hive-cortex-platform-634e
-
-# עכשיו הקובץ קיים:
-pwsh -File platform\connections\connect-local.ps1
-```
-
-אם תרצה להחזיר את ה-graphify אחרי (אופציונלי; עלול להיות conflict):
-```powershell
-git stash list
-# git stash pop   # רק אם צריך את הגרף הישן על branch הזה
-```
+| Monday MCP | Desktop OAuth |
+| Obsidian/graphify sync script | על branch עם `research/` (PR #2 / bridge) |
+| Live Q&A confirm | שלח תשובות Alfred+Hermes לכאן |
 
 ## פקודות
 
 ```bash
-# ענן / בכל clone שכבר על hive-cortex:
 node platform/connections/connect-all.mjs
 ```
-
-דוחות חיים: `platform/status/connections.json` · `platform/status/canon-drift.json`
