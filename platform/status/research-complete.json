@@ -1,0 +1,19 @@
+{
+  "completedAt": "2026-07-11T17:45:00Z",
+  "report": "docs/RESEARCH_A_TO_Z.md",
+  "corpus": {
+    "branch": "claude/capability-extensions-collection-JjV2s",
+    "files": 224,
+    "alsoReviewed": [
+      "cursor/brain-obsidian-bridge-436d",
+      "cursor/hive-cortex-platform-634e",
+      "cloud agents bc-df5ef7ee / bc-68ffc151"
+    ]
+  },
+  "verdict": "Research complete. Next is execution: P0 Brain Bus local, Monday MCP auth, then supervisor + spine rows.",
+  "doNotReResearchUnless": [
+    "Barak machine state diverged materially from May/June snapshots",
+    "Locked LD/EA decisions are explicitly reopened by Barak",
+    "New primary docs for OPEN KB items (SHAAM, tariffs) arrive"
+  ]
+}
