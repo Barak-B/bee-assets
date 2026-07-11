@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-11T17:10:00Z",
+  "canonSource": {
+    "repo": "github.com/Barak-B/bee-assets",
+    "branch": "claude/capability-extensions-collection-JjV2s",
+    "path": "research/AGENT_CANON.md"
+  },
+  "brains": [
+    {
+      "id": "alfred",
+      "runtime": "openclaw",
+      "role": "WhatsApp persona + constitutional send + intake",
+      "trustTier": "L1",
+      "canonPath": "C:\\Users\\Barak\\.openclaw\\workspace\\BEE_CANON.md",
+      "migration": {
+        "status": "in_progress",
+        "lastVerifiedAt": null,
+        "blocker": "Needs WIRE_AGENTS_TO_CANON Step 1 (AGENTS.md startup) on Barak PC",
+        "notes": "PushCanonToAgents script exists; constitutional edit awaits Barak"
+      }
+    },
+    {
+      "id": "hermes",
+      "runtime": "hermes",
+      "role": "Heavy tools, memory, kanban, MoA",
+      "trustTier": "L1",
+      "canonPath": "C:\\Users\\Barak\\.hermes\\bee-canon\\BEE_CANON.md",
+      "migration": {
+        "status": "in_progress",
+        "lastVerifiedAt": null,
+        "blocker": "Needs external_dirs + bridge_port 3100",
+        "notes": "Same wire runbook Step 2–3"
+      }
+    },
+    {
+      "id": "max",
+      "runtime": "cursor-cloud",
+      "role": "Cloud cortex — architecture, reference code, orchestration design",
+      "trustTier": "L0",
+      "canonPath": "docs/HIVE_CORTEX_PLATFORM.md + docs/MAX_KNOWLEDGE_BASE.md",
+      "migration": {
+        "status": "migrated",
+        "lastVerifiedAt": "2026-07-11T17:10:00Z",
+        "blocker": null,
+        "notes": "Bootstrapped this session; still cannot reach E:\\ vault"
+      }
+    },
+    {
+      "id": "claude-local",
+      "runtime": "claude-code",
+      "role": "Local execution — BEE app port, OAuth, Windows paths",
+      "trustTier": "L1",
+      "canonPath": "E:\\bee-assets\\research\\BRAIN.md",
+      "migration": {
+        "status": "in_progress",
+        "lastVerifiedAt": null,
+        "blocker": "Must pull PR #2 research tree locally and start sessions from BRAIN.md",
+        "notes": "Session handoffs already assume this"
+      }
+    },
+    {
+      "id": "wave-53a",
+      "runtime": "bee-spine",
+      "role": "Bank receipts ingest",
+      "trustTier": "L1",
+      "canonPath": null,
+      "migration": {
+        "status": "in_progress",
+        "lastVerifiedAt": null,
+        "blocker": "Phase A reference exists; not ported to BEE app",
+        "notes": "Uses shared primitives; facts from AGENT_CANON (Mercantile 17)"
+      }
+    },
+    {
+      "id": "wave-53b",
+      "runtime": "bee-spine",
+      "role": "Procurement tracking + price anomaly",
+      "trustTier": "L1",
+      "canonPath": null,
+      "migration": {
+        "status": "in_progress",
+        "lastVerifiedAt": null,
+        "blocker": "Phase A reference exists; LLM email extract not built",
+        "notes": "Smart-layer piece 1 (anomaly) coded"
+      }
+    },
+    {
+      "id": "wave-53c",
+      "runtime": "bee-spine",
+      "role": "Proposal generator",
+      "trustTier": "L1",
+      "canonPath": null,
+      "migration": {
+        "status": "not_started",
+        "lastVerifiedAt": null,
+        "blocker": "LLD only",
+        "notes": ""
+      }
+    },
+    {
+      "id": "wave-53d",
+      "runtime": "bee-spine",
+      "role": "Accounting ledger",
+      "trustTier": "L1",
+      "canonPath": null,
+      "migration": {
+        "status": "not_started",
+        "lastVerifiedAt": null,
+        "blocker": "LLD only; needs OB-2 Invoice Maven sample",
+        "notes": ""
+      }
+    },
+    {
+      "id": "wave-54",
+      "runtime": "bee-spine",
+      "role": "Engineering / PV brain",
+      "trustTier": "L1",
+      "canonPath": null,
+      "migration": {
+        "status": "not_started",
+        "lastVerifiedAt": null,
+        "blocker": "Orchestrator not coded; wire_sizing/protection Tier-0",
+        "notes": "6 sub-skill specs exist"
+      }
+    },
+    {
+      "id": "wave-55",
+      "runtime": "bee-spine",
+      "role": "Customer success",
+      "trustTier": "L1",
+      "canonPath": null,
+      "migration": {
+        "status": "not_started",
+        "lastVerifiedAt": null,
+        "blocker": "LLD only",
+        "notes": ""
+      }
+    }
+  ]
+}

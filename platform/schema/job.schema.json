@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bee.local/platform/schema/job.schema.json",
+  "title": "BEE Hive Job",
+  "description": "Unit of autonomous work: Collect, Edit, or Dispatch. Every job must be ledgered.",
+  "type": "object",
+  "required": ["id", "kind", "loop", "status", "trustTier", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "description": "Unique job id (uuid or ulid)" },
+    "kind": { "enum": ["collect", "edit", "dispatch"] },
+    "loop": {
+      "type": "string",
+      "description": "Loop name, e.g. collect.bank, edit.dedup, dispatch.draft",
+      "pattern": "^(collect|edit|dispatch)\\.[a-z0-9_-]+$"
+    },
+    "status": {
+      "enum": ["queued", "running", "succeeded", "failed", "blocked_trust", "cancelled"]
+    },
+    "trustTier": { "enum": ["L0", "L1", "L2"] },
+    "costTier": { "type": "integer", "minimum": 0, "maximum": 4 },
+    "source": { "type": "string", "description": "Origin system: mercantile, gmail, whatsapp, monday, git, ..." },
+    "payload": { "type": "object", "additionalProperties": true },
+    "result": { "type": ["object", "null"], "additionalProperties": true },
+    "error": { "type": ["string", "null"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "startedAt": { "type": ["string", "null"], "format": "date-time" },
+    "finishedAt": { "type": ["string", "null"], "format": "date-time" },
+    "outbound": {
+      "type": "object",
+      "description": "If set, must pass Trust Gate before send",
+      "properties": {
+        "channel": { "enum": ["whatsapp", "email", "db", "none"] },
+        "destinationClass": {
+          "enum": ["self_chat", "neri_group", "drafts_group", "voice_transcripts", "customer", "supplier", "other"]
+        },
+        "requiresHumanPick": { "type": "boolean" }
+      }
+    }
+  }
+}
