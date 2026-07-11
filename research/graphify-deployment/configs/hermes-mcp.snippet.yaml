@@ -1,0 +1,33 @@
+# Hermes MCP registration for graphify (BEE knowledge graph).
+#
+# Paste into Hermes MCP config (hermes mcp add, or the mcp_servers section).
+# Backup first. Restart Hermes after editing.
+#
+# All graphify tools are read-only — no allowed_tools whitelist needed
+# (unlike GitNexus, which exposes rename/cypher/group_sync).
+
+mcp_servers:
+  - name: bee-graph
+    description: "BEE knowledge graph (code + schema + docs) via graphify"
+    enabled: true
+
+    # === Option A: shared HTTP server on bee-prod-1 (Stage 3) — RECOMMENDED ===
+    transport: http
+    url: "http://<TAILSCALE_IP>:8090/mcp"
+    headers:
+      Authorization: "Bearer <API_KEY from /etc/graphify-mcp.key>"
+
+    # === Option B: local stdio (if Hermes runs on the same box as the graph) ===
+    # transport: stdio
+    # command: ["python3", "-m", "graphify.serve", "/opt/bee-ops/graphify-out/graph.json"]
+    # env:
+    #   GRAPHIFY_QUERY_LOG_DISABLE: "1"
+
+    timeout_ms: 15000
+    restart_policy: on-failure
+
+    intent_hints:
+      - "code-question"
+      - "architecture-question"
+      - "schema-question"
+      - "design-request"

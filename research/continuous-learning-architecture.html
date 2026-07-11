@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧠 Alfred — 6 שכבות למידה מתמשכת</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --bg-2: #1a2027;
+    --bg-3: #232b35;
+    --line: #2d3742;
+    --text: #e8edf2;
+    --text-dim: #9aa5b1;
+    --accent: #ffb547;
+    --accent-2: #4dabf7;
+    --green: #34c77b;
+    --yellow: #ffd166;
+    --red: #ef5350;
+    --blue: #4dabf7;
+    --purple: #b388ff;
+    --pink: #f06292;
+    --cyan: #4dd0e1;
+    --orange: #ff7043;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Segoe UI", "Heebo", "Assistant", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.65;
+  }
+  header {
+    background: linear-gradient(135deg, #1a2027 0%, #0f1419 100%);
+    padding: 36px 32px;
+    border-bottom: 2px solid var(--purple);
+  }
+  header h1 { font-size: 2.2em; margin-bottom: 8px; }
+  header .subtitle { color: var(--text-dim); font-size: 1.0em; }
+  header .updated { color: var(--accent); font-size: 0.85em; margin-top: 10px; }
+  header .lead { color: var(--text); font-size: 0.98em; line-height: 1.8; max-width: 920px; margin-top: 16px; }
+
+  main { max-width: 1320px; margin: 0 auto; padding: 32px; }
+  section { margin-bottom: 56px; }
+  h2 { font-size: 1.6em; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid var(--line); color: var(--accent); }
+  h3 { font-size: 1.18em; margin-bottom: 12px; color: var(--text); }
+  .section-lead { color: var(--text-dim); font-size: 0.95em; line-height: 1.8; margin-bottom: 18px; max-width: 950px; }
+
+  .toc { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; margin-bottom: 32px; }
+  .toc h3 { color: var(--accent); margin-bottom: 10px; }
+  .toc ol { list-style: none; counter-reset: t; }
+  .toc ol li { counter-increment: t; padding: 4px 0; }
+  .toc ol li::before { content: counter(t) ". "; color: var(--accent); font-weight: 600; }
+  .toc a { color: var(--text); text-decoration: none; transition: color 0.2s; }
+  .toc a:hover { color: var(--accent); }
+
+  /* Layer cards */
+  .layer-stack { display: flex; flex-direction: column; gap: 16px; margin: 24px 0; }
+  .layer-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 22px 26px; border-right: 5px solid var(--accent); }
+  .layer-card.layer-1 { border-right-color: var(--blue); }
+  .layer-card.layer-2 { border-right-color: var(--purple); }
+  .layer-card.layer-3 { border-right-color: var(--green); }
+  .layer-card.layer-4 { border-right-color: var(--yellow); }
+  .layer-card.layer-5 { border-right-color: var(--pink); }
+  .layer-card.layer-6 { border-right-color: var(--red); }
+  .layer-card h3 { font-size: 1.3em; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  .layer-card .badge { font-size: 0.7em; font-weight: 600; padding: 3px 10px; border-radius: 10px; }
+  .layer-card .badge.live { background: rgba(52,199,123,0.18); color: var(--green); }
+  .layer-card .badge.partial { background: rgba(255,209,102,0.18); color: var(--yellow); }
+  .layer-card .badge.dormant { background: rgba(239,83,80,0.18); color: var(--red); }
+  .layer-card .badge.new { background: rgba(77,171,247,0.18); color: var(--blue); }
+  .layer-card .desc { color: var(--text-dim); font-size: 0.95em; line-height: 1.7; margin: 10px 0; }
+  .layer-card .desc code { background: var(--bg-3); padding: 1px 6px; border-radius: 3px; font-family: monospace; font-size: 0.85em; color: var(--accent-2); }
+
+  .layer-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+  .layer-meta .cell { background: var(--bg-3); border-radius: 8px; padding: 10px 12px; }
+  .layer-meta .cell .label { color: var(--text-dim); font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .layer-meta .cell .value { font-weight: 600; font-size: 0.92em; color: var(--text); }
+  @media (max-width: 720px) { .layer-meta { grid-template-columns: 1fr 1fr; } }
+
+  .layer-progress { height: 10px; background: var(--bg-3); border-radius: 5px; overflow: hidden; margin: 12px 0 4px; }
+  .layer-progress .fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+  .fill.empty { background: var(--text-dim); width: 5%; }
+  .fill.low { background: linear-gradient(90deg, #ef5350 0%, #f06292 100%); }
+  .fill.med { background: linear-gradient(90deg, #ffb547 0%, #ffd166 100%); }
+  .fill.high { background: linear-gradient(90deg, #34c77b 0%, #4dabf7 100%); }
+  .layer-progress + .pct { color: var(--accent); font-weight: 700; text-align: right; font-size: 0.88em; margin-bottom: 8px; }
+
+  .layer-actions { margin-top: 12px; padding: 12px; background: var(--bg-3); border-radius: 8px; }
+  .layer-actions .head { color: var(--accent); font-weight: 600; margin-bottom: 6px; font-size: 0.92em; }
+  .layer-actions ul { list-style: none; }
+  .layer-actions li { padding: 4px 0 4px 22px; position: relative; color: var(--text-dim); font-size: 0.88em; }
+  .layer-actions li::before { content: "▸"; position: absolute; right: 0; color: var(--accent); }
+  .layer-actions li.done::before { content: "✓"; color: var(--green); }
+  .layer-actions li.todo::before { content: "○"; color: var(--text-dim); }
+  .layer-actions li strong { color: var(--text); }
+
+  /* Maturity matrix */
+  .matrix { width: 100%; border-collapse: collapse; background: var(--bg-2); border-radius: 10px; overflow: hidden; margin: 12px 0; }
+  .matrix th, .matrix td { padding: 11px 14px; text-align: right; border-bottom: 1px solid var(--line); font-size: 0.92em; vertical-align: middle; }
+  .matrix th { background: var(--bg-3); color: var(--accent); font-weight: 600; }
+  .matrix tr:last-child td { border-bottom: none; }
+  .matrix .cap { font-weight: 600; }
+  .matrix .now { color: var(--red); }
+  .matrix .step1 { color: var(--yellow); }
+  .matrix .step2 { color: var(--blue); }
+  .matrix .step3 { color: var(--green); }
+  .matrix small { color: var(--text-dim); font-size: 0.78em; }
+
+  /* Cost table */
+  .cost-table { width: 100%; border-collapse: collapse; background: var(--bg-2); border-radius: 10px; overflow: hidden; }
+  .cost-table th, .cost-table td { padding: 10px 14px; text-align: right; border-bottom: 1px solid var(--line); font-size: 0.9em; }
+  .cost-table th { background: var(--bg-3); color: var(--accent); font-weight: 600; }
+  .cost-table tr.totals { background: var(--bg-3); font-weight: 700; }
+  .cost-table .pos { color: var(--green); font-weight: 600; }
+  .cost-table .neg { color: var(--red); font-weight: 600; }
+
+  /* Wave timeline */
+  .wave { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 14px; border-right: 4px solid var(--accent); }
+  .wave.w8 { border-right-color: var(--blue); }
+  .wave.w9 { border-right-color: var(--green); }
+  .wave.w10 { border-right-color: var(--yellow); }
+  .wave.w11 { border-right-color: var(--purple); }
+  .wave.w12 { border-right-color: var(--pink); }
+  .wave .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .wave .num { font-weight: 700; font-size: 1.05em; color: var(--accent); }
+  .wave .name { font-size: 1.0em; }
+  .wave .hours { color: var(--text-dim); font-size: 0.85em; font-family: monospace; }
+  .wave .items { color: var(--text-dim); font-size: 0.88em; line-height: 1.7; padding-right: 8px; }
+  .wave .items strong { color: var(--text); }
+
+  /* Alert */
+  .alert { background: rgba(239,83,80,0.08); border: 1px solid var(--red); border-right: 4px solid var(--red); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+  .alert h3 { color: var(--red); margin-bottom: 6px; }
+  .alert.ok { background: rgba(52,199,123,0.08); border-color: var(--green); border-right-color: var(--green); }
+  .alert.ok h3 { color: var(--green); }
+  .alert.warn { background: rgba(255,209,102,0.08); border-color: var(--yellow); border-right-color: var(--yellow); }
+  .alert.warn h3 { color: var(--yellow); }
+
+  /* Footer */
+  footer { margin-top: 60px; padding: 24px 32px; border-top: 1px solid var(--line); color: var(--text-dim); font-size: 0.85em; text-align: center; background: var(--bg-2); }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  footer code { background: var(--bg-3); padding: 1px 6px; border-radius: 3px; font-family: monospace; color: var(--accent-2); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧠 Alfred — 6 שכבות למידה מתמשכת</h1>
+  <div class="subtitle">תוכנית טכנית מעמיקה לסגירת לולאות feedback קיימות + הוספת weight-level learning</div>
+  <div class="updated">📅 נכתב 2026-05-26 06:30 · מבוסס על 4 חוקרי-משנה מקבילים</div>
+  <div class="lead">
+    <strong>הסיפור הגדול:</strong> יש כבר ~70% מהתשתית של learning ב-Alfred + Hermes — אבל לא הופעלה. ה-clarify loop מותקן ו<strong>ריק</strong>. self-improving skill = templates ריקים. Hermes Curator קוד מוכן אבל לא רץ. 8 memory plugins על דיסק, 0 פעילים. Alfred עבד ב-"first attempt mode" כבר שבועות.<br><br>
+    התוכנית הזאת מסבירה את 6 השכבות, מצב נוכחי, יעד, ועלות. <strong>תשובה לשאלה "עד כמה?"</strong> — אחרי Wave 11-12 (4-5 חודשים), Alfred ילמד מתיקונים, יציע שיפורים מבוססי-נתונים, יעדכן prompts אוטומטית שבועי, ויריץ אינטליגנציה עברית מקומית במחיר אפס.
+  </div>
+</header>
+
+<main>
+
+<div class="toc">
+  <h3>📑 תוכן עניינים</h3>
+  <ol>
+    <li><a href="#legal">דגל משפטי קריטי — תיקון 13</a></li>
+    <li><a href="#layers">6 שכבות learning — ארכיטקטורה מלאה</a></li>
+    <li><a href="#matrix">מטריצת בגרות — איפה אנחנו, עד איפה אפשר</a></li>
+    <li><a href="#cost">עלויות — setup + תפעול חודשי</a></li>
+    <li><a href="#waves">5 גלים — סדר ביצוע</a></li>
+    <li><a href="#donts">7 דברים שאסור</a></li>
+  </ol>
+</div>
+
+<!-- ====== LEGAL ALERT ====== -->
+<section id="legal">
+  <h2>🚨 1. דגל משפטי קריטי</h2>
+  <div class="alert">
+    <h3>⚠️ תיקון 13 לחוק הגנת הפרטיות (תוקף 14/8/2025)</h3>
+    <p style="color: var(--text);">
+      <strong>דורש:</strong> הסכמה מפורשת, נפרדת, גרנולרית לאימון AI על נתוני לקוחות. ToS כללי לא מספיק יותר. חציית גבולות (Replicate/Together/Modal/Lambda US-based) דורשת הגנות נוספות. <strong>PPA יכול להטיל קנסות של מיליוני ש"ח</strong> על הפרות governance.
+    </p>
+    <p style="color: var(--text); margin-top: 8px;">
+      <strong>אנחנו עושים:</strong> ✅ אימון רק על תיקוני ברק (תוכן שלו) · ✅ הסרת PII דרך DictaBERT NER לפני אימון · ✅ אימון מקומי בלבד על RTX 4090 · ❌ <strong>לא</strong> אימון על שיחות לקוחות שלמות בלי הסכמה · ❌ <strong>לא</strong> העלאת WhatsApp history לענן.
+    </p>
+    <p style="color: var(--text); margin-top: 8px;">
+      <strong>לפני production LoRA — לדבר עם משפטנית.</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ====== 6 LAYERS ====== -->
+<section id="layers">
+  <h2>🏗️ 2. 6 שכבות learning</h2>
+  <p class="section-lead">כל שכבה — מה היא לומדת, מאיפה, איך מטמיעים. סטטוס נוכחי + פעולות מומלצות.</p>
+
+  <div class="layer-stack">
+
+    <!-- Layer 1: Active Learning -->
+    <div class="layer-card layer-1">
+      <h3>1️⃣ Active Learning — Clarification Loop <span class="badge partial">חלקי</span></h3>
+      <div class="desc">
+        כל פעם שברק מסווג מחדש משימה אחרי שAlfred ניחש לא נכון — הזוג (הודעה מקורית, תיוג נכון) נכנס ל-corpus של few-shot examples. הבא ש-router רואה הודעה דומה — רואה את הדוגמא ומסווג נכון.
+      </div>
+      <div class="layer-meta">
+        <div class="cell"><div class="label">קוד</div><div class="value">alfred-clarify.js (641 שורות)</div></div>
+        <div class="cell"><div class="label">Storage</div><div class="value">task-examples.md</div></div>
+        <div class="cell"><div class="label">דוגמאות היום</div><div class="value" style="color:var(--red)">0</div></div>
+        <div class="cell"><div class="label">Cache TTL</div><div class="value">1h prompt cache</div></div>
+      </div>
+      <div class="layer-progress"><div class="fill empty" style="width: 15%;"></div></div>
+      <div class="pct">15% — מותקן אבל ריק</div>
+      <div class="layer-actions">
+        <div class="head">מומלץ — Wave 8 (2-3h):</div>
+        <ul>
+          <li>הוסף <strong>passive correction detector</strong> ב-alfred-handle.js</li>
+          <li>רגקס: <code>/(לא|לא נכון|תקן|שגוי|אחרת|במקום|שכחת|פספסת)/i</code></li>
+          <li>אחרי כל outbound → 30 דק' watch על JID</li>
+          <li>אם תיקון זוהה → preference pair אוטומטי</li>
+          <li><strong>ROI:</strong> מ-0 דוגמאות → מאות בשבוע. אין שינוי UX</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Layer 2: Self-Improvement -->
+    <div class="layer-card layer-2">
+      <h3>2️⃣ Self-Improvement Skill <span class="badge dormant">רדום</span></h3>
+      <div class="desc">
+        מנגנון מלא: 3× rule (אם ברק תיקן אותו דבר 3 פעמים בשבוע → מוצע ל-memory.md) · Tiered memory (HOT/WARM/COLD) · Weekly review cron (ראשון 09:00) · Constitutional protection (לא יכול לערוך AGENTS.md ללא אישור).
+      </div>
+      <div class="layer-meta">
+        <div class="cell"><div class="label">קבצים</div><div class="value">14 (כולם templates)</div></div>
+        <div class="cell"><div class="label">cron</div><div class="value">weekly-self-review (✅ הופעל ב-Phase 1)</div></div>
+        <div class="cell"><div class="label">memory.md</div><div class="value" style="color:var(--green)">seeded 2026-05-26</div></div>
+        <div class="cell"><div class="label">corrections.md</div><div class="value" style="color:var(--text-dim)">ריק</div></div>
+      </div>
+      <div class="layer-progress"><div class="fill low" style="width: 30%;"></div></div>
+      <div class="pct">30% — cron פעיל, hot tier מאוכלס, ממתין לcorrections</div>
+      <div class="layer-actions">
+        <div class="head">בוצע + מומלץ — Wave 8 (1h):</div>
+        <ul>
+          <li class="done">memory.md hot tier seeded עם 5 העדפות ידועות (2026-05-26)</li>
+          <li class="done">weekly-self-review cron הופעל ב-Phase 1</li>
+          <li class="todo">Wire passive correction detector → corrections.md</li>
+          <li class="todo">Heartbeat (alfred-heartbeat.js) → reflections.md "found patterns"</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Layer 3: Memory Curation -->
+    <div class="layer-card layer-3">
+      <h3>3️⃣ Memory Curation <span class="badge dormant">רדום</span></h3>
+      <div class="desc">
+        <strong>Hermes Curator:</strong> בודק skills שנוצרו אוטומטית, מוחק stale (>30 ימים), מאחד duplicates. רץ כל 7 ימים. <strong>+ 8 memory plugins על דיסק:</strong> byterover · hindsight · holographic · honcho · mem0 · openviking · retaindb · supermemory. אף אחד לא פעיל ב-Hermes.
+      </div>
+      <div class="layer-meta">
+        <div class="cell"><div class="label">Hermes Curator</div><div class="value" style="color:var(--red)">קוד מוכן, never ran</div></div>
+        <div class="cell"><div class="label">Memory plugins</div><div class="value" style="color:var(--red)">0/8 פעילים</div></div>
+        <div class="cell"><div class="label">state.db</div><div class="value">172MB, 1504 sessions</div></div>
+        <div class="cell"><div class="label">feedback table</div><div class="value" style="color:var(--red)">חסר</div></div>
+      </div>
+      <div class="layer-progress"><div class="fill low" style="width: 20%;"></div></div>
+      <div class="pct">20% — תשתית מוכנה, ממתינה לhermes gateway restart</div>
+      <div class="layer-actions">
+        <div class="head">מומלץ — Wave 8 (4h, אחרי gateway restart):</div>
+        <ul>
+          <li>הפעל Hermes Curator: <code>config.yaml: curator.enabled: true</code></li>
+          <li>בחר memory backend — <strong>Letta</strong> (paging core/recall/archival) או <strong>Honcho</strong> (user reasoning modeling)</li>
+          <li>אקטיבציה: <code>memory.provider: honcho</code> (או letta — Hermes plugin)</li>
+          <li>חכה ל-Hermes 0.14 OAuth proxy fix לפני</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Layer 4: Prompt Optimization -->
+    <div class="layer-card layer-4">
+      <h3>4️⃣ Prompt Optimization — DSPy MIPROv2 <span class="badge new">חדש</span></h3>
+      <div class="desc">
+        <strong>DSPy 3.2.1</strong> — Declarative framework. מגדירים pipeline + dataset + judge → DSPy מקמפל system prompt + few-shot demos אופטימליים. גרסה חדשה כל שבוע על traffic חי. <strong>אלטרנטיבה:</strong> GEPA (ICLR 2026 Oral) — 35× פחות rollouts.
+      </div>
+      <div class="layer-meta">
+        <div class="cell"><div class="label">סטטוס</div><div class="value" style="color:var(--red)">לא קיים</div></div>
+        <div class="cell"><div class="label">דרישה מינ'</div><div class="value">100-300 דוגמאות</div></div>
+        <div class="cell"><div class="label">עלות compile</div><div class="value">~$2 / 20 דק'</div></div>
+        <div class="cell"><div class="label">Hebrew</div><div class="value" style="color:var(--green)">עובד כ-API layer</div></div>
+      </div>
+      <div class="layer-progress"><div class="fill empty" style="width: 0%;"></div></div>
+      <div class="pct">0% — Wave 10 build</div>
+      <div class="layer-actions">
+        <div class="head">מומלץ — Wave 10 (16h, שבוע 3-4):</div>
+        <ul>
+          <li><code>pip install dspy-ai</code> על Windows הראשי</li>
+          <li>הגדר Alfred כ-dspy.Module (classify + enrich + compose)</li>
+          <li>Dataset מ-task-examples.md (אחרי שיש 100+ דוגמאות מ-Layer 1)</li>
+          <li>MIPROv2 weekly compile cron</li>
+          <li>Shadow A/B: 10% traffic → candidate prompt async</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Layer 5: Continuous Eval -->
+    <div class="layer-card layer-5">
+      <h3>5️⃣ Continuous Eval — Langfuse + Judge <span class="badge partial">חלקי</span></h3>
+      <div class="desc">
+        <strong>Langfuse v3</strong> (self-host on bee-prod-1) — observability + datasets + experiments. <strong>Inspect AI</strong> nightly Hebrew regression suite. <strong>Promptfoo</strong> CI gate. <strong>Judge:</strong> "next user message = correction" detector + Haiku 4.5 fallback.
+      </div>
+      <div class="layer-meta">
+        <div class="cell"><div class="label">Langfuse</div><div class="value" style="color:var(--red)">לא מותקן</div></div>
+        <div class="cell"><div class="label">decisions.sqlite</div><div class="value" style="color:var(--yellow)">2 רשומות test</div></div>
+        <div class="cell"><div class="label">Judge</div><div class="value" style="color:var(--red)">לא קיים</div></div>
+        <div class="cell"><div class="label">Shadow A/B</div><div class="value" style="color:var(--red)">לא קיים</div></div>
+      </div>
+      <div class="layer-progress"><div class="fill low" style="width: 10%;"></div></div>
+      <div class="pct">10% — telemetry בסיסי, אין judging</div>
+      <div class="layer-actions">
+        <div class="head">מומלץ — Wave 9 (12h, שבוע 2):</div>
+        <ul>
+          <li>Langfuse self-host על bee-prod-1 (docker-compose)</li>
+          <li>OpenLLMetry instrumentation ב-Alfred</li>
+          <li>Next-msg-correction judge (רגקס + Langfuse score)</li>
+          <li>Inspect AI 100-case Hebrew suite (nightly cron)</li>
+          <li>Shadow A/B infrastructure (10% traffic async)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Layer 6: Weight Updates -->
+    <div class="layer-card layer-6">
+      <h3>6️⃣ Weight Updates — DictaLM 3.0 LoRA <span class="badge new">חדש · Wave 11-12</span></h3>
+      <div class="desc">
+        LoRA adapter על <strong>DictaLM 3.0 12B</strong> (Hebrew-native, 200B tokens, tool calling preserved, 65K ctx, Apache 2.0). אימון על RTX 4090 24GB עם <strong>Unsloth</strong> (60% פחות זיכרון). <strong>KTO</strong> מועדף על DPO (90% פחות "desirable" examples נדרשים).
+      </div>
+      <div class="layer-meta">
+        <div class="cell"><div class="label">סטטוס</div><div class="value" style="color:var(--red)">לא קיים</div></div>
+        <div class="cell"><div class="label">דרישה מינ'</div><div class="value">100-500 pairs</div></div>
+        <div class="cell"><div class="label">עלות/run</div><div class="value">$0 local · $1.99-4 cloud</div></div>
+        <div class="cell"><div class="label">PPL flag</div><div class="value" style="color:var(--red)">חייב משפטנית</div></div>
+      </div>
+      <div class="layer-progress"><div class="fill empty" style="width: 0%;"></div></div>
+      <div class="pct">0% — Wave 11-12 (חודש 2-3)</div>
+      <div class="layer-actions">
+        <div class="head">מומלץ — Wave 11 quick win (10h):</div>
+        <ul>
+          <li>DictaLM 1.7B trained on Barak's corrections, runs locally</li>
+          <li>Replace intent classifier (70% of bulk operations)</li>
+          <li><strong>Wave 12:</strong> KTO על 100 pairs ב-DictaLM 12B QLoRA</li>
+          <li>Held-out 50 hebrew pairs כ-golden set</li>
+          <li>Promote רק אם ≥55% win rate vs current</li>
+          <li><strong>PPL gate:</strong> אימון רק על תוכן ברק, PII-stripped אם רלוונטי לקוחות</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ====== MATURITY MATRIX ====== -->
+<section id="matrix">
+  <h2>📊 3. מטריצת בגרות — איפה אנחנו, עד איפה אפשר</h2>
+  <p class="section-lead">איפה Alfred נמצא היום מול היכולות בכל wave. השאלה "עד כמה ניתן" — התשובה בעמודה הימנית.</p>
+
+  <table class="matrix">
+    <thead>
+      <tr>
+        <th>יכולת</th>
+        <th>היום</th>
+        <th>אחרי Wave 8-9</th>
+        <th>אחרי Wave 10</th>
+        <th>אחרי Wave 11-12</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="cap">לזכור פעם אחת</td>
+        <td class="step3">✅ workspace files</td>
+        <td class="step3">✅ + memory backend indexed</td>
+        <td class="step3">✅</td>
+        <td class="step3">✅ + LoRA weights</td>
+      </tr>
+      <tr>
+        <td class="cap">ללמוד מתיקון</td>
+        <td class="step1">🟡 wired, 0 examples</td>
+        <td class="step3">✅ passive detector</td>
+        <td class="step3">✅ + DSPy auto-compile</td>
+        <td class="step3">✅ + weight updates</td>
+      </tr>
+      <tr>
+        <td class="cap">לזהות דפוס חוזר</td>
+        <td class="now">❌</td>
+        <td class="step3">✅ 3× rule</td>
+        <td class="step3">✅ judge מציין</td>
+        <td class="step3">✅ KTO learns</td>
+      </tr>
+      <tr>
+        <td class="cap">לשפר ניסוח עברי</td>
+        <td class="now">❌</td>
+        <td class="step1">🟡 manual review</td>
+        <td class="step3">✅ DSPy + judge</td>
+        <td class="step3">✅ KTO + local model</td>
+      </tr>
+      <tr>
+        <td class="cap">להציע שיפורים</td>
+        <td class="now">🔴 cron מובטל היה</td>
+        <td class="step3">✅ weekly proposals</td>
+        <td class="step3">✅ data-driven</td>
+        <td class="step3">✅</td>
+      </tr>
+      <tr>
+        <td class="cap">להחליף intent classification ב-local model</td>
+        <td class="now">❌</td>
+        <td class="now">❌</td>
+        <td class="step1">🟡 prompt-level</td>
+        <td class="step3">✅ DictaLM 1.7B local</td>
+      </tr>
+      <tr>
+        <td class="cap">להפחית cloud spend</td>
+        <td class="now">❌ ($36/mo today)</td>
+        <td class="step1">~$30 (caching)</td>
+        <td class="step2">~$25</td>
+        <td class="step3">~$10-15 (70% local)</td>
+      </tr>
+      <tr>
+        <td class="cap">A/B prompts בייצור</td>
+        <td class="now">❌</td>
+        <td class="step1">🟡 shadow infrastructure</td>
+        <td class="step3">✅ canary 1→5→20→50→100%</td>
+        <td class="step3">✅ + model A/B</td>
+      </tr>
+      <tr>
+        <td class="cap">Auto-rollback ברגרסיה</td>
+        <td class="now">❌</td>
+        <td class="now">❌</td>
+        <td class="step3">✅ judge-delta p&lt;0.05</td>
+        <td class="step3">✅</td>
+      </tr>
+      <tr>
+        <td class="cap">Memory backend פעיל</td>
+        <td class="now">❌ (0 of 8)</td>
+        <td class="step3">✅ Letta/Honcho</td>
+        <td class="step3">✅</td>
+        <td class="step3">✅ + KG (Phase 2)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="alert ok" style="margin-top: 18px;">
+    <h3>✅ שורה תחתונה — "עד כמה?"</h3>
+    <p style="color: var(--text);">
+      אחרי Wave 11-12 (4-5 חודשים, ~60 שעות עבודה), Alfred יוכל ללמוד מתיקונים אוטומטית, להציע שיפורים מבוססי-נתונים שבועי, לעדכן את ה-prompts שלו אוטומטית, ולהריץ אינטליגנציה עברית מקומית. <strong>זה הדבר הכי קרוב ל-"continuous learning" שאפשר בלי שנמצא בארגון של גוגל.</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ====== COST ====== -->
+<section id="cost">
+  <h2>💰 4. עלויות — setup + תפעול חודשי</h2>
+  <p class="section-lead">פירוט כל שכבה. שים לב — חיסכון פוטנציאלי על cloud spend מקזז 50-100% מה-overhead.</p>
+
+  <table class="cost-table">
+    <thead><tr><th>שכבה</th><th>Setup (שעות)</th><th>תפעול חודשי</th><th>הערות</th></tr></thead>
+    <tbody>
+      <tr><td>1️⃣ Passive correction</td><td>3</td><td class="pos">$0</td><td>רגקס, חינם</td></tr>
+      <tr><td>2️⃣ Self-improvement</td><td>3</td><td class="pos">$0</td><td>weekly cron כבר פעיל</td></tr>
+      <tr><td>3️⃣ Memory curation (Letta)</td><td>4</td><td class="pos">$0-5</td><td>Letta OSS · Hermes Curator חינם</td></tr>
+      <tr><td>4️⃣ Prompt opt (DSPy MIPROv2)</td><td>6</td><td>~$8</td><td>weekly compile × $2</td></tr>
+      <tr><td>5️⃣ Continuous eval (Langfuse)</td><td>10</td><td>~$5</td><td>Haiku judge + Langfuse על CX52 קיים</td></tr>
+      <tr><td>6️⃣ Local LoRA (DictaLM 12B)</td><td>20</td><td class="pos">$0</td><td>RTX 4090 owned · $4-15/run אם cloud</td></tr>
+      <tr class="totals"><td>סה"כ</td><td>~60</td><td>~$13-50/mo</td><td>חיסכון פוטנציאלי <span class="pos">$20-50/mo cloud</span> ⇒ <span class="pos">net neutral or positive</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ====== WAVES ====== -->
+<section id="waves">
+  <h2>🌊 5. 5 גלים — סדר ביצוע מומלץ</h2>
+  <p class="section-lead">אחרי Phase 1 (שכבר בוצע). כל גל = שבוע 1-3 שעות עבודה ביום.</p>
+
+  <div class="wave w8">
+    <div class="head"><span class="num">Wave 8</span><span class="name">Activate dormant scaffolding</span><span class="hours">~10 שעות · שבוע 1</span></div>
+    <div class="items">
+      ▸ <strong>Passive correction detector</strong> ב-alfred-handle.js (2-3h) → מאכלס task-examples.md אוטומטית<br>
+      ▸ <strong>memory.md hot tier</strong> (✅ בוצע עכשיו) → 5 העדפות ידועות<br>
+      ▸ <strong>Hermes Curator activate</strong> (30 min, אחרי gateway restart) → config.yaml + restart<br>
+      ▸ <strong>Letta/Honcho memory plugin</strong> (4h) → <code>memory.provider: honcho</code>
+    </div>
+  </div>
+
+  <div class="wave w9">
+    <div class="head"><span class="num">Wave 9</span><span class="name">Eval foundation</span><span class="hours">~12 שעות · שבוע 2</span></div>
+    <div class="items">
+      ▸ <strong>Langfuse self-host</strong> על bee-prod-1 (4h) → docker-compose<br>
+      ▸ <strong>OpenLLMetry instrumentation</strong> ב-Alfred (3h) → spans ל-Langfuse<br>
+      ▸ <strong>Next-msg-correction judge</strong> (2h) → רגקס + Langfuse score()<br>
+      ▸ <strong>Inspect AI 100-case Hebrew suite</strong> (3h) → nightly cron
+    </div>
+  </div>
+
+  <div class="wave w10">
+    <div class="head"><span class="num">Wave 10</span><span class="name">Prompt optimization</span><span class="hours">~16 שעות · שבוע 3-4</span></div>
+    <div class="items">
+      ▸ <strong>DSPy program</strong> ל-alfred-router (6h)<br>
+      ▸ <strong>Dataset</strong> מ-task-examples.md + decisions.sqlite (2h)<br>
+      ▸ <strong>MIPROv2 weekly compile cron</strong> (2h setup)<br>
+      ▸ <strong>Shadow A/B</strong> infrastructure (6h) → 10% traffic to candidate
+    </div>
+  </div>
+
+  <div class="wave w11">
+    <div class="head"><span class="num">Wave 11</span><span class="name">Local DictaLM — quick win</span><span class="hours">~20 שעות · חודש 2</span></div>
+    <div class="items">
+      ▸ <strong>Setup Unsloth + DictaLM 1.7B</strong> מקומית (4h)<br>
+      ▸ <strong>Replace intent classifier</strong> עם local DictaLM (6h)<br>
+      ▸ <strong>Hardening + monitoring</strong> (4h)<br>
+      ▸ <strong>Wave A — KTO על 100 pairs</strong> (6h) — אם יש 100 מאוסף מ-Wave 8
+    </div>
+  </div>
+
+  <div class="wave w12">
+    <div class="head"><span class="num">Wave 12+</span><span class="name">Continuous fine-tuning</span><span class="hours">ongoing · חודש 3+</span></div>
+    <div class="items">
+      ▸ <strong>Wave B — DPO על 500+ pairs</strong> (חודש 3)<br>
+      ▸ <strong>Wave C — Weekly auto-retrain workflow</strong> (חודש 4-5)<br>
+      ▸ <strong>Eval gate</strong> אוטומטי לפני deploy (חודש 4-5)<br>
+      ▸ <strong>Memory curator</strong> אוטומטי על LoRAs ישנות
+    </div>
+  </div>
+</section>
+
+<!-- ====== DON'TS ====== -->
+<section id="donts">
+  <h2>🚫 6. 7 דברים שאסור</h2>
+
+  <div class="alert">
+    <h3>1. אסור: אימון על שיחות לקוחות בלי הסכמה</h3>
+    <p style="color: var(--text);">PPL Amendment 13 — קנסות PPA. אופציה: לעבוד עם משפטנית למסמך הסכמה לכל לקוח, או רק על תוכן ברק.</p>
+  </div>
+
+  <div class="alert">
+    <h3>2. אסור: העלאת raw data ל-Replicate/Together/Modal</h3>
+    <p style="color: var(--text);">Cross-border = exposure. אופציה: train locally only.</p>
+  </div>
+
+  <div class="alert warn">
+    <h3>3. הזהר: TextGrad / Trace ל-production</h3>
+    <p style="color: var(--text);">3-12 LLM calls per instance = יקר מדי לטראפיק יומיומי. שמור לpipeline batches בלבד.</p>
+  </div>
+
+  <div class="alert warn">
+    <h3>4. הזהר: Helicone</h3>
+    <p style="color: var(--text);">בmaintenance mode מאז ש-Mintlify קנה אותם במרץ 2026. השרת לא יעודכן — תעדיף Langfuse.</p>
+  </div>
+
+  <div class="alert warn">
+    <h3>5. הזהר: DictaLM 24B local</h3>
+    <p style="color: var(--text);">דורש 48GB GPU. אם 12B לא מספיק → cloud H100 ($15-50/run). 12B Nemotron-Nano-V2 הוא ה-sweet spot.</p>
+  </div>
+
+  <div class="alert warn">
+    <h3>6. הזהר: Constitutional AI RLAIF end-user library</h3>
+    <p style="color: var(--text);">Anthropic שחררו את ה-2026 Constitution כ-CC0, אבל אין lib סופי. תצטרך לממש מחדש ב-TRL.</p>
+  </div>
+
+  <div class="alert warn">
+    <h3>7. הזהר: clarify confidence threshold מתחת 0.6</h3>
+    <p style="color: var(--text);">ייצור הצפת שאלות ל-self-chat (annoyance ל-Barak). השאר ≥0.85 ל-DM ו-≥0.6 ל-self-chat.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>🧠 Alfred · 6-Layer Continuous Learning Architecture</p>
+  <p>📂 מסמכים נלווים: <a href="https://github.com/Barak-B/bee-assets/blob/claude/capability-extensions-collection-JjV2s/research/continuous-learning-plan.md">continuous-learning-plan.md</a> · <a href="https://github.com/Barak-B/bee-assets/blob/claude/capability-extensions-collection-JjV2s/research/agent-architecture.html">agent-architecture.html</a> · <a href="https://github.com/Barak-B/bee-assets/blob/claude/capability-extensions-collection-JjV2s/research/agent-io-flow.html">agent-io-flow.html</a></p>
+  <p>📅 נכתב 2026-05-26 06:45 · 4 חוקרי-משנה מקבילים · audit + SOTA 2026 + eval frameworks + local fine-tuning</p>
+  <p style="margin-top: 8px;">מקור: <code>E:\bee-assets\research\continuous-learning-architecture.html</code></p>
+</footer>
+
+</body>
+</html>

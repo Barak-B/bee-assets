@@ -1,0 +1,17 @@
+{
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "",
+  "attachmentFolderPath": "attachments",
+  "showUnsupportedFiles": false,
+  "defaultViewMode": "source",
+  "readableLineLength": true,
+  "strictLineBreaks": false,
+  "promptDelete": true,
+  "showLineNumber": false,
+  "spellcheck": true,
+  "spellcheckLanguages": null,
+  "useMarkdownLinks": false,
+  "newLinkFormat": "shortest",
+  "wikiLinkEnabled": true
+}

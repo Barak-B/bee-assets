@@ -1,0 +1,282 @@
+Plugins (68/93 enabled)
+Source roots:
+  stock: C:\Users\Barak\AppData\Roaming\npm\node_modules\openclaw\dist\extensions
+
++--------------+----------+----------+----------+-----------------------------------------------------------+----------+
+| Name         | ID       | Format   | Status   | Source                                                    | Version  |
++--------------+----------+----------+----------+-----------------------------------------------------------+----------+
+| Active       | active-  | openclaw | disabled | stock:active-memory/index.js                              |          |
+| Memory       | memory   |          |          | Runs a bounded blocking memory sub-agent before eligible  |          |
+|              |          |          |          | conversational replies and injects relevant memory into   |          |
+|              |          |          |          | prompt context.                                           |          |
+| @openclaw/   | alibaba  | openclaw | enabled  | stock:alibaba/index.js                                    | 2026.5.2 |
+| alibaba-     |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | amazon-  | openclaw | enabled  | stock:amazon-bedrock/index.js                             | 2026.5.2 |
+| amazon-      | bedrock  |          |          |                                                           |          |
+| bedrock-     |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | amazon-  | openclaw | enabled  | stock:amazon-bedrock-mantle/index.js                      | 2026.5.2 |
+| amazon-      | bedrock- |          |          |                                                           |          |
+| bedrock-     | mantle   |          |          |                                                           |          |
+| mantle-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | anthropi | openclaw | enabled  | stock:anthropic/index.js                                  | 2026.5.2 |
+| anthropic-   | c        |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | anthropi | openclaw | enabled  | stock:anthropic-vertex/index.js                           | 2026.5.2 |
+| anthropic-   | c-vertex |          |          |                                                           |          |
+| vertex-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | arcee    | openclaw | enabled  | stock:arcee/index.js                                      | 2026.5.2 |
+| arcee-       |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| Azure Speech | azure-   | openclaw | enabled  | stock:azure-speech/index.js                               | 2026.5.2 |
+|              | speech   |          |          | Azure AI Speech text-to-speech (MP3, native Ogg/Opus      |          |
+|              |          |          |          | voice notes, PCM telephony).                              |          |
+| Bonjour      | bonjour  | openclaw | enabled  | stock:bonjour/index.js                                    | 2026.5.2 |
+| Gateway      |          |          |          | Advertise the local OpenClaw gateway over Bonjour/mDNS.   |          |
+| Discovery    |          |          |          |                                                           |          |
+| @openclaw/   | browser  | openclaw | enabled  | stock:browser/index.js                                    | 2026.5.2 |
+| browser-     |          |          |          |                                                           |          |
+| plugin       |          |          |          |                                                           |          |
+| @openclaw/   | byteplus | openclaw | enabled  | stock:byteplus/index.js                                   | 2026.5.2 |
+| byteplus-    |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | cerebras | openclaw | enabled  | stock:cerebras/index.js                                   | 2026.5.2 |
+| cerebras-    |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | chutes   | openclaw | enabled  | stock:chutes/index.js                                     | 2026.5.2 |
+| chutes-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | cloudfla | openclaw | enabled  | stock:cloudflare-ai-gateway/index.js                      | 2026.5.2 |
+| cloudflare-  | re-ai-   |          |          |                                                           |          |
+| ai-gateway-  | gateway  |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | comfy    | openclaw | enabled  | stock:comfy/index.js                                      | 2026.5.2 |
+| comfy-       |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | copilot- | openclaw | enabled  | stock:copilot-proxy/index.js                              | 2026.5.2 |
+| copilot-     | proxy    |          |          |                                                           |          |
+| proxy        |          |          |          |                                                           |          |
+| @openclaw/   | deepgram | openclaw | enabled  | stock:deepgram/index.js                                   | 2026.5.2 |
+| deepgram-    |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | deepinfr | openclaw | enabled  | stock:deepinfra/index.js                                  | 2026.5.2 |
+| deepinfra-   | a        |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | deepseek | openclaw | enabled  | stock:deepseek/index.js                                   | 2026.5.2 |
+| deepseek-    |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| Device       | device-  | openclaw | enabled  | stock:device-pair/index.js                                |          |
+| Pairing      | pair     |          |          | Generate setup codes and approve device pairing requests. |          |
+| Document     | document | openclaw | enabled  | stock:document-extract/index.js                           | 2026.5.2 |
+| Extraction   | -extract |          |          | Extract text and fallback page images from local          |          |
+|              |          |          |          | document attachments.                                     |          |
+| @openclaw/   | duckduck | openclaw | disabled | stock:duckduckgo/index.js                                 | 2026.5.2 |
+| duckduckgo-  | go       |          |          |                                                           |          |
+| plugin       |          |          |          |                                                           |          |
+| @openclaw/   | elevenla | openclaw | enabled  | stock:elevenlabs/index.js                                 | 2026.5.2 |
+| elevenlabs-  | bs       |          |          |                                                           |          |
+| speech       |          |          |          |                                                           |          |
+| @openclaw/   | exa      | openclaw | disabled | stock:exa/index.js                                        | 2026.5.2 |
+| exa-plugin   |          |          |          |                                                           |          |
+| @openclaw/   | fal      | openclaw | enabled  | stock:fal/index.js                                        | 2026.5.2 |
+| fal-provider |          |          |          |                                                           |          |
+| File         | file-    | openclaw | enabled  | stock:file-transfer/index.js                              | 2026.5.2 |
+| Transfer     | transfer |          |          | Fetch, list, and write files on paired nodes via          |          |
+|              |          |          |          | dedicated node commands. Bypasses bash stdout truncation  |          |
+|              |          |          |          | by using base64 over node.invoke for binaries up to 16    |          |
+|              |          |          |          | MB.                                                       |          |
+| @openclaw/   | firecraw | openclaw | disabled | stock:firecrawl/index.js                                  | 2026.5.2 |
+| firecrawl-   | l        |          |          |                                                           |          |
+| plugin       |          |          |          |                                                           |          |
+| @openclaw/   | firework | openclaw | enabled  | stock:fireworks/index.js                                  | 2026.5.2 |
+| fireworks-   | s        |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | github-  | openclaw | enabled  | stock:github-copilot/index.js                             | 2026.5.2 |
+| github-      | copilot  |          |          |                                                           |          |
+| copilot-     |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | google   | openclaw | enabled  | stock:google/index.js                                     | 2026.5.2 |
+| google-      |          |          |          |                                                           |          |
+| plugin       |          |          |          |                                                           |          |
+| @openclaw/   | gradium  | openclaw | disabled | stock:gradium/index.js                                    | 2026.5.2 |
+| gradium-     |          |          |          |                                                           |          |
+| speech       |          |          |          |                                                           |          |
+| @openclaw/   | groq     | openclaw | enabled  | stock:groq/index.js                                       | 2026.5.2 |
+| groq-        |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | huggingf | openclaw | enabled  | stock:huggingface/index.js                                | 2026.5.2 |
+| huggingface- | ace      |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | imessage | openclaw | disabled | stock:imessage/index.js                                   | 2026.5.2 |
+| imessage     |          |          |          |                                                           |          |
+| Inworld      | inworld  | openclaw | enabled  | stock:inworld/index.js                                    | 2026.5.2 |
+|              |          |          |          | Inworld streaming text-to-speech (MP3, OGG_OPUS, PCM      |          |
+|              |          |          |          | telephony).                                               |          |
+| @openclaw/   | irc      | openclaw | disabled | stock:irc/index.js                                        | 2026.5.2 |
+| irc          |          |          |          |                                                           |          |
+| @openclaw/   | kilocode | openclaw | enabled  | stock:kilocode/index.js                                   | 2026.5.2 |
+| kilocode-    |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | kimi     | openclaw | enabled  | stock:kimi-coding/index.js                                | 2026.5.2 |
+| kimi-        |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | litellm  | openclaw | enabled  | stock:litellm/index.js                                    | 2026.5.2 |
+| litellm-     |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| LLM Task     | llm-task | openclaw | disabled | stock:llm-task/index.js                                   | 2026.5.2 |
+|              |          |          |          | Generic JSON-only LLM tool for structured tasks callable  |          |
+|              |          |          |          | from workflows.                                           |          |
+| @openclaw/   | lmstudio | openclaw | enabled  | stock:lmstudio/index.js                                   | 2026.5.2 |
+| lmstudio-    |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | matrix   | openclaw | disabled | stock:matrix/index.js                                     | 2026.5.2 |
+| matrix       |          |          |          |                                                           |          |
+| @openclaw/   | mattermo | openclaw | disabled | stock:mattermost/index.js                                 | 2026.5.2 |
+| mattermost   | st       |          |          |                                                           |          |
+| @openclaw/   | memory-  | openclaw | enabled  | stock:memory-core/index.js                                | 2026.5.2 |
+| memory-core  | core     |          |          |                                                           |          |
+| Memory Wiki  | memory-  | openclaw | disabled | stock:memory-wiki/index.js                                | 2026.5.2 |
+|              | wiki     |          |          | Persistent wiki compiler and Obsidian-friendly knowledge  |          |
+|              |          |          |          | vault for OpenClaw.                                       |          |
+| @openclaw/   | microsof | openclaw | enabled  | stock:microsoft/index.js                                  | 2026.5.2 |
+| microsoft-   | t        |          |          |                                                           |          |
+| speech       |          |          |          |                                                           |          |
+| @openclaw/   | microsof | openclaw | enabled  | stock:microsoft-foundry/index.js                          | 2026.5.2 |
+| microsoft-   | t-       |          |          |                                                           |          |
+| foundry      | foundry  |          |          |                                                           |          |
+| Claude       | migrate- | openclaw | disabled | stock:migrate-claude/index.js                             | 2026.5.2 |
+| Migration    | claude   |          |          | Imports Claude Code and Claude Desktop instructions, MCP  |          |
+|              |          |          |          | servers, skills, and safe configuration into OpenClaw.    |          |
+| Hermes       | migrate- | openclaw | disabled | stock:migrate-hermes/index.js                             | 2026.5.2 |
+| Migration    | hermes   |          |          | Imports Hermes configuration, memories, skills, and       |          |
+|              |          |          |          | supported credentials into OpenClaw.                      |          |
+| @openclaw/   | minimax  | openclaw | enabled  | stock:minimax/index.js                                    | 2026.5.2 |
+| minimax-     |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | mistral  | openclaw | enabled  | stock:mistral/index.js                                    | 2026.5.2 |
+| mistral-     |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | moonshot | openclaw | enabled  | stock:moonshot/index.js                                   | 2026.5.2 |
+| moonshot-    |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | nvidia   | openclaw | enabled  | stock:nvidia/index.js                                     | 2026.5.2 |
+| nvidia-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | ollama   | openclaw | enabled  | stock:ollama/index.js                                     | 2026.5.2 |
+| ollama-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| OpenProse    | open-    | openclaw | disabled | stock:open-prose/index.js                                 | 2026.5.2 |
+|              | prose    |          |          | OpenProse VM skill pack with a /prose slash command.      |          |
+| @openclaw/   | openai   | openclaw | enabled  | stock:openai/index.js                                     | 2026.5.2 |
+| openai-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | opencode | openclaw | enabled  | stock:opencode/index.js                                   | 2026.5.2 |
+| opencode-    |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | opencode | openclaw | enabled  | stock:opencode-go/index.js                                | 2026.5.2 |
+| opencode-go- | -go      |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | openrout | openclaw | enabled  | stock:openrouter/index.js                                 | 2026.5.2 |
+| openrouter-  | er       |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| OpenShell    | openshel | openclaw | disabled | stock:openshell/index.js                                  | 2026.5.2 |
+| Sandbox      | l        |          |          | Sandbox backend powered by OpenShell with mirrored local  |          |
+|              |          |          |          | workspaces and SSH-based command execution.               |          |
+| @openclaw/   | perplexi | openclaw | disabled | stock:perplexity/index.js                                 | 2026.5.2 |
+| perplexity-  | ty       |          |          |                                                           |          |
+| plugin       |          |          |          |                                                           |          |
+| Phone        | phone-   | openclaw | enabled  | stock:phone-control/index.js                              |          |
+| Control      | control  |          |          | Arm/disarm high-risk phone node commands (camera/screen/  |          |
+|              |          |          |          | writes) with an optional auto-expiry.                     |          |
+| @openclaw/   | qianfan  | openclaw | enabled  | stock:qianfan/index.js                                    | 2026.5.2 |
+| qianfan-     |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | qwen     | openclaw | enabled  | stock:qwen/index.js                                       | 2026.5.2 |
+| qwen-        |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | runway   | openclaw | enabled  | stock:runway/index.js                                     | 2026.5.2 |
+| runway-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | searxng  | openclaw | disabled | stock:searxng/index.js                                    | 2026.5.2 |
+| searxng-     |          |          |          |                                                           |          |
+| plugin       |          |          |          |                                                           |          |
+| @openclaw/   | senseaud | openclaw | enabled  | stock:senseaudio/index.js                                 | 2026.5.2 |
+| senseaudio-  | io       |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | sglang   | openclaw | enabled  | stock:sglang/index.js                                     | 2026.5.2 |
+| sglang-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | signal   | openclaw | disabled | stock:signal/index.js                                     | 2026.5.2 |
+| signal       |          |          |          |                                                           |          |
+| Skill        | skill-   | openclaw | disabled | stock:skill-workshop/index.js                             | 2026.5.2 |
+| Workshop     | workshop |          |          | Captures repeatable workflows as workspace skills, with   |          |
+|              |          |          |          | pending review, safe writes, and skill prompt refresh.    |          |
+| @openclaw/   | slack    | openclaw | disabled | stock:slack/index.js                                      | 2026.5.2 |
+| slack        |          |          |          |                                                           |          |
+| @openclaw/   | stepfun  | openclaw | enabled  | stock:stepfun/index.js                                    | 2026.5.2 |
+| stepfun-     |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | syntheti | openclaw | enabled  | stock:synthetic/index.js                                  | 2026.5.2 |
+| synthetic-   | c        |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| Talk Voice   | talk-    | openclaw | enabled  | stock:talk-voice/index.js                                 |          |
+|              | voice    |          |          | Manage Talk voice selection (list/set).                   |          |
+| @openclaw/   | tavily   | openclaw | disabled | stock:tavily/index.js                                     | 2026.5.2 |
+| tavily-      |          |          |          |                                                           |          |
+| plugin       |          |          |          |                                                           |          |
+| @openclaw/   | telegram | openclaw | disabled | stock:telegram/index.js                                   | 2026.5.2 |
+| telegram     |          |          |          |                                                           |          |
+| @openclaw/   | tencent  | openclaw | enabled  | stock:tencent/index.js                                    | 2026.5.2 |
+| tencent-     |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| Thread       | thread-  | openclaw | disabled | stock:thread-ownership/index.js                           |          |
+| Ownership    | ownershi |          |          | Prevents multiple agents from responding in the same      |          |
+|              | p        |          |          | Slack thread. Uses HTTP calls to the slack-forwarder      |          |
+|              |          |          |          | ownership API.                                            |          |
+| @openclaw/   | together | openclaw | enabled  | stock:together/index.js                                   | 2026.5.2 |
+| together-    |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| tokenjuice   |          | openclaw | disabled | stock:tokenjuice/index.js                                 | 2026.5.2 |
+|              |          |          |          | Compacts exec and bash tool results with tokenjuice       |          |
+|              |          |          |          | reducers.                                                 |          |
+| @openclaw/   | tts-     | openclaw | enabled  | stock:tts-local-cli/index.js                              | 2026.5.2 |
+| tts-local-   | local-   |          |          |                                                           |          |
+| cli          | cli      |          |          |                                                           |          |
+| @openclaw/   | venice   | openclaw | enabled  | stock:venice/index.js                                     | 2026.5.2 |
+| venice-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | vercel-  | openclaw | enabled  | stock:vercel-ai-gateway/index.js                          | 2026.5.2 |
+| vercel-ai-   | ai-      |          |          |                                                           |          |
+| gateway-     | gateway  |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | vllm     | openclaw | enabled  | stock:vllm/index.js                                       | 2026.5.2 |
+| vllm-        |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | volcengi | openclaw | enabled  | stock:volcengine/index.js                                 | 2026.5.2 |
+| volcengine-  | ne       |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | voyage   | openclaw | enabled  | stock:voyage/index.js                                     | 2026.5.2 |
+| voyage-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | vydra    | openclaw | enabled  | stock:vydra/index.js                                      | 2026.5.2 |
+| vydra-       |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| Web          | web-     | openclaw | enabled  | stock:web-readability/index.js                            | 2026.5.2 |
+| Readability  | readabil |          |          | Extract readable article content from local HTML web      |          |
+| Extraction   | ity      |          |          | fetch responses.                                          |          |
+| Webhooks     | webhooks | openclaw | disabled | stock:webhooks/index.js                                   | 2026.5.2 |
+|              |          |          |          | Authenticated inbound webhooks that bind external         |          |
+|              |          |          |          | automation to OpenClaw TaskFlows.                         |          |
+| @openclaw/   | xai      | openclaw | enabled  | stock:xai/index.js                                        | 2026.5.2 |
+| xai-plugin   |          |          |          |                                                           |          |
+| @openclaw/   | xiaomi   | openclaw | enabled  | stock:xiaomi/index.js                                     | 2026.5.2 |
+| xiaomi-      |          |          |          |                                                           |          |
+| provider     |          |          |          |                                                           |          |
+| @openclaw/   | zai      | openclaw | enabled  | stock:zai/index.js                                        | 2026.5.2 |
+| zai-provider |          |          |          |                                                           |          |
+| @openclaw/   | whatsapp | openclaw | enabled  | ~\.openclaw\npm\node_modules\@openclaw\whatsapp\index.ts  | 2026.5.2 |
+| whatsapp     |          |          |          |                                                           |          |
++--------------+----------+----------+----------+-----------------------------------------------------------+----------+

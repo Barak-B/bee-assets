@@ -1,0 +1,142 @@
+{
+  "_comment": "Copy to config.json and fill in. See README.md for details.",
+
+  "monday": {
+    "api_token": "FILL_IN — monday.com → Profile → Developer → API token",
+    "board_name": "Tenders",
+    "board_id": null,
+    "_board_id_note": "Leave null on first run — code auto-creates and saves ID here",
+    "column_ids": {
+      "_note": "Auto-discovered after first run; do not edit manually",
+      "name": null,
+      "source": null,
+      "deadline": null,
+      "estimated_value": null,
+      "status": null,
+      "win_probability": null,
+      "bee_tender_id": null,
+      "link": null
+    }
+  },
+
+  "alfred": {
+    "self_phone_e164": "972509554483",
+    "hermes_bridge_url": "http://127.0.0.1:3000/send",
+    "alert_destination": "self-chat"
+  },
+
+  "sources": [
+    {
+      "name": "Ministry of Energy",
+      "type": "rss",
+      "url": "https://www.gov.il/he/Departments/policies?OfficeId=fee23793-93b5-4d56-8be5-22e3f8ab5bb1&format=rss",
+      "_note": "Adjust URL — gov.il RSS varies. Confirm in browser first."
+    },
+    {
+      "name": "Electricity Authority (PUA)",
+      "type": "rss",
+      "url": "https://pua.gov.il/Departments/Publications/tenders?format=rss",
+      "_note": "Best-effort; may need HTML scraping if no RSS"
+    },
+    {
+      "name": "Tel Aviv Municipality",
+      "type": "html",
+      "url": "https://www.tel-aviv.gov.il/Service/Pages/ServiceList.aspx?CatID=tenders",
+      "selector": ".tender-row"
+    },
+    {
+      "name": "Ashkelon Municipality",
+      "type": "html",
+      "url": "https://www.ashkelon.muni.il/tenders/",
+      "selector": ".tender-item",
+      "_note": "THE ONE WE MISSED — make absolutely sure this works"
+    },
+    {
+      "name": "Kiryat Gat Municipality",
+      "type": "html",
+      "url": "https://www.qgat.org.il/category/tenders/",
+      "selector": ".tender",
+      "_note": "THE OTHER ONE WE MISSED"
+    },
+    {
+      "name": "Jerusalem Municipality",
+      "type": "html",
+      "url": "https://www.jerusalem.muni.il/he/residents/contracting/tenders/"
+    },
+    {
+      "name": "Beersheba Municipality",
+      "type": "html",
+      "url": "https://www.beer-sheva.muni.il/Residents/CityServices/Tenders/Pages/default.aspx"
+    },
+    {
+      "name": "Ashdod Municipality",
+      "type": "html",
+      "url": "https://www.ashdod.muni.il/tenders"
+    },
+    {
+      "name": "Haifa Municipality",
+      "type": "html",
+      "url": "https://www.haifa.muni.il/tenders/"
+    },
+    {
+      "name": "Eilat Municipality",
+      "type": "html",
+      "url": "https://www.eilat.muni.il/tenders"
+    }
+  ],
+
+  "keywords": {
+    "_comment": "Match if tender title or description contains ANY of these. Hebrew + English.",
+    "include": [
+      "סולארי",
+      "סולאר",
+      "מערכת סולארית",
+      "פאנלים",
+      "פוטו-וולטאי",
+      "PV",
+      "photovoltaic",
+      "solar",
+      "חשמלאי",
+      "חשמלאות",
+      "תאורה",
+      "תשתית חשמל",
+      "בודק חשמל",
+      "מערכת אגירה",
+      "energy storage",
+      "battery storage",
+      "אינוורטר",
+      "inverter",
+      "התקנה חשמלית",
+      "פיקוח חשמל"
+    ],
+    "exclude": [
+      "תוצרת חוץ בלבד",
+      "המנהל הצבאי בלבד"
+    ]
+  },
+
+  "alert_thresholds_days": [30, 14, 7, 3, 1, 0],
+
+  "deadline_parser": {
+    "_comment": "Heuristics for parsing Hebrew dates",
+    "patterns": [
+      "DD.MM.YYYY",
+      "DD/MM/YYYY",
+      "DD-MM-YYYY",
+      "ב-DD ב-MMMM",
+      "עד תאריך"
+    ]
+  },
+
+  "polling": {
+    "user_agent": "BEE-tender-tracker/0.1 (contact: barak@bee.co.il)",
+    "timeout_ms": 15000,
+    "max_retries": 3,
+    "delay_between_sources_ms": 2000
+  },
+
+  "logging": {
+    "log_file": "./tender-tracker.log",
+    "level": "info"
+  }
+}

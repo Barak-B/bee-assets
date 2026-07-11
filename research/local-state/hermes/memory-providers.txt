@@ -1,0 +1,4 @@
+usage: hermes plugins [-h]
+                      {install,update,remove,rm,uninstall,list,ls,enable,disable}
+                      ...
+hermes plugins: error: argument plugins_action: invalid choice: 'show' (choose from 'install', 'update', 'remove', 'rm', 'uninstall', 'list', 'ls', 'enable', 'disable')

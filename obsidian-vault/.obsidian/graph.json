@@ -1,0 +1,18 @@
+{
+  "collapse-all": false,
+  "tooltip": true,
+  "hide-unresolved": false,
+  "show-attachments": false,
+  "show-orphans": true,
+  "show-tags": true,
+  "show-arrow": true,
+  "text-fade-multiplier": 0,
+  "node-size-multiplier": 1.1,
+  "line-size-multiplier": 1,
+  "center-strength": 0.55,
+  "repel-strength": 12,
+  "link-strength": 1.1,
+  "link-distance": 220,
+  "scale": 1,
+  "close": false
+}

@@ -1,0 +1,30 @@
+{
+  "name": "procurement-tracking-phase-a",
+  "version": "0.1.0",
+  "description": "Phase A: schema + lock + ManualUploadSource + dry-run for procurement-tracking ingestion (per LLD.md §5). Standalone reference impl — port src/ into BEE app, run migration via prisma migrate deploy.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "selftest": "tsx src/cli.ts selftest",
+    "test": "node --import tsx --test tests/dryrun.test.ts",
+    "test:pure": "node --import tsx --test tests/benchmark.test.ts",
+    "dry-run": "tsx src/cli.ts ingest --source tests --name test:dry --dry-run"
+  },
+  "comment_scripts": "Run via tsx (not bare node --experimental-strip-types): type-stripping does NOT rewrite '.js'→'.ts' import specifiers, so bare node throws ERR_MODULE_NOT_FOUND. For production, `npm run build` then run dist/*.js.",
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
+    "ioredis": "^5.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "prisma": "^5.20.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

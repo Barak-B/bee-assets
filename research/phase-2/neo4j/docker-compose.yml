@@ -1,0 +1,86 @@
+# Phase 2 Action #7 — Neo4j Community KG deployment for bee-prod-1
+#
+# Deploy on: bee-prod-1 (Hetzner CX52, 16GB RAM — enough for 100K+ nodes)
+# Cost: $0 (Community edition free)
+# Resource: ~0.5 CPU, ~2GB RAM at BEE scale
+#
+# HOW TO DEPLOY:
+#   ssh barak@bee-prod-1
+#   mkdir -p ~/bee-neo4j && cd ~/bee-neo4j
+#   # Copy this file + .env (filled from .env.example)
+#   docker compose up -d
+#   docker compose logs -f bee-neo4j
+#   # Wait for "Started." line (~30s on first boot)
+#
+# VERIFY:
+#   curl -u neo4j:$NEO4J_PASSWORD http://localhost:7474/db/data/
+#   # Or open http://bee-prod-1:7474 in browser (after SSH tunnel)
+#
+# ROLLBACK:
+#   docker compose down
+#   # Data persists in /var/lib/bee-neo4j/data — delete to wipe
+
+services:
+  bee-neo4j:
+    image: neo4j:5-community
+    container_name: bee-neo4j
+    restart: unless-stopped
+
+    # Bind to localhost only — never expose publicly.
+    # Access via SSH tunnel or Tailscale.
+    ports:
+      - "127.0.0.1:7474:7474"   # HTTP browser interface
+      - "127.0.0.1:7687:7687"   # Bolt protocol (driver connections)
+
+    volumes:
+      - /var/lib/bee-neo4j/data:/data
+      - /var/lib/bee-neo4j/logs:/logs
+      - /var/lib/bee-neo4j/import:/import
+      - /var/lib/bee-neo4j/plugins:/plugins
+
+    environment:
+      # Auth: username always 'neo4j', password from .env
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+
+      # Plugins: GDS (Graph Data Science) for similarity / community detection
+      NEO4J_PLUGINS: '["graph-data-science"]'
+
+      # Memory (tune based on actual node count)
+      # 2G heap is enough for 100K nodes; bump to 4G if you scale past that.
+      NEO4J_dbms_memory_heap_initial__size: 2G
+      NEO4J_dbms_memory_heap_max__size: 2G
+      NEO4J_dbms_memory_pagecache_size: 1G
+
+      # Security: restrict procedures to allowlist (defense in depth)
+      NEO4J_dbms_security_procedures_unrestricted: "gds.*"
+      NEO4J_dbms_security_procedures_allowlist: "gds.*"
+
+      # Logging
+      NEO4J_dbms_logs_default__format: "JSON"
+      NEO4J_dbms_logs_query_enabled: "INFO"
+
+      # Backups (run nightly via host cron, not container)
+      NEO4J_dbms_backup_enabled: "true"
+      NEO4J_dbms_backup_listen__address: "0.0.0.0:6362"
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Resource limits to avoid eating the whole VM
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2'
+        reservations:
+          memory: 2G
+          cpus: '0.5'
+
+networks:
+  default:
+    name: bee-network
+    external: false
