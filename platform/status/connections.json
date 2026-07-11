@@ -1,0 +1,164 @@
+{
+  "generatedAt": "2026-07-11T17:32:05.785Z",
+  "suite": "connect-cloud",
+  "summary": {
+    "passed": 15,
+    "failed": 6,
+    "total": 21,
+    "cloudReady": true
+  },
+  "checks": [
+    {
+      "id": "canon.agent_canon",
+      "ok": true,
+      "detail": "AGENT_CANON.md 3441 bytes",
+      "next": "ensure platform/canon/AGENT_CANON.md exists"
+    },
+    {
+      "id": "canon.published",
+      "ok": true,
+      "detail": "BEE_CANON.md published for agents",
+      "next": null
+    },
+    {
+      "id": "canon.paths",
+      "ok": true,
+      "detail": "PATHS.md mirrored",
+      "next": null
+    },
+    {
+      "id": "canon.wire_runbook",
+      "ok": true,
+      "detail": "WIRE_AGENTS_TO_CANON present",
+      "next": null
+    },
+    {
+      "id": "canon.facts.bank",
+      "ok": true,
+      "detail": "Mercantile code 17 present",
+      "next": null
+    },
+    {
+      "id": "canon.facts.vat",
+      "ok": true,
+      "detail": "monthly VAT locked",
+      "next": null
+    },
+    {
+      "id": "canon.facts.law1",
+      "ok": true,
+      "detail": "Law #1 present",
+      "next": null
+    },
+    {
+      "id": "canon.facts.law2",
+      "ok": true,
+      "detail": "Law #2 present",
+      "next": null
+    },
+    {
+      "id": "roster.present",
+      "ok": true,
+      "detail": "10 brains registered",
+      "next": null
+    },
+    {
+      "id": "roster.max_migrated",
+      "ok": true,
+      "detail": "max marked migrated",
+      "next": null
+    },
+    {
+      "id": "trust.loops_law1",
+      "ok": true,
+      "detail": "all loop outbound destinations Law#1-safe",
+      "next": null
+    },
+    {
+      "id": "git.repo",
+      "ok": true,
+      "detail": "bee-assets git repo",
+      "next": null
+    },
+    {
+      "id": "mcp.github",
+      "ok": true,
+      "detail": "GitHub push already proven on this branch",
+      "next": null
+    },
+    {
+      "id": "mcp.cursor_cloud",
+      "ok": true,
+      "detail": "cursor-cloud MCP ready (run-info/list-agents used this session)",
+      "next": null
+    },
+    {
+      "id": "mcp.cloudflare_docs",
+      "ok": true,
+      "detail": "Cloudflare-docs MCP ready (docs only)",
+      "next": null
+    },
+    {
+      "id": "mcp.monday",
+      "ok": false,
+      "detail": "needsAuth — Barak must authenticate Monday in Cursor Desktop → Settings → MCP",
+      "next": "Auth Monday MCP and re-run connect-cloud.mjs"
+    },
+    {
+      "id": "mcp.notion",
+      "ok": false,
+      "detail": "needsAuth — optional knowledge mirror",
+      "next": "Auth Notion MCP if used; Obsidian remains canon hub"
+    },
+    {
+      "id": "mcp.gitlab",
+      "ok": false,
+      "detail": "needsAuth — not required for BEE spine",
+      "next": "Skip unless GitLab workflow needed"
+    },
+    {
+      "id": "local.alfred_wire",
+      "ok": false,
+      "detail": "cannot reach E:\\ from cloud — run platform/connections/connect-local.ps1 on Barak PC",
+      "next": "Run connect-local.ps1 (wraps WIRE_AGENTS_TO_CANON)"
+    },
+    {
+      "id": "local.hermes_wire",
+      "ok": false,
+      "detail": "cannot reach Hermes dirs from cloud",
+      "next": "Same connect-local.ps1"
+    },
+    {
+      "id": "local.obsidian_sync",
+      "ok": false,
+      "detail": "vault on E:\\ — local sync only (protocol §5)",
+      "next": "After pull: sync-vault-and-graphify.ps1 -PushCanonToAgents"
+    }
+  ],
+  "nextActions": [
+    {
+      "id": "mcp.monday",
+      "next": "Auth Monday MCP and re-run connect-cloud.mjs"
+    },
+    {
+      "id": "mcp.notion",
+      "next": "Auth Notion MCP if used; Obsidian remains canon hub"
+    },
+    {
+      "id": "mcp.gitlab",
+      "next": "Skip unless GitLab workflow needed"
+    },
+    {
+      "id": "local.alfred_wire",
+      "next": "Run connect-local.ps1 (wraps WIRE_AGENTS_TO_CANON)"
+    },
+    {
+      "id": "local.hermes_wire",
+      "next": "Same connect-local.ps1"
+    },
+    {
+      "id": "local.obsidian_sync",
+      "next": "After pull: sync-vault-and-graphify.ps1 -PushCanonToAgents"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bee.local/platform/schema/brain-roster.json",
+  "title": "BEE Brain Roster",
+  "description": "Registry of every AI brain and its migration status onto the shared canon.",
+  "type": "object",
+  "required": ["version", "canonSource", "brains", "updatedAt"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "canonSource": {
+      "type": "object",
+      "required": ["repo", "path"],
+      "properties": {
+        "repo": { "type": "string" },
+        "branch": { "type": "string" },
+        "path": { "type": "string", "description": "Path to AGENT_CANON.md in git" }
+      }
+    },
+    "brains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "runtime", "role", "migration"],
+        "properties": {
+          "id": { "type": "string" },
+          "runtime": { "type": "string" },
+          "role": { "type": "string" },
+          "trustTier": { "enum": ["L0", "L1", "L2"] },
+          "canonPath": { "type": ["string", "null"] },
+          "migration": {
+            "type": "object",
+            "required": ["status"],
+            "properties": {
+              "status": {
+                "enum": ["not_started", "in_progress", "migrated", "drifted", "blocked"]
+              },
+              "lastVerifiedAt": { "type": ["string", "null"], "format": "date-time" },
+              "blocker": { "type": ["string", "null"] },
+              "notes": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
