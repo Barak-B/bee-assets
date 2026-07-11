@@ -13,46 +13,44 @@ tags:
 
 זה דף הכניסה לחבילת הגשר. **המוח עצמו** הוא הערה `[[BRAIN]]`.
 
-## חשוב: לא מ־`C:\Users\Barak`
+## חשוב
 
-הסקריפטים חיים **בתוך** ה־clone של `bee-assets`. אם אתה ב־home folder, PowerShell לא מוצא אותם.
+1. **לא מ־`C:\Users\Barak`** — הסקריפטים בתוך `E:\bee-assets`.
+2. אם `git checkout` נכשל בגלל שינויים מקומיים — קודם **stash**, אחר כך checkout.
 
-נתיב קנוני (מ־[[PATHS]]): `E:\bee-assets`
+## אם אתה תקוע עכשיו (העתק־הדבק את כל הבלוק)
 
-## צעדים (העתק־הדבק)
+```powershell
+cd E:\bee-assets
 
-### אפשרות מהירה (מומלץ) — מכל מקום
+# שומר את השינויים המקומיים בצד (graphify-out / protocol_hive וכו')
+git stash push -u -m "pre-brain-obsidian"
+
+# עובר לענף עם הגשר + המוח
+git fetch origin
+git checkout cursor/brain-obsidian-bridge-436d
+git pull origin cursor/brain-obsidian-bridge-436d
+
+# מסנכרן ל־vault ומתקין hook
+pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 -SkipPull -SkipGraphify
+pwsh -File .\research\scripts\install-git-hooks.ps1
+```
+
+אחרי זה באובסידיאן: חפש **`BRAIN`** או **`מוח`**.
+
+לבדוק מה נשמר ב־stash:
+
+```powershell
+git stash list
+# אם תרצה להחזיר (זהירות — עלול להתנגש):
+# git stash pop
+```
+
+## אחרי שהענף כבר אצלך
 
 ```powershell
 pwsh -File E:\bee-assets\research\scripts\connect-brain-to-obsidian.ps1
 ```
-
-אם ה־clone במקום אחר:
-
-```powershell
-pwsh -File E:\bee-assets\research\scripts\connect-brain-to-obsidian.ps1 -RepoRoot "D:\path\to\bee-assets"
-```
-
-### ידני
-
-```powershell
-cd E:\bee-assets
-git fetch origin
-git checkout cursor/brain-obsidian-bridge-436d
-git pull
-pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 -SkipGraphify
-pwsh -File .\research\scripts\install-git-hooks.ps1
-```
-
-בדיקה יבשה לפני כתיבה ל־vault:
-
-```powershell
-cd E:\bee-assets
-pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 -DryRun -SkipGraphify
-```
-
-2. באובסידיאן, תחת `3-Projects/BEE/`, פתח **`BRAIN`** (או חפש `מוח`).
-3. גרף הקישורים (`Graph view`) אמור להראות את `BRAIN` כמרכז.
 
 ## מה זה הסנכרון?
 
@@ -60,13 +58,12 @@ pwsh -File .\research\scripts\sync-vault-and-graphify.ps1 -DryRun -SkipGraphify
 |---|---|
 | `bee-assets/research/**/*.md` | vault → `3-Projects/BEE/` |
 | `[[BRAIN]]` | hub / MOC |
-| Graphify | `research/graphify-out/` (אופציונלי; דורש `graphify` + מפתח) |
+| Graphify | `research/graphify-out/` (אופציונלי) |
 
-פרטים מלאים: [[README]] בתיקייה הזו · [[PATHS]] · [[protocol_hive]]
+פרטים: [[README]] · [[PATHS]] · [[protocol_hive]]
 
 ## אל תעשה
 
-- אל תריץ את הסקריפט מ־`C:\Users\Barak` בלי `cd` לריפו
-- אל תנחש נתיבים — רק מ־[[PATHS]]
-- אל תמחק עריכות ידניות ב־vault בלי לבדוק — הסקריפט שומר קבצים חדשים יותר ב־vault
-- אל תריץ `graphify hook install` על הריפו הזה — יש hook מותאם (`install-git-hooks.ps1`)
+- אל תריץ מ־home בלי `cd E:\bee-assets`
+- אל תדביק מילולית `<הנתיב-שמצאת>` — זה היה placeholder
+- אל תריץ `graphify hook install` על הריפו הזה — יש `install-git-hooks.ps1`
