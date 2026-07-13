@@ -3,6 +3,7 @@
 > **מקור UX:** אפליקציית תמיר — https://solar-survey.pages.dev/  
 > **יעד:** Collect לשטח → Edit ל־Wave 54 DesignSuite → Dispatch טיוטה (Law #2)  
 > **קוד:** `apps/bee-solar-survey/`  
+> **חוזי jobs/loops:** [`HIVE_PLATFORM_SCHEMA.md`](HIVE_PLATFORM_SCHEMA.md) · [`platform/schema/`](../platform/schema/)  
 > **עודכן:** 2026-07-13
 
 ## למה זה חלק מהכוורת
@@ -38,6 +39,18 @@
 - Law #1 — אין WA ללקוח מהאפליקציה
 - Law #2 — `requiresHumanPick: true` על כל outbound
 - `customer.id = [OPEN]` עד קישור Monday/CRM
+
+## מוכנות לשטח (completeness)
+
+נבדק ב־`apps/bee-solar-survey/src/schema.ts` → `assessCompleteness`:
+
+| חובה ל־`readyForWave54` | מומלץ |
+|---|---|
+| שם פרויקט, כתובת, סוג גג | שם סוקר, מפסק ראשי |
+| ≥1 צילום `roof` / `siteOverview` | צילום לוח חשמל, GPS |
+| שטח שימושי **או** יעד kWp / תקציב | אזימוט (ברירת מחדל UI: 180), שיפוע |
+
+אם edit חסום — הייצוא מחזיר רק collect + edit (`blocked_trust`), בלי `dispatch.draft`.
 
 ## סטטוס
 
