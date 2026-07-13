@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<meta name="theme-color" content="#0f1c24"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<title>B.E.E · סקר אתר סולארי</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Rubik:wght@600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --ink:#0f1c24;--ink2:#1a3340;--sand:#f3eee4;--paper:#fffdf8;
+  --honey:#e4b23c;--honey2:#c9931a;--muted:#5d6b73;--line:#d8d0c2;
+  --danger:#b42318;--ok:#1f7a4d;--radius:14px;
+  --shadow:0 8px 24px rgba(15,28,36,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Heebo,Rubik,sans-serif;background:
+  radial-gradient(1000px 500px at 100% -10%,rgba(228,178,60,.16),transparent 55%),
+  linear-gradient(180deg,#f7f2e8,var(--sand));color:var(--ink);min-height:100vh;direction:rtl}
+button,input,select,textarea{font:inherit}
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:rgba(15,28,36,.95);color:#fffdf8;backdrop-filter:blur(8px);border-bottom:1px solid rgba(240,193,75,.25)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.mark{width:36px;height:36px;border-radius:10px;background:linear-gradient(145deg,#f0c14b,#c9931a);color:var(--ink);display:grid;place-items:center;font-family:Rubik,sans-serif;font-weight:700;font-size:11px;flex-shrink:0}
+.brand strong{display:block;font-size:15px;font-family:Rubik,Heebo,sans-serif}
+.brand span{display:block;font-size:11px;opacity:.72}
+.icon-btn{border:1px solid rgba(255,253,248,.18);background:rgba(255,253,248,.06);color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer}
+.shell{width:min(760px,100%);margin:0 auto;padding:16px 16px 110px}
+.hero{margin-bottom:16px;padding:18px;border-radius:18px;background:linear-gradient(135deg,rgba(15,28,36,.96),rgba(26,51,64,.92));color:#fffdf8;box-shadow:var(--shadow)}
+.hero h1{font-family:Rubik,Heebo,sans-serif;font-size:clamp(1.25rem,4vw,1.7rem);margin-bottom:6px}
+.hero p{opacity:.82;font-size:.95rem;line-height:1.45}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pill{font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;background:rgba(240,193,75,.14);color:#f0c14b;border:1px solid rgba(240,193,75,.28)}
+.btn{border:none;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,var(--honey),var(--honey2));color:var(--ink);box-shadow:0 8px 18px rgba(201,147,26,.25)}
+.btn-secondary{background:var(--paper);color:var(--ink);border:1px solid var(--line)}
+.btn-danger{background:#f8e2df;color:var(--danger);border:1px solid #efc4bf}
+.btn-ghost{background:transparent;border:1px dashed var(--line);color:var(--ink2)}
+.btn-block{width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--paper);margin-bottom:12px}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.item h3{font-size:1.05rem;margin-bottom:4px}
+.meta{color:var(--muted);font-size:.86rem;display:flex;flex-wrap:wrap;gap:10px}
+.badge{display:inline-flex;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px}
+.badge-ok{background:#e4f5eb;color:var(--ok)}
+.badge-warn{background:#fff3d6;color:#8a6200}
+.item-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.section{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.section h2{font-family:Rubik,Heebo,sans-serif;font-size:1.05rem;margin-bottom:4px}
+.hint{color:var(--muted);font-size:.85rem;margin-bottom:12px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:.86rem;font-weight:600;margin-bottom:6px}
+.req{color:var(--danger)}
+.field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+.field textarea{min-height:84px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid rgba(228,178,60,.4);border-color:var(--honey)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.grid2{grid-template-columns:1fr}}
+.gps{display:flex;gap:8px}.gps input{flex:1}
+.photo h3{font-size:.92rem;margin-bottom:8px}
+.photo-actions{display:flex;gap:8px;margin-bottom:8px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.thumb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb button{position:absolute;top:4px;left:4px;border:none;background:rgba(15,28,36,.75);color:#fff;border-radius:8px;width:26px;height:26px;cursor:pointer}
+.complete{border-radius:14px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--line);background:linear-gradient(180deg,#fff,#f7f1e4)}
+.bar{height:8px;border-radius:999px;background:#e7dfd0;overflow:hidden;margin:8px 0}
+.bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--honey2),var(--honey))}
+.sticky{position:fixed;bottom:0;left:0;right:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(243,238,228,.94);border-top:1px solid var(--line);backdrop-filter:blur(8px);display:flex;gap:8px;justify-content:center;z-index:30}
+.sticky .btn{flex:1;max-width:240px}
+.toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s;z-index:50;font-size:.9rem}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.empty{text-align:center;padding:40px 12px;color:var(--muted)}
+.hidden{display:none!important}
+.check{display:flex;align-items:center;gap:8px;margin:8px 0 14px}
+.check input{width:18px;height:18px}
+.draw{position:fixed;inset:0;background:rgba(15,28,36,.8);z-index:60;display:flex;flex-direction:column}
+.draw-toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--ink)}
+.draw-toolbar button{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;border-radius:8px;padding:8px 10px;cursor:pointer}
+.draw-toolbar button.active{background:var(--honey);color:var(--ink);border-color:transparent}
+.draw-wrap{flex:1;display:grid;place-items:center;overflow:auto;padding:10px}
+.draw-wrap canvas{max-width:100%;background:#111;touch-action:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+(() => {
+const DB='bee-site-survey-v1', VER=1;
+const BREAKERS=['10A','16A','20A','25A','32A','40A','50A','63A','80A','100A','125A','160A','200A','250A','320A','400A','500A','630A','800A','1000A','1250A','1600A'];
+const PHOTO_LABELS={
+  electricalPanel:'לוח חשמל פתוח', busbars:'פסי צבירה והארקות', cableRoute:'תוואי כבילה',
+  roof:'גג', siteOverview:'מבט כללי על האתר', inverterLocation:'מיקום ממירים', craneAccess:'גישה למנוף'
+};
+const ROOF_MAP={'בטון':'flat','רעפים':'tile','פנל מבודד':'metal-standing-seam','איסכורית':'metal-trapezoidal','קרקע':'ground','אחר':'other'};
+
+let screen='list', editing=null, photos=[], search='', toastT=0, autoT=0, drawTarget=null;
+
+const uid=()=>crypto.randomUUID();
+const now=()=>new Date().toISOString();
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const toast=m=>{const el=document.getElementById('toast');el.textContent=m;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2200)};
+
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB,VER);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains('projects'))db.createObjectStore('projects',{keyPath:'id'});if(!db.objectStoreNames.contains('photos')){const s=db.createObjectStore('photos',{keyPath:'id'});s.createIndex('byProject','projectId')}};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function listProjects(){const db=await openDB();return new Promise((res,rej)=>{const q=db.transaction('projects').objectStore('projects').getAll();q.onsuccess=()=>res(q.result.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)));q.onerror=()=>rej(q.error)})}
+async function getProject(id){const db=await openDB();return new Promise((res,rej)=>{const q=db.transaction('projects').objectStore('projects').get(id);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function saveProject(p){const db=await openDB();p.updatedAt=now();const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(p);await txDone(tx)}
+async function deleteProject(id){const db=await openDB();const tx=db.transaction(['projects','photos'],'readwrite');tx.objectStore('projects').delete(id);const idx=tx.objectStore('photos').index('byProject');const keys=await new Promise((res,rej)=>{const q=idx.getAllKeys(id);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});keys.forEach(k=>tx.objectStore('photos').delete(k));await txDone(tx)}
+async function listPhotos(pid){const db=await openDB();return new Promise((res,rej)=>{const q=db.transaction('photos').objectStore('photos').index('byProject').getAll(pid);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
+async function savePhoto(ph){const db=await openDB();const tx=db.transaction('photos','readwrite');tx.objectStore('photos').put(ph);await txDone(tx)}
+async function deletePhoto(id){const db=await openDB();const tx=db.transaction('photos','readwrite');tx.objectStore('photos').delete(id);await txDone(tx)}
+function txDone(tx){return new Promise((res,rej)=>{tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
+
+function emptyProject(){return{
+  id:uid(), projectName:'', surveyDate:now().slice(0,10), surveyor:'', gps:'', lat:null, lon:null, address:'',
+  mainBreaker:'', panelSpace:'', solarBreaker:'', meterNumber:'', meterType:'', meterLocation:'', cableLengthM:'', cableNotes:'',
+  roofTypeHe:'', inverterLocation:'', usableAreaM2:'', azimuthDeg:'180', tiltDeg:'', annualConsumptionKwh:'',
+  targetKwp:'', budgetIls:'', inverterBrandPref:'', includeBattery:false, generalNotes:'', customFields:[],
+  createdAt:now(), updatedAt:now(), hiveReady:false
+}}
+
+function parseGps(g){const m=String(g||'').trim().match(/(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)/);if(!m)return{lat:null,lon:null};const lat=+m[1],lon=+m[2];if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<-90||lat>90||lon<-180||lon>180)return{lat:null,lon:null};return{lat,lon}}
+function num(v){const t=String(v||'').trim().replace(',','.');if(!t)return null;const n=+t;return Number.isFinite(n)?n:null}
+
+function completeness(p,ph){
+  const miss=[],rec=[];
+  if(!p.projectName.trim())miss.push('שם הפרויקט');
+  if(!p.address.trim())miss.push('כתובת');
+  if(!p.roofTypeHe)miss.push('סוג גג');
+  if(!ph.some(x=>x.field==='roof'||x.field==='siteOverview'))miss.push('צילום גג / מבט אתר');
+  if(num(p.usableAreaM2)===null && num(p.targetKwp)===null && num(p.budgetIls)===null)miss.push('שטח שימושי או יעד kWp / תקציב');
+  if(!p.surveyor.trim())rec.push('שם הסוקר');
+  if(!p.mainBreaker)rec.push('מפסק ראשי');
+  if(!ph.some(x=>x.field==='electricalPanel'))rec.push('צילום לוח חשמל');
+  if(!p.gps.trim()&&p.lat==null)rec.push('GPS');
+  if(num(p.tiltDeg)===null)rec.push('שיפוע גג');
+  const score=Math.max(0,Math.min(100,Math.round(((5-miss.length)/5)*70+((5-rec.length)/5)*30)));
+  return{score,ready:miss.length===0,miss,rec};
+}
+
+async function sha256(dataUrl){
+  const b64=dataUrl.slice(dataUrl.indexOf(',')+1);const bin=atob(b64);const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  const dig=await crypto.subtle.digest('SHA-256',bytes);
+  return [...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function toDesignSuite(p,ph){
+  const g=parseGps(p.gps);
+  return{
+    site:{
+      addressLine:p.address.trim(),
+      lat:p.lat??g.lat, lon:p.lon??g.lon,
+      roofType:ROOF_MAP[p.roofTypeHe]||'other',
+      usableAreaM2:num(p.usableAreaM2), azimuthDeg:num(p.azimuthDeg), tiltDeg:num(p.tiltDeg),
+      photos:ph.map(x=>({sha256:x.sha256||('pending:'+x.id),mimeType:x.mimeType||'image/jpeg',path:`survey://${p.id}/photos/${x.field}/${x.id}`,field:x.field})),
+      ...(num(p.annualConsumptionKwh)!==null?{annualConsumptionKwh:num(p.annualConsumptionKwh)}:{})
+    },
+    target:{...(num(p.targetKwp)!==null?{sizeKwp:num(p.targetKwp)}:{}),...(num(p.budgetIls)!==null?{budgetCents:Math.round(num(p.budgetIls)*100)}:{})},
+    preferences:{...(p.inverterBrandPref?{inverterBrand:p.inverterBrandPref}:{}),...(p.includeBattery?{includeBattery:true}:{})},
+    electricalIntake:{
+      mainBreaker:p.mainBreaker||null, panelSpaceForSolar:p.panelSpace||null, solarMainBreaker:p.solarBreaker||null,
+      meterNumber:p.meterNumber||null, meterType:p.meterType||null, meterLocation:p.meterLocation||null,
+      acCableLengthM:num(p.cableLengthM), cableRouteNotes:p.cableNotes||null, inverterWallLocation:p.inverterLocation||null
+    },
+    customer:{id:'[OPEN]',tier:'standard'}
+  };
+}
+
+function hiveExport(p,ph){
+  const c=completeness(p,ph);
+  const collect={id:uid(),kind:'collect',loop:'collect.site-survey',status:c.ready?'succeeded':'queued',trustTier:'L1',costTier:0,source:'bee-site-survey.html',
+    payload:{projectId:p.id,projectName:p.projectName,surveyDate:p.surveyDate,surveyor:p.surveyor,photoCount:ph.length,completeness:c,raw:p,
+      photoMeta:ph.map(x=>({id:x.id,field:x.field,mimeType:x.mimeType,sha256:x.sha256||null}))},
+    createdAt:now(),outbound:{channel:'none',destinationClass:'drafts_group',requiresHumanPick:true}};
+  const edit={id:uid(),kind:'edit',loop:'edit.normalize-site-survey',status:c.ready?'succeeded':'blocked_trust',trustTier:'L1',costTier:0,source:'bee-site-survey.html',
+    payload:{collectJobId:collect.id,projectId:p.id,designSuiteReq:toDesignSuite(p,ph),completeness:c,notes:p.generalNotes},
+    error:c.ready?null:('חסרים: '+c.miss.join(', ')),createdAt:now(),
+    outbound:{channel:'db',destinationClass:'drafts_group',requiresHumanPick:true}};
+  const jobs=[collect,edit];
+  if(c.ready)jobs.push({id:uid(),kind:'dispatch',loop:'dispatch.draft',status:'queued',trustTier:'L1',costTier:0,source:'bee-site-survey.html',
+    payload:{editJobId:edit.id,projectId:p.id,titleHe:'טיוטת סקר אתר — '+p.projectName,nextAgent:'wave-54',
+      messageHe:'סקר אתר מוכן לעיון. לאחר אישור ברק → engineering-agent.designSuite. אין שליחה ללקוח.'},
+    createdAt:now(),outbound:{channel:'whatsapp',destinationClass:'drafts_group',requiresHumanPick:true}});
+  return{exportedAt:now(),app:'bee-site-survey.html',hiveModel:'Collect → Edit → Dispatch',
+    trust:{law1:'4 authorized WA destinations only',law2:'Human picks — no customer auto-send',tier:'L1'},jobs};
+}
+
+function downloadJson(name,data){const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;a.click();URL.revokeObjectURL(u)}
+function opts(list,sel){return '<option value="">בחר...</option>'+list.map(v=>`<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(v)}</option>`).join('')}
+
+async function compressFile(file){
+  const bmp=await createImageBitmap(file);const scale=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+  const w=Math.max(1,Math.round(bmp.width*scale)),h=Math.max(1,Math.round(bmp.height*scale));
+  const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(bmp,0,0,w,h);bmp.close();
+  return{dataUrl:c.toDataURL('image/jpeg',.72),mimeType:'image/jpeg'};
+}
+
+function readForm(){
+  const g=id=>document.getElementById(id)?.value??'';
+  Object.assign(editing,{
+    projectName:g('f_projectName'),surveyDate:g('f_date'),surveyor:g('f_surveyor'),gps:g('f_gps'),address:g('f_address'),
+    mainBreaker:g('f_mainBreaker'),panelSpace:g('f_panelSpace'),solarBreaker:g('f_solarBreaker'),meterNumber:g('f_meterNumber'),
+    meterType:g('f_meterType'),meterLocation:g('f_meterLocation'),cableLengthM:g('f_cableLength'),cableNotes:g('f_cableNotes'),
+    roofTypeHe:g('f_roofType'),inverterLocation:g('f_inverterLocation'),usableAreaM2:g('f_usableArea'),azimuthDeg:g('f_azimuth'),
+    tiltDeg:g('f_tilt'),annualConsumptionKwh:g('f_consumption'),targetKwp:g('f_targetKwp'),budgetIls:g('f_budget'),
+    inverterBrandPref:g('f_inverterBrand'),includeBattery:!!document.getElementById('f_battery')?.checked,generalNotes:g('f_generalNotes')
+  });
+  const gp=parseGps(editing.gps);if(editing.lat==null)editing.lat=gp.lat;if(editing.lon==null)editing.lon=gp.lon;
+  editing.hiveReady=completeness(editing,photos).ready;
+}
+
+function scheduleSave(){clearTimeout(autoT);autoT=setTimeout(async()=>{if(!editing.projectName.trim())return;readForm();await saveProject(editing);toast('נשמר אוטומטית ✓')},900)}
+
+function photoBlock(field,req=false){
+  const list=photos.filter(p=>p.field===field);
+  return `<div class="photo" data-field="${field}">
+    <h3>${PHOTO_LABELS[field]}${req?' <span class="req">*</span>':''} <span class="meta">(${list.length}/10)</span></h3>
+    <div class="photo-actions">
+      <button type="button" class="btn btn-secondary" data-cam="${field}">מצלמה</button>
+      <button type="button" class="btn btn-secondary" data-gal="${field}">גלריה</button>
+    </div>
+    <div class="thumbs">${list.map(p=>`<div class="thumb" data-ph="${p.id}"><img src="${p.dataUrl}" alt=""/><button type="button" data-delph="${p.id}">×</button></div>`).join('')}</div>
+  </div>`;
+}
+
+function completeBox(){
+  const c=completeness(editing,photos);
+  return `<div class="complete"><strong>מוכנות כוורת → Wave 54: ${c.ready?'מוכן':'חסר'} · ציון ${c.score}</strong>
+    <div class="bar"><span style="width:${c.score}%"></span></div>
+    ${c.miss.length?`<div>חובה:<ul>${c.miss.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:'<div>כל שדות החובה מלאים.</div>'}
+    ${c.rec.length?`<div>מומלץ:<ul>${c.rec.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+  </div>`;
+}
+
+async function render(){
+  const app=document.getElementById('app');
+  if(screen==='list'){
+    const projects=await listProjects();
+    const filtered=projects.filter(p=>!search.trim()||[p.projectName,p.address,p.surveyor].join(' ').includes(search));
+    app.innerHTML=`<header class="topbar"><div class="brand"><div class="mark">BEE</div><div class="brand-text"><strong>ברק אלקטריק אנג׳ינירינג</strong><span>Hive Collect · סקר אתר</span></div></div></header>
+    <main class="shell">
+      <section class="hero"><h1>B.E.E · סקר אתר סולארי</h1>
+        <p>איסוף שטח לפי מודל הכוורת: Collect → Edit → Dispatch. הפלט ל־Wave 54 כטיוטה לאישור ברק — לא נשלח ללקוח.</p>
+        <div class="pills"><span class="pill">collect.site-survey</span><span class="pill">edit.normalize</span><span class="pill">dispatch.draft · Law #2</span></div>
+      </section>
+      <button class="btn btn-primary btn-block" id="btnNew">+ סקר חדש</button>
+      <div class="row"><button class="btn btn-secondary" id="btnBackup">גיבוי</button><button class="btn btn-secondary" id="btnRestore">שחזור</button></div>
+      <input class="search" id="search" placeholder="חיפוש פרויקט..." value="${esc(search)}"/>
+      <div class="list">${filtered.length?filtered.map(p=>`<article class="item">
+        <h3>${esc(p.projectName||'ללא שם')}</h3>
+        <div class="meta"><span>${esc(p.surveyDate||'')}</span><span>${esc(p.surveyor||'')}</span><span>${esc(p.address||'')}</span>
+          <span class="badge ${p.hiveReady?'badge-ok':'badge-warn'}">${p.hiveReady?'מוכן ל־54':'טיוטה'}</span></div>
+        <div class="item-actions">
+          <button class="btn btn-secondary" data-edit="${p.id}">עריכה</button>
+          <button class="btn btn-secondary" data-hive="${p.id}">ייצוא כוורת</button>
+          <button class="btn btn-secondary" data-pdf="${p.id}">PDF</button>
+          <button class="btn btn-danger" data-del="${p.id}">מחק</button>
+        </div></article>`).join(''):`<div class="empty">אין סקרים עדיין. התחל בסקר חדש מהשטח.</div>`}</div>
+    </main>`;
+    document.getElementById('btnNew').onclick=()=>{editing=emptyProject();photos=[];screen='form';render()};
+    document.getElementById('search').oninput=e=>{search=e.target.value;render()};
+    document.getElementById('btnBackup').onclick=async()=>{
+      const projects=await listProjects();const db=await openDB();
+      const allPh=await new Promise((res,rej)=>{const q=db.transaction('photos').objectStore('photos').getAll();q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
+      downloadJson('bee-survey-backup-'+now().slice(0,10)+'.json',{app:'bee-site-survey',version:1,exportedAt:now(),projects,photos:allPh});
+      toast('הגיבוי הורד');
+    };
+    document.getElementById('btnRestore').onclick=()=>{
+      const inp=document.createElement('input');inp.type='file';inp.accept='application/json';
+      inp.onchange=async()=>{const data=JSON.parse(await inp.files[0].text());const db=await openDB();const tx=db.transaction(['projects','photos'],'readwrite');
+        (data.projects||[]).forEach(p=>tx.objectStore('projects').put(p));(data.photos||[]).forEach(p=>tx.objectStore('photos').put(p));await txDone(tx);toast('שוחזר');render()};
+      inp.click();
+    };
+    app.querySelectorAll('[data-edit]').forEach(b=>b.onclick=async()=>{editing=await getProject(b.dataset.edit);photos=await listPhotos(editing.id);screen='form';render()});
+    app.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('למחוק?'))return;await deleteProject(b.dataset.del);toast('נמחק');render()});
+    app.querySelectorAll('[data-hive]').forEach(b=>b.onclick=async()=>{const p=await getProject(b.dataset.hive);const ph=await listPhotos(p.id);const bundle=hiveExport(p,ph);downloadJson('hive-site-survey-'+p.id.slice(0,8)+'.json',bundle);toast(bundle.jobs.length===3?'ייצוא כוורת מלא':'ייצוא חלקי')});
+    app.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=async()=>{const p=await getProject(b.dataset.pdf);const ph=await listPhotos(p.id);await makePdf(p,ph)});
+    return;
+  }
+
+  // form
+  app.innerHTML=`<header class="topbar"><div class="brand"><div class="mark">BEE</div><div><strong>סקר אתר</strong><span>Wave 54 intake</span></div></div>
+    <button class="icon-btn" id="btnBack">חזרה</button></header>
+  <main class="shell">${completeBox()}
+    <section class="section"><h2>פרטים כלליים</h2><p class="hint">Collect — קלט שטח</p>
+      <div class="field"><label>שם הפרויקט <span class="req">*</span></label><input id="f_projectName" value="${esc(editing.projectName)}"/></div>
+      <div class="grid2">
+        <div class="field"><label>תאריך בדיקה</label><input type="date" id="f_date" value="${esc(editing.surveyDate)}"/></div>
+        <div class="field"><label>שם הסוקר</label><input id="f_surveyor" value="${esc(editing.surveyor)}"/></div>
+      </div>
+      <div class="field"><label>כתובת <span class="req">*</span></label><input id="f_address" value="${esc(editing.address)}"/></div>
+      <div class="field"><label>GPS</label><div class="gps"><input id="f_gps" value="${esc(editing.gps)}" placeholder="31.77, 35.21"/><button type="button" class="btn btn-secondary" id="btnGps">GPS</button></div></div>
+    </section>
+    <section class="section"><h2>חשמל ומונים</h2><p class="hint">קלט ל־wire_sizing / protection</p>
+      <div class="grid2">
+        <div class="field"><label>מפסק ראשי במתקן</label><select id="f_mainBreaker">${opts(BREAKERS,editing.mainBreaker)}</select></div>
+        <div class="field"><label>מקום בלוח למפסק סולארי</label><select id="f_panelSpace">${opts(['כן','לא','דורש בדיקה'],editing.panelSpace)}</select></div>
+        <div class="field"><label>מפסק ראשי סולארי</label><select id="f_solarBreaker">${opts(BREAKERS,editing.solarBreaker)}</select></div>
+        <div class="field"><label>סוג מונה סולארי</label><select id="f_meterType">${opts(['ישיר','ארון מניה'],editing.meterType)}</select></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>מספר מונה</label><input id="f_meterNumber" value="${esc(editing.meterNumber)}"/></div>
+        <div class="field"><label>מיקום מונה</label><input id="f_meterLocation" value="${esc(editing.meterLocation)}"/></div>
+        <div class="field"><label>אורך כבל AC (מ׳)</label><input id="f_cableLength" inputmode="decimal" value="${esc(editing.cableLengthM)}"/></div>
+        <div class="field"><label>מיקום קיר ממירים</label><input id="f_inverterLocation" value="${esc(editing.inverterLocation)}"/></div>
+      </div>
+      <div class="field"><label>תוואי כבילה — הערות</label><textarea id="f_cableNotes">${esc(editing.cableNotes)}</textarea></div>
+      ${photoBlock('electricalPanel',true)}${photoBlock('busbars')}${photoBlock('cableRoute')}
+    </section>
+    <section class="section"><h2>גג · גיאומטריה · יעד (Wave 54)</h2><p class="hint">DesignSuiteReq.site / target</p>
+      <div class="field"><label>סוג גג <span class="req">*</span></label><select id="f_roofType">${opts(['בטון','רעפים','פנל מבודד','איסכורית','קרקע','אחר'],editing.roofTypeHe)}</select></div>
+      <div class="grid2">
+        <div class="field"><label>שטח שימושי (מ״ר)</label><input id="f_usableArea" inputmode="decimal" value="${esc(editing.usableAreaM2)}"/></div>
+        <div class="field"><label>אזימוט (180=דרום)</label><input id="f_azimuth" inputmode="decimal" value="${esc(editing.azimuthDeg)}"/></div>
+        <div class="field"><label>שיפוע (°)</label><input id="f_tilt" inputmode="decimal" value="${esc(editing.tiltDeg)}"/></div>
+        <div class="field"><label>צריכה שנתית kWh</label><input id="f_consumption" inputmode="decimal" value="${esc(editing.annualConsumptionKwh)}"/></div>
+        <div class="field"><label>יעד kWp</label><input id="f_targetKwp" inputmode="decimal" value="${esc(editing.targetKwp)}"/></div>
+        <div class="field"><label>תקציב ₪</label><input id="f_budget" inputmode="decimal" value="${esc(editing.budgetIls)}"/></div>
+      </div>
+      <div class="field"><label>העדפת ממיר (צי B.E.E)</label><select id="f_inverterBrand">${opts(['SolarEdge','KStar','ABB','Deye'],editing.inverterBrandPref)}</select></div>
+      <label class="check"><input type="checkbox" id="f_battery" ${editing.includeBattery?'checked':''}/> לכלול סוללה בתכנון</label>
+      ${photoBlock('roof',true)}${photoBlock('siteOverview')}${photoBlock('inverterLocation')}${photoBlock('craneAccess')}
+    </section>
+    <section class="section"><h2>הערות</h2>
+      <div class="field"><label>הערות כלליות</label><textarea id="f_generalNotes">${esc(editing.generalNotes)}</textarea></div>
+    </section>
+  </main>
+  <div class="sticky">
+    <button class="btn btn-secondary" id="btnCancel">ביטול</button>
+    <button class="btn btn-secondary" id="btnHive">ייצוא כוורת</button>
+    <button class="btn btn-primary" id="btnSave">שמור סקר</button>
+  </div>
+  <div id="drawHost"></div>`;
+
+  document.getElementById('btnBack').onclick=async()=>{readForm();if(editing.projectName.trim())await saveProject(editing);screen='list';render()};
+  document.getElementById('btnCancel').onclick=()=>{screen='list';render()};
+  document.getElementById('btnSave').onclick=async()=>{readForm();if(!editing.projectName.trim()){toast('חובה שם פרויקט');return}await saveProject(editing);toast('הסקר נשמר');screen='list';render()};
+  document.getElementById('btnHive').onclick=async()=>{readForm();await saveProject(editing);const bundle=hiveExport(editing,photos);downloadJson('hive-site-survey-'+editing.id.slice(0,8)+'.json',bundle);toast(bundle.jobs.length===3?'ייצוא כוורת מלא':'ייצוא חלקי')};
+  document.getElementById('btnGps').onclick=()=>{
+    if(!navigator.geolocation){toast('אין GPS');return}
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const lat=+pos.coords.latitude.toFixed(6),lon=+pos.coords.longitude.toFixed(6);
+      editing.gps=`${lat}, ${lon}`;editing.lat=lat;editing.lon=lon;document.getElementById('f_gps').value=editing.gps;toast('GPS נקלט');scheduleSave();
+    },()=>toast('GPS נכשל'),{enableHighAccuracy:true,timeout:15000});
+  };
+  app.querySelectorAll('input,select,textarea').forEach(el=>{el.addEventListener('input',()=>{readForm();scheduleSave()});el.addEventListener('change',()=>{readForm();scheduleSave();const box=app.querySelector('.complete');if(box)box.outerHTML=completeBox()})});
+  app.querySelectorAll('[data-cam],[data-gal]').forEach(btn=>btn.onclick=()=>pickFiles(btn.dataset.cam||btn.dataset.gal, !!btn.dataset.cam));
+  app.querySelectorAll('[data-delph]').forEach(btn=>btn.onclick=async()=>{await deletePhoto(btn.dataset.delph);photos=photos.filter(p=>p.id!==btn.dataset.delph);readForm();await render()});
+  app.querySelectorAll('.thumb img').forEach(img=>img.onclick=()=>{const id=img.closest('.thumb').dataset.ph;const ph=photos.find(p=>p.id===id);if(ph)openDraw(ph)});
+}
+
+function pickFiles(field,camera){
+  const n=photos.filter(p=>p.field===field).length;if(n>=10){toast('מקסימום 10');return}
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=!camera;if(camera)inp.setAttribute('capture','environment');
+  inp.onchange=async()=>{
+    for(const file of [...inp.files].slice(0,10-n)){
+      const {dataUrl,mimeType}=await compressFile(file);const sha=await sha256(dataUrl);
+      const ph={id:uid(),projectId:editing.id,field,dataUrl,mimeType,sha256:sha,createdAt:now()};
+      await savePhoto(ph);photos.push(ph);
+    }
+    readForm();await saveProject(editing);await render();toast('תמונות נוספו');
+  };inp.click();
+}
+
+function openDraw(photo){
+  drawTarget=photo;const host=document.getElementById('drawHost');
+  host.innerHTML=`<div class="draw"><div class="draw-toolbar">
+    <button type="button" data-tool="pen" class="active">קו</button>
+    <button type="button" data-tool="text">טקסט</button>
+    <button type="button" id="drawUndo">בטל</button>
+    <button type="button" id="drawClear">נקה</button>
+    <button type="button" id="drawClose">סגור</button>
+    <button type="button" id="drawSave">שמור</button>
+  </div><div class="draw-wrap"><canvas id="drawCanvas"></canvas></div></div>`;
+  const canvas=document.getElementById('drawCanvas');const ctx=canvas.getContext('2d');
+  const img=new Image();const history=[];let tool='pen',drawing=false;
+  img.onload=()=>{canvas.width=img.width;canvas.height=img.height;ctx.drawImage(img,0,0);history.push(ctx.getImageData(0,0,canvas.width,canvas.height))};
+  img.src=photo.dataUrl;
+  host.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{host.querySelectorAll('[data-tool]').forEach(x=>x.classList.remove('active'));b.classList.add('active');tool=b.dataset.tool});
+  const pos=e=>{const r=canvas.getBoundingClientRect();return{x:((e.clientX-r.left)/r.width)*canvas.width,y:((e.clientY-r.top)/r.height)*canvas.height}};
+  canvas.onpointerdown=e=>{const p=pos(e);if(tool==='text'){const t=prompt('טקסט');if(!t)return;ctx.fillStyle='#f0c14b';ctx.font=`${Math.max(24,canvas.width*.03)}px Heebo,Arial`;ctx.fillText(t,p.x,p.y);history.push(ctx.getImageData(0,0,canvas.width,canvas.height));return}
+    drawing=true;ctx.strokeStyle='#f0c14b';ctx.lineWidth=Math.max(3,canvas.width*.004);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(p.x,p.y);canvas.setPointerCapture(e.pointerId)};
+  canvas.onpointermove=e=>{if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke()};
+  canvas.onpointerup=()=>{if(!drawing)return;drawing=false;history.push(ctx.getImageData(0,0,canvas.width,canvas.height))};
+  document.getElementById('drawUndo').onclick=()=>{if(history.length<=1)return;history.pop();ctx.putImageData(history.at(-1),0,0)};
+  document.getElementById('drawClear').onclick=()=>{if(!history.length)return;ctx.putImageData(history[0],0,0);history.length=1};
+  document.getElementById('drawClose').onclick=()=>{host.innerHTML='';drawTarget=null};
+  document.getElementById('drawSave').onclick=async()=>{drawTarget.dataUrl=canvas.toDataURL('image/jpeg',.85);drawTarget.mimeType='image/jpeg';drawTarget.sha256=await sha256(drawTarget.dataUrl);await savePhoto(drawTarget);host.innerHTML='';drawTarget=null;toast('סימון נשמר');render()};
+}
+
+async function hebrewLine(label,value,w=700){
+  const c=document.createElement('canvas');c.width=w;c.height=36;const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,w,36);ctx.fillStyle='#1a1a1a';ctx.font='600 18px Heebo,Arial';ctx.direction='rtl';ctx.textAlign='right';
+  ctx.fillText(`${label}: ${value||'—'}`,w-8,24);return c.toDataURL('image/png');
+}
+async function hebrewHead(title,w=700){
+  const c=document.createElement('canvas');c.width=w;c.height=44;const ctx=c.getContext('2d');
+  ctx.fillStyle='#0f1c24';ctx.fillRect(0,0,w,44);ctx.fillStyle='#f0c14b';ctx.font='700 22px Heebo,Arial';ctx.direction='rtl';ctx.textAlign='right';
+  ctx.fillText(title,w-12,30);return c.toDataURL('image/png');
+}
+async function makePdf(p,ph){
+  toast('מכין PDF...');
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});const pageW=doc.internal.pageSize.getWidth();const m=12;let y=12;
+  const c=completeness(p,ph);
+  doc.addImage(await hebrewHead('B.E.E · סקר אתר סולארי · טיוטה לאישור'),'PNG',m,y,pageW-m*2,12);y+=16;
+  for(const [l,v] of [['פרויקט',p.projectName],['תאריך',p.surveyDate],['סוקר',p.surveyor],['כתובת',p.address],['GPS',p.gps],['מוכנות Wave 54',c.ready?'מוכן':`חסר · ${c.score}`]]){
+    doc.addImage(await hebrewLine(l,v),'PNG',m,y,pageW-m*2,8);y+=9;
+  }
+  y+=2;doc.addImage(await hebrewHead('גג · יעד Wave 54'),'PNG',m,y,pageW-m*2,10);y+=12;
+  for(const [l,v] of [['סוג גג',`${p.roofTypeHe||'—'} (${ROOF_MAP[p.roofTypeHe]||'—'})`],['שטח מ״ר',p.usableAreaM2],['אזימוט',p.azimuthDeg],['שיפוע',p.tiltDeg],['יעד kWp',p.targetKwp],['תקציב ₪',p.budgetIls],['ממיר',p.inverterBrandPref]]){
+    if(y>270){doc.addPage();y=12}doc.addImage(await hebrewLine(l,v),'PNG',m,y,pageW-m*2,8);y+=9;
+  }
+  for(const phx of ph.slice(0,12)){
+    if(y>200){doc.addPage();y=12}
+    try{doc.addImage(phx.dataUrl,'JPEG',m,y,pageW-m*2,55);y+=61}catch{}
+  }
+  if(y>260){doc.addPage();y=12}
+  doc.addImage(await hebrewLine('אמון כוורת','טיוטה בלבד · Law #2 · אין שליחה ללקוח ללא אישור ברק'),'PNG',m,y,pageW-m*2,8);
+  const blob=doc.output('blob');const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=`bee-survey-${(p.projectName||p.id).replace(/\s+/g,'_')}.pdf`;a.click();URL.revokeObjectURL(u);
+}
+
+render();
+})();
+</script>
+</body>
+</html>
