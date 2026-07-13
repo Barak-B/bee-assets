@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Handoff — B.E.E Solar Site Survey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Rubik:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0f1c24;
+      --ink-soft: #1a3340;
+      --sand: #f3eee4;
+      --honey: #e4b23c;
+      --honey-deep: #c9931a;
+      --paper: #fffdf8;
+      --muted: #5d6b73;
+      --line: #d8d0c2;
+      --ok: #1f7a4d;
+      --warn: #8a6200;
+      --ok-bg: #e4f5eb;
+      --warn-bg: #fff3d6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Heebo, Rubik, sans-serif;
+      background:
+        radial-gradient(1000px 500px at 100% -10%, rgba(228,178,60,.18), transparent 55%),
+        radial-gradient(800px 400px at -10% 110%, rgba(26,51,64,.1), transparent 50%),
+        linear-gradient(180deg, #f7f2e8, var(--sand));
+      color: var(--ink);
+      line-height: 1.55;
+      padding: 24px 16px 64px;
+    }
+
+    .wrap {
+      width: min(920px, 100%);
+      margin: 0 auto;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #f0c14b, #c9931a);
+      display: grid;
+      place-items: center;
+      font-family: Rubik, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .04em;
+      color: var(--ink);
+    }
+
+    .brand strong {
+      display: block;
+      font-family: Rubik, Heebo, sans-serif;
+      font-size: 1.05rem;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 9px 14px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      border: none;
+      background: linear-gradient(180deg, var(--honey), var(--honey-deep));
+      color: var(--ink);
+    }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(15,28,36,.96), rgba(26,51,64,.92));
+      color: #fffdf8;
+      border-radius: 18px;
+      padding: 22px 22px 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 12px 32px rgba(15,28,36,.12);
+    }
+
+    .hero h1 {
+      font-family: Rubik, Heebo, sans-serif;
+      font-size: clamp(1.4rem, 3.5vw, 1.9rem);
+      margin-bottom: 8px;
+    }
+
+    .hero p {
+      opacity: .85;
+      max-width: 40rem;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .meta div {
+      background: rgba(255,253,248,.06);
+      border: 1px solid rgba(240,193,75,.22);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .meta dt {
+      font-size: .75rem;
+      color: #f0c14b;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .meta dd {
+      font-size: .92rem;
+      word-break: break-word;
+    }
+
+    .meta a { color: #ffe9a8; }
+
+    section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 24px rgba(15,28,36,.05);
+    }
+
+    h2 {
+      font-family: Rubik, Heebo, sans-serif;
+      font-size: 1.15rem;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h3 {
+      font-size: 1rem;
+      margin: 14px 0 8px;
+    }
+
+    p, li { font-size: .98rem; }
+    ul { padding-inline-start: 1.2rem; margin: 8px 0; }
+    li { margin: 4px 0; }
+
+    .flow {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      background: var(--ink);
+      color: #f0c14b;
+      border-radius: 12px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      white-space: pre;
+      font-size: .86rem;
+      line-height: 1.6;
+      direction: ltr;
+      text-align: left;
+      margin: 12px 0;
+    }
+
+    pre, code {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+    }
+
+    code {
+      background: #f0ebe1;
+      padding: 1px 6px;
+      border-radius: 6px;
+      font-size: .88em;
+      direction: ltr;
+      display: inline-block;
+    }
+
+    pre {
+      background: #122029;
+      color: #e8f0f4;
+      border-radius: 12px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      font-size: .84rem;
+      line-height: 1.55;
+      direction: ltr;
+      text-align: left;
+      margin: 10px 0;
+    }
+
+    .copy-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .copy-row .btn { font-size: .85rem; padding: 6px 10px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: .94rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: right;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: .82rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .78rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .ok { background: var(--ok-bg); color: var(--ok); }
+    .wait { background: var(--warn-bg); color: var(--warn); }
+
+    .note {
+      background: #fff8e6;
+      border: 1px solid #edd89a;
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: #6b4e00;
+      margin: 10px 0;
+      font-weight: 500;
+    }
+
+    .prompt-box {
+      background: #142832;
+      color: #f4f7f8;
+      border-radius: 14px;
+      padding: 16px;
+      white-space: pre-wrap;
+      font-family: Heebo, sans-serif;
+      font-size: .95rem;
+      line-height: 1.65;
+      border: 1px solid rgba(240,193,75,.25);
+    }
+
+    footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: .85rem;
+      text-align: center;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .actions, .copy-row .btn { display: none !important; }
+      section, .hero { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="mark">BEE</div>
+        <div>
+          <strong>ברק אלקטריק אנג׳ינירינג</strong>
+          <span>Handoff · סשן מקומי</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" type="button" onclick="window.print()">הדפס / PDF</button>
+        <a class="btn btn-primary" href="https://github.com/Barak-B/bee-assets/pull/11" target="_blank" rel="noopener">PR #11</a>
+      </div>
+    </div>
+
+    <header class="hero">
+      <h1>Handoff — B.E.E Solar Site Survey</h1>
+      <p>העבר לסשן מקומי. אל תנחש נתיבים — ראה §3 Paths. המקור: <code style="background:rgba(255,255,255,.12);color:#ffe9a8">handoff.md</code></p>
+      <dl class="meta">
+        <div><dt>Cloud run</dt><dd><a href="https://cursor.com/agents/bc-9bb92be1-3678-4e6c-9f65-a47b3b959f06" target="_blank" rel="noopener">bc-9bb92be1…</a></dd></div>
+        <div><dt>Owner</dt><dd>ברק ברזל · barak-barzel@barak-e.com</dd></div>
+        <div><dt>Date</dt><dd>2026-07-13</dd></div>
+        <div><dt>Branch</dt><dd><code style="background:rgba(255,255,255,.1);color:#ffe9a8">cursor/bee-solar-survey-hive-9f06</code></dd></div>
+        <div><dt>PR</dt><dd><a href="https://github.com/Barak-B/bee-assets/pull/11" target="_blank" rel="noopener">#11 (draft)</a></dd></div>
+        <div><dt>Base</dt><dd>main · github.com/Barak-B/bee-assets</dd></div>
+      </dl>
+    </header>
+
+    <section>
+      <h2>1 — Request</h2>
+      <p>לפתוח את סקר האתר של תמיר (<a href="https://solar-survey.pages.dev/" target="_blank" rel="noopener">solar-survey.pages.dev</a>) ולבנות אותו מחדש לפי <strong>מודל הכוורת של B.E.E</strong> (Collect → Edit → Dispatch → Wave 54).</p>
+    </section>
+
+    <section>
+      <h2>2 — What shipped</h2>
+      <p>PWA שטח RTL בעברית, מבוסס UX של תמיר, ממותג B.E.E, מייצא jobs לכוורת:</p>
+      <div class="flow">collect.site-survey
+  → edit.normalize-site-survey
+  → dispatch.draft          (Law #2 · requiresHumanPick)
+  → wave-54.designSuite</div>
+
+      <table>
+        <thead><tr><th>Path</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><code>apps/bee-solar-survey/</code></td><td>Vite + TS PWA</td></tr>
+          <tr><td><code>docs/BEE_SOLAR_SURVEY_HIVE.md</code></td><td>Hive integration charter</td></tr>
+          <tr><td><code>platform/schema/loops.json</code></td><td>הוספת <code>collect.site-survey</code> + <code>edit.normalize-site-survey</code></td></tr>
+          <tr><td><code>platform/schema/job.schema.json</code></td><td>חוזה job של הכוורת</td></tr>
+          <tr><td><code>apps/bee-solar-survey/README.md</code></td><td>הוראות הרצה / פריסה</td></tr>
+          <tr><td><code>handoff.md</code> / <code>handoff.html</code></td><td>מסמך העברה לסשן מקומי</td></tr>
+        </tbody>
+      </table>
+
+      <h3>נשמר מתמיר</h3>
+      <ul>
+        <li>RTL עברית, פרויקטים מקומיים, גיבוי/שחזור</li>
+        <li>מצלמה/גלריה, סימון על תמונה, GPS</li>
+        <li>שדות חשמל/מונים/גג/ממירים + PDF + IndexedDB</li>
+      </ul>
+
+      <h3>נוסף ל־B.E.E / Wave 54</h3>
+      <ul>
+        <li>מיפוי סוג גג עברית → enum קנוני (<code>flat</code> / <code>tile</code> / …)</li>
+        <li><code>usableAreaM2</code>, אזימוט, שיפוע, צריכה שנתית, יעד kWp / תקציב ₪</li>
+        <li>העדפת ממיר: SolarEdge / KStar / ABB / Deye</li>
+        <li>ציון מוכנות Wave 54 + ייצוא JSON לכוורת</li>
+        <li>Trust L1 · לא <code>customer</code> · <code>customer.id = [OPEN]</code></li>
+      </ul>
+
+      <h3>Verify</h3>
+      <pre id="verify">cd apps\bee-solar-survey
+npm test
+npm run build</pre>
+    </section>
+
+    <section>
+      <h2>3 — Paths (Windows · PATHS.md)</h2>
+      <div class="note">לא להשתמש ב־placeholder <code>C:\path\to\...</code> — הנתיב הקנוני הוא <code>E:\bee-assets</code>.</div>
+      <table>
+        <thead><tr><th>What</th><th>Path</th></tr></thead>
+        <tbody>
+          <tr><td><strong>bee-assets (מקומי)</strong></td><td><code>E:\bee-assets</code></td></tr>
+          <tr><td>App</td><td><code>E:\bee-assets\apps\bee-solar-survey</code></td></tr>
+          <tr><td>Alfred</td><td><code>E:\Desktop\OpenClawAgent\</code></td></tr>
+          <tr><td>Hermes</td><td><code>E:\bee-hermes\</code></td></tr>
+          <tr><td>Obsidian BEE</td><td><code>E:\Desktop\ברק\תוכנות\תכנות וAI\obsidian\Barak-v-obsidian\3-Projects\BEE\</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>4 — Run locally (PowerShell)</h2>
+      <p>Windows PowerShell 5.x: <strong>אין <code>&amp;&amp;</code></strong> — להשתמש ב־<code>;</code> או בשורות נפרדות.</p>
+
+      <div class="copy-row"><strong>אם הריפו קיים</strong><button class="btn" type="button" data-copy="run-existing">העתק</button></div>
+      <pre id="run-existing">cd E:\bee-assets
+git fetch origin
+git checkout cursor/bee-solar-survey-hive-9f06
+cd apps\bee-solar-survey
+npm install
+npm run dev</pre>
+      <p>ואז פתח: <a href="http://localhost:5173" target="_blank" rel="noopener">http://localhost:5173</a></p>
+
+      <div class="copy-row"><strong>אם <code>E:\bee-assets</code> חסר</strong><button class="btn" type="button" data-copy="run-clone">העתק</button></div>
+      <pre id="run-clone">cd E:\
+git clone https://github.com/Barak-B/bee-assets.git
+cd bee-assets
+git checkout cursor/bee-solar-survey-hive-9f06
+cd apps\bee-solar-survey
+npm install
+npm run dev</pre>
+
+      <div class="copy-row"><strong>בדיקת קיום</strong><button class="btn" type="button" data-copy="run-testpath">העתק</button></div>
+      <pre id="run-testpath">Test-Path E:\bee-assets</pre>
+    </section>
+
+    <section>
+      <h2>5 — קבצים חשובים לסשן מקומי</h2>
+      <ol>
+        <li><code>apps/bee-solar-survey/src/schema.ts</code> — מיפוי + completeness</li>
+        <li><code>apps/bee-solar-survey/src/hive.ts</code> — Collect/Edit/Dispatch jobs</li>
+        <li><code>apps/bee-solar-survey/src/main.ts</code> — UI</li>
+        <li><code>docs/BEE_SOLAR_SURVEY_HIVE.md</code> — ארכיטקטורה</li>
+        <li>Canon: <code>research/phase-3/engineering-agent/LLD.md</code> על <code>claude/capability-extensions-collection-JjV2s</code></li>
+        <li><code>AGENT_CANON</code> / <code>docs/HIVE_CORTEX_PLATFORM.md</code> על <code>cursor/hive-cortex-platform-634e</code></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>6 — Status / next</h2>
+      <table>
+        <thead><tr><th>Item</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>PWA + schema + hive export + tests</td><td><span class="badge ok">✅ done</span></td></tr>
+          <tr><td>PR #11 draft</td><td><span class="badge ok">✅ open</span></td></tr>
+          <tr><td>Cloudflare Pages deploy</td><td><span class="badge wait">⏳</span> root=<code>apps/bee-solar-survey</code>, build=<code>npm run build</code>, out=<code>dist</code></td></tr>
+          <tr><td>Wire ל־Alfred drafts / supervisor</td><td><span class="badge wait">⏳</span> אחרי Brain Bus מקומי</td></tr>
+          <tr><td>Merge ל־<code>main</code></td><td><span class="badge wait">⏳</span> אחרי review של ברק</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>7 — Prompt לסשן מקומי</h2>
+      <div class="copy-row"><span></span><button class="btn btn-primary" type="button" data-copy="prompt">העתק פרומפט</button></div>
+      <div class="prompt-box" id="prompt">המשך מ-PR #11 (branch cursor/bee-solar-survey-hive-9f06).
+סקר אתר B.E.E כ-collect.site-survey ל-Wave 54.
+נתיב: E:\bee-assets\apps\bee-solar-survey
+קרא handoff.md + docs/BEE_SOLAR_SURVEY_HIVE.md.
+הרץ npm install; npm run dev (PowerShell בלי &&).
+בדוק UX מול https://solar-survey.pages.dev/ וחבר Pages / Alfred drafts לפי הצורך.
+חוקה: Law #1/#2, customer.id=[OPEN], wire_sizing/protection = Tier-0.</div>
+    </section>
+
+    <section>
+      <h2>8 — Constitutional reminders</h2>
+      <ul>
+        <li><strong>Law #1</strong> — רק 4 יעדי WA מורשים; אין שליחה ללקוח מהאפליקציה</li>
+        <li><strong>Law #2</strong> — כל outbound הוא טיוטה + בחירה אנושית</li>
+        <li><strong>§3.6a</strong> — לא ממציאים עובדות מפעיל/CRM</li>
+        <li>בנק Mercantile 17 · מע״מ חודשי · צי: SolarEdge / iSolarCloud / Deye / KStar / ABB</li>
+      </ul>
+    </section>
+
+    <footer>
+      B.E.E Hive · handoff.html · מקור: handoff.md · 2026-07-13
+    </footer>
+  </div>
+
+  <script>
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-copy')
+        const el = document.getElementById(id)
+        if (!el) return
+        const text = el.innerText.trim()
+        try {
+          await navigator.clipboard.writeText(text)
+          const prev = btn.textContent
+          btn.textContent = 'הועתק ✓'
+          setTimeout(() => { btn.textContent = prev }, 1400)
+        } catch {
+          btn.textContent = 'Ctrl+C ידני'
+        }
+      })
+    })
+  </script>
+</body>
+</html>
