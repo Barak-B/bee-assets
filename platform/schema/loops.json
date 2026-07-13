@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-13T08:00:00Z",
+  "description": "Declared autonomous loops. Supervisor wakes these on schedule or event. Outbound always Trust-Gated.",
+  "loops": [
+    {
+      "name": "collect.canon-drift",
+      "kind": "collect",
+      "schedule": "0 */6 * * *",
+      "costTier": 0,
+      "trustTier": "L0",
+      "enabled": true,
+      "entrypoint": "platform/connections/collect-canon-drift.mjs",
+      "description": "Compare published canon facts + roster migration status (cloud-safe)"
+    },
+    {
+      "name": "collect.bank",
+      "kind": "collect",
+      "schedule": "0 7 * * 0-4",
+      "costTier": 0,
+      "trustTier": "L1",
+      "enabled": false,
+      "blocker": "Needs OB-4 + 53/A port to BEE app",
+      "description": "Ingest Mercantile CSV / portal export"
+    },
+    {
+      "name": "collect.mail",
+      "kind": "collect",
+      "schedule": "*/15 * * * *",
+      "costTier": 1,
+      "trustTier": "L1",
+      "enabled": false,
+      "blocker": "Needs Gmail OAuth + 53/B Phase B",
+      "description": "Poll supplier email"
+    },
+    {
+      "name": "collect.wa",
+      "kind": "collect",
+      "schedule": "event:alfred-inbound",
+      "costTier": 1,
+      "trustTier": "L1",
+      "enabled": true,
+      "description": "Alfred inbound watcher → intake (already partially live)"
+    },
+    {
+      "name": "collect.monday",
+      "kind": "collect",
+      "schedule": "*/30 * * * *",
+      "costTier": 1,
+      "trustTier": "L0",
+      "enabled": false,
+      "blocker": "Monday MCP needsAuth in Cursor; local Alfred Monday skill may exist",
+      "description": "CRM board deltas"
+    },
+    {
+      "name": "edit.normalize",
+      "kind": "edit",
+      "schedule": "event:after-collect",
+      "costTier": 0,
+      "trustTier": "L1",
+      "enabled": true,
+      "description": "Hebrew/date/amount normalize (spine primitives)"
+    },
+    {
+      "name": "edit.dedup",
+      "kind": "edit",
+      "schedule": "event:after-normalize",
+      "costTier": 0,
+      "trustTier": "L1",
+      "enabled": true,
+      "description": "Hard-key + fuzzy dedup"
+    },
+    {
+      "name": "edit.anomaly",
+      "kind": "edit",
+      "schedule": "event:after-procurement-line",
+      "costTier": 0,
+      "trustTier": "L1",
+      "enabled": false,
+      "blocker": "Wire checkLineAnomaly into ingest.ts (math already tested)",
+      "description": "Price anomaly z-score"
+    },
+    {
+      "name": "dispatch.alert",
+      "kind": "dispatch",
+      "schedule": "event:on-anomaly-or-failure",
+      "costTier": 1,
+      "trustTier": "L1",
+      "enabled": true,
+      "outbound": {
+        "channel": "whatsapp",
+        "destinationClass": "self_chat",
+        "requiresHumanPick": false
+      },
+      "description": "⚡ Barak self-chat only"
+    },
+    {
+      "name": "dispatch.draft",
+      "kind": "dispatch",
+      "schedule": "event:on-proposal-or-reply",
+      "costTier": 2,
+      "trustTier": "L1",
+      "enabled": true,
+      "outbound": {
+        "channel": "whatsapp",
+        "destinationClass": "drafts_group",
+        "requiresHumanPick": true
+      },
+      "description": "Human picks before any real-world send"
+    },
+    {
+      "name": "dispatch.digest",
+      "kind": "dispatch",
+      "schedule": "0 8 * * 0",
+      "costTier": 2,
+      "trustTier": "L1",
+      "enabled": false,
+      "blocker": "Wave 55 not built",
+      "outbound": {
+        "channel": "whatsapp",
+        "destinationClass": "self_chat",
+        "requiresHumanPick": false
+      },
+      "description": "Sunday CS digest → self-chat (Neri only if scheduled summary rules allow)"
+    },
+    {
+      "name": "collect.site-survey",
+      "kind": "collect",
+      "schedule": "event:surveyor-export",
+      "costTier": 0,
+      "trustTier": "L1",
+      "enabled": true,
+      "entrypoint": "apps/bee-solar-survey",
+      "description": "Field solar site survey PWA → Wave 54 DesignSuite intake (Tamir UX + BEE hive export)"
+    },
+    {
+      "name": "edit.normalize-site-survey",
+      "kind": "edit",
+      "schedule": "event:after-collect.site-survey",
+      "costTier": 0,
+      "trustTier": "L1",
+      "enabled": true,
+      "description": "Normalize survey to DesignSuiteReq.site/target; block if incomplete"
+    }
+  ],
+  "trustGate": {
+    "law1Destinations": [
+      "self_chat",
+      "neri_group",
+      "drafts_group",
+      "voice_transcripts"
+    ],
+    "forbiddenWithoutPick": [
+      "customer",
+      "supplier",
+      "other"
+    ],
+    "notes": "Supervisor MUST refuse dispatch when destinationClass not in law1Destinations"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "B.E.E סקר אתר סולארי",
+  "short_name": "BEE Survey",
+  "description": "סקר אתר סולארי — Collect לכוורת B.E.E / Wave 54",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1c24",
+  "theme_color": "#0f1c24",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

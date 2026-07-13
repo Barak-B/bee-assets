@@ -1,0 +1,25 @@
+{
+  "name": "bee-solar-survey",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "B.E.E. Hive Collect — solar site survey for Wave 54 engineering intake",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
+    "jsdom": "^29.1.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1"
+  }
+}
