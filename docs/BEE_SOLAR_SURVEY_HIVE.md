@@ -3,7 +3,8 @@
 > **מקור UX:** אפליקציית תמיר — https://solar-survey.pages.dev/  
 > **יעד:** Collect לשטח → Edit ל־Wave 54 DesignSuite → Dispatch טיוטה (Law #2)  
 > **קוד:** `apps/bee-solar-survey/`  
-> **עודכן:** 2026-07-13
+> **חוזי jobs/loops:** [`HIVE_PLATFORM_SCHEMA.md`](HIVE_PLATFORM_SCHEMA.md) · [`platform/schema/`](../platform/schema/)  
+> **עודכן:** 2026-07-20
 
 ## למה זה חלק מהכוורת
 
@@ -25,11 +26,11 @@
 
 | שדה סקר | Wave 54 |
 |---|---|
-| סוג גג (בטון/רעפים/…) | `roofType` flat/tile/metal-*/ground |
+| סוג גג בטון / רעפים / פנל מבודד / איסכורית / קרקע / אחר | `roofType` → `flat` / `tile` / `metal-standing-seam` / `metal-trapezoidal` / `ground` / `other` |
 | שטח שימושי מ״ר | `usableAreaM2` |
-| אזימוט / שיפוע | `azimuthDeg` / `tiltDeg` |
+| אזימוט / שיפוע | `azimuthDeg` (UI default 180) / `tiltDeg` |
 | צילום גג/אתר | `photos[]` (sha256) — חובה ל־performance_forecast |
-| יעד kWp / תקציב ₪ | `target.sizeKwp` / `budgetCents` |
+| יעד kWp / תקציב ₪ | `target.sizeKwp` / `budgetCents` (₪→cents) |
 | העדפת ממיר | SolarEdge / KStar / ABB / Deye |
 | מפסקים / כבל AC | `electricalIntake` (עזר ל־wire/protection) |
 
@@ -38,6 +39,18 @@
 - Law #1 — אין WA ללקוח מהאפליקציה
 - Law #2 — `requiresHumanPick: true` על כל outbound
 - `customer.id = [OPEN]` עד קישור Monday/CRM
+
+## מוכנות לשטח (completeness)
+
+נבדק ב־`apps/bee-solar-survey/src/schema.ts` → `assessCompleteness`:
+
+| חובה ל־`readyForWave54` | מומלץ |
+|---|---|
+| שם פרויקט, כתובת, סוג גג | שם סוקר, מפסק ראשי |
+| ≥1 צילום `roof` / `siteOverview` | צילום לוח חשמל, GPS |
+| שטח שימושי **או** יעד kWp / תקציב | אזימוט (ברירת מחדל UI: 180), שיפוע |
+
+אם edit חסום — הייצוא מחזיר collect (`queued`) + edit (`blocked_trust`), בלי `dispatch.draft`. קובץ: `hive-site-survey-{id8}.json`.
 
 ## סטטוס
 
