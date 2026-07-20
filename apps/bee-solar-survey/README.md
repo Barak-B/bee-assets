@@ -35,9 +35,20 @@ wave-54.designSuite     ← pv_design / wire_sizing / protection / BOM / forecas
 ## מה נוסף ל־B.E.E / Wave 54
 
 - מיפוי סוג גג עברית → enum קנוני (`flat` / `tile` / …)
-- שטח שימושי, אזימוט, שיפוע, צריכה שנתית, יעד kWp/תקציב, העדפת ממיר (SolarEdge/KStar/ABB/Deye)
+- שטח שימושי, אזימוט (ברירת מחדל UI: **180** דרום), שיפוע, צריכה שנתית, יעד kWp/תקציב, העדפת ממיר (SolarEdge/KStar/ABB/Deye)
 - ציון מוכנות ל־Wave 54 + ייצוא חבילת jobs לכוורת
 - מיתוג B.E.E
+
+### מיפוי גג (`ROOF_HE_TO_CANONICAL`)
+
+| עברית (UI) | Wave 54 `roofType` |
+|---|---|
+| בטון | `flat` |
+| רעפים | `tile` |
+| פנל מבודד | `metal-standing-seam` |
+| איסכורית | `metal-trapezoidal` |
+| קרקע | `ground` |
+| אחר / לא מוכר | `other` |
 
 ## הרצה
 
@@ -87,9 +98,11 @@ PWA: `public/manifest.json` · אייקון `icon.svg` · `display: standalone`.
 
 מומלץ (משפיע על הציון, לא חוסם): סוקר, מפסק ראשי, צילום לוח חשמל, GPS, אזימוט, שיפוע.
 
+ציון: עד **70** מ־5 חובה + עד **30** מ־6 מומלץ (`score` 0–100).
+
 אזהרה: אם ממלאים גם kWp וגם תקציב — Wave 54 מצפה לאחד מהם; הייצוא מעביר את שניהם עם warning.
 
-ייצוא חלקי (רק collect + edit ב־`blocked_trust`) כשחסרים שדות חובה — בלי `dispatch.draft`.
+ייצוא חלקי כשחסרים שדות חובה: collect (`queued`) + edit (`blocked_trust`) — **בלי** `dispatch.draft`.
 
 ## אחסון מקומי
 
@@ -114,7 +127,7 @@ IndexedDB name: `bee-solar-survey` (version 1)
 
 ## ייצוא כוורת
 
-כפתור **ייצוא כוורת** מוריד JSON:
+כפתור **ייצוא כוורת** מוריד `hive-site-survey-{8-char-id}.json`:
 
 ```json
 {
@@ -126,7 +139,14 @@ IndexedDB name: `bee-solar-survey` (version 1)
 }
 ```
 
-חוזה job: [`platform/schema/job.schema.json`](../../platform/schema/job.schema.json).
+| Toast | משמעות |
+|---|---|
+| «ייצוא כוורת מלא» | 3 jobs כולל `dispatch.draft` |
+| «ייצוא חלקי» | 2 jobs — edit ב־`blocked_trust` |
+
+גיבוי מלא: `bee-survey-backup-YYYY-MM-DD.json` (`projects` + `photos`).
+
+חוזה job: [`platform/schema/job.schema.json`](../../platform/schema/job.schema.json) · פירוט לולאות: [`docs/HIVE_PLATFORM_SCHEMA.md`](../../docs/HIVE_PLATFORM_SCHEMA.md).
 
 ## פתרון תקלות
 

@@ -2,7 +2,7 @@
 
 > **Code:** `platform/schema/`  
 > **Consumers:** `apps/bee-solar-survey` (export), supervisor / Brain Bus (planned)  
-> **Updated:** 2026-07-13
+> **Updated:** 2026-07-20
 
 Canonical contracts for autonomous Hive work units. Every Collect / Edit / Dispatch job should match `job.schema.json` and declare its loop in `loops.json`.
 
@@ -12,6 +12,10 @@ Canonical contracts for autonomous Hive work units. Every Collect / Edit / Dispa
 |---|---|
 | [`platform/schema/job.schema.json`](../platform/schema/job.schema.json) | JSON Schema (draft 2020-12) for a single ledgered job |
 | [`platform/schema/loops.json`](../platform/schema/loops.json) | Declared loops: schedule, trust, cost, enablement, blockers |
+
+## Repo scope
+
+On `main`, this repo ships the **schema + survey exporter** only. Loop `entrypoint` paths such as `platform/connections/collect-canon-drift.mjs` are **declared** in `loops.json` for the supervisor roster; those scripts are not present here until the Hive Cortex / Brain Bus trees land. Do not treat a missing entrypoint file as a schema bug — treat it as an enablement gap (same class as `blocker` strings on disabled loops).
 
 ## Job model
 
@@ -91,13 +95,23 @@ Loops are the supervisor’s wake targets (cron or event). Disabled loops keep a
 
 ## Site-survey job chain (verified in app)
 
-Built by `apps/bee-solar-survey/src/hive.ts`:
+Built by `apps/bee-solar-survey/src/hive.ts` → `buildHiveExportBundle`:
 
-1. **`collect.site-survey`** — raw project + photo meta + completeness; `outbound.channel = none`
-2. **`edit.normalize-site-survey`** — `designSuiteReq` + `electricalIntake`; status `blocked_trust` when incomplete
-3. **`dispatch.draft`** — only if edit succeeded; WhatsApp drafts group, `requiresHumanPick: true`
+| # | Loop | When incomplete | When complete | Outbound |
+|---|---|---|---|---|
+| 1 | `collect.site-survey` | `status: queued` | `status: succeeded` | `channel: none`, `drafts_group`, human pick |
+| 2 | `edit.normalize-site-survey` | `status: blocked_trust` + Hebrew `error` | `status: succeeded` + `result.readyFor` | `channel: db`, `drafts_group`, human pick |
+| 3 | `dispatch.draft` | **omitted** | `status: queued` | `channel: whatsapp`, `drafts_group`, human pick |
 
-`customer.id` stays `[OPEN]` until CRM link (§3.6a). See [`BEE_SOLAR_SURVEY_HIVE.md`](BEE_SOLAR_SURVEY_HIVE.md).
+Payload highlights (complete path):
+
+1. **Collect** — `raw` project, `photoMeta[]`, `completeness`
+2. **Edit** — `designSuiteReq.site/target/preferences` + `electricalIntake`; `customer.id = "[OPEN]"` (§3.6a)
+3. **Dispatch** — Hebrew draft title/body pointing to `wave-54`; never `destinationClass: customer`
+
+**costTier note:** the PWA currently emits `costTier: 0` on all three jobs. `loops.json` lists `dispatch.draft` at registry cost **2** (policy intent for the live supervisor). Prefer the registry when scheduling spend; treat the JSON download as a field artifact until the wire normalizes tiers.
+
+See [`BEE_SOLAR_SURVEY_HIVE.md`](BEE_SOLAR_SURVEY_HIVE.md) and [`apps/bee-solar-survey/README.md`](../apps/bee-solar-survey/README.md).
 
 ## Constraints for authors
 
@@ -105,6 +119,7 @@ Built by `apps/bee-solar-survey/src/hive.ts`:
 - Do not set `destinationClass` to `customer` / `supplier` without `requiresHumanPick: true` and an explicit Trust Gate change.
 - Job payloads are open objects (`additionalProperties: true`); keep field names stable once a consumer ships.
 - Schema `$id` is `https://bee.local/platform/schema/job.schema.json` (local canon URL, not a public host).
+- Keep `blocker` text honest when disabling a loop — it is the operator-facing reason in status tables.
 
 ## Validation
 
