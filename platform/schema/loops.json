@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-07-13T08:00:00Z",
+  "updatedAt": "2026-10-06T19:50:00Z",
   "description": "Declared autonomous loops. Supervisor wakes these on schedule or event. Outbound always Trust-Gated.",
   "loops": [
     {
@@ -141,6 +141,34 @@
       "trustTier": "L1",
       "enabled": true,
       "description": "Normalize survey to DesignSuiteReq.site/target; block if incomplete"
+    },
+    {
+      "name": "collect.startup-brief",
+      "kind": "collect",
+      "schedule": "event:founder-submit",
+      "costTier": 0,
+      "trustTier": "L1",
+      "enabled": true,
+      "entrypoint": "apps/bee-business-plan",
+      "description": "AI App Business Plan Generator — founder brief (industry, platform, followers, experience, hours, budget) saved in-app, exported as hive JSON"
+    },
+    {
+      "name": "edit.render-business-plan-prompt",
+      "kind": "edit",
+      "schedule": "event:after-collect.startup-brief",
+      "costTier": 0,
+      "trustTier": "L1",
+      "enabled": true,
+      "description": "Fill prompts/ai-app-business-plan-generator.md from the brief (sha256 of the rendered prompt); block while any of the six inputs is missing"
+    },
+    {
+      "name": "edit.generate-business-plan",
+      "kind": "edit",
+      "schedule": "event:founder-generate",
+      "costTier": 2,
+      "trustTier": "L1",
+      "enabled": true,
+      "description": "Optional in-app Claude generation with the founder’s own key (BYOK); output is a Markdown draft that only reaches dispatch.draft (Law #2)"
     }
   ],
   "trustGate": {
