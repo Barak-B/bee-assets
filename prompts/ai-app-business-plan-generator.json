@@ -1,0 +1,151 @@
+{
+  "id": "ai-app-business-plan-generator",
+  "version": "1.0.0",
+  "title": "AI App Business Plan Generator",
+  "kind": "startup-idea-research-prompt",
+  "summary": "Beginner-friendly business plan and technical roadmap for an AI-powered mobile app, built around a founder's existing social-platform audience.",
+  "template": "ai-app-business-plan-generator.md",
+  "placeholderSyntax": "{{variable_name}}",
+  "app": "apps/bee-business-plan",
+  "links": {
+    "app": "https://app.barak-e.com",
+    "site": "https://www.barak-e.com",
+    "source": "https://github.com/Barak-B/bee-assets/tree/main/prompts"
+  },
+  "hive": {
+    "collect": "collect.startup-brief",
+    "edit": ["edit.render-business-plan-prompt", "edit.generate-business-plan"],
+    "dispatch": "dispatch.draft",
+    "trustTier": "L1",
+    "law2": "Human picks — generated plans are drafts, never auto-sent"
+  },
+  "variables": [
+    {
+      "name": "industry_vertical",
+      "label": "Industry vertical",
+      "type": "text",
+      "required": true,
+      "placeholder": "e.g. home solar and energy savings",
+      "help": "The market the app serves. Be specific: a niche beats a category.",
+      "examples": [
+        "home solar and energy savings",
+        "fitness coaching for busy parents",
+        "small-restaurant inventory",
+        "Hebrew-language personal finance",
+        "electrical contractor field operations"
+      ]
+    },
+    {
+      "name": "platform",
+      "label": "Social platform",
+      "type": "select",
+      "required": true,
+      "allowCustom": true,
+      "options": [
+        "Instagram",
+        "TikTok",
+        "YouTube",
+        "LinkedIn",
+        "Facebook",
+        "X (Twitter)",
+        "WhatsApp Communities",
+        "Telegram",
+        "Pinterest",
+        "Threads"
+      ],
+      "help": "Where the founder already has an audience. Appears in the marketing-strategy section and the evaluation matrix."
+    },
+    {
+      "name": "platform_follower_count",
+      "label": "Platform follower count",
+      "type": "number",
+      "required": true,
+      "min": 0,
+      "format": "thousands",
+      "placeholder": "e.g. 12500 or 12.5k",
+      "help": "Rough is fine. Accepts 12500, 12,500 or 12.5k."
+    },
+    {
+      "name": "experience_level",
+      "label": "Programming experience level",
+      "type": "select",
+      "required": true,
+      "allowCustom": true,
+      "options": [
+        "No coding experience",
+        "Beginner — comfortable with no-code tools, little or no code",
+        "Intermediate — can build simple apps with help",
+        "Advanced — professional developer"
+      ]
+    },
+    {
+      "name": "hours_per_week",
+      "label": "Available time commitment",
+      "type": "select",
+      "required": true,
+      "allowCustom": true,
+      "options": [
+        "Under 5 hours per week",
+        "5–10 hours per week",
+        "10–20 hours per week",
+        "20–40 hours per week",
+        "Full-time (40+ hours per week)"
+      ]
+    },
+    {
+      "name": "budget_range",
+      "label": "Initial budget range",
+      "type": "select",
+      "required": true,
+      "allowCustom": true,
+      "options": [
+        "Under $500",
+        "$500–$2,000",
+        "$2,000–$5,000",
+        "$5,000–$10,000",
+        "$10,000–$25,000",
+        "$25,000+"
+      ],
+      "help": "Also used as the cost ceiling in the Constraints section."
+    }
+  ],
+  "extras": {
+    "appendSection": "Additional Context",
+    "fields": [
+      {
+        "name": "output_language",
+        "label": "Output language",
+        "type": "select",
+        "required": false,
+        "allowCustom": true,
+        "default": "English",
+        "options": ["English", "Hebrew", "Arabic", "Russian", "French", "Spanish"],
+        "help": "English leaves the prompt untouched. Any other value adds an instruction to write the whole plan in that language."
+      },
+      {
+        "name": "founder_notes",
+        "label": "Founder notes",
+        "type": "textarea",
+        "required": false,
+        "placeholder": "Anything the consultant should know: existing products, audience demographics, geography, hard constraints…"
+      }
+    ]
+  },
+  "outputSections": [
+    "1. Market Analysis",
+    "2. Target Audience Profile",
+    "3. Solution Development",
+    "4. Concept Evaluation Matrix",
+    "5. Winning Concept Deep Dive",
+    "6. Business Model",
+    "7. Technical Implementation Roadmap",
+    "8. {{platform}} Marketing Strategy"
+  ],
+  "constraints": [
+    "Focus on solutions requiring minimal coding",
+    "Prioritize no-code/low-code tools where possible",
+    "Ensure compliance with {{platform}} guidelines",
+    "Keep initial costs under {{budget_range}}",
+    "Design for MVP launch within 90 days"
+  ]
+}

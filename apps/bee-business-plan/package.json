@@ -1,0 +1,26 @@
+{
+  "name": "bee-business-plan",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "B.E.E. Hive Collect — AI App Business Plan Generator (startup idea research prompt)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
+    "jsdom": "^29.1.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "dompurify": "^3.4.16",
+    "marked": "^18.1.0"
+  }
+}
