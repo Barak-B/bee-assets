@@ -1,0 +1,121 @@
+{
+  "$comment": "B.E.E Engine — הגדרת מכונת המצבים של פרויקט כנתונים (טיוטה 0.1). statuses משותפים לכל שלב. exit = תנאים שחייבים להתקיים למעבר לשלב הבא. documents = סוגי Document שנוצרים בשלב. sla_days = יעד לסיום השלב. profiles = באילו פרופילי אסדרה השלב נדרש (ALL או רשימה).",
+  "version": "0.1",
+  "statuses": ["open", "in_progress", "waiting_customer", "waiting_iec", "waiting_supplier", "waiting_engineer", "blocked", "done"],
+  "profiles": {
+    "RES_LE_15": "ביתי עד 15 kW",
+    "COM_LE_100": "עסקי/חקלאי 15–100 kW",
+    "COM_LE_630": "100–630 kW",
+    "LARGE_GT_630": "מעל 630 kW",
+    "BESS_ADD": "תוספת אגירה למתקן קיים",
+    "HISTORIC_DIST": "מחלק היסטורי (קיבוץ/מושב)"
+  },
+  "stages": [
+    {
+      "id": "S01", "key": "lead", "name_he": "ליד",
+      "owner_role": "sales", "sla_days": 1, "profiles": "ALL",
+      "entry": ["contact.phone_or_email"],
+      "exit": ["customer.name", "site.address", "project.kind", "project.profile_guess"],
+      "documents": [],
+      "auto_tasks": ["schedule_survey"]
+    },
+    {
+      "id": "S02", "key": "survey", "name_he": "סקר אתר",
+      "owner_role": "surveyor", "sla_days": 7, "profiles": "ALL",
+      "entry": ["S01.done"],
+      "exit": ["survey.completeness.ready OR owner.override"],
+      "documents": ["survey_pdf"],
+      "auto_tasks": ["link_survey_to_project", "request_electric_bill"]
+    },
+    {
+      "id": "S03", "key": "quote", "name_he": "תכנון ראשוני והצעת מחיר",
+      "owner_role": "owner", "sla_days": 3, "profiles": "ALL",
+      "entry": ["S02.done"],
+      "exit": ["quote.version.sent"],
+      "documents": ["design_lite", "quote_pdf", "boq_xlsx"],
+      "auto_tasks": ["build_design_lite", "price_from_assemblies", "generate_boq", "generate_quote", "draft_outbound_quote"]
+    },
+    {
+      "id": "S04", "key": "contract", "name_he": "מו\"מ וחוזה",
+      "owner_role": "owner", "sla_days": 21, "profiles": "ALL",
+      "entry": ["S03.done"],
+      "exit": ["contract.signed", "payment.deposit.received"],
+      "documents": ["contract_pdf", "invoice_deposit"],
+      "auto_tasks": ["followup_every_3_days", "generate_contract", "create_schedule_from_template"]
+    },
+    {
+      "id": "S05", "key": "iec_pre_application", "name_he": "הגשה מקדימה לחח\"י",
+      "owner_role": "pm", "sla_days": null, "sla_source": "research/01-iec-process.md",
+      "profiles": "ALL",
+      "parallel_with": ["S06"],
+      "entry": ["S04.done"],
+      "exit": ["submission.pre.approved OR profile.pre_application_not_required"],
+      "documents": ["iec_application_pack", "iec_fee_receipt"],
+      "auto_tasks": ["build_submission_steps_from_profile", "fill_forms", "track_fee_payment", "remind_waiting_iec"]
+    },
+    {
+      "id": "S06", "key": "engineering", "name_he": "תכנון מפורט",
+      "owner_role": "owner", "sla_days": 10, "profiles": "ALL",
+      "parallel_with": ["S05"],
+      "entry": ["S04.done"],
+      "exit": ["design.set.approved_by_owner", "design.verify.empty", "eplan.all_checks_pass OR owner_accepted"],
+      "documents": ["drawing_set_dwg", "drawing_set_pdf", "bom_csv", "boq_xlsx_rev"],
+      "auto_tasks": ["generate_spec_yaml", "ingest_constructor_drawing", "run_eplan", "convert_dwg", "diff_bom_vs_quote"]
+    },
+    {
+      "id": "S07", "key": "procurement", "name_he": "רכש",
+      "owner_role": "procurement", "sla_days": 14, "profiles": "ALL",
+      "entry": ["S06.done"],
+      "exit": ["po.critical_items.delivered_or_scheduled"],
+      "documents": ["purchase_orders"],
+      "auto_tasks": ["split_bom_by_supplier", "create_po", "track_deliveries"]
+    },
+    {
+      "id": "S08", "key": "installation", "name_he": "התקנה",
+      "owner_role": "foreman", "sla_days": null, "sla_source": "schedule", "profiles": "ALL",
+      "entry": ["S07.done", "S05.done OR S05.not_required"],
+      "exit": ["checklist.installation.complete", "daily_reports.closed"],
+      "documents": ["daily_report_pdf", "change_orders"],
+      "auto_tasks": ["assign_crew", "sync_calendar", "open_checklist", "collect_photos"]
+    },
+    {
+      "id": "S09", "key": "inspection", "name_he": "בדיקת בודק",
+      "owner_role": "owner", "sla_days": 7, "profiles": "ALL",
+      "entry": ["S08.done"],
+      "exit": ["inspection.report.signed", "inspection.defects.open == 0"],
+      "documents": ["inspector_report_pdf", "iec62446_tests"],
+      "auto_tasks": ["select_inspector_type_by_rule", "book_inspector", "generate_test_report", "defects_to_tasks"]
+    },
+    {
+      "id": "S10", "key": "grid_connection", "name_he": "חיבור מונה חח\"י",
+      "owner_role": "pm", "sla_days": null, "sla_source": "research/01-iec-process.md", "profiles": "ALL",
+      "entry": ["S09.done"],
+      "exit": ["grid.meter.installed", "grid.operation_approved"],
+      "documents": ["iec_final_pack", "as_made_set"],
+      "auto_tasks": ["fill_final_forms", "generate_as_made", "schedule_iec_inspection", "record_meter"]
+    },
+    {
+      "id": "S11", "key": "handover", "name_he": "הפעלה ומסירה",
+      "owner_role": "owner", "sla_days": 14, "profiles": "ALL",
+      "entry": ["S10.done"],
+      "exit": ["handover.signed_by_customer", "invoice.final.issued", "monitoring.link.active"],
+      "documents": ["handover_pack_pdf", "warranty_cards", "invoice_final"],
+      "auto_tasks": ["commissioning_checklist", "merge_handover_pack", "register_warranties", "create_monitoring_link", "verify_first_sync"]
+    },
+    {
+      "id": "S12", "key": "om", "name_he": "ניטור ותחזוקה",
+      "owner_role": "service", "sla_days": null, "profiles": "ALL", "terminal": true,
+      "entry": ["S11.done"],
+      "exit": [],
+      "documents": ["periodic_inspection_pdf", "service_reports"],
+      "auto_tasks": ["alerts_to_tickets", "periodic_inspection_schedule", "contract_renewal_reminder"]
+    }
+  ],
+  "transitions_rules": [
+    "מעבר קדימה רק כש-exit מתקיים; המנוע מציג את הרשימה החסרה",
+    "כל מעבר נרשם ב-project_events עם actor, timestamp, reason",
+    "blocked חייב reason + owner",
+    "חזרה לאחור מותרת (למשל S09→S08 על ליקויים) ומתועדת כ-rollback event",
+    "כל auto_task הוא job בלדג'ר הכוורת; outbound ללקוח/ספק תמיד requiresHumanPick=true"
+  ]
+}
