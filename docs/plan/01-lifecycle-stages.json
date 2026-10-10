@@ -1,6 +1,6 @@
 {
-  "$comment": "B.E.E Engine — הגדרת מכונת המצבים של פרויקט כנתונים (טיוטה 0.1). statuses משותפים לכל שלב. exit = תנאים שחייבים להתקיים למעבר לשלב הבא. documents = סוגי Document שנוצרים בשלב. sla_days = יעד לסיום השלב. profiles = באילו פרופילי אסדרה השלב נדרש (ALL או רשימה).",
-  "version": "0.2",
+  "$comment": "B.E.E Engine — הגדרת מכונת המצבים של פרויקט כנתונים (גרסה 0.3). statuses משותפים לכל שלב. exit = תנאים שחייבים להתקיים למעבר לשלב הבא. documents = סוגי Document שנוצרים בשלב. sla_days = יעד לסיום השלב. profiles = באילו פרופילי אסדרה השלב נדרש (ALL או רשימה). sla_days = ימי עבודה (business_calendar). profiles: המפתח הקנוני הוא snake_case (כמו בתוכנית האב §3 ובתבניות ההגשה); legacy_code = הקוד הישן מגרסה 0.1–0.2. roles: owner_role הוא תפקיד תפעולי; canonical_role ממפה לרשימת התפקידים של תוכנית האב §15.",
+  "version": "0.3",
   "statuses": [
     "open",
     "in_progress",
@@ -12,12 +12,30 @@
     "done"
   ],
   "profiles": {
-    "RES_LE_15": "ביתי עד 15 kW",
-    "COM_LE_100": "עסקי/חקלאי 15–100 kW",
-    "COM_LE_630": "100–630 kW",
-    "LARGE_GT_630": "מעל 630 kW",
-    "BESS_ADD": "תוספת אגירה למתקן קיים",
-    "HISTORIC_DIST": "מחלק היסטורי (קיבוץ/מושב)"
+    "residential_le15": {
+      "name_he": "ביתי עד 15 kW",
+      "legacy_code": "RES_LE_15"
+    },
+    "commercial_15_100": {
+      "name_he": "עסקי/חקלאי 15–100 kW",
+      "legacy_code": "COM_LE_100"
+    },
+    "commercial_100_630": {
+      "name_he": "100–630 kW",
+      "legacy_code": "COM_LE_630"
+    },
+    "mv_gt630": {
+      "name_he": "מעל 630 kW (מתח גבוה)",
+      "legacy_code": "LARGE_GT_630"
+    },
+    "bess_add": {
+      "name_he": "תוספת אגירה למתקן קיים",
+      "legacy_code": "BESS_ADD"
+    },
+    "historic_distributor": {
+      "name_he": "מחלק היסטורי (קיבוץ/מושב)",
+      "legacy_code": "HISTORIC_DIST"
+    }
   },
   "stages": [
     {
@@ -39,7 +57,8 @@
       "documents": [],
       "auto_tasks": [
         "schedule_survey"
-      ]
+      ],
+      "customer_visible_label_he": "קיבלנו את פנייתך"
     },
     {
       "id": "S02",
@@ -60,7 +79,8 @@
       "auto_tasks": [
         "link_survey_to_project",
         "request_electric_bill"
-      ]
+      ],
+      "customer_visible_label_he": "סקר אתר"
     },
     {
       "id": "S03",
@@ -86,7 +106,8 @@
         "generate_boq",
         "generate_quote",
         "draft_outbound_quote"
-      ]
+      ],
+      "customer_visible_label_he": "הצעת מחיר בהכנה"
     },
     {
       "id": "S04",
@@ -110,7 +131,8 @@
         "followup_every_3_days",
         "generate_contract",
         "create_schedule_from_template"
-      ]
+      ],
+      "customer_visible_label_he": "הצעה/הסכם לאישורך"
     },
     {
       "id": "S05",
@@ -139,7 +161,9 @@
         "track_fee_payment",
         "ingest_receipt",
         "remind_waiting_iec_business_days"
-      ]
+      ],
+      "customer_visible_label_he": "בקשה לחברת החשמל",
+      "notes": "לפי דוח 01 אין פרופיל שמדלג על ההגשה המקדימה; profile.pre_application_not_required נשאר כדגל לאימות (ברירת מחדל: נדרש)."
     },
     {
       "id": "S06",
@@ -171,7 +195,8 @@
         "run_eplan",
         "convert_dwg",
         "diff_bom_vs_quote"
-      ]
+      ],
+      "customer_visible_label_he": "תכנון הנדסי"
     },
     {
       "id": "S07",
@@ -193,7 +218,8 @@
         "split_bom_by_supplier",
         "create_po",
         "track_deliveries"
-      ]
+      ],
+      "customer_visible_label_he": "הזמנת ציוד"
     },
     {
       "id": "S08",
@@ -220,7 +246,8 @@
         "sync_calendar",
         "open_checklist",
         "collect_photos"
-      ]
+      ],
+      "customer_visible_label_he": "התקנה"
     },
     {
       "id": "S09",
@@ -245,7 +272,8 @@
         "book_inspector",
         "generate_test_report",
         "defects_to_tasks"
-      ]
+      ],
+      "customer_visible_label_he": "בדיקת בודק"
     },
     {
       "id": "S10",
@@ -275,7 +303,8 @@
         "record_meter",
         "register_tariff_track_portal",
         "operating_permit_if_required"
-      ]
+      ],
+      "customer_visible_label_he": "חיבור מונה חברת החשמל"
     },
     {
       "id": "S11",
@@ -304,7 +333,8 @@
         "create_monitoring_link",
         "verify_first_sync",
         "collect_iec_data_consent"
-      ]
+      ],
+      "customer_visible_label_he": "מסירה והפעלה"
     },
     {
       "id": "S12",
@@ -326,7 +356,8 @@
         "alerts_to_tickets",
         "periodic_inspection_schedule",
         "contract_renewal_reminder"
-      ]
+      ],
+      "customer_visible_label_he": "ניטור ותחזוקה"
     }
   ],
   "transitions_rules": [
@@ -335,5 +366,40 @@
     "blocked חייב reason + owner",
     "חזרה לאחור מותרת (למשל S09→S08 על ליקויים) ומתועדת כ-rollback event",
     "כל auto_task הוא job בלדג'ר הכוורת; outbound ללקוח/ספק תמיד requiresHumanPick=true"
-  ]
+  ],
+  "sla_unit": "business_days",
+  "roles": {
+    "owner": {
+      "canonical": "owner",
+      "name_he": "ברק (בעלים/מהנדס)"
+    },
+    "sales": {
+      "canonical": "owner",
+      "name_he": "מכירות (כיום ברק)"
+    },
+    "surveyor": {
+      "canonical": "surveyor",
+      "name_he": "סוקר"
+    },
+    "pm": {
+      "canonical": "pm",
+      "name_he": "מנהל פרויקט"
+    },
+    "procurement": {
+      "canonical": "pm",
+      "name_he": "רכש (כיום מנהל פרויקט)"
+    },
+    "foreman": {
+      "canonical": "technician",
+      "name_he": "מנהל עבודה (טכנאי בכיר)"
+    },
+    "service": {
+      "canonical": "technician",
+      "name_he": "שירות/תחזוקה"
+    },
+    "engineer": {
+      "canonical": "engineer",
+      "name_he": "מהנדס/מתכנן"
+    }
+  }
 }

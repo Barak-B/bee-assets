@@ -32,7 +32,7 @@ description: Use when working on the B.E.E Engine (PV contractor lifecycle CRM, 
 1. `PLAN_DIR/00-master-plan.md` — §0 (תקציר), §2 (עקרונות), §3 (שלבים), §4.2 (מבנה קוד), §5 (ישויות). את §6–§15 קוראים לפי הצורך של החבילה.
 2. `PLAN_DIR/01-lifecycle-stages.json` — מכונת המצבים כנתונים (S01–S12, statuses, profiles, exit, auto_tasks).
 3. `PLAN_DIR/specs/16-execution-plan.md` — למצוא את חבילת העבודה (`WP-M<n>-<nn>`) שהמשתמש ביקש: תיאור, קלט, פלט, קבלה, טסטים, תלויות, סיכונים.
-4. המפרט שהחבילה מפנה אליו (`PLAN_DIR/specs/10…15`). אם הקובץ/הסעיף לא קיים עדיין — המקור הסמכותי הוא הסעיף בתוכנית האב שצוין לצידו; לציין זאת ב-STATUS.
+4. המפרט שהחבילה מפנה אליו (`PLAN_DIR/specs/10…18`). אם הקובץ/הסעיף לא קיים עדיין — המקור הסמכותי הוא הסעיף בתוכנית האב שצוין לצידו; לציין זאת ב-STATUS.
 5. `PLAN_DIR/specs/17-local-setup.md` — סביבה, פורטים, מלכודות (§D), לולאת deploy (§E), בטיחות נתונים (§F).
 6. רק כשצריך: `PLAN_DIR/research/0x-*.md` (מקורות ורמות אימות), `platform/schema/job.schema.json` (לדג'ר/שער אמון), `PLAN_DIR/rules/`, `PLAN_DIR/schema/`, `PLAN_DIR/templates/`.
 7. בקוד: `CLAUDE.md` של bee-live, `docs/ops-runbook.md`, `docs/dev-local.md`, והמודול הקיים שנוגעים בו.

@@ -20,7 +20,7 @@
 | `E:\bee-live\docs\engine-plan\` | **עותק מסונכרן** של `E:\bee-assets\docs\plan\` (ראו A.2) — כדי שסשן Claude Code שפתוח על bee-live יראה את המפרטים בלי לצאת מהמאגר | לא submodule, לא junction (ראו D) |
 | `E:\bee-build` | הקו הישן (SQLite) עם מחולל הדוחות ב-`merge/neri-phase1`. **קריאה בלבד** עד הפורט ב-M5 (WP-M5-05). לא להריץ ממנו שרת במקביל על אותם פורטים | handoff §2, §3 |
 | `E:\bee-status\` | קבצי סטטוס של משימות ה-PC (`jobs.json`, `prod-alert-pending.txt`) | handoff §3 |
-| `E:\bee-cad\` (חדש) | עבודה של ה-worker: `jobs\`, `out\`, `logs\`, `cad-worker.log` | מפרט 15, B.6 |
+| `E:\bee-cad\` (חדש) | עבודה של ה-worker: `jobs\`, `out\`, `logs\`, `cad-worker.log` | מפרט 14, B.6 |
 | `C:\Users\<user>\.claude\skills\` | סקילים של Claude Code: `electrical-drawing-sets\` (כולל `generator\eplan-generator.zip`), `bee-block-library\`, `bee-engine\` (חדש, מפרט 18) | HANDOFF ספריית בלוקים §1 |
 | `C:\Users\<user>\.claude\projects\...\memory\` | זיכרון פרויקט של Claude Code (`project_bee_live_control.md` וכו') | handoff §4 |
 | `E:\bee-live\services\cad\eplan\` | **eplan vendored**: תוכן ה-zip (113 קבצים, Python ≥3.11) כחבילה בתוך השירות. הסקיל נשאר ב-`.claude\skills` ל"שיטת העבודה"; הקוד חי במאגר | WP-M4-01 |
@@ -75,7 +75,7 @@ pg-boss משתמש **באותו Postgres** (schema `pgboss`) — אין Redis, �
 **קיימים ב-bee-live (לפי ה-handoff):**
 `DATABASE_URL` · `PORT` (מקומי 3021) · `JWT_SECRET` (**≥ 32 תווים; מומלץ 64** — אחרת השרת מת בשקט, D.4) · `BEE_BACKGROUND_WORKERS` (`off` מקומית) · `API_PROXY_TARGET` (ל-Vite) · `SOLAREDGE_API_VERSION` · `PUPPETEER_SKIP_DOWNLOAD` (=1 בהתקנה מקומית אם לא מריצים docgen מקומית).
 
-**חדשים למנוע (מוצעים; שם סופי במפרט 10/13/15):**
+**חדשים למנוע (מוצעים; שם סופי במפרט 10/12/14):**
 
 | קבוצה | שמות |
 |---|---|
@@ -129,7 +129,7 @@ Caddy: route חדש לכל אפליקציה (`apps/portal` → `portal.…`), ו
 
 ### B.6 התקנת worker ה-CAD על Windows (מחשב המשרד)
 
-(פירוט מלא במפרט 15; כאן צעדי ההתקנה.)
+(פירוט מלא במפרט 14; כאן צעדי ההתקנה.)
 
 1. **רישיון ו-API:** GstarCAD 2027 מותקן ומופעל (מי מחזיק רישיון — §17(3) בתוכנית האב). לבדוק איזה API זמין: .NET (`NETLOAD` של DLL שלנו) או Python (GstarCAD Python API / `cad-pyrx`) — **V19, לא אומת**. להתחיל בבדיקה ידנית של 5 דקות: INSERT בלוק דינמי מ-`bee-block-library\dynamic\_test_in_autocad\…` ולראות גריפ visibility (HANDOFF §3).
 2. **חשבון ייעודי:** משתמש Windows מקומי `bee-cad` (לא admin), עם GstarCAD מופעל בפרופיל שלו; תיקיות `E:\bee-cad\{jobs,out,logs}` עם הרשאות לאותו משתמש.

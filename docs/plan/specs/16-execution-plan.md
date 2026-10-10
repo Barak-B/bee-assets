@@ -18,22 +18,18 @@
 - **מסלול מקביל מחוץ לאבני הדרך:** סיום אדפטר SolarEdge V2 (דדליין קשיח 01–03.11.2026 לפי ה-handoff) וחיבור Hermes מחדש — לא תלויים במנוע ואסור שהמנוע יעכב אותם (§12–§13).
 - **פערי אימות V1–V20** לא חוסמים את M0–M1 כמעט בכלל; הם חוסמים חלקים מוגדרים ב-M2–M6 (§15). כלל: כל מה שנכנס לקוד לפני שהפער נסגר נכנס כ**נתון בטבלה עם `verification: unverified`**, לא כקוד.
 
-### 0.1 מפרטים נלווים (נכתבים במקביל — שמות קבצים משוערים)
+### 0.1 מפרטים נלווים
 
-המפרטים 10–15 נכתבים במקביל על ידי סוכנים אחרים תחת `docs/plan/specs/`. השמות להלן **משוערים** ויש ליישר אותם ברגע שהקבצים קיימים (ראו "אי-התאמות" בסוף):
-
-| מס' | שם משוער | מה מכסה |
+| מס' | קובץ | מה מכסה |
 |---|---|---|
-| 10 | `10-data-model.md` | סכמת Postgres, ישויות ליבה (§5 בתוכנית האב), migrations |
-| 11 | `11-state-machine-jobs.md` | XState v5, `project_events`, pg-boss, לדג'ר jobs, שער אמון |
-| 12 | `12-catalog-pricing-quotes.md` | קטלוג, מחירונים, ערכות, PricingRule, QuoteVersion, ROI |
-| 13 | `13-documents-docgen.md` | services/docgen, XLSX/PDF/DOCX, Document immutability, R2 |
-| 14 | `14-submissions-iec.md` | פרופילי אסדרה, Submission templates, טפסים, SLA |
-| 15 | `15-cad-service.md` | services/cad (eplan, pvlib, layout), Windows CAD worker, בלוקים דינמיים |
+| 10 | `10-data-model.md` + `schema/engine.sql` | ישויות ליבה (§5 בתוכנית האב), enums, RLS, triggers, DDL שנבדק על Postgres 16 |
+| 11 | `11-projects-workflow-spec.md` | XState v5, `project_events`, משימות/SLA, pg-boss, לו"זים/CPM, יומן Google, תקשורת ושער אמון, פורטל, סוכני AI, הרשאות, דיווח בוקר |
+| 12 | `12-cpq-documents-spec.md` | קטלוג, מחירונים, ערכות, מנוע תמחור, שורות רגולטוריות, ROI, services/docgen (XLSX/PDF/DOCX), חתימה, הנה"ח |
+| 13 | `13-submissions-regulation-spec.md` | פרופילי אסדרה, Submission steps, חבילות מסמכים, SLA בימי עבודה, מנוע כללים, מחלק היסטורי |
+| 14 | `14-cad-design-service-spec.md` | services/cad (eplan, pvlib, layout), גיאומטריה, Windows CAD worker, DWG, רינדור, שערי איכות |
+| 15 | `15-inspection-handover-monitoring-spec.md` | ביצוע, בדיקת בודק 62446-1, חיבור מונה, מסירה, MonitoringLink, אדפטרים, KPI, תחזוקה, מיגרציה מ-bee-live |
 
-כאשר חבילת עבודה מפנה ל"מפרט 12 §x" — הכוונה למסמך המקביל; אם הסעיף לא קיים עדיין, המקור הסמכותי הוא תוכנית האב (הסעיף מצוין לצידו).
-
----
+**הערת מספור:** המפרט נכתב במקביל למפרטים 10–15 עם שמות משוערים; ההפניות "מפרט NN" בגוף המסמך יושרו לקבצים בטבלה. הפניות לנושאי בדיקה/מסירה/ניטור (שלא היו ברשימה המשוערת) שייכות למפרט 15.
 
 ## 1. עקרונות הביצוע (חלים על כל חבילה)
 
@@ -92,7 +88,7 @@
 ```
 WP-M0-03 — <שם>
 תיאור:      מה בונים, במשפט–שניים.
-קלט:        מפרט/סעיף (מספר מפרט משוער + סעיף תוכנית אב).
+קלט:        מפרט/סעיף (מספר מפרט + סעיף תוכנית אב).
 פלט:        קבצים/טבלאות/endpoints/מסכים.
 קבלה:       תנאים ניתנים לבדיקה (checkbox).
 טסטים:      מה כותבים (unit / integration / E2E / snapshot).
@@ -144,7 +140,7 @@ WP-M0-03 — <שם>
 
 ### WP-M0-05 — מודול מסמכים (R2 + hash + נעילה)
 - **תיאור:** `documents` (project, kind, rev, file key, sha256, `generated_from` jsonb, `signed_by`, `sent_at`, `supersedes`), העלאה/הורדה presigned, S3-compatible client (R2 ב-prod, MinIO ב-dev/staging), trigger "לעולם לא נמחק" ונעילה אחרי `sent_at`/`signed_by`.
-- **קלט:** מפרט 13; תוכנית האב §5 (Document), §2(5).
+- **קלט:** מפרט 12; תוכנית האב §5 (Document), §2(5).
 - **פלט:** `modules/documents`, compose service `minio` ל-dev.
 - **קבלה:** [ ] העלאה מחשבת sha256 ומאמתת · [ ] DELETE נדחה · [ ] UPDATE על מסמך שנשלח נדחה · [ ] presigned URL פג תוך זמן מוגדר.
 - **טסטים:** integration מול MinIO; טסט trigger.
@@ -288,19 +284,19 @@ WP-M0-03 — <שם>
 
 ### WP-M2-02 — `services/docgen` (container)
 - **תיאור:** שירות Node נפרד: Puppeteer/Chromium (או Playwright), גופני Rubik + Noto Sans Hebrew מותקנים, ExcelJS, docxtemplater, LibreOffice headless, pypdf (python slim) למיזוג; API פנימי `POST /render/{pdf,xlsx,docx}`; browser pool עם סגירה נקייה (לקח מה-handoff: `closeBrowserPool()`); compose ב-dev/staging/prod.
-- **קלט:** מפרט 13; מחקר 04; תוכנית האב §4.1. **פלט:** `services/docgen/`, `Dockerfile`, compose.
+- **קלט:** מפרט 12; מחקר 04; תוכנית האב §4.1. **פלט:** `services/docgen/`, `Dockerfile`, compose.
 - **קבלה:** [ ] PDF עברי עם `<bdi>` ומספרים מתרנדר נכון (snapshot) · [ ] השירות לא דולף תהליכי Chromium אחרי 100 רינדורים · [ ] לא נגיש מבחוץ (רשת docker בלבד).
 - **טסטים:** snapshot (pixelmatch) ל-3 תבניות; load test קצר. **הערכה:** 3 ימים. **בעלים:** Neri (+Claude Code). **תלויות:** —. **סיכונים:** RAM ב-VPS; Chromium בקונטיינר.
 
 ### WP-M2-03 — כתב כמויות XLSX (ExcelJS)
 - **תיאור:** גיליון סיכום + גיליון לפרק במבנה המפרט הכללי פרק 08 (`08.01.0010` כטקסט) + פרקי PV; נוסחאות חיות + cached values מהמנוע; `rightToLeft`; definedNames; הגנה; שתי תצוגות (לקוח/פנימי); CSV.
-- **קלט:** מפרט 13; מחקר 04 §4.6 (דוגמת 50 kWp). **פלט:** `services/docgen/templates/boq`, `Document kind=boq_xlsx`.
+- **קלט:** מפרט 12; מחקר 04 §4.6 (דוגמת 50 kWp). **פלט:** `services/docgen/templates/boq`, `Document kind=boq_xlsx`.
 - **קבלה:** [ ] פתיחה ב-Excel ללא "תיקון" · [ ] סה"כ בנוסחה = סה"כ המנוע · [ ] תצוגת לקוח ללא עמודות עלות/רווח (נבדק אוטומטית).
 - **טסטים:** קריאה חוזרת עם ExcelJS ובדיקת ערכים; snapshot מבני. **הערכה:** 4 ימים. **בעלים:** Claude Code. **תלויות:** WP-M2-01, 02; §19(1) לכיול.
 
 ### WP-M2-04 — הצעת מחיר PDF (Chromium)
 - **תיאור:** תבנית ממותגת RTL לפי תוכנית האב §6.3 (שער עם תמונת גג, 3 מספרים, מערכת, תפוקה, כלכלה, מפרט, היקף, מחיר, תשלומים, אחריות, החרגות, תוקף, חתימה). כל נתון `unverified` מסומן.
-- **קלט:** מפרט 13; §6.3. **פלט:** תבנית + `Document kind=quote_pdf`.
+- **קלט:** מפרט 12; §6.3. **פלט:** תבנית + `Document kind=quote_pdf`.
 - **קבלה:** [ ] ברק מאשר שהתבנית "נראית כמו שלנו" מול 2–3 הצעות קיימות · [ ] header/footer עם מספר גרסה ו-sha256 מקוצר.
 - **טסטים:** snapshot; בדיקת bidi עם Claude-vision (מחקר 07) כצעד ידני. **הערכה:** 4 ימים. **בעלים:** Claude Code + Barak. **תלויות:** WP-M2-02, 05.
 
@@ -312,7 +308,7 @@ WP-M0-03 — <שם>
 
 ### WP-M2-06 — Design-lite (מצב מהיר)
 - **תיאור:** kWp יעד + מודול/ממיר מהקטלוג → מספר מודולים, string sizing (Voc_cold/Vmp_hot/ΣIsc — לוגיקת eplan, מצב מהיר) בלי פריסת גג גרפית (זו M4). שומר `Design` ראשוני (rev 0) שמזין ערכות ו-ROI.
-- **קלט:** מפרט 15 (מצב מהיר); תוכנית האב §8.2. **פלט:** `modules/design` (שלד), קריאה ל-`services/cad/quick`.
+- **קלט:** מפרט 14 (מצב מהיר); תוכנית האב §8.2. **פלט:** `modules/design` (שלד), קריאה ל-`services/cad/quick`.
 - **קבלה:** [ ] מחרוזת מחוץ לחלון MPPT נחסמת עם הסבר · [ ] פלט מזין ערכה ו-ROI.
 - **טסטים:** unit מול מקרי eplan קיימים. **הערכה:** 3 ימים. **בעלים:** Claude Code. **תלויות:** M1. **הערה:** ראו אי-התאמה (פריסת גג ב-S03 מול M4).
 
@@ -324,7 +320,7 @@ WP-M0-03 — <שם>
 
 ### WP-M2-08 — חוזה + חתימה click-to-accept
 - **תיאור:** DOCX (docxtemplater) מ-QuoteVersion+Customer → PDF (LibreOffice); דף חתימה: OTP SMS, חתימה מצוירת, sha256 של ה-PDF, IP/UA, חותמת זמן, דף תעודה מצורף; `Signature` + נעילת Document. שלב ב' (Documenso/PAdES) מחוץ ל-M2.
-- **קלט:** מפרט 13; מחקר 04 (חתימה); החלטה §17(5); V17. **פלט:** `modules/contracts`, דף חתימה (ב-`apps/portal` מינימלי או route ציבורי עם token).
+- **קלט:** מפרט 12; מחקר 04 (חתימה); החלטה §17(5); V17. **פלט:** `modules/contracts`, דף חתימה (ב-`apps/portal` מינימלי או route ציבורי עם token).
 - **קבלה:** [ ] OTP שגוי ×3 נועל · [ ] PDF חתום = sha256 שנשמר · [ ] audit trail מלא בציר הזמן.
 - **טסטים:** E2E חתימה; unit hash. **הערכה:** 5 ימים. **בעלים:** Neri. **תלויות:** WP-M2-02, 07; §19(5) (חוזה Word נוכחי). **סיכונים:** תוקף משפטי (V17) — "לאימות עם עו"ד" לפני שימוש בחוזה אמיתי.
 
@@ -358,19 +354,19 @@ WP-M0-03 — <שם>
 
 ### WP-M3-01 — פרופילי אסדרה + תבניות Submission כנתונים
 - **תיאור:** טבלת `regulatory_profiles` (seed מ-`01-lifecycle-stages.json.profiles`), `submission_templates` (לכל פרופיל: צעדים, מסמכים נדרשים, אגרות, חתומים, SLA בימי עבודה, "ממתין ל"), עם `verification` לכל שדה. שני מסלולים: IEC ו-historic distributor (V11).
-- **קלט:** מפרט 14; תוכנית האב §9; מחקר 01. **פלט:** seed YAML/JSON ב-`docs/plan/templates/` → טבלאות; מסך עריכה.
+- **קלט:** מפרט 13; תוכנית האב §9; מחקר 01. **פלט:** seed YAML/JSON ב-`docs/plan/templates/` → טבלאות; מסך עריכה.
 - **קבלה:** [ ] שינוי תבנית לא דורש deploy · [ ] כל SLA נושא מקור (V1 פתוח → `unverified`).
 - **טסטים:** data test לשלמות תבניות. **הערכה:** 3 ימים. **בעלים:** Claude Code + Barak (תוכן). **תלויות:** M0. **סיכונים:** V1/V3/V5/V6 פתוחים — התבנית נבנית מהניסיון של ברק (§19(4), (6)) ומסומנת.
 
 ### WP-M3-02 — מודול submissions
 - **תיאור:** Submission (iec|historic|authority|fire), SubmissionStep (`status`, `owner`, `documents[]`, `fee{amount,receipt,paidAt}`, `externalRef`, `dueAt` בימי עבודה, `correspondence[]`), יצירה אוטומטית מפרופיל ב-S04→S05 וב-S09→S10, job `remind_waiting_iec_business_days`.
-- **קלט:** מפרט 14; תוכנית האב §9.2. **פלט:** `modules/submissions`.
+- **קלט:** מפרט 13; תוכנית האב §9.2. **פלט:** `modules/submissions`.
 - **קבלה:** [ ] `dueAt` מדלג על חגים · [ ] תשובת מחלק חיובית = תנאי יציאה S05 · [ ] "לא נדרש" לפי פרופיל מדלג.
 - **טסטים:** integration; unit ל-dueAt. **הערכה:** 4 ימים. **בעלים:** Neri. **תלויות:** WP-M3-01, M0-08.
 
 ### WP-M3-03 — מילוי טפסי PDF וחבילת הגשה
 - **תיאור:** טופס 22-8-22 (ועתידיים) כ-PDF forms ממולאים מהרשומה (pdf-lib/pypdf ב-docgen), מיזוג לחבילה אחת לפי רשימת המסמכים בתבנית, רשימת חוסרים.
-- **קלט:** מפרט 14; §19(4), (6); V5. **פלט:** `services/docgen/forms/`, `Document kind=iec_application_pack`.
+- **קלט:** מפרט 13; §19(4), (6); V5. **פלט:** `services/docgen/forms/`, `Document kind=iec_application_pack`.
 - **קבלה:** [ ] טופס ממולא תואם ויזואלית לטופס שברק הגיש · [ ] חוסר מסמך חוסם "מוכן להגשה".
 - **טסטים:** snapshot PDF; unit למיפוי שדות. **הערכה:** 3 ימים. **בעלים:** Claude Code. **תלויות:** WP-M2-02. **סיכונים:** הטופס ישתנה (V5) — מיפוי שדות כנתון.
 
@@ -410,37 +406,37 @@ WP-M0-03 — <שם>
 
 ### WP-M4-01 — `services/cad` container מלא
 - **תיאור:** Python ≥3.11; eplan vendored (מה-zip `electrical-drawing-sets/generator/eplan-generator.zip`, 113 קבצים) כחבילה; pvlib, shapely, ezdxf 1.4.x, PyMuPDF, python-bidi, גופנים (Rubik, heb.shx); API `POST /jobs/eplan`, `POST /jobs/layout`, `POST /jobs/ingest-drawing`; מריץ כ-consumer של pg-boss (או HTTP + polling); תוצרים ל-documents.
-- **קלט:** מפרט 15; תוכנית האב §8.1, §8.3; מחקר 07. **פלט:** `services/cad/`, Dockerfile, compose.
+- **קלט:** מפרט 14; תוכנית האב §8.1, §8.3; מחקר 07. **פלט:** `services/cad/`, Dockerfile, compose.
 - **קבלה:** [ ] `pytest` של eplan ירוק בתוך הקונטיינר · [ ] YAML דוגמה מהסקיל מפיק E-00…E-08 DXF+PDF+PNG+SVG+BOM · [ ] `ezdxf audit` 0/0/0.
 - **טסטים:** pytest קיים + smoke API. **הערכה:** 4 ימים. **בעלים:** Claude Code (+Barak מכיר את eplan). **תלויות:** —. **סיכונים:** גודל image; זמן ריצה — להגביל במקביליות.
 
 ### WP-M4-02 — Design + spec YAML אוטומטי
 - **תיאור:** `Design` (spec YAML rev + hash, layout geometry, status), מחולל spec מ-Project (כתובת, חיבור, פרופיל) + Survey (לוח, מונה, תוואי) + Catalog (נתוני דף נתונים עם מקור) + החלטות ברק; כל לא-מאומת = `# VERIFY`; גרסאות; diff בין revs.
-- **קלט:** מפרט 15; תוכנית האב §8.1(1); reference "מפרט YAML" בסקיל. **פלט:** `modules/design`, `spec-builder.ts`.
+- **קלט:** מפרט 14; תוכנית האב §8.1(1); reference "מפרט YAML" בסקיל. **פלט:** `modules/design`, `spec-builder.ts`.
 - **קבלה:** [ ] spec לפרויקט אמיתי עובר את ולידטור ה-eplan · [ ] כל שדה `# VERIFY` מופיע ברשימת verify ב-UI.
 - **טסטים:** unit על 3 פרויקטים (ביתי/עסקי/BESS). **הערכה:** 4 ימים. **בעלים:** Claude Code. **תלויות:** WP-M4-01, M1, M2-06.
 
 ### WP-M4-03 — קליטת תוכנית קונסטרוקטור
 - **תיאור:** (א) DWG/DXF (כמו NESPAH-543-05): DWG→DXF דרך ה-worker (WP-M4-06) או קלט DXF ישיר; חילוץ `INSERT`/`LWPOLYLINE` לפי שכבות (ezdxf) → פוליגוני גג/הפרעות/מודולים; (ב) PDF וקטורי: PyMuPDF `get_drawings()`; (ג) רסטר: Claude vision + נקודות בקרה אפיניות → תמיד לאישור. נשמר ב-`roof/layout` של ה-spec.
-- **קלט:** מפרט 15; תוכנית האב §8.1(2); מחקר 07. **פלט:** `services/cad/ingest/`, מסך "אשר גיאומטריה".
+- **קלט:** מפרט 14; תוכנית האב §8.1(2); מחקר 07. **פלט:** `services/cad/ingest/`, מסך "אשר גיאומטריה".
 - **קבלה:** [ ] NESPAH-543-05 נקלט: גג, מודולים, סקאלה · [ ] PDF וקטורי של אותו סט נותן אותה גיאומטריה ±1%.
 - **טסטים:** fixtures (DXF, PDF, PNG מוסווים). **הערכה:** 5 ימים. **בעלים:** Claude Code. **תלויות:** WP-M4-01. **סיכונים:** שכבות לא עקביות בין קונסטרוקטורים — מיפוי שכבות כנתון לכל קונסטרוקטור.
 
 ### WP-M4-04 — עורך גג על אורתופוטו + אלגוריתם פריסה
 - **תיאור:** UI: מפה (govmap XYZ/WMS או MapTiler), ציור פוליגון גג/הפרעות/אזימוט/שיפוע, קליטת תוצאות WP-M4-03; שרת (python): רוטציה לאזימוט, גריד portrait/landscape, pitch משורות מצל חורף, `contains` מול גג והפרעות, קיבוץ למחרוזות לפי פאה, string sizing (eplan). תפוקה מ-WP-M2-05 עם horizon.
-- **קלט:** מפרט 15; תוכנית האב §8.2; מחקר 03. **פלט:** `apps/web/src/pages/design/roof-editor`, `services/cad/layout/`.
+- **קלט:** מפרט 14; תוכנית האב §8.2; מחקר 03. **פלט:** `apps/web/src/pages/design/roof-editor`, `services/cad/layout/`.
 - **קבלה:** [ ] גג מלבני 10×20 מ' עם הפרעה אחת מניב פריסה שברק מאשר · [ ] מספר מודולים ≤ תיאורטי · [ ] שמירה כ-GeoJSON ב-Design.
 - **טסטים:** unit גיאומטריה (shapely) עם מקרי קצה; Playwright לעורך. **הערכה:** 6 ימים. **בעלים:** Neri (UI) + Claude Code (אלגוריתם). **תלויות:** WP-M4-02; V15 (כיסוי Google Solar / רישוי מפ"י — לא חוסם: govmap ציבורי). **סיכונים:** דיוק אורתופוטו; תמיד "לאימות בשטח".
 
 ### WP-M4-05 — הרצת eplan כ-job + STATUS/RESULT/NEXT
 - **תיאור:** job → `services/cad` → `ALL CHECKS PASS`/חסימות → CalcReport, DrawingSet (DXF+PDF+PNG+SVG), BOM CSV → Documents עם `generated_from{design_rev, rules_snapshot}`; מסך verify עם `owner_accepted`; תנאי יציאה S06.
-- **קלט:** מפרט 15; תוכנית האב §8.1(3); `01-lifecycle-stages.json` S06. **פלט:** `modules/design/run.ts`, מסך "סט rev".
+- **קלט:** מפרט 14; תוכנית האב §8.1(3); `01-lifecycle-stages.json` S06. **פלט:** `modules/design/run.ts`, מסך "סט rev".
 - **קבלה:** [ ] חסימת ולידטור מוצגת עם כלל ומקור · [ ] אין יציאה מ-S06 עם verify לא ריק אלא `owner_accepted` מתועד.
 - **טסטים:** integration מלא על spec דוגמה; E2E. **הערכה:** 4 ימים. **בעלים:** Claude Code. **תלויות:** WP-M4-01, 02, M0-04.
 
 ### WP-M4-06 — `workers/cad-windows` (GstarCAD)
 - **תיאור:** worker על מחשב המשרד (Windows, GstarCAD 2027): poller שמושך job (`GET /cad-jobs/next`, token, דרך Tailscale כמו `/status`), מוריד DXF + job JSON, מריץ סקריפט GstarCAD (.NET/Python API או cad-pyrx — V19): החלפת placeholder בבלוק דינמי מהספרייה (`bee-block-library/dynamic`) + `DynamicBlockReferenceProperty`, AUDIT, PURGE, SAVEAS DWG 2018, PLOT לפי CTB → PDF רשמי; העלאה; heartbeat ל-Uptime Kuma; לוג. התקנה כמשימה מתוזמנת/שירות של משתמש ייעודי (מפרט 17 §B.6). **Fallback:** שיטוח 152 הבלוקים הדינמיים לווריאנטים סטטיים (ezdxf) — אם V19 נכשל.
-- **קלט:** מפרט 15; תוכנית האב §8.3; מחקר 07; HANDOFF ספריית בלוקים (33 בלוקים לבדיקה). **פלט:** `workers/cad-windows/{poller.py, gstar_job.py|.cs, install.ps1, README}`, `modules/cad-jobs`.
+- **קלט:** מפרט 14; תוכנית האב §8.3; מחקר 07; HANDOFF ספריית בלוקים (33 בלוקים לבדיקה). **פלט:** `workers/cad-windows/{poller.py, gstar_job.py|.cs, install.ps1, README}`, `modules/cad-jobs`.
 - **קבלה:** [ ] DXF מהסקיל → DWG 2018 נפתח ב-GstarCAD עם בלוקים דינמיים פעילים (גריפ visibility) · [ ] PDF מודפס לפי CTB תואם PNG של ezdxf (pixelmatch ≤ סף) · [ ] worker מתאושש אחרי ריסטארט של ה-PC · [ ] job שנכשל 3× → DLQ + התראה.
 - **טסטים:** ידני על ה-PC + integration ב-staging עם worker מחובר ל-bee-lab. **הערכה:** 6 ימים (הערכה גסה במיוחד). **בעלים:** Barak (PC, רישיון) + Claude Code מקומי. **תלויות:** WP-M4-05; §17(3); V19; בדיקת 33 הבלוקים ב-CAD מלא. **סיכונים:** הגבוה ביותר בתוכנית — API של GstarCAD לא אומת; לכן ה-fallback מתוכנן מראש והוא WP-M4-06b (3 ימים).
 
@@ -715,10 +711,10 @@ M0 יסודות
 ## אי-התאמות שזוהו (לטיפול במפרטים/בתוכנית האב)
 
 1. **customers/sites קיימים ב-bee-live** (ניטור, 184 לקוחות) ותוכנית האב מגדירה Customer/Site חדשים — צריך החלטה: הרחבת הטבלאות הקיימות (עמודות + RLS) או טבלאות `engine_*` עם FK. המלצה: הרחבה, כדי ש-MonitoringLink לא יהפוך לטבלת מיפוי. (מפרט 10)
-2. **פריסת גג ב-S03** (תוכנית האב §3, §8.2) מול "ציור גג ב-UI" ב-**M4** (§16): ב-M2 יש רק Design-lite (WP-M2-06); הצעות עד M4 יוצאות עם kWp/מודולים בלי פריסה גרפית. לתעד במפרט 12/15.
+2. **פריסת גג ב-S03** (תוכנית האב §3, §8.2) מול "ציור גג ב-UI" ב-**M4** (§16): ב-M2 יש רק Design-lite (WP-M2-06); הצעות עד M4 יוצאות עם kWp/מודולים בלי פריסה גרפית. לתעד במפרט 12/14.
 3. **Better Auth** מופיע ב-M0 (§16) אבל bee-live כבר עובד עם JWT משלו; כאן נדחה לפורטל (M2-10/M7-05) ו-M0 מוסיף תפקידים בלבד. דורש אישור.
 4. **מספור אבני דרך ב-handoff** (M1–M4b של bee-live ops/SolarEdge) מתנגש עם M0–M7 של המנוע; כאן "M" = תמיד המנוע; עבודת ה-handoff מכונה "מסלול מקביל".
 5. **דדליין SolarEdge V2 (01–03.11.2026)** נופל בתוך M0 — תוכנית האב אומרת "נבלע ב-M6/M7", אבל הוא חייב להסתיים לפני; מטופל כמסלול מקביל (§12–§13).
-6. **שמות המפרטים 10–15** משוערים (§0.1) — ליישר ברגע שהקבצים קיימים.
+6. **שמות המפרטים 10–15** יושרו לקבצים הקיימים (§0.1).
 7. `01-lifecycle-stages.json` משתמש ב-`RES_LE_15`… לפרופילים, תוכנית האב §3 ב-`residential_le15`… — לבחור אחד (המלצה: ה-JSON, כי הוא ה-seed).
 8. מע"מ 18% מופיע כקבוע בתוכנית האב; כאן כנתון בטבלה עם תאריך תחולה (לפי עקרון §1(2)).

@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| גרסה | 0.2 — טיוטת תכנון אחרי סבב מחקר (2026-10-06) |
+| גרסה | 0.3 — תוכנית אב + חבילת מפרטים מלאה (2026-10-10). אינדקס: `README.md` |
 | מזמין | ברק (B.E.E — ברק הנדסת חשמל) |
 | מטרה | תכנון בלבד. אחרי אישור התוכנית עוברים שלב-שלב וכלי-כלי עד אינטגרציה מלאה |
 | מקורות | handoff.md (bee-live / bee-build), HANDOFF.md (ספריית בלוקים), סקיל `electrical-drawing-sets` + מחולל `eplan`, `apps/bee-solar-survey`, `platform/schema`, קבלה חח"י (28.09.26), סט NESPAH-543-05, ושבעה דוחות מחקר ב-`docs/plan/research/` |
@@ -89,7 +89,7 @@
 
 הערות:
 
-- **פרופיל אסדרה** (`regulatory_track`): `residential_le15` · `commercial_15_100` · `commercial_100_630` · `mv_gt630` · `bess_add` · `historic_distributor`. נקבע ב-S01/S03, מאומת ב-S05, וקובע: צעדי Submission, מסמכים, אגרות, סוג בודק, מניה, שורות הצעה ו-ROI.
+- **פרופיל אסדרה** (`regulatory_track`): `residential_le15` · `commercial_15_100` · `commercial_100_630` · `mv_gt630` · `bess_add` · `historic_distributor` (הקודים הקנוניים; `01-lifecycle-stages.json` v0.3 נושא גם את ה-legacy `RES_LE_15`…). נקבע ב-S01/S03, מאומת ב-S05, וקובע: צעדי Submission, מסמכים, אגרות, סוג בודק, מניה, שורות הצעה ו-ROI.
 - **מחלק היסטורי** (קיבוץ/מושב): הבקשה למחלק ולא לחח"י, שני סקרים (פנימי + חח"י), מונה/תעריף מול המחלק → שדה `distributor` + checklist ו-SLA נפרדים.
 - **מסלולים מקבילים**: S05 ‖ S06. חזרה לאחור (S09→S08 על ליקויים) מתועדת כ-rollback event.
 - **סטטוסים** אחידים: `open · in_progress · waiting_customer · waiting_iec · waiting_supplier · waiting_engineer · blocked · done`. "ממתין ל-X" מזין את רשימת "תקועים" בדיווח הבוקר.
@@ -180,7 +180,7 @@ Customer ─┬─ Site ─┬─ Project (stage, status, regulatory_track, dist
           │        │                                                         ├─ Design (spec YAML rev, layout geometry) ─ CalcReport · DrawingSet · BOM
           │        │                                                         ├─ Quote ─ QuoteVersion (immutable) ─ QuoteSection ─ QuoteLine{price_snapshot}
           │        │                                                         ├─ Contract · Invoice · Payment · Signature{sha256, otp, ip, ua}
-          │        │                                                         ├─ Submission (iec | historic | authority | fire) ─ SubmissionStep · Form · Fee/Receipt · Correspondence
+          │        │                                                         ├─ Submission (iec_pre | iec_inspection | tariff_registration | operating_permit | historic_distributor | municipality_exemption_report | fire_authority) ─ SubmissionStep · Form · SubmissionFee/Receipt · Correspondence
           │        │                                                         ├─ PurchaseOrder ─ POLine · Delivery
           │        │                                                         ├─ WorkOrder · Crew · DailyReport · Checklist · ChangeOrder
           │        │                                                         ├─ Inspection ─ TestResult (62446-1) · Defect
@@ -432,9 +432,49 @@ spec YAML ─▶ eplan (ezdxf) ─▶ DXF (R2018, placeholders INSERT לבלוק
 
 ---
 
+## 20. אי-עקביות ידועות והחלטות איחוד (אחרי כתיבת המפרטים)
+
+המפרטים 10–18 נכתבו במקביל; הסבב המאחד קבע:
+
+| # | נושא | החלטה |
+|---|---|---|
+| I1 | מפתחות פרופיל אסדרה (`RES_LE_15` מול `residential_le15`) | snake_case הוא הקנוני בכל מקום; ה-JSON נושא `legacy_code` |
+| I2 | אוצר תפקידים (`sales/procurement/foreman/service` ב-JSON מול §15) | ה-JSON ממפה כל תפקיד תפעולי ל-`canonical_role` מרשימת §15 |
+| I3 | `sla_days` — ימי לוח או עבודה | ימי עבודה (`business_calendar`) בכל המסמכים |
+| I4 | סוגי Submission (§5 הישן: 4) | הורחב ל-7 הסוגים של מפרט 13 |
+| I5 | מספור המפרטים במפרט 16/17 (שמות משוערים) | יושר לקבצים הקיימים; מפרט 15 = בדיקה/מסירה/ניטור |
+| I6 | Customer/Site חדשים מול `customers`/`sites` הקיימים ב-bee-live | הרחבה של הטבלאות הקיימות (לא טבלאות `engine_*` מקבילות); החלטה סופית ביום 2 של ה-kickoff (מפרט 16 §14) אחרי בדיקת הסכמה המקומית |
+| I7 | Better Auth ב-M0 מול JWT קיים | M0 מוסיף תפקידים + RLS בלבד; Better Auth לפורטל (M2 אופציונלי / M7) |
+| I8 | ציור גג ב-UI — M2 או M4 | M2: Design-lite (מחרוזות בלי גיאומטריה); M4: פריסה על אורתופוטו |
+| I9 | ChangeOrder — תחת WorkOrder או QuoteVersion | QuoteVersion delta עם `work_order_id` אופציונלי |
+| I10 | `eplan` DXF R2010 / matplotlib render / bidi רק ב-TEXT / אין `as_made` | שינויים נדרשים ב-eplan ב-M4 (מפרט 14 §12) |
+| I11 | הארקת קונסטרוקציה 10 מול 16 mm² (eplan `bond_structure_mm2_small` מול R14/§17(ה)) | שני הכללים ב-seed עם הערה; **ברק מכריע** |
+| I12 | ספי בודק סוג 1/2/3 סותרים בין דוח 01 ל-02 | פרמטרים ב-`rules`, `unverified` (V7) |
+| I13 | שדות BOM שאינם ב-Product kinds (§5) | נוספו `mounting/accessory/meter` (מפרט 12) |
+| I14 | מספור BOQ (`08.01.0010` מול פרקים 01–08) | `08.CC.NNNN`; קיום פרק PV במפרט הכללי — לאימות |
+| I15 | "מעל 50 kW מונה קריאה מרחוק" (§6.1) ללא מקור | R25 `unverified` |
+| I16 | `sharing_status`/`defects.status`/`service_tickets.status` enums שונים בין מפרט 10 ל-15 | מפרט 15 §i.4 מגדיר את המיפוי; ה-DDL מתעדכן ב-WP-M0 |
+| I17 | `designs.mode` (`lite/full/as_made` מול `quick/full`) ו-`rules.key` style | `quick/full/as_made`; מפתחות `eplan.<key>` |
+| I18 | חשבוניות ביניים (S07/S08/S10) חסרות ב-JSON | לוח תשלומים ב-`pricing-rules.json`; ה-JSON מציין רק מסמכי חובה |
+| I19 | OTP/magic-link נשלחים ללקוח בלי בחירה אנושית | חריג מדיניות מתועד ב-`message-templates.json`; **דורש אישור ברק** |
+| I20 | מיפוי `'פנל מבודד' → metal-standing-seam` ב-PWA | לתקן ל-`metal-sandwich` או דומה ב-M0 |
+
+---
+
 ## נספחים
 
-- `01-lifecycle-stages.json` — מכונת המצבים כנתונים
+- `README.md` — אינדקס חבילת התכנון וסדר קריאה
+- `01-lifecycle-stages.json` — מכונת המצבים כנתונים (v0.3)
+- `specs/10-data-model.md` + `schema/engine.sql` — מודל נתונים ו-DDL
+- `specs/11-projects-workflow-spec.md` — מכונת מצבים, משימות, לו"זים, תקשורת, פורטל, AI, הרשאות
+- `specs/12-cpq-documents-spec.md` — קטלוג, תמחור, ROI, docgen, חתימה, הנה"ח
+- `specs/13-submissions-regulation-spec.md` — הגשות, כללים, מחלק היסטורי
+- `specs/14-cad-design-service-spec.md` — שירות CAD/תכנון, DWG worker
+- `specs/15-inspection-handover-monitoring-spec.md` — ביצוע, בדיקה, מונה, מסירה, ניטור, O&M
+- `specs/16-execution-plan.md` — חבילות עבודה M0–M7, לוח שנה, kickoff
+- `specs/17-local-setup.md` — עבודה מהלוקאלי
+- `specs/18-bee-engine-skill.md` — SKILL.md ל-Claude Code
+- `templates/*`, `rules/*` — נתוני seed (ראו README)
 - `research/01-iec-process.md` — תהליך חח"י מקצה לקצה
 - `research/02-regulation-tariffs.md` — רגולציה, אסדרות, תעריפים, רישוי, R1–R24
 - `research/03-pv-design-tools.md` — כלי תכנון/סימולציה/הצעות ו-APIs
