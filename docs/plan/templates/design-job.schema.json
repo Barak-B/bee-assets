@@ -683,7 +683,7 @@
     "DwgBindJob": {
       "type": "object",
       "title": "DwgBindJob",
-      "description": "Pull-queue job for workers/cad-windows (GstarCAD). Claimed via GET /api/cad/worker/jobs; result via POST …/result.",
+      "description": "Pull-queue job for workers/cad-windows (GstarCAD). Claimed via GET /api/cad-jobs/next; result via POST /api/cad-jobs/{id}/result (modules/cad-jobs, specs 16/17).",
       "required": ["job_id", "kind", "design_rev", "sheets", "library", "plot", "save_as"],
       "properties": {
         "job_id": { "type": "string" },
