@@ -519,6 +519,7 @@ type GanttResponse = {
 | S04 | חשבונית מקדמה | לקוח | WA + email | `deposit_payment_link` | utility |
 | S04 | `contract.signed` | לקוח | WA | `contract_signed_confirmation` | utility |
 | S05 | טופס מוכן לחתימה / ייפוי כוח | לקוח | WA (פורטל) | `iec_form_sign_request` | utility |
+| S05 | הבקשה הוגשה (מספר בקשה) | לקוח | WA | `iec_submitted` | utility |
 | S05 | הצעת חשבון חח"י | לקוח | WA | `iec_fee_request` | utility |
 | S05 | תשובת מחלק חיובית | לקוח | WA | `iec_answer_positive` | utility |
 | S05 | תשובת מחלק שלילית/מותנית | לקוח | טלפון + Gmail (ידני) | — (אין תבנית אוטומטית; שיחה) | — |
@@ -535,7 +536,8 @@ type GanttResponse = {
 | S12 | בדיקה תקופתית | לקוח | WA | `periodic_inspection_reminder` | utility |
 | S12 | קריאת שירות נפתחה/נסגרה | לקוח | WA | `service_ticket_opened`, `service_ticket_closed` | utility |
 | S12 | חידוש חוזה / הפניות | לקוח | WA | `contract_renewal_offer` | **marketing** (consent חובה) |
-| כל שלב | OTP (פורטל/חתימה) | לקוח | SMS (ראשי) / WA authentication | `otp` | authentication |
+| S02/S08/S09/S10 | `schedule.changed` (אבן-דרך זזה > 5 י"ע) | לקוח | WA | `schedule_changed` | utility |
+| כל שלב | OTP (פורטל/חתימה) | לקוח | SMS (ראשי) / WA authentication | `otp` | authentication (חריג ל-pick: תגובה לפעולת לקוח — ראו הערה בתבנית) |
 | כל שלב | magic link / "מסמך מוכן" | לקוח | email טרנזקציוני | `portal_magic_link`, `document_ready` | — |
 | פנימי | דיווח בוקר, התראות | ברק | WA self_chat | `morning_report`, `internal_alert` | — (Law #1) |
 
@@ -579,7 +581,7 @@ communication_log(
    │  if destinationClass ∈ law1Destinations      → may send directly (self_chat / drafts_group …)
    │  if destinationClass ∈ forbiddenWithoutPick  → MUST have requiresHumanPick=true, else job.status='blocked_trust'
    ▼
-[human pick]  UI "ממתינות לבחירה" + העתק ל-drafts_group (WA)  — כפתורים: שלח / ערוך פרמטרים / בטל / דחה ל-
+[human pick]  UI "ממתינות לבחירה" + כרטיס ל-drafts_group (תבנית `drafts_group_card`, Law #1)  — כפתורים: שלח / ערוך פרמטרים / בטל / דחה ל-
    │  approvals(id, kind='outbound_msg', payload={comm_log_id, body_hash}, requested_by, status, decided_by, decided_at, edited_params)
    │  pick ⇒ communication_log.status='approved', picked_by/at  ⇒ boss.send('comm.send-approved')
    ▼

@@ -340,6 +340,12 @@
       "source": "inbound",
       "verification": "unverified"
     },
+    "ems_declaration": {
+      "name_he": "הצהרת מגבלת הזרמה / zero-export / EMS (מעל 100 kW)",
+      "signed_by": "designer",
+      "source": "docgen",
+      "verification": "unverified"
+    },
     "pack_cover_index": {
       "name_he": "דף שער + תוכן עניינים לחבילה (מופק אוטומטית)",
       "signed_by": null,
