@@ -1,0 +1,393 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bee.local/docs/plan/templates/inspection-62446-record.schema.json",
+  "title": "BEE Inspection Test Record (IEC 62446-1 Category 1 + optional Category 2) and Defect list",
+  "description": "רשומת בדיקה מובנית לפי IEC 62446-1:2016+A1:2018 — קטגוריה 1 חובה, קטגוריה 2 אופציונלית, ורשימת ליקויים. ספי Riso/Voc/Isc אינם קבועים בסכמה: הם נקראים מטבלת rules (R62446.*) ומצוינים בכל שורה כ-limit. ערכי הסף של התקן לא אומתו (לאימות). מפרט: docs/plan/specs/15-inspection-handover-monitoring-spec.md §(b).",
+  "type": "object",
+  "required": ["id", "inspectionId", "projectId", "standard", "category", "system", "environment", "instruments", "visual", "earthing", "strings", "inverters", "acBoards", "functional", "summary", "defects"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "description": "uuid/ulid של הרשומה" },
+    "inspectionId": { "type": "string" },
+    "projectId": { "type": "string" },
+    "parentTestRecordId": { "type": ["string", "null"], "description": "לבדיקה חוזרת (retest): הרשומה המקורית" },
+    "standard": { "type": "string", "const": "IEC 62446-1:2016+A1:2018" },
+    "category": { "type": "integer", "enum": [1, 2], "description": "2 = בוצעו גם בדיקות קטגוריה 2 (I-V / IR)" },
+    "israelFormRef": {
+      "type": ["object", "null"],
+      "description": "קישור ל'טופס בדיקת מתקן שקבע המנהל' אם נדרש בנפרד (לאימות V7)",
+      "properties": { "documentId": { "type": "string" }, "formVersion": { "type": "string" } },
+      "additionalProperties": false
+    },
+    "system": {
+      "type": "object",
+      "required": ["dcKwp", "acKw", "phases", "connectionA", "inverters", "moduleProductId", "moduleCount"],
+      "additionalProperties": false,
+      "properties": {
+        "dcKwp": { "type": "number", "minimum": 0 },
+        "acKw": { "type": "number", "minimum": 0 },
+        "phases": { "type": "integer", "enum": [1, 3] },
+        "connectionA": { "type": "number", "description": "גודל חיבור באמפר (לפאזה)" },
+        "mainBreakerA": { "type": ["number", "null"] },
+        "regulatoryTrack": { "type": ["string", "null"], "enum": ["residential_le15", "commercial_15_100", "commercial_100_630", "mv_gt630", "bess_add", "historic_distributor", null] },
+        "inverters": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "required": ["sn", "productId", "mppts"], "additionalProperties": false,
+            "properties": {
+              "sn": { "type": "string" }, "productId": { "type": "string" }, "model": { "type": "string" },
+              "mppts": { "type": "integer", "minimum": 1 }, "hasOptimizers": { "type": "boolean" },
+              "galvanicIsolation": { "type": ["boolean", "null"] },
+              "iec62109DeclarationDocId": { "type": ["string", "null"], "description": "הצהרת ממיר לפטור מ-RCD סוג B (R13)" }
+            }
+          }
+        },
+        "moduleProductId": { "type": "string" },
+        "moduleModel": { "type": "string" },
+        "moduleCount": { "type": "integer", "minimum": 1 },
+        "moduleStc": {
+          "type": "object", "description": "נתוני דף נתונים לחישוב ערכים צפויים (מועתק מ-Product.tech)",
+          "properties": {
+            "vocV": { "type": "number" }, "iscA": { "type": "number" }, "vmpV": { "type": "number" }, "impA": { "type": "number" },
+            "betaVocPctPerC": { "type": "number", "description": "מקדם טמפ' של Voc (%/°C, שלילי)" },
+            "alphaIscPctPerC": { "type": "number" }, "gammaPmaxPctPerC": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "hasBattery": { "type": "boolean" },
+        "designRev": { "type": ["string", "null"] },
+        "stringMapRev": { "type": ["string", "null"] }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "required": ["measuredAt", "irradianceMethod"],
+      "additionalProperties": false,
+      "properties": {
+        "measuredAt": { "type": "string", "format": "date-time" },
+        "irradianceWm2": { "type": ["number", "null"], "minimum": 0, "maximum": 1500 },
+        "irradianceMethod": { "type": "string", "enum": ["pyranometer", "reference_cell", "app_estimate", "none"] },
+        "ambientC": { "type": ["number", "null"] },
+        "moduleTempC": { "type": ["number", "null"] },
+        "moduleTempMethod": { "type": ["string", "null"], "enum": ["ir", "contact", "model_faiman", null] },
+        "windMs": { "type": ["number", "null"] },
+        "weather": { "type": ["string", "null"], "enum": ["clear", "partly_cloudy", "cloudy", "rain", "dust", null] },
+        "note": { "type": ["string", "null"] }
+      }
+    },
+    "instruments": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["kind", "model"], "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "enum": ["megger", "clamp_dc", "multimeter", "irradiance_meter", "ir_camera", "iv_tracer", "rcd_tester", "earth_tester", "other"] },
+          "model": { "type": "string" }, "sn": { "type": ["string", "null"] },
+          "calibrationDue": { "type": ["string", "null"], "format": "date" }
+        }
+      }
+    },
+    "visual": {
+      "type": "object",
+      "description": "בחינה חזותית — DC, AC, שילוט, הגנות, ניתוקים, חיווט, הארקה, מבנה",
+      "required": ["items"],
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "required": ["code", "name_he", "result"], "additionalProperties": false,
+            "properties": {
+              "code": { "type": "string", "description": "למשל V-DC-01; קטלוג הפריטים נשמר כנתונים (ChecklistTemplate key=iec62446_visual)" },
+              "name_he": { "type": "string" },
+              "group": { "type": "string", "enum": ["dc", "ac", "labeling", "protection", "disconnects", "wiring", "earthing", "structure", "battery", "other"] },
+              "result": { "type": "string", "enum": ["ok", "fail", "na"] },
+              "ruleRef": { "type": ["string", "null"], "description": "למשל R11, R12, R14, R19, R20" },
+              "note": { "type": ["string", "null"] },
+              "photoIds": { "type": "array", "items": { "type": "string" } },
+              "defectId": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "earthing": {
+      "type": "object",
+      "required": ["continuityTests", "bondingOk"],
+      "additionalProperties": false,
+      "properties": {
+        "bondingOk": { "type": "boolean", "description": "equipotential bonding" },
+        "earthElectrodeOhm": { "type": ["number", "null"] },
+        "continuityTests": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "required": ["from", "to", "ohm", "limitOhm", "result"], "additionalProperties": false,
+            "properties": {
+              "from": { "type": "string" }, "to": { "type": "string" },
+              "ohm": { "type": "number", "minimum": 0 },
+              "limitOhm": { "type": "number", "description": "מ-rules R62446.continuity_max_ohm (לאימות)" },
+              "conductorMm2": { "type": ["number", "null"], "description": "R14: 10/16/10" },
+              "result": { "type": "string", "enum": ["pass", "fail"] },
+              "note": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "strings": {
+      "type": "array",
+      "description": "שורה לכל מחרוזת ב-StringMap. ללא שורה לכל מחרוזת — הרשומה לא ניתנת לחתימה.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["inverterSn", "mpptIndex", "stringIndex", "modulesInSeries", "polarityOk", "vocV", "riso", "result"],
+        "additionalProperties": false,
+        "properties": {
+          "inverterSn": { "type": "string" },
+          "mpptIndex": { "type": "integer", "minimum": 1 },
+          "stringIndex": { "type": "integer", "minimum": 1 },
+          "label": { "type": ["string", "null"], "description": "כפי שמסומן בשטח, למשל S1.2" },
+          "arrayId": { "type": ["string", "null"], "description": "מערך/פאה (אוריינטציה) מתוך StringMap" },
+          "modulesInSeries": { "type": "integer", "minimum": 1 },
+          "optimizerCount": { "type": ["integer", "null"] },
+          "measuredAt": { "type": ["string", "null"], "format": "date-time" },
+          "polarityOk": { "type": "boolean" },
+          "vocV": { "type": "number", "minimum": 0 },
+          "expectedVocV": { "type": ["number", "null"], "description": "מחושב מ-moduleStc.vocV × modulesInSeries × (1 + betaVoc × (moduleTempC − 25)); אופטימייזרים לפני pairing: 1 V ליחידה" },
+          "deviationVocPct": { "type": ["number", "null"] },
+          "vocLimitPct": { "type": ["number", "null"], "description": "מ-rules R62446.voc_tol_pct (לאימות)" },
+          "currentMode": { "type": ["string", "null"], "enum": ["isc", "operating", null] },
+          "iscA": { "type": ["number", "null"], "minimum": 0 },
+          "operatingCurrentA": { "type": ["number", "null"], "minimum": 0 },
+          "expectedIscA": { "type": ["number", "null"], "description": "moduleStc.iscA × irradianceWm2/1000 × (1 + alphaIsc × ΔT)" },
+          "deviationIscPct": { "type": ["number", "null"] },
+          "iscLimitPct": { "type": ["number", "null"], "description": "מ-rules R62446.isc_tol_pct (לאימות)" },
+          "riso": {
+            "type": "object",
+            "required": ["testVoltageV", "method", "megohm", "limitMegohm", "result"],
+            "additionalProperties": false,
+            "properties": {
+              "testVoltageV": { "type": "integer", "enum": [250, 500, 1000, 1500], "description": "חייב להיות ≥ Voc_cold של המחרוזת (לאימות מול התקן)" },
+              "method": { "type": "string", "enum": ["array_to_earth", "pos_to_earth", "neg_to_earth", "pos_and_neg_shorted_to_earth"] },
+              "megohm": { "type": "number", "minimum": 0 },
+              "limitMegohm": { "type": "number", "description": "מ-rules R62446.riso_min_megohm לפי מתח המערכת — הערך בתקן לא אומת" },
+              "result": { "type": "string", "enum": ["pass", "fail"] },
+              "wet": { "type": "boolean", "default": false }
+            }
+          },
+          "result": { "type": "string", "enum": ["pass", "warn", "fail"] },
+          "note": { "type": ["string", "null"] },
+          "photoIds": { "type": "array", "items": { "type": "string" } },
+          "defectId": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "combinerBoxes": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["ref", "result"], "additionalProperties": false,
+        "properties": {
+          "ref": { "type": "string" },
+          "fusesOk": { "type": ["boolean", "null"] }, "fuseRatingA": { "type": ["number", "null"] },
+          "spdOk": { "type": ["boolean", "null"] }, "spdType": { "type": ["string", "null"] },
+          "disconnectOk": { "type": ["boolean", "null"] }, "labelsOk": { "type": ["boolean", "null"] },
+          "isoMeasuredMegohm": { "type": ["number", "null"] },
+          "result": { "type": "string", "enum": ["pass", "fail", "na"] },
+          "note": { "type": ["string", "null"] }, "photoIds": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "inverters": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["sn", "functionalStartOk", "result"], "additionalProperties": false,
+        "properties": {
+          "sn": { "type": "string" },
+          "firmware": { "type": ["string", "null"] },
+          "gridSettingsProfile": { "type": ["string", "null"], "description": "פרופיל רשת שהוגדר (ישראל — פרמטרים טכניים של חח\"י לאימות V8)" },
+          "functionalStartOk": { "type": "boolean" },
+          "antiIslandingTripOk": { "type": ["boolean", "null"], "description": "ניתוק בעת הפסקת רשת (סימולציה ע\"י ניתוק המפסק)" },
+          "reconnectTimeS": { "type": ["number", "null"] },
+          "acVoltageV": { "type": "array", "items": { "type": "number" }, "maxItems": 3 },
+          "acPowerKw": { "type": ["number", "null"] },
+          "dcIsoMonitorOk": { "type": ["boolean", "null"], "description": "R15 — משגוח בידוד/RCM פנימי" },
+          "exportLimitVerified": { "type": ["boolean", "null"], "description": "R10 — zero-export/הגבלה אם נדרש" },
+          "commOk": { "type": ["boolean", "null"] },
+          "result": { "type": "string", "enum": ["pass", "fail"] },
+          "note": { "type": ["string", "null"] }, "photoIds": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "acBoards": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["ref", "result"], "additionalProperties": false,
+        "properties": {
+          "ref": { "type": "string", "description": "למשל לוח PV ראשי / ארון מונה ייצור" },
+          "rcd": {
+            "type": ["object", "null"],
+            "required": ["type", "ratedMa", "result"],
+            "additionalProperties": false,
+            "properties": {
+              "type": { "type": "string", "enum": ["A", "B", "F", "AC", "none"] },
+              "ratedMa": { "type": "number" },
+              "tripTimeMs": { "type": ["number", "null"] },
+              "tripCurrentMa": { "type": ["number", "null"] },
+              "buttonTestOk": { "type": ["boolean", "null"] },
+              "result": { "type": "string", "enum": ["pass", "fail", "na"] },
+              "ruleRef": { "type": "string", "const": "R13" }
+            }
+          },
+          "mainBreakerA": { "type": ["number", "null"] },
+          "mainBreakerLabelOk": { "type": ["boolean", "null"], "description": "R11 — מפסק ראשי PV + שלט" },
+          "ctMeasurement": { "type": ["boolean", "null"], "description": "R9 — מדידה עקיפה אם In > 3×100A" },
+          "standardMarkOk": { "type": ["boolean", "null"], "description": "R23 — לוח בתו תקן 61439" },
+          "spdOk": { "type": ["boolean", "null"] },
+          "labelsOk": { "type": ["boolean", "null"] },
+          "result": { "type": "string", "enum": ["pass", "fail"] },
+          "note": { "type": ["string", "null"] }, "photoIds": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "functional": {
+      "type": "object",
+      "required": ["switchgearOk"],
+      "additionalProperties": false,
+      "properties": {
+        "switchgearOk": { "type": "boolean" },
+        "dcDisconnectsOk": { "type": ["boolean", "null"] },
+        "emergencyStopOk": { "type": ["boolean", "null"], "description": "R19/R20" },
+        "monitoringCommOk": { "type": ["boolean", "null"] },
+        "batteryOk": { "type": ["boolean", "null"] },
+        "note": { "type": ["string", "null"] }
+      }
+    },
+    "category2": {
+      "type": ["object", "null"],
+      "description": "אופציונלי — נדרש ב-commercial_100_630 / mv_gt630 ובחוזה Premium (ברירת מחדל, ניתנת לשינוי)",
+      "additionalProperties": false,
+      "properties": {
+        "ivCurves": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["inverterSn", "mpptIndex", "stringIndex", "irradianceWm2", "moduleTempC", "vocV", "iscA", "vmpV", "impA", "pmaxW", "result"],
+            "additionalProperties": false,
+            "properties": {
+              "inverterSn": { "type": "string" }, "mpptIndex": { "type": "integer" }, "stringIndex": { "type": "integer" },
+              "irradianceWm2": { "type": "number" }, "moduleTempC": { "type": "number" },
+              "vocV": { "type": "number" }, "iscA": { "type": "number" }, "vmpV": { "type": "number" }, "impA": { "type": "number" },
+              "pmaxW": { "type": "number" },
+              "pmaxStcW": { "type": ["number", "null"], "description": "מנורמל ל-STC" },
+              "expectedPmaxStcW": { "type": ["number", "null"] },
+              "deviationPct": { "type": ["number", "null"] },
+              "fillFactor": { "type": ["number", "null"] },
+              "curveFileId": { "type": ["string", "null"], "description": "CSV של העקומה (Document)" },
+              "shape": { "type": ["string", "null"], "enum": ["normal", "step", "low_shunt", "high_series", "mismatch", null] },
+              "result": { "type": "string", "enum": ["pass", "warn", "fail"] },
+              "note": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "irThermography": {
+          "type": ["object", "null"],
+          "required": ["loadPct", "images", "result"],
+          "additionalProperties": false,
+          "properties": {
+            "loadPct": { "type": "number", "description": "עומס באחוז הספק בזמן הצילום; מקובל > ~60% — לאימות מול התקן" },
+            "irradianceWm2": { "type": ["number", "null"] },
+            "ambientC": { "type": ["number", "null"] }, "windMs": { "type": ["number", "null"] },
+            "cameraModel": { "type": ["string", "null"] }, "emissivity": { "type": ["number", "null"] },
+            "images": {
+              "type": "array",
+              "items": {
+                "type": "object", "required": ["photoId", "target", "finding"], "additionalProperties": false,
+                "properties": {
+                  "photoId": { "type": "string" },
+                  "visualPhotoId": { "type": ["string", "null"] },
+                  "target": { "type": "string", "enum": ["module", "connector", "combiner", "inverter", "board", "cable", "other"] },
+                  "ref": { "type": ["string", "null"], "description": "מיקום/סריאל/מחרוזת" },
+                  "maxTempC": { "type": ["number", "null"] }, "deltaTC": { "type": ["number", "null"] },
+                  "finding": { "type": "string", "enum": ["none", "hotspot", "bypass_diode", "connector", "substring_open", "pid_suspect", "other"] },
+                  "severity": { "type": ["string", "null"], "enum": ["minor", "major", "critical", null] },
+                  "defectId": { "type": ["string", "null"] }
+                }
+              }
+            },
+            "result": { "type": "string", "enum": ["pass", "warn", "fail"] }
+          }
+        },
+        "wetRiso": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["stringRef", "megohm", "limitMegohm", "result"], "additionalProperties": false,
+            "properties": {
+              "stringRef": { "type": "string" }, "testVoltageV": { "type": ["integer", "null"] },
+              "megohm": { "type": "number" }, "limitMegohm": { "type": "number" },
+              "result": { "type": "string", "enum": ["pass", "fail"] }
+            }
+          }
+        },
+        "blockingDiodes": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["ref", "result"], "additionalProperties": false,
+            "properties": { "ref": { "type": "string" }, "result": { "type": "string", "enum": ["pass", "fail", "na"] } }
+          }
+        }
+      }
+    },
+    "defects": {
+      "type": "array",
+      "description": "רשימת ליקויים שנפתחו מהבדיקה. כל ליקוי הופך ל-Task; critical/blocksConnection חוסם מעבר ל-S10.",
+      "items": {
+        "type": "object",
+        "required": ["id", "code", "category", "severity", "blocksConnection", "description", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "code": { "type": "string", "description": "קוד מקטלוג ליקויים (נתונים), למשל D-DC-RISO" },
+          "category": { "type": "string", "enum": ["dc", "ac", "earthing", "structure", "labeling", "documentation", "comm", "battery", "other"] },
+          "severity": { "type": "string", "enum": ["critical", "major", "minor"] },
+          "blocksConnection": { "type": "boolean" },
+          "location": { "type": ["string", "null"] },
+          "refs": {
+            "type": "object", "description": "מצביעים לשורות הבדיקה שהולידו את הליקוי",
+            "properties": {
+              "stringRef": { "type": ["string", "null"] }, "inverterSn": { "type": ["string", "null"] },
+              "boardRef": { "type": ["string", "null"] }, "visualCode": { "type": ["string", "null"] }, "irPhotoId": { "type": ["string", "null"] }
+            },
+            "additionalProperties": false
+          },
+          "description": { "type": "string" },
+          "photoIds": { "type": "array", "items": { "type": "string" } },
+          "status": { "type": "string", "enum": ["open", "assigned", "fixed", "retest_pending", "closed", "waived"] },
+          "taskId": { "type": ["string", "null"] },
+          "assigneeId": { "type": ["string", "null"] },
+          "fixedAt": { "type": ["string", "null"], "format": "date-time" },
+          "fixEvidencePhotoIds": { "type": "array", "items": { "type": "string" } },
+          "retestInspectionId": { "type": ["string", "null"] },
+          "waivedBy": { "type": ["string", "null"] },
+          "waiveReason": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["overall", "inspectorId", "inspectorLicenseType", "signedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "overall": { "type": "string", "enum": ["pass", "pass_with_defects", "fail"] },
+        "inspectorId": { "type": "string" },
+        "inspectorLicenseNo": { "type": ["string", "null"] },
+        "inspectorLicenseType": { "type": "integer", "enum": [1, 2, 3], "description": "חייב להיות ≥ requiredLicenseType מכלל R17 (ספים לאימות)" },
+        "requiredLicenseType": { "type": ["integer", "null"], "enum": [1, 2, 3, null] },
+        "inspectorSignatureId": { "type": ["string", "null"] },
+        "installerPresentUserId": { "type": ["string", "null"] },
+        "installerSignatureId": { "type": ["string", "null"] },
+        "signedAt": { "type": ["string", "null"], "format": "date-time" },
+        "reportDocumentId": { "type": ["string", "null"], "description": "Document{kind: inspector_report_pdf}" },
+        "remarks": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
