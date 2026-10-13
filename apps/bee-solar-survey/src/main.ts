@@ -1,4 +1,5 @@
 import './style.css'
+import { registerSW } from 'virtual:pwa-register'
 import {
   deletePhoto,
   deleteProject,
@@ -13,9 +14,9 @@ import {
   saveProject,
   type StoredPhoto,
 } from './db'
-import { buildHiveExportBundle, downloadJson } from './hive'
-import { buildSurveyPdf, downloadBlob } from './pdf'
+import { buildHiveExportBundle } from './hive'
 import { fileToSurveyPhoto, getCurrentGps } from './photos'
+import { outcomeToast, shareOrDownload, shareOrDownloadJson } from './share'
 import { assessCompleteness, emptyProject, parseGps } from './schema'
 import {
   BREAKER_OPTIONS,
@@ -220,8 +221,8 @@ async function render() {
     })
     document.getElementById('btnBackup')?.addEventListener('click', async () => {
       const data = await exportBackup()
-      downloadJson(`bee-survey-backup-${new Date().toISOString().slice(0, 10)}.json`, data)
-      toast('הגיבוי הורד')
+      const outcome = await shareOrDownloadJson(`bee-survey-backup-${new Date().toISOString().slice(0, 10)}.json`, data, 'גיבוי סקרים B.E.E')
+      toast(outcomeToast(outcome, 'הגיבוי'))
     })
     document.getElementById('btnRestore')?.addEventListener('click', () => {
       const input = document.createElement('input')
@@ -432,8 +433,8 @@ function bindFormEvents() {
     readFormIntoEditing()
     await persistCurrent()
     const bundle = buildHiveExportBundle(editing, photos)
-    downloadJson(`hive-site-survey-${editing.id.slice(0, 8)}.json`, bundle)
-    toast(bundle.jobs.length === 3 ? 'ייצוא כוורת מלא' : 'ייצוא חלקי — חסרים שדות')
+    const outcome = await shareOrDownloadJson(`hive-site-survey-${editing.id.slice(0, 8)}.json`, bundle, 'ייצוא כוורת')
+    toast(`${outcomeToast(outcome, 'ייצוא הכוורת')} · ${bundle.jobs.length === 3 ? 'מלא' : 'חלקי — חסרים שדות'}`)
   })
   document.getElementById('btnGps')?.addEventListener('click', async () => {
     try {
@@ -650,8 +651,8 @@ async function exportHiveFor(id: string) {
   if (!p) return
   const ph = await listPhotos(id)
   const bundle = buildHiveExportBundle(p, ph)
-  downloadJson(`hive-site-survey-${id.slice(0, 8)}.json`, bundle)
-  toast(bundle.jobs.some((j) => j.loop === 'dispatch.draft') ? 'ייצוא כוורת מלא' : 'ייצוא חלקי')
+  const outcome = await shareOrDownloadJson(`hive-site-survey-${id.slice(0, 8)}.json`, bundle, 'ייצוא כוורת')
+  toast(`${outcomeToast(outcome, 'ייצוא הכוורת')} · ${bundle.jobs.some((j) => j.loop === 'dispatch.draft') ? 'מלא' : 'חלקי'}`)
 }
 
 async function exportPdfFor(id: string) {
@@ -660,8 +661,16 @@ async function exportPdfFor(id: string) {
   const ph = await listPhotos(id)
   const c = assessCompleteness(p, ph)
   toast('מכין PDF...')
-  const blob = await buildSurveyPdf(p, ph, c)
-  downloadBlob(blob, `bee-survey-${(p.projectName || id).replace(/\s+/g, '_')}.pdf`)
+  try {
+    // Lazy: jsPDF + embedded Hebrew font are only loaded when a report is requested.
+    const { buildSurveyPdfDetailed, surveyPdfFilename } = await import('./pdf')
+    const res = await buildSurveyPdfDetailed(p, ph, c)
+    const outcome = await shareOrDownload(res.blob, surveyPdfFilename(p), `סקר אתר — ${p.projectName}`)
+    toast(`${outcomeToast(outcome, 'הדוח')} · ${res.meta.pages} עמ׳ · ${Math.round(res.meta.bytes / 1024)} KB`)
+  } catch (err) {
+    console.error(err)
+    toast('יצירת ה-PDF נכשלה')
+  }
 }
 
 function escapeHtml(s: string): string {
@@ -675,5 +684,8 @@ function escapeHtml(s: string): string {
 function escapeAttr(s: string): string {
   return escapeHtml(s).replaceAll("'", '&#39;')
 }
+
+// Offline-first: precached app shell; a new version activates on the next launch.
+registerSW({ immediate: true })
 
 void render()

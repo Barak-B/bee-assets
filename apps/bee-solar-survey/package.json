@@ -16,10 +16,10 @@
     "jsdom": "^29.1.1",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
+    "vite-plugin-pwa": "^2.0.0",
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1"
   }
 }
