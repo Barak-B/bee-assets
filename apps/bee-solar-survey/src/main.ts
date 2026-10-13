@@ -16,6 +16,9 @@ import {
 } from './db'
 import { buildHiveExportBundle } from './hive'
 import { fileToSurveyPhoto, getCurrentGps } from './photos'
+import { escapeAttr, escapeHtml } from './html'
+import { renderPricingScreen } from './pricingScreen'
+import { openQuotesDialog } from './quotesDialog'
 import { outcomeToast, shareOrDownload, shareOrDownloadJson } from './share'
 import { assessCompleteness, emptyProject, parseGps } from './schema'
 import {
@@ -26,7 +29,7 @@ import {
   type SiteSurveyProject,
 } from './types'
 
-type Screen = 'list' | 'form'
+type Screen = 'list' | 'form' | 'pricing'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -176,6 +179,7 @@ async function render() {
         </section>
         <button class="btn btn-primary btn-block" id="btnNew">+ סקר חדש</button>
         <div class="row">
+          <button class="btn btn-secondary" id="btnPricing">מחירון</button>
           <button class="btn btn-secondary" id="btnBackup">גיבוי</button>
           <button class="btn btn-secondary" id="btnRestore">שחזור</button>
         </div>
@@ -199,7 +203,7 @@ async function render() {
                 <button class="btn btn-secondary" data-edit="${p.id}">עריכה</button>
                 <button class="btn btn-secondary" data-hive="${p.id}">ייצוא כוורת</button>
                 <button class="btn btn-secondary" data-pdf="${p.id}">PDF</button>
-                <button class="btn btn-secondary" data-quote="${p.id}">הצעה ראשונית</button>
+                <button class="btn btn-secondary" data-quote="${p.id}">הצעות מחיר</button>
                 <button class="btn btn-danger" data-del="${p.id}">מחק</button>
               </div>
             </article>`,
@@ -218,6 +222,10 @@ async function render() {
     })
     document.getElementById('search')?.addEventListener('input', (e) => {
       search = (e.target as HTMLInputElement).value
+      void render()
+    })
+    document.getElementById('btnPricing')?.addEventListener('click', () => {
+      screen = 'pricing'
       void render()
     })
     document.getElementById('btnBackup')?.addEventListener('click', async () => {
@@ -272,7 +280,7 @@ async function render() {
     app.querySelectorAll('[data-quote]').forEach((btn) =>
       btn.addEventListener('click', async (e) => {
         e.stopPropagation()
-        await exportQuoteFor((btn as HTMLElement).dataset.quote!)
+        await openQuotesDialog((btn as HTMLElement).dataset.quote!, quotesCtx)
       }),
     )
     app.querySelectorAll('[data-open]').forEach((el) =>
@@ -280,6 +288,18 @@ async function render() {
         await openEditor((el as HTMLElement).dataset.open!)
       }),
     )
+    return
+  }
+
+  if (screen === 'pricing') {
+    await renderPricingScreen({
+      app,
+      toast,
+      onBack: () => {
+        screen = 'list'
+        void render()
+      },
+    })
     return
   }
 
@@ -366,7 +386,7 @@ async function render() {
       <div class="sticky-actions">
         <button class="btn btn-secondary" id="btnCancel">ביטול</button>
         <button class="btn btn-secondary" id="btnHive">ייצוא כוורת</button>
-        <button class="btn btn-secondary" id="btnQuote">הצעה ראשונית</button>
+        <button class="btn btn-secondary" id="btnQuote">הצעות מחיר</button>
         <button class="btn btn-primary" id="btnSave">שמור סקר</button>
       </div>
       <div class="toast" id="toast"></div>
@@ -451,7 +471,7 @@ function bindFormEvents() {
       return
     }
     await persistCurrent()
-    await exportQuoteFor(editing.id)
+    await openQuotesDialog(editing.id, quotesCtx)
   })
   document.getElementById('btnGps')?.addEventListener('click', async () => {
     try {
@@ -690,50 +710,12 @@ async function exportPdfFor(id: string) {
   }
 }
 
-/**
- * Quote-lite: survey → draft QuoteVersion (JSON + PDF). Seed catalog/rules only —
- * every price is "לאימות" until Barak fills packages/quote-core/src/seed/*.
- */
-async function exportQuoteFor(id: string) {
-  const p = await getProject(id)
-  if (!p) return
-  const ph = await listPhotos(id)
-  const c = assessCompleteness(p, ph)
-  if (!p.roofTypeHe) {
-    toast('להצעה ראשונית חובה סוג גג')
-    return
-  }
-  if (!c.readyForWave54 && !confirm(`הסקר עדיין חסר (${c.missingRequired.join(', ')}). להפיק הצעה ראשונית בכל זאת?`)) return
-  toast('מחשב הצעה ראשונית...')
-  try {
-    const [{ buildQuoteDraft }, { buildQuotePdf, quotePdfFilename }, { quoteSummaryHe }] = await Promise.all([
-      import('./quote'),
-      import('./quotePdf'),
-      import('@bee/quote-core'),
-    ])
-    const bundle = await buildQuoteDraft(p, ph)
-    const pdf = await buildQuotePdf(bundle.quote, p)
-    const outcome = await shareOrDownload(pdf.blob, quotePdfFilename(bundle.quote, p), `הצעה ראשונית — ${p.projectName}`)
-    if (outcome !== 'cancelled') {
-      await shareOrDownloadJson(`quote-draft-${bundle.quote.quote_number}.json`, bundle, 'טיוטת הצעה (JSON)')
-    }
-    toast(`${outcomeToast(outcome, 'טיוטת ההצעה')} · ${quoteSummaryHe(bundle.quote)}`)
-  } catch (err) {
-    console.error(err)
-    toast('יצירת ההצעה נכשלה')
-  }
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-}
-
-function escapeAttr(s: string): string {
-  return escapeHtml(s).replaceAll("'", '&#39;')
+const quotesCtx = {
+  toast,
+  openPricing: () => {
+    screen = 'pricing'
+    void render()
+  },
 }
 
 // Offline-first: precached app shell; a new version activates on the next launch.

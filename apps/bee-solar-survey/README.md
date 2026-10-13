@@ -40,7 +40,9 @@ wave-54.designSuite     ← pv_design / wire_sizing / protection / BOM / forecas
 ## דוחות והצעת מחיר ראשונית
 
 - **PDF סקר** (`src/pdf.ts` על `src/pdfkit.ts`): טקסט עברי אמיתי עם Heebo מוטמע (jsPDF + bidi), גלישת שורות, תמונות ביחס נכון, מספרי עמודים ו-hash תוכן בכותרת התחתונה. ~35 KB לדוח של 2 עמודים.
-- **הצעה ראשונית** (`src/quote.ts`, `src/quotePdf.ts` + `packages/quote-core`): כפתור "הצעה ראשונית" ברשימה ובטופס → `QuoteVersion` (JSON, עטוף כ-job `dispatch.draft`) + PDF עם סימן מים "טיוטה". כל מחיר הוא "לאימות" עד שממלאים את `packages/quote-core/src/seed/*.json`.
+- **מחירון** (`src/pricingScreen.ts`, `src/pricing.ts`): כפתור "מחירון" ברשימה. עלויות לכל מק"ט, מרווחים, מע"מ, שערי מט"ח, עבודה למודול לפי גג, פרמטרי תכנון ולוח תשלומים — נשמר ב-IndexedDB ועובד אופליין. ייבוא מחירון ספק מ-CSV או Excel (שורת כותרת עם מק"ט + עלות, כולל כותרות בעברית), הורדת תבנית, גיבוי/שחזור. מד מוכנות מראה בדיוק מה חסר.
+- **הצעות מחיר** (`src/quotesDialog.ts`, `src/quote.ts`, `src/quotePdf.ts` + `packages/quote-core`): כפתור "הצעות מחיר" ברשימה ובטופס פותח חלון לסקר: חישוב גרסה חדשה מהסקר + המחירון, רשימת גרסאות שמורות (אינן משתנות; אותו תוכן = אין גרסה חדשה), ולכל גרסה PDF, Excel ללקוח, Excel פנימי ו-JSON. מגרסה 2 ה-PDF כולל "מה השתנה". כל זה טיוטה בלבד (`dispatch.draft`, `requiresHumanPick`).
+- **כתב כמויות Excel** (`src/boqXlsx.ts`, ExcelJS): גיליונות `סיכום`, `פרמטרים` ופרק לכל `08.CC` לפי `docs/plan/templates/boq-xlsx-layout.md`; RTL, נוסחאות חיות עם ערכים מחושבים, שמות מוגדרים (`CH_08_02_TOTAL`, `TOTAL_INCL_VAT`…). תצוגת לקוח נעולה וללא עלויות; תצוגה פנימית עם עלות, רווח ₪/%, מק"ט, מקור כמות ואימות.
 - **שיתוף** (`src/share.ts`): Web Share API (WhatsApp/קבצים) → לשונית חדשה ב-iOS מותקן → הורדה רגילה. זה מחליף `a.click()` שלא עבד ב-iOS.
 - **אופליין**: service worker (`vite-plugin-pwa`) מקאש את האפליקציה, הגופנים (`public/fonts`, OFL) ואת מודול ה-PDF. אין בקשות ל-Google Fonts.
 
@@ -50,7 +52,8 @@ wave-54.designSuite     ← pv_design / wire_sizing / protection / BOM / forecas
 cd apps/bee-solar-survey
 npm install
 npm run dev      # מקומי
-npm test         # schema, hive export, RTL, PDF, quote adapter
+npm test         # schema, hive export, RTL, PDF, quote adapter, BOQ Excel, price-list import
+npm run build && npm run e2e   # Playwright: דוח, מחירון → הצעה מתומחרת, Excel, גרסאות, אופליין
 npm run build    # dist/ ל־Cloudflare Pages
 ```
 

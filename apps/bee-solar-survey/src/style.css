@@ -634,3 +634,158 @@ textarea {
   background: #111;
   touch-action: none;
 }
+
+/* ── Pricing screen ─────────────────────────────────────────── */
+.price-group {
+  font-family: var(--display);
+  font-size: 15px;
+  margin: 18px 0 6px;
+  color: var(--ink-soft);
+}
+
+.price-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.price-row.price-missing .price-name strong {
+  color: var(--danger);
+}
+
+.price-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.price-name strong {
+  font-size: 14px;
+}
+
+.price-inputs {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.price-inputs select,
+.price-inputs input {
+  font: inherit;
+  font-size: 15px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.price-inputs select {
+  width: 82px;
+  direction: ltr;
+}
+
+.price-inputs input {
+  width: 110px;
+  direction: ltr;
+  text-align: left;
+}
+
+/* ── Quotes dialog ──────────────────────────────────────────── */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 28, 36, 0.6);
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.dialog {
+  background: var(--paper);
+  width: min(640px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 700px) {
+  .dialog-backdrop {
+    align-items: center;
+  }
+  .dialog {
+    border-radius: var(--radius);
+  }
+}
+
+.dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dialog-head h2 {
+  font-family: var(--display);
+  font-size: 18px;
+  margin: 0;
+}
+
+.dialog-head .icon-btn {
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.note {
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--sand);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.note-warn {
+  background: #fff4e5;
+  color: #7a4b00;
+}
+
+.note-ok {
+  background: #e8f5ee;
+  color: var(--ok);
+}
+
+.quote-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quote-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.quote-card h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}

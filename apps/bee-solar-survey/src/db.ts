@@ -1,7 +1,9 @@
+import type { Catalog, PricingRules, QuoteVersion } from '@bee/quote-core'
 import type { SiteSurveyProject, SurveyPhoto } from './types'
 
 const DB_NAME = 'bee-solar-survey'
-const DB_VER = 1
+// v2: + quotes store (quote versions per project)
+const DB_VER = 2
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -17,6 +19,10 @@ function openDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains('meta')) {
         db.createObjectStore('meta', { keyPath: 'key' })
+      }
+      if (!db.objectStoreNames.contains('quotes')) {
+        const store = db.createObjectStore('quotes', { keyPath: 'id' })
+        store.createIndex('byProject', 'projectId', { unique: false })
       }
     }
     req.onsuccess = () => resolve(req.result)
@@ -69,17 +75,18 @@ export async function saveProject(project: SiteSurveyProject): Promise<void> {
 
 export async function deleteProject(id: string): Promise<void> {
   const db = await openDB()
-  const tx = db.transaction(['projects', 'photos'], 'readwrite')
+  const tx = db.transaction(['projects', 'photos', 'quotes'], 'readwrite')
   tx.objectStore('projects').delete(id)
-  const idx = tx.objectStore('photos').index('byProject')
-  const req = idx.getAllKeys(id)
-  await new Promise<void>((resolve, reject) => {
-    req.onsuccess = () => {
-      for (const key of req.result) tx.objectStore('photos').delete(key)
-      resolve()
-    }
-    req.onerror = () => reject(req.error)
-  })
+  for (const storeName of ['photos', 'quotes'] as const) {
+    const req = tx.objectStore(storeName).index('byProject').getAllKeys(id)
+    await new Promise<void>((resolve, reject) => {
+      req.onsuccess = () => {
+        for (const key of req.result) tx.objectStore(storeName).delete(key)
+        resolve()
+      }
+      req.onerror = () => reject(req.error)
+    })
+  }
   await txDone(tx)
 }
 
@@ -138,25 +145,112 @@ export async function exportBackup(): Promise<object> {
     req.onsuccess = () => resolve(req.result as StoredPhoto[])
     req.onerror = () => reject(req.error)
   })
+  const quotes = await new Promise<StoredQuote[]>((resolve, reject) => {
+    const req = db.transaction('quotes', 'readonly').objectStore('quotes').getAll()
+    req.onsuccess = () => resolve(req.result as StoredQuote[])
+    req.onerror = () => reject(req.error)
+  })
+  const pricing = await getPricing()
   return {
     app: 'bee-solar-survey',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     projects,
     photos,
+    quotes,
+    pricing,
   }
 }
 
 export async function importBackup(data: {
   projects?: SiteSurveyProject[]
   photos?: StoredPhoto[]
+  quotes?: StoredQuote[]
+  pricing?: StoredPricing | null
 }): Promise<number> {
   const projects = data.projects ?? []
   const photos = data.photos ?? []
+  const quotes = data.quotes ?? []
   const db = await openDB()
-  const tx = db.transaction(['projects', 'photos'], 'readwrite')
+  const tx = db.transaction(['projects', 'photos', 'quotes'], 'readwrite')
   for (const p of projects) tx.objectStore('projects').put(p)
   for (const ph of photos) tx.objectStore('photos').put(ph)
+  for (const q of quotes) tx.objectStore('quotes').put(q)
   await txDone(tx)
+  if (data.pricing?.catalog && data.pricing?.rules) await savePricing(data.pricing)
   return projects.length
+}
+
+// ── Pricing (catalog + rules edited in the app) ─────────────────────────
+
+export interface StoredPricing {
+  catalog: Catalog
+  rules: PricingRules
+  updatedAt?: string
+}
+
+export async function getPricing(): Promise<StoredPricing | null> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('meta', 'readonly').objectStore('meta').get('pricing')
+    req.onsuccess = () => {
+      const row = req.result as { key: string; value: StoredPricing } | undefined
+      resolve(row?.value ?? null)
+    }
+    req.onerror = () => reject(req.error)
+  })
+}
+
+export async function savePricing(pricing: StoredPricing): Promise<void> {
+  const db = await openDB()
+  const tx = db.transaction('meta', 'readwrite')
+  tx.objectStore('meta').put({ key: 'pricing', value: { ...pricing, updatedAt: new Date().toISOString() } })
+  await txDone(tx)
+}
+
+export async function clearPricing(): Promise<void> {
+  const db = await openDB()
+  const tx = db.transaction('meta', 'readwrite')
+  tx.objectStore('meta').delete('pricing')
+  await txDone(tx)
+}
+
+// ── Quote versions ─────────────────────────────────────────────────────
+
+export interface StoredQuote {
+  /** `${projectId}:${version_no}` */
+  id: string
+  projectId: string
+  version_no: number
+  quote_number: string
+  created_at: string
+  snapshot_hash: string
+  quote: QuoteVersion
+}
+
+export async function listQuotes(projectId: string): Promise<StoredQuote[]> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('quotes', 'readonly').objectStore('quotes').index('byProject').getAll(projectId)
+    req.onsuccess = () => resolve((req.result as StoredQuote[]).sort((a, b) => b.version_no - a.version_no))
+    req.onerror = () => reject(req.error)
+  })
+}
+
+export async function saveQuote(projectId: string, quote: QuoteVersion): Promise<StoredQuote> {
+  const row: StoredQuote = {
+    id: `${projectId}:${quote.version_no}`,
+    projectId,
+    version_no: quote.version_no,
+    quote_number: quote.quote_number,
+    created_at: quote.created_at,
+    snapshot_hash: quote.snapshot_hash,
+    quote,
+  }
+  const db = await openDB()
+  const tx = db.transaction('quotes', 'readwrite')
+  // add(), not put(): a stored version is immutable (spec 12 principle 3).
+  tx.objectStore('quotes').add(row)
+  await txDone(tx)
+  return row
 }

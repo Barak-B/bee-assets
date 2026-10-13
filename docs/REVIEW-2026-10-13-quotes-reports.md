@@ -128,9 +128,14 @@ S09–S12 בדיקה / מסירה / ניטור ──── bee-live (חי, 184 
 | 1 — דוח סקר | ✅ גופן מוטמע, bidi, גלישה, תמונות, שדות, עמודים, hash, Web Share. 35 KB במקום 2 MB | `apps/bee-solar-survey/src/{pdf,pdfkit,rtl,share}.ts` |
 | 2 — PWA | ✅ service worker, גופנים מקומיים, favicon, fallback ל-Safari; נבדק reload אופליין | `vite.config.ts`, `public/fonts` |
 | 3 — הצעה ראשונית | ✅ מנוע + כתב כמויות + PDF טיוטה + job `dispatch.draft`; **מחירים = לאימות** עד מילוי הזרע | `packages/quote-core`, `src/quote*.ts` |
+| 3b — מחירון באפליקציה | ✅ מסך מחירון, ייבוא CSV/Excel מספק, מד מוכנות, גיבוי | `src/pricingScreen.ts`, `quote-core/src/pricebook.ts` |
+| 3c — כתב כמויות Excel + גרסאות | ✅ Excel ללקוח/פנימי לפי תבנית 08.CC, גרסאות בלתי-משתנות + "מה השתנה" | `src/boqXlsx.ts`, `src/quotesDialog.ts`, `quote-core/src/diff.ts` |
+| E2E | ✅ Playwright ב-CI: דוח, ייבוא מחירון → הצעה מתומחרת, Excel, גרסה 2, אופליין | `apps/bee-solar-survey/e2e` |
 | 4–6 | ⏳ דורשים גישה ל-bee-live והחלטות (סעיף 5) | |
 
 ## 5. מה צריך מברק כדי שההצעה תהיה אמיתית
+
+> את כל זה אפשר להזין עכשיו לבד, באפליקציה, במסך "מחירון" — כולל ייבוא קובץ מחירון מהספק.
 
 1. **מחירון ראשון** (ספק אחד, Excel/PDF) + מרווח רווח ברירת מחדל ותנאי תשלום.
 2. **2–3 הצעות מחיר אמיתיות** שיצאו בעבר (אפשר מוסוות) — לכיול ולעיצוב "שייראה כמו שלנו".

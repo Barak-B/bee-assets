@@ -60,7 +60,7 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
   const w = new Writer(
     doc,
     {
-      title: `הצעת מחיר ראשונית · ${quote.quote_number} · טיוטה`,
+      title: `הצעת מחיר ראשונית · ${quote.quote_number} · גרסה ${quote.version_no} · טיוטה`,
       sub: `${quote.input.projectName} · ${quote.input.address} · ${quote.created_at.slice(0, 10)}${project.surveyor ? ` · סקר: ${project.surveyor} ${project.surveyDate}` : ` · סקר: ${project.surveyDate}`}`,
     },
     {
@@ -165,6 +165,29 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
     ]),
     { fontSize: 9 },
   )
+
+  // ── What changed (spec quote-pdf-sections §2.12) ─────────
+  const ch = quote.changes
+  if (ch && (ch.added.length || ch.removed.length || ch.changed.length)) {
+    w.section(`מה השתנה מגרסה ${ch.from_version}`)
+    const diffRows: string[][] = [
+      ...ch.added.map((l) => [`נוסף: ${l.name_he}`, '—', formatNumber(l.qty), money(l.line_total_ils)]),
+      ...ch.removed.map((l) => [`הוסר: ${l.name_he}`, formatNumber(l.qty), '—', l.line_total_ils === null ? '—' : formatIls(-l.line_total_ils)]),
+      ...ch.changed.map((c) => [c.name_he, formatNumber(c.before.qty), formatNumber(c.after.qty), c.delta_ils === null ? 'לאימות *' : `${c.delta_ils > 0 ? '+' : ''}${formatIls(c.delta_ils)}`]),
+    ]
+    const d2 = ch.total_delta_incl_vat_ils
+    diffRows.push(['הפרש כולל מע״מ', '', '', d2 === null ? 'לאימות *' : `${d2 > 0 ? '+' : ''}${formatIls(d2)}`])
+    w.table(
+      [
+        { label: 'שורה', width: 96 },
+        { label: 'כמות קודם', width: 24, align: 'left' },
+        { label: 'כמות עכשיו', width: 24, align: 'left' },
+        { label: 'הפרש ₪', width: 38, align: 'left' },
+      ],
+      diffRows,
+      { fontSize: 8.5, highlightLast: true },
+    )
+  }
 
   // ── Terms ───────────────────────────────────────────────
   w.section('תוקף ותנאים')

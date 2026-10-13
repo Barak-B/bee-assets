@@ -51,14 +51,21 @@ export interface QuoteDraftBundle {
   job: HiveJob
 }
 
+export interface QuoteDraftOptions {
+  /** Previous saved version — the new one becomes version_no + 1 with a diff. */
+  previous?: QuoteVersion | null
+  now?: Date
+}
+
 export async function buildQuoteDraft(
   project: SiteSurveyProject,
   photos: SurveyPhoto[],
   catalog: Catalog = seedCatalog,
   rules: PricingRules = seedPricingRules,
+  opts: QuoteDraftOptions = {},
 ): Promise<QuoteDraftBundle> {
   const input = surveyToQuoteInput(project, photos)
-  const quote = await buildQuote(input, catalog, rules)
+  const quote = await buildQuote(input, catalog, rules, { previous: opts.previous ?? null, now: opts.now })
   const now = new Date().toISOString()
   const job: HiveJob = {
     id: crypto.randomUUID(),
@@ -71,8 +78,10 @@ export async function buildQuoteDraft(
     payload: {
       projectId: project.id,
       quoteNumber: quote.quote_number,
+      versionNo: quote.version_no,
       snapshotHash: quote.snapshot_hash,
-      titleHe: `טיוטת הצעת מחיר — ${project.projectName}`,
+      supersedesHash: quote.supersedes_hash,
+      titleHe: `טיוטת הצעת מחיר ${quote.quote_number} v${quote.version_no} — ${project.projectName}`,
       messageHe: quote.needs_owner_input
         ? 'הצעה ראשונית מהסקר. חסרים מחירים/פרמטרים — ברק משלים לפני כל שימוש. אין שליחה ללקוח.'
         : 'הצעה ראשונית מהסקר מוכנה לעיון ברק. אין שליחה ללקוח.',
