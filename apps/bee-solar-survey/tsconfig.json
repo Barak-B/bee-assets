@@ -35,5 +35,8 @@
   "include": [
     "src",
     "../../packages/quote-core/src"
+  ],
+  "exclude": [
+    "../../packages/quote-core/src/**/*.test.ts"
   ]
 }
