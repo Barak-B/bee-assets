@@ -1,36 +1,448 @@
 {
   "version": "seed-0.1",
   "updated_at": "2026-10-13",
-  "$comment": "קטלוג זרע ל-quote-lite. כל unit_cost הוא null עד שברק ממלא ממחירון ספק (needs_owner_input). מבנה לפי spec 12 §1. דגמים לדוגמה בלבד — לא התחייבות למלאי.",
-  "fx_rates": { "USD": null, "EUR": null, "source": "בנק ישראל — לאימות", "as_of": null },
+  "$comment": "קטלוג זרע ל-quote-lite. כל unit_cost הוא null עד שברק ממלא ממחירון ספק (needs_owner_input). מבנה לפי spec 12 §1. דגמים לדוגמה בלבד — לא התחייבות למלאי. boq_section לפי docs/plan/templates/boq-xlsx-layout.md §2 (08.01–08.08).",
+  "fx_rates": {
+    "USD": null,
+    "EUR": null,
+    "source": "בנק ישראל — לאימות",
+    "as_of": null
+  },
   "products": [
-    { "sku": "BEE-MOD-0001", "kind": "module", "subkind": "topcon", "name_he": "מודול פוטו-וולטאי 450W", "description_he": "מודול TOPCon דו-זכוכיתי ~450Wp, מסגרת שחורה, 25 שנות אחריות ביצועים (לפי דף נתונים)", "manufacturer": "לאימות", "model": "לאימות", "unit": "unit", "unit_cost": null, "currency": "USD", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.02", "tech": { "p_max_w": 450 } },
-    { "sku": "BEE-INV-SE05", "kind": "inverter", "subkind": "string", "name_he": "ממיר SolarEdge 5kW חד-פאזי", "unit": "unit", "unit_cost": null, "currency": "USD", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.03", "tech": { "brand": "SolarEdge", "phases": 1, "ac_power_kw": 5, "requires_optimizers": true } },
-    { "sku": "BEE-INV-SE10", "kind": "inverter", "subkind": "string", "name_he": "ממיר SolarEdge 10kW תלת-פאזי", "unit": "unit", "unit_cost": null, "currency": "USD", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.03", "tech": { "brand": "SolarEdge", "phases": 3, "ac_power_kw": 10, "requires_optimizers": true } },
-    { "sku": "BEE-INV-SE17", "kind": "inverter", "subkind": "string", "name_he": "ממיר SolarEdge 17kW תלת-פאזי", "unit": "unit", "unit_cost": null, "currency": "USD", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.03", "tech": { "brand": "SolarEdge", "phases": 3, "ac_power_kw": 17, "requires_optimizers": true } },
-    { "sku": "BEE-INV-SE27", "kind": "inverter", "subkind": "string", "name_he": "ממיר SolarEdge 27.6kW תלת-פאזי", "unit": "unit", "unit_cost": null, "currency": "USD", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.03", "tech": { "brand": "SolarEdge", "phases": 3, "ac_power_kw": 27.6, "requires_optimizers": true } },
-    { "sku": "BEE-INV-KS10", "kind": "inverter", "subkind": "string", "name_he": "ממיר KStar 10kW תלת-פאזי", "unit": "unit", "unit_cost": null, "currency": "USD", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.03", "tech": { "brand": "KStar", "phases": 3, "ac_power_kw": 10, "requires_optimizers": false } },
-    { "sku": "BEE-INV-KS20", "kind": "inverter", "subkind": "string", "name_he": "ממיר KStar 20kW תלת-פאזי", "unit": "unit", "unit_cost": null, "currency": "USD", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.03", "tech": { "brand": "KStar", "phases": 3, "ac_power_kw": 20, "requires_optimizers": false } },
-    { "sku": "BEE-INV-DY12", "kind": "inverter", "subkind": "hybrid", "name_he": "ממיר היברידי Deye 12kW תלת-פאזי", "unit": "unit", "unit_cost": null, "currency": "USD", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.03", "tech": { "brand": "Deye", "phases": 3, "ac_power_kw": 12, "requires_optimizers": false } },
-    { "sku": "BEE-OPT-SE01", "kind": "optimizer", "subkind": "single", "name_he": "אופטימייזר SolarEdge (מודול אחד)", "unit": "unit", "unit_cost": null, "currency": "USD", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.03", "tech": { "brand": "SolarEdge", "inputs": 1 } },
-    { "sku": "BEE-BAT-0001", "kind": "battery", "subkind": "hv", "name_he": "סוללת אגירה ~10kWh", "unit": "unit", "unit_cost": null, "currency": "USD", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.03", "tech": { "usable_kwh": 10 } },
-    { "sku": "BEE-MNT-TILE", "kind": "mounting", "subkind": "hook_tile", "name_he": "קונסטרוקציה לגג רעפים (למודול)", "description_he": "ווים, מסילות אלומיניום, קלמרות אמצע/קצה — לאימות קונסטרוקטור", "unit": "set", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.04", "tech": { "roof_types": ["tile"], "per_module_qty": 1 } },
-    { "sku": "BEE-MNT-FLAT", "kind": "mounting", "subkind": "ballast", "name_he": "קונסטרוקציה לגג בטון שטוח (למודול)", "description_he": "מערכת משקולות/עיגון, זווית לפי תכנון", "unit": "set", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.04", "tech": { "roof_types": ["flat"], "per_module_qty": 1 } },
-    { "sku": "BEE-MNT-TIN", "kind": "mounting", "subkind": "tin_roof_bracket", "name_he": "קונסטרוקציה לגג פח/פנל (למודול)", "unit": "set", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.04", "tech": { "roof_types": ["metal-standing-seam", "metal-trapezoidal"], "per_module_qty": 1 } },
-    { "sku": "BEE-MNT-GND", "kind": "mounting", "subkind": "ground", "name_he": "קונסטרוקציה קרקעית (למודול)", "unit": "set", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.04", "tech": { "roof_types": ["ground", "other"], "per_module_qty": 1 } },
-    { "sku": "BEE-CBL-DC6", "kind": "cable", "subkind": "dc_solar", "name_he": "כבל סולארי DC 6 ממ״ר (H1Z2Z2-K)", "unit": "m", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.05" },
-    { "sku": "BEE-CBL-AC", "kind": "cable", "subkind": "ac_power", "name_he": "כבל AC (חתך לפי תכנון)", "description_he": "N2XY, חתך סופי לפי wire_sizing בתכנון המפורט", "unit": "m", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.05" },
-    { "sku": "BEE-CAB-AC", "kind": "cabinet", "subkind": "ac_box", "name_he": "לוח/סט הגנות AC לממיר", "description_he": "מא״ז, RCD (סוג לפי הצהרת היצרן), SPD, שילוט — לפי כללים R7–R13", "unit": "komplet", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.06" },
-    { "sku": "BEE-CAB-DC", "kind": "cabinet", "subkind": "dc_box", "name_he": "קופסת חיבורים DC + SPD DC", "unit": "komplet", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.06" },
-    { "sku": "BEE-ACC-PE", "kind": "accessory", "subkind": "earthing_set", "name_he": "סט הארקות למערך (פס, מוליכים, נעלי כבל)", "unit": "set", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.06" },
-    { "sku": "BEE-MTR-PROD", "kind": "meter", "subkind": "production", "name_he": "הכנה למונה ייצור / ארון מונה", "description_he": "המונה עצמו מסופק ע״י חח״י (35כ3(י)); הפריט הוא הארון/ההכנה", "unit": "komplet", "unit_cost": null, "currency": "ILS", "verification": "office", "needs_owner_input": true, "boq_section": "08.06" },
-    { "sku": "BEE-LAB-MOD", "kind": "labour", "subkind": "install_modules", "name_he": "התקנת מודולים וקונסטרוקציה", "unit": "unit", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.07", "tech": { "basis": "module" } },
-    { "sku": "BEE-LAB-INV", "kind": "labour", "subkind": "install_inverter_boards", "name_he": "התקנת ממיר, לוחות וחיווט", "unit": "unit", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.07", "tech": { "basis": "inverter" } },
-    { "sku": "BEE-LAB-CRANE", "kind": "labour", "subkind": "crane", "name_he": "מנוף להנפת ציוד (יום)", "unit": "day", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.07", "tech": { "basis": "day" } },
-    { "sku": "BEE-SRV-DESIGN", "kind": "service", "subkind": "design", "name_he": "תכנון חשמלי ותוכניות (מהנדס)", "unit": "komplet", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.01" },
-    { "sku": "BEE-SRV-CONST", "kind": "service", "subkind": "constructor", "name_he": "אישור קונסטרוקטור", "unit": "komplet", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.01" },
-    { "sku": "BEE-SRV-INSP", "kind": "service", "subkind": "inspector", "name_he": "בדיקת בודק מוסמך (IEC 62446-1)", "unit": "komplet", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.01" },
-    { "sku": "BEE-SRV-IEC", "kind": "service", "subkind": "iec_followup", "name_he": "הגשה וליווי מול חח״י עד חיבור", "unit": "komplet", "unit_cost": null, "currency": "ILS", "verification": "unverified", "needs_owner_input": true, "boq_section": "08.01" },
-    { "sku": "BEE-FEE-IEC", "kind": "fee", "subkind": "iec_test", "name_he": "אגרות חח״י (סקר, בדיקה, מונה)", "description_he": "על חשבון הלקוח לפי חשבון חח״י בפועל — לא נכלל בסה״כ", "unit": "komplet", "unit_cost": null, "currency": "ILS", "verification": "office", "needs_owner_input": true, "boq_section": "08.08", "tech": { "passthrough": true } }
+    {
+      "sku": "BEE-MOD-0001",
+      "kind": "module",
+      "subkind": "topcon",
+      "name_he": "מודול פוטו-וולטאי 450W",
+      "description_he": "מודול TOPCon דו-זכוכיתי ~450Wp, מסגרת שחורה, 25 שנות אחריות ביצועים (לפי דף נתונים)",
+      "manufacturer": "לאימות",
+      "model": "לאימות",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "USD",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.02",
+      "tech": {
+        "p_max_w": 450
+      }
+    },
+    {
+      "sku": "BEE-INV-SE05",
+      "kind": "inverter",
+      "subkind": "string",
+      "name_he": "ממיר SolarEdge 5kW חד-פאזי",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "USD",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.02",
+      "tech": {
+        "brand": "SolarEdge",
+        "phases": 1,
+        "ac_power_kw": 5,
+        "requires_optimizers": true
+      }
+    },
+    {
+      "sku": "BEE-INV-SE10",
+      "kind": "inverter",
+      "subkind": "string",
+      "name_he": "ממיר SolarEdge 10kW תלת-פאזי",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "USD",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.02",
+      "tech": {
+        "brand": "SolarEdge",
+        "phases": 3,
+        "ac_power_kw": 10,
+        "requires_optimizers": true
+      }
+    },
+    {
+      "sku": "BEE-INV-SE17",
+      "kind": "inverter",
+      "subkind": "string",
+      "name_he": "ממיר SolarEdge 17kW תלת-פאזי",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "USD",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.02",
+      "tech": {
+        "brand": "SolarEdge",
+        "phases": 3,
+        "ac_power_kw": 17,
+        "requires_optimizers": true
+      }
+    },
+    {
+      "sku": "BEE-INV-SE27",
+      "kind": "inverter",
+      "subkind": "string",
+      "name_he": "ממיר SolarEdge 27.6kW תלת-פאזי",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "USD",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.02",
+      "tech": {
+        "brand": "SolarEdge",
+        "phases": 3,
+        "ac_power_kw": 27.6,
+        "requires_optimizers": true
+      }
+    },
+    {
+      "sku": "BEE-INV-KS10",
+      "kind": "inverter",
+      "subkind": "string",
+      "name_he": "ממיר KStar 10kW תלת-פאזי",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "USD",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.02",
+      "tech": {
+        "brand": "KStar",
+        "phases": 3,
+        "ac_power_kw": 10,
+        "requires_optimizers": false
+      }
+    },
+    {
+      "sku": "BEE-INV-KS20",
+      "kind": "inverter",
+      "subkind": "string",
+      "name_he": "ממיר KStar 20kW תלת-פאזי",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "USD",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.02",
+      "tech": {
+        "brand": "KStar",
+        "phases": 3,
+        "ac_power_kw": 20,
+        "requires_optimizers": false
+      }
+    },
+    {
+      "sku": "BEE-INV-DY12",
+      "kind": "inverter",
+      "subkind": "hybrid",
+      "name_he": "ממיר היברידי Deye 12kW תלת-פאזי",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "USD",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.02",
+      "tech": {
+        "brand": "Deye",
+        "phases": 3,
+        "ac_power_kw": 12,
+        "requires_optimizers": false
+      }
+    },
+    {
+      "sku": "BEE-OPT-SE01",
+      "kind": "optimizer",
+      "subkind": "single",
+      "name_he": "אופטימייזר SolarEdge (מודול אחד)",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "USD",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.02",
+      "tech": {
+        "brand": "SolarEdge",
+        "inputs": 1
+      }
+    },
+    {
+      "sku": "BEE-BAT-0001",
+      "kind": "battery",
+      "subkind": "hv",
+      "name_he": "סוללת אגירה ~10kWh",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "USD",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.08",
+      "tech": {
+        "usable_kwh": 10
+      }
+    },
+    {
+      "sku": "BEE-MNT-TILE",
+      "kind": "mounting",
+      "subkind": "hook_tile",
+      "name_he": "קונסטרוקציה לגג רעפים (למודול)",
+      "description_he": "ווים, מסילות אלומיניום, קלמרות אמצע/קצה — לאימות קונסטרוקטור",
+      "unit": "set",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.03",
+      "tech": {
+        "roof_types": [
+          "tile"
+        ],
+        "per_module_qty": 1
+      }
+    },
+    {
+      "sku": "BEE-MNT-FLAT",
+      "kind": "mounting",
+      "subkind": "ballast",
+      "name_he": "קונסטרוקציה לגג בטון שטוח (למודול)",
+      "description_he": "מערכת משקולות/עיגון, זווית לפי תכנון",
+      "unit": "set",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.03",
+      "tech": {
+        "roof_types": [
+          "flat"
+        ],
+        "per_module_qty": 1
+      }
+    },
+    {
+      "sku": "BEE-MNT-TIN",
+      "kind": "mounting",
+      "subkind": "tin_roof_bracket",
+      "name_he": "קונסטרוקציה לגג פח/פנל (למודול)",
+      "unit": "set",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.03",
+      "tech": {
+        "roof_types": [
+          "metal-standing-seam",
+          "metal-trapezoidal"
+        ],
+        "per_module_qty": 1
+      }
+    },
+    {
+      "sku": "BEE-MNT-GND",
+      "kind": "mounting",
+      "subkind": "ground",
+      "name_he": "קונסטרוקציה קרקעית (למודול)",
+      "unit": "set",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.03",
+      "tech": {
+        "roof_types": [
+          "ground",
+          "other"
+        ],
+        "per_module_qty": 1
+      }
+    },
+    {
+      "sku": "BEE-CBL-DC6",
+      "kind": "cable",
+      "subkind": "dc_solar",
+      "name_he": "כבל סולארי DC 6 ממ״ר (H1Z2Z2-K)",
+      "unit": "m",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.04"
+    },
+    {
+      "sku": "BEE-CBL-AC",
+      "kind": "cable",
+      "subkind": "ac_power",
+      "name_he": "כבל AC (חתך לפי תכנון)",
+      "description_he": "N2XY, חתך סופי לפי wire_sizing בתכנון המפורט",
+      "unit": "m",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.05"
+    },
+    {
+      "sku": "BEE-CAB-AC",
+      "kind": "cabinet",
+      "subkind": "ac_box",
+      "name_he": "לוח/סט הגנות AC לממיר",
+      "description_he": "מא״ז, RCD (סוג לפי הצהרת היצרן), SPD, שילוט — לפי כללים R7–R13",
+      "unit": "komplet",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.05"
+    },
+    {
+      "sku": "BEE-CAB-DC",
+      "kind": "cabinet",
+      "subkind": "dc_box",
+      "name_he": "קופסת חיבורים DC + SPD DC",
+      "unit": "komplet",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.04"
+    },
+    {
+      "sku": "BEE-ACC-PE",
+      "kind": "accessory",
+      "subkind": "earthing_set",
+      "name_he": "סט הארקות למערך (פס, מוליכים, נעלי כבל)",
+      "unit": "set",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.05"
+    },
+    {
+      "sku": "BEE-MTR-PROD",
+      "kind": "meter",
+      "subkind": "production",
+      "name_he": "הכנה למונה ייצור / ארון מונה",
+      "description_he": "המונה עצמו מסופק ע״י חח״י (35כ3(י)); הפריט הוא הארון/ההכנה",
+      "unit": "komplet",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "office",
+      "needs_owner_input": true,
+      "boq_section": "08.05"
+    },
+    {
+      "sku": "BEE-LAB-MOD",
+      "kind": "labour",
+      "subkind": "install_modules",
+      "name_he": "התקנת מודולים וקונסטרוקציה",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.06",
+      "tech": {
+        "basis": "module"
+      }
+    },
+    {
+      "sku": "BEE-LAB-INV",
+      "kind": "labour",
+      "subkind": "install_inverter_boards",
+      "name_he": "התקנת ממיר, לוחות וחיווט",
+      "unit": "unit",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.06",
+      "tech": {
+        "basis": "inverter"
+      }
+    },
+    {
+      "sku": "BEE-LAB-CRANE",
+      "kind": "labour",
+      "subkind": "crane",
+      "name_he": "מנוף להנפת ציוד (יום)",
+      "unit": "day",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.06",
+      "tech": {
+        "basis": "day"
+      }
+    },
+    {
+      "sku": "BEE-SRV-DESIGN",
+      "kind": "service",
+      "subkind": "design",
+      "name_he": "תכנון חשמלי ותוכניות (מהנדס)",
+      "unit": "komplet",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.01"
+    },
+    {
+      "sku": "BEE-SRV-CONST",
+      "kind": "service",
+      "subkind": "constructor",
+      "name_he": "אישור קונסטרוקטור",
+      "unit": "komplet",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.01"
+    },
+    {
+      "sku": "BEE-SRV-INSP",
+      "kind": "service",
+      "subkind": "inspector",
+      "name_he": "בדיקת בודק מוסמך (IEC 62446-1)",
+      "unit": "komplet",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.07"
+    },
+    {
+      "sku": "BEE-SRV-IEC",
+      "kind": "service",
+      "subkind": "iec_followup",
+      "name_he": "הגשה וליווי מול חח״י עד חיבור",
+      "unit": "komplet",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "unverified",
+      "needs_owner_input": true,
+      "boq_section": "08.07"
+    },
+    {
+      "sku": "BEE-FEE-IEC",
+      "kind": "fee",
+      "subkind": "iec_test",
+      "name_he": "אגרות חח״י (סקר, בדיקה, מונה)",
+      "description_he": "על חשבון הלקוח לפי חשבון חח״י בפועל — לא נכלל בסה״כ",
+      "unit": "komplet",
+      "unit_cost": null,
+      "currency": "ILS",
+      "verification": "office",
+      "needs_owner_input": true,
+      "boq_section": "08.07",
+      "tech": {
+        "passthrough": true
+      }
+    }
   ]
 }

@@ -1,3 +1,4 @@
+import { diffQuotes } from './diff'
 import { canonicalJson, round2, roundToStep, sha256Hex } from './money'
 import type {
   Catalog,
@@ -250,8 +251,11 @@ export function priceLines(drafts: DraftLine[], catalog: Catalog, rules: Pricing
     const p = d.product
     const flags = [...(d.flags ?? [])]
     const passthrough = p.kind === 'fee' && (p.tech?.passthrough ?? true)
+    // Sale price from a rules table (labour per module): the product's own cost is irrelevant.
+    const fromTable = d.unit_price_ils !== undefined
     const { cost, fx, flags: costFlags } = costInIls(p, catalog)
-    flags.push(...costFlags)
+    // A passthrough fee without an estimate is normal ("לפי חשבון בפועל") — not a gap.
+    if (!fromTable && !passthrough) flags.push(...costFlags)
 
     let margin: number | null = null
     let unitPrice: number | null
@@ -271,8 +275,10 @@ export function priceLines(drafts: DraftLine[], catalog: Catalog, rules: Pricing
         unitPrice = round2(cost * (1 + margin))
       }
     }
-    if (p.needs_owner_input) flags.push('catalog:needs_owner_input')
-    if (p.verification === 'unverified') flags.push('verification:unverified')
+    const verification = fromTable ? rules.verification : p.verification
+    const ownerInput = fromTable ? unitPrice === null : !passthrough && (unitPrice === null || !!p.needs_owner_input)
+    if (!fromTable && !passthrough && p.needs_owner_input) flags.push('catalog:needs_owner_input')
+    if (verification === 'unverified') flags.push('verification:unverified')
 
     return {
       line_no: i + 1,
@@ -291,8 +297,8 @@ export function priceLines(drafts: DraftLine[], catalog: Catalog, rules: Pricing
       unit_price_ils: unitPrice,
       line_total_ils: unitPrice === null ? null : round2(unitPrice * d.qty),
       passthrough,
-      verification: p.verification,
-      needs_owner_input: unitPrice === null || !!p.needs_owner_input,
+      verification,
+      needs_owner_input: ownerInput,
       flags,
       boq_section: p.boq_section,
     }
@@ -322,9 +328,20 @@ export function computeTotals(lines: QuoteLine[], rules: PricingRules, dcKwp: nu
 // Quote
 // ──────────────────────────────────────────────────────────────────────────
 
+/** Flags that mean "data missing" (vs. informational warnings). */
+export function isBlockingFlag(flag: string): boolean {
+  return /^(rules|pricing|catalog):/.test(flag) || flag === 'sizing:no_kwp_basis'
+}
+
 export interface BuildQuoteOptions {
   now?: Date
   quoteNumber?: string
+  /**
+   * Previous version of the same quote. The new one keeps its quote number,
+   * gets version_no + 1 and a line diff (spec 12 §3.5). Sent versions are never
+   * edited — a change is always a new version.
+   */
+  previous?: QuoteVersion | null
 }
 
 export function quoteNumberFor(projectId: string, now: Date): string {
@@ -363,19 +380,26 @@ export async function buildQuote(
   const body = { input, design: sizing.design, lines, totals, terms, catalog_version: catalog.version, rules_version: rules.version }
   const snapshot_hash = await sha256Hex(canonicalJson(body))
 
-  return {
-    quote_number: opts.quoteNumber ?? quoteNumberFor(input.projectId, now),
-    version_no: 1,
+  const prev = opts.previous ?? null
+  const version_no = prev ? prev.version_no + 1 : 1
+  const draft: QuoteVersion = {
+    quote_number: opts.quoteNumber ?? prev?.quote_number ?? quoteNumberFor(input.projectId, now),
+    version_no,
     status: 'draft',
     created_at: now.toISOString(),
     ...body,
     flags,
-    needs_owner_input: flags.length > 0 || lines.some((l) => l.needs_owner_input),
+    // Informational flags (budget, multiple inverters, tight area) do not block; missing data does.
+    needs_owner_input: flags.some(isBlockingFlag) || lines.some((l) => l.needs_owner_input),
     snapshot_hash,
+    supersedes_hash: prev?.snapshot_hash ?? null,
+    changes: null,
     trust: {
       law2: 'Human picks — no customer auto-send',
       requiresHumanPick: true,
       destinationClass: 'drafts_group',
     },
   }
+  if (prev) draft.changes = diffQuotes(prev, draft)
+  return draft
 }

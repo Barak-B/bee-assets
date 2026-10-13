@@ -198,9 +198,29 @@ export interface QuoteTotals {
   unpriced_lines: number
 }
 
+export interface QuoteLineChange {
+  sku: string
+  name_he: string
+  before: { qty: number; unit_price_ils: number | null; line_total_ils: number | null }
+  after: { qty: number; unit_price_ils: number | null; line_total_ils: number | null }
+  /** after − before (line total, ILS); null when either side is unpriced. */
+  delta_ils: number | null
+}
+
+/** Spec 12 §3.5 / quote-pdf-sections §2.12 — what changed against the previous version. */
+export interface QuoteDiff {
+  from_version: number
+  to_version: number
+  added: QuoteLine[]
+  removed: QuoteLine[]
+  changed: QuoteLineChange[]
+  total_delta_excl_vat_ils: number | null
+  total_delta_incl_vat_ils: number | null
+}
+
 export interface QuoteVersion {
   quote_number: string
-  version_no: 1
+  version_no: number
   status: 'draft'
   created_at: string
   input: QuoteInput
@@ -219,6 +239,10 @@ export interface QuoteVersion {
   rules_version: string
   /** sha256 (hex) of the canonical JSON of input+design+lines+totals+terms. */
   snapshot_hash: string
+  /** snapshot_hash of the version this one replaces (null for v1). */
+  supersedes_hash: string | null
+  /** Line-level diff against the previous version (null for v1). */
+  changes: QuoteDiff | null
   trust: {
     law2: 'Human picks — no customer auto-send'
     requiresHumanPick: true

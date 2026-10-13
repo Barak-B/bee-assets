@@ -197,7 +197,9 @@ describe('buildQuote (golden)', () => {
     expect(q.needs_owner_input).toBe(true)
     expect(q.flags).toContain('rules:vat_missing')
     expect(q.flags).toContain('rules:needs_owner_input')
-    for (const l of q.lines) expect(l.needs_owner_input).toBe(true)
+    for (const l of q.lines) expect(l.needs_owner_input).toBe(!l.passthrough)
+    // passthrough fees without an estimate are not a gap
+    expect(q.lines.find((l) => l.kind === 'fee')!.flags).not.toContain('pricing:cost_missing')
     // seed sizing parameters are null → no area/yield estimates, but target kWp still works
     expect(q.design.area_needed_m2).toBeNull()
     expect(q.lines.find((l) => l.sku === 'BEE-CBL-DC6')).toBeUndefined()

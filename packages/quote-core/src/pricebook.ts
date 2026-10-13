@@ -1,0 +1,321 @@
+/**
+ * Price book maintenance: readiness check, supplier price-list import (CSV),
+ * template export and suggested sizing defaults. Pure functions — the app
+ * stores the result; nothing here touches the network.
+ */
+import type { Catalog, Currency, PricingRules, Product, ProductKind, RoofType } from './types'
+
+// ──────────────────────────────────────────────────────────────────────────
+// BOQ chapters (docs/plan/templates/boq-xlsx-layout.md §2)
+// ──────────────────────────────────────────────────────────────────────────
+
+export const BOQ_SECTIONS: { code: string; title_he: string }[] = [
+  { code: '08.01', title_he: 'מקדמות ותכנון' },
+  { code: '08.02', title_he: 'מודולים ואלקטרוניקה' },
+  { code: '08.03', title_he: 'קונסטרוקציה' },
+  { code: '08.04', title_he: 'חשמל DC ותשתית גג' },
+  { code: '08.05', title_he: 'חשמל AC, לוחות והארקה' },
+  { code: '08.06', title_he: 'עבודות התקנה' },
+  { code: '08.07', title_he: 'בדיקות, אישורים והפעלה' },
+  { code: '08.08', title_he: 'שונות ואופציות' },
+]
+
+export function boqSectionTitle(code: string | undefined): string {
+  return BOQ_SECTIONS.find((s) => s.code === code)?.title_he ?? 'שונות ואופציות'
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Readiness
+// ──────────────────────────────────────────────────────────────────────────
+
+export const ROOF_LABELS_HE: Record<RoofType, string> = {
+  flat: 'בטון שטוח',
+  tile: 'רעפים',
+  'metal-standing-seam': 'פנל מבודד',
+  'metal-trapezoidal': 'איסכורית',
+  ground: 'קרקע',
+  other: 'אחר',
+}
+
+export const KIND_LABELS_HE: Record<ProductKind, string> = {
+  module: 'מודולים',
+  inverter: 'ממירים',
+  optimizer: 'אופטימייזרים',
+  battery: 'סוללות',
+  breaker: 'הגנות',
+  meter: 'מונה',
+  cable: 'כבלים',
+  tray: 'תעלות',
+  cabinet: 'לוחות',
+  mounting: 'קונסטרוקציה',
+  accessory: 'אביזרים',
+  labour: 'עבודה',
+  service: 'שירותים',
+  fee: 'אגרות',
+}
+
+export interface ReadinessItem {
+  key: string
+  label_he: string
+}
+
+export interface PricingReadiness {
+  ready: boolean
+  missing: ReadinessItem[]
+  pricedCount: number
+  totalCount: number
+  unpricedSkus: string[]
+}
+
+const REQUIRED_ROOFS: RoofType[] = ['flat', 'tile', 'metal-standing-seam', 'metal-trapezoidal', 'ground']
+
+/**
+ * What still blocks a real (non-"לאימות") quote. Labour sold from the per-roof
+ * table (install_modules) does not need a cost; fees are passthrough and only
+ * need a cost if Barak wants an estimate, so they never block.
+ */
+export function pricingReadiness(catalog: Catalog, rules: PricingRules): PricingReadiness {
+  const missing: ReadinessItem[] = []
+  const products = catalog.products.filter((p) => p.is_active !== false)
+  const needsCost = (p: Product) => p.kind !== 'fee' && !(p.kind === 'labour' && p.subkind === 'install_modules')
+  const unpriced = products.filter((p) => needsCost(p) && (p.unit_cost === null || p.unit_cost === undefined))
+  const priced = products.filter((p) => needsCost(p)).length - unpriced.length
+
+  if (unpriced.length) missing.push({ key: 'catalog.costs', label_he: `${unpriced.length} פריטים ללא מחיר עלות` })
+
+  const currencies = new Set(products.filter((p) => p.unit_cost !== null).map((p) => p.currency))
+  for (const c of ['USD', 'EUR'] as const) {
+    if (currencies.has(c) && !catalog.fx_rates[c]) missing.push({ key: `fx.${c}`, label_he: `שער ${c}` })
+  }
+
+  if (rules.vat_rate === null) missing.push({ key: 'rules.vat_rate', label_he: 'שיעור מע״מ' })
+
+  const kinds = new Set(products.filter((p) => needsCost(p)).map((p) => p.kind))
+  if (rules.default_margin_pct === null) {
+    const noMargin = [...kinds].filter((k) => rules.margins[k] === null || rules.margins[k] === undefined)
+    if (noMargin.length) {
+      missing.push({ key: 'rules.margins', label_he: `מרווח ל: ${noMargin.map((k) => KIND_LABELS_HE[k]).join(', ')}` })
+    }
+  }
+
+  const noLabour = REQUIRED_ROOFS.filter((r) => rules.labour_per_module_ils[r] === null || rules.labour_per_module_ils[r] === undefined)
+  if (noLabour.length) {
+    missing.push({ key: 'rules.labour', label_he: `מחיר עבודה למודול: ${noLabour.map((r) => ROOF_LABELS_HE[r]).join(', ')}` })
+  }
+
+  if (rules.validity_days === null) missing.push({ key: 'rules.validity_days', label_he: 'תוקף הצעה (ימים)' })
+
+  const pcts = rules.payment_schedule.map((m) => m.pct)
+  if (pcts.some((p) => p === null)) missing.push({ key: 'rules.payment_schedule', label_he: 'אחוזי לוח תשלומים' })
+  else {
+    const sum = pcts.reduce<number>((s, p) => s + (p ?? 0), 0)
+    if (Math.abs(sum - 100) > 0.01) missing.push({ key: 'rules.payment_schedule_sum', label_he: `לוח התשלומים מסתכם ל-${sum}% ולא 100%` })
+  }
+
+  const s = rules.sizing
+  if (s.area_m2_per_kwp === null || s.specific_yield_kwh_per_kwp === null || s.dc_ac_ratio_max === null) {
+    missing.push({ key: 'rules.sizing', label_he: 'פרמטרי תכנון (שטח ל-kWp, תפוקה סגולית, יחס DC/AC)' })
+  }
+
+  return {
+    ready: missing.length === 0,
+    missing,
+    pricedCount: priced,
+    totalCount: products.filter((p) => needsCost(p)).length,
+    unpricedSkus: unpriced.map((p) => p.sku),
+  }
+}
+
+/**
+ * Rough engineering starting points for Israel. Offered in the UI as a
+ * one-click fill, always stored as `unverified` until calibrated against real jobs.
+ */
+export const SUGGESTED_SIZING: PricingRules['sizing'] = {
+  area_m2_per_kwp: 6.5,
+  specific_yield_kwh_per_kwp: 1650,
+  dc_ac_ratio_max: 1.2,
+  dc_cable_m_per_module: 2.5,
+  default_ac_cable_m: 25,
+  strings_modules_per_string: 14,
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Price-list import (CSV / rows from XLSX)
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface PriceRow {
+  sku: string
+  unit_cost: number | null
+  currency?: Currency
+  /** 1-based source row, for error messages. */
+  row?: number
+}
+
+export interface ApplyResult {
+  catalog: Catalog
+  applied: number
+  unchanged: number
+  unknownSkus: string[]
+  invalid: { row: number; reason: string }[]
+}
+
+const SKU_HEADERS = ['sku', 'מקט', 'מק"ט', 'מק״ט', 'קוד', 'code', 'item']
+const COST_HEADERS = ['unit_cost', 'cost', 'price', 'net_price', 'עלות', 'מחיר', 'מחיר נטו', 'מחיר יחידה', 'עלות יחידה']
+const CURRENCY_HEADERS = ['currency', 'מטבע', 'cur']
+
+function norm(h: string): string {
+  return h.trim().toLowerCase().replace(/[‏‎﻿]/g, '').replace(/\s+/g, ' ')
+}
+
+export function parseNumber(raw: unknown): number | null {
+  if (raw === null || raw === undefined) return null
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null
+  const t = String(raw).replace(/[₪$€\s]/g, '').replace(/[‏‎]/g, '')
+  if (!t) return null
+  // "1,234.50" → 1234.50 ; "1234,50" → 1234.50
+  const cleaned = /,\d{1,2}$/.test(t) && !t.includes('.') ? t.replace(',', '.') : t.replace(/,/g, '')
+  const n = Number(cleaned)
+  return Number.isFinite(n) ? n : null
+}
+
+export function parseCurrency(raw: unknown): Currency | undefined {
+  const t = String(raw ?? '').trim().toUpperCase()
+  if (!t) return undefined
+  if (t === 'ILS' || t === 'NIS' || t === '₪' || t === 'ש"ח' || t === 'ש״ח' || t === 'שח') return 'ILS'
+  if (t === 'USD' || t === '$' || t === 'דולר') return 'USD'
+  if (t === 'EUR' || t === '€' || t === 'יורו') return 'EUR'
+  return undefined
+}
+
+function splitCsvLine(line: string, delim: string): string[] {
+  const out: string[] = []
+  let cur = ''
+  let q = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]!
+    if (q) {
+      if (ch === '"' && line[i + 1] === '"') {
+        cur += '"'
+        i++
+      } else if (ch === '"') q = false
+      else cur += ch
+    } else if (ch === '"' && cur === '') q = true // quotes only open a field (RFC 4180); מק"ט stays literal
+    else if (ch === delim) {
+      out.push(cur)
+      cur = ''
+    } else cur += ch
+  }
+  out.push(cur)
+  return out
+}
+
+/** Find the header row and column indexes in a table of cells. */
+export function rowsFromTable(table: unknown[][]): { rows: PriceRow[]; invalid: { row: number; reason: string }[] } {
+  const invalid: { row: number; reason: string }[] = []
+  let headerIdx = -1
+  let skuCol = -1
+  let costCol = -1
+  let curCol = -1
+  for (let r = 0; r < Math.min(table.length, 20); r++) {
+    const cells = (table[r] ?? []).map((c) => norm(String(c ?? '')))
+    const s = cells.findIndex((c) => SKU_HEADERS.includes(c))
+    const c = cells.findIndex((c2) => COST_HEADERS.includes(c2))
+    if (s >= 0 && c >= 0) {
+      headerIdx = r
+      skuCol = s
+      costCol = c
+      curCol = cells.findIndex((c3) => CURRENCY_HEADERS.includes(c3))
+      break
+    }
+  }
+  if (headerIdx < 0) {
+    invalid.push({ row: 1, reason: 'לא נמצאה שורת כותרת עם עמודות מק״ט ועלות (sku, unit_cost)' })
+    return { rows: [], invalid }
+  }
+  const rows: PriceRow[] = []
+  for (let r = headerIdx + 1; r < table.length; r++) {
+    const cells = table[r] ?? []
+    const sku = String(cells[skuCol] ?? '').trim()
+    if (!sku) continue
+    const rawCost = cells[costCol]
+    const cost = parseNumber(rawCost)
+    if (cost === null && String(rawCost ?? '').trim() !== '') {
+      invalid.push({ row: r + 1, reason: `עלות לא מספרית: "${String(rawCost)}"` })
+      continue
+    }
+    if (cost !== null && cost < 0) {
+      invalid.push({ row: r + 1, reason: 'עלות שלילית' })
+      continue
+    }
+    const currency = curCol >= 0 ? parseCurrency(cells[curCol]) : undefined
+    if (curCol >= 0 && String(cells[curCol] ?? '').trim() && !currency) {
+      invalid.push({ row: r + 1, reason: `מטבע לא מוכר: "${String(cells[curCol])}"` })
+      continue
+    }
+    rows.push({ sku, unit_cost: cost, currency, row: r + 1 })
+  }
+  return { rows, invalid }
+}
+
+export function parsePriceListCsv(text: string): { rows: PriceRow[]; invalid: { row: number; reason: string }[] } {
+  const clean = text.replace(/^﻿/, '')
+  const lines = clean.split(/\r?\n/).filter((l) => l.trim() !== '')
+  if (!lines.length) return { rows: [], invalid: [{ row: 1, reason: 'הקובץ ריק' }] }
+  const first = lines[0]!
+  const delim = [',', ';', '\t'].sort((a, b) => first.split(b).length - first.split(a).length)[0]!
+  return rowsFromTable(lines.map((l) => splitCsvLine(l, delim)))
+}
+
+export function applyPriceList(catalog: Catalog, rows: PriceRow[], source: string, today = new Date().toISOString().slice(0, 10)): ApplyResult {
+  const next: Catalog = structuredClone(catalog)
+  const bySku = new Map(next.products.map((p) => [p.sku.toUpperCase(), p]))
+  const unknownSkus: string[] = []
+  const invalid: { row: number; reason: string }[] = []
+  let applied = 0
+  let unchanged = 0
+  for (const r of rows) {
+    const p = bySku.get(r.sku.toUpperCase())
+    if (!p) {
+      unknownSkus.push(r.sku)
+      continue
+    }
+    if (r.unit_cost === null) continue
+    const currency = r.currency ?? p.currency
+    if (p.unit_cost === r.unit_cost && p.currency === currency) {
+      unchanged++
+      continue
+    }
+    p.unit_cost = r.unit_cost
+    p.currency = currency
+    p.cost_source = `${source} · ${today}`
+    p.needs_owner_input = false
+    if (p.verification === 'unverified') p.verification = 'office'
+    applied++
+  }
+  next.updated_at = today
+  return { catalog: next, applied, unchanged, unknownSkus, invalid }
+}
+
+function csvCell(v: unknown): string {
+  const s = v === null || v === undefined ? '' : String(v)
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+/** CSV the supplier/Barak can fill and re-import (UTF-8 BOM so Excel opens Hebrew correctly). */
+export function priceListTemplateCsv(catalog: Catalog): string {
+  const header = ['sku', 'name_he', 'kind', 'unit', 'currency', 'unit_cost', 'cost_source']
+  const lines = catalog.products.map((p) =>
+    [p.sku, p.name_he, p.kind, p.unit, p.currency, p.unit_cost ?? '', p.cost_source ?? ''].map(csvCell).join(','),
+  )
+  return '﻿' + [header.join(','), ...lines].join('\r\n') + '\r\n'
+}
+
+/** Rules are "owner-filled" once nothing in readiness points at them. */
+export function markRulesFilled(rules: PricingRules, catalog: Catalog): PricingRules {
+  const r = structuredClone(rules)
+  const rd = pricingReadiness(catalog, r)
+  const rulesMissing = rd.missing.filter((m) => m.key.startsWith('rules.'))
+  r.needs_owner_input = rulesMissing.length > 0
+  if (!r.needs_owner_input && r.verification === 'unverified') r.verification = 'office'
+  return r
+}

@@ -1,5 +1,22 @@
 export * from './types'
-export { buildQuote, sizeSystem, buildAssemblies, priceLines, computeTotals, quoteNumberFor } from './engine'
+export { buildQuote, sizeSystem, buildAssemblies, priceLines, computeTotals, quoteNumberFor, isBlockingFlag } from './engine'
+export { diffQuotes, diffIsEmpty } from './diff'
+export {
+  BOQ_SECTIONS,
+  boqSectionTitle,
+  ROOF_LABELS_HE,
+  KIND_LABELS_HE,
+  pricingReadiness,
+  SUGGESTED_SIZING,
+  parseNumber,
+  parseCurrency,
+  rowsFromTable,
+  parsePriceListCsv,
+  applyPriceList,
+  priceListTemplateCsv,
+  markRulesFilled,
+} from './pricebook'
+export type { PricingReadiness, ReadinessItem, PriceRow, ApplyResult } from './pricebook'
 export type { BuildQuoteOptions, SizingResult } from './engine'
 export { round2, roundToStep, pct, canonicalJson, sha256Hex } from './money'
 export { formatIls, quoteSummaryHe, flagLabelHe } from './format'
