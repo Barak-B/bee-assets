@@ -199,6 +199,7 @@ async function render() {
                 <button class="btn btn-secondary" data-edit="${p.id}">עריכה</button>
                 <button class="btn btn-secondary" data-hive="${p.id}">ייצוא כוורת</button>
                 <button class="btn btn-secondary" data-pdf="${p.id}">PDF</button>
+                <button class="btn btn-secondary" data-quote="${p.id}">הצעה ראשונית</button>
                 <button class="btn btn-danger" data-del="${p.id}">מחק</button>
               </div>
             </article>`,
@@ -266,6 +267,12 @@ async function render() {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation()
         await exportPdfFor((btn as HTMLElement).dataset.pdf!)
+      }),
+    )
+    app.querySelectorAll('[data-quote]').forEach((btn) =>
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation()
+        await exportQuoteFor((btn as HTMLElement).dataset.quote!)
       }),
     )
     app.querySelectorAll('[data-open]').forEach((el) =>
@@ -359,6 +366,7 @@ async function render() {
       <div class="sticky-actions">
         <button class="btn btn-secondary" id="btnCancel">ביטול</button>
         <button class="btn btn-secondary" id="btnHive">ייצוא כוורת</button>
+        <button class="btn btn-secondary" id="btnQuote">הצעה ראשונית</button>
         <button class="btn btn-primary" id="btnSave">שמור סקר</button>
       </div>
       <div class="toast" id="toast"></div>
@@ -435,6 +443,15 @@ function bindFormEvents() {
     const bundle = buildHiveExportBundle(editing, photos)
     const outcome = await shareOrDownloadJson(`hive-site-survey-${editing.id.slice(0, 8)}.json`, bundle, 'ייצוא כוורת')
     toast(`${outcomeToast(outcome, 'ייצוא הכוורת')} · ${bundle.jobs.length === 3 ? 'מלא' : 'חלקי — חסרים שדות'}`)
+  })
+  document.getElementById('btnQuote')?.addEventListener('click', async () => {
+    readFormIntoEditing()
+    if (!editing.projectName.trim()) {
+      toast('חובה שם פרויקט')
+      return
+    }
+    await persistCurrent()
+    await exportQuoteFor(editing.id)
   })
   document.getElementById('btnGps')?.addEventListener('click', async () => {
     try {
@@ -670,6 +687,40 @@ async function exportPdfFor(id: string) {
   } catch (err) {
     console.error(err)
     toast('יצירת ה-PDF נכשלה')
+  }
+}
+
+/**
+ * Quote-lite: survey → draft QuoteVersion (JSON + PDF). Seed catalog/rules only —
+ * every price is "לאימות" until Barak fills packages/quote-core/src/seed/*.
+ */
+async function exportQuoteFor(id: string) {
+  const p = await getProject(id)
+  if (!p) return
+  const ph = await listPhotos(id)
+  const c = assessCompleteness(p, ph)
+  if (!p.roofTypeHe) {
+    toast('להצעה ראשונית חובה סוג גג')
+    return
+  }
+  if (!c.readyForWave54 && !confirm(`הסקר עדיין חסר (${c.missingRequired.join(', ')}). להפיק הצעה ראשונית בכל זאת?`)) return
+  toast('מחשב הצעה ראשונית...')
+  try {
+    const [{ buildQuoteDraft }, { buildQuotePdf, quotePdfFilename }, { quoteSummaryHe }] = await Promise.all([
+      import('./quote'),
+      import('./quotePdf'),
+      import('@bee/quote-core'),
+    ])
+    const bundle = await buildQuoteDraft(p, ph)
+    const pdf = await buildQuotePdf(bundle.quote, p)
+    const outcome = await shareOrDownload(pdf.blob, quotePdfFilename(bundle.quote, p), `הצעה ראשונית — ${p.projectName}`)
+    if (outcome !== 'cancelled') {
+      await shareOrDownloadJson(`quote-draft-${bundle.quote.quote_number}.json`, bundle, 'טיוטת הצעה (JSON)')
+    }
+    toast(`${outcomeToast(outcome, 'טיוטת ההצעה')} · ${quoteSummaryHe(bundle.quote)}`)
+  } catch (err) {
+    console.error(err)
+    toast('יצירת ההצעה נכשלה')
   }
 }
 

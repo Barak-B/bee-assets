@@ -1,9 +1,16 @@
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   // Served from the root of its own Cloudflare Pages project.
   base: '/',
+  resolve: {
+    alias: {
+      // Pure TS package shared with the (future) bee-live quotes module.
+      '@bee/quote-core': fileURLToPath(new URL('../../packages/quote-core/src/index.ts', import.meta.url)),
+    },
+  },
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',

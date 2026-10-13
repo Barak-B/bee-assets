@@ -67,7 +67,8 @@ describe('survey PDF', () => {
 
   it('builds a filesystem-safe filename', () => {
     const p = fullProject()
-    expect(surveyPdfFilename(p)).toBe('bee-survey-גג_תל_אביב_—_בדיקה-2026-10-13.pdf')
+    expect(surveyPdfFilename(p)).toBe('bee-survey-11111111-2026-10-13.pdf') // Hebrew name → id fallback
+    expect(surveyPdfFilename({ ...p, projectName: 'Roof TLV (test)' })).toBe('bee-survey-Roof_TLV_(test)-2026-10-13.pdf')
     expect(surveyPdfFilename(emptyProject({ id: 'abcdefgh-xxxx', surveyDate: '2026-01-01' }))).toBe('bee-survey-abcdefgh-2026-01-01.pdf')
   })
 })

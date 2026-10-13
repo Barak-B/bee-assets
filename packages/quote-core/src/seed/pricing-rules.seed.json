@@ -1,0 +1,47 @@
+{
+  "version": "seed-0.1",
+  "$comment": "תת-קבוצה שטוחה של docs/plan/rules/pricing-rules.json ל-quote-lite. כל null = ברק ממלא (needs_owner_input). sizing.* הם פרמטרי תכנון מהיר — לכייל מול 2–3 הצעות אמיתיות לפני שימוש מול לקוח.",
+  "vat_rate": null,
+  "default_margin_pct": null,
+  "margins": {
+    "module": null,
+    "inverter": null,
+    "optimizer": null,
+    "battery": null,
+    "cable": null,
+    "cabinet": null,
+    "mounting": null,
+    "accessory": null,
+    "meter": null,
+    "labour": null,
+    "service": null,
+    "fee": 0
+  },
+  "labour_per_module_ils": {
+    "flat": null,
+    "tile": null,
+    "metal-standing-seam": null,
+    "metal-trapezoidal": null,
+    "ground": null,
+    "other": null
+  },
+  "sizing": {
+    "area_m2_per_kwp": null,
+    "specific_yield_kwh_per_kwp": null,
+    "dc_ac_ratio_max": null,
+    "dc_cable_m_per_module": null,
+    "default_ac_cable_m": null,
+    "strings_modules_per_string": null
+  },
+  "validity_days": null,
+  "final_round_step_ils": null,
+  "payment_schedule": [
+    { "milestone_key": "contract_signed", "label_he": "חתימה על ההסכם", "pct": null },
+    { "milestone_key": "equipment_delivered", "label_he": "אספקת ציוד לאתר / תחילת התקנה", "pct": null },
+    { "milestone_key": "installation_done", "label_he": "סיום התקנה ובדיקת בודק", "pct": null },
+    { "milestone_key": "iec_connection", "label_he": "חיבור מונה ואישור הפעלה מחח״י", "pct": null },
+    { "milestone_key": "handover", "label_he": "מסירה ותיק מתקן — יתרה", "pct": null }
+  ],
+  "verification": "unverified",
+  "needs_owner_input": true
+}

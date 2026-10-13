@@ -11,8 +11,9 @@ describe('mirrorBrackets', () => {
     expect(mirrorBrackets('SolarEdge (SE5K) inverter')).toBe('SolarEdge (SE5K) inverter')
   })
 
-  it('treats digits as RTL-neutral context (UAX #9 N1)', () => {
+  it('treats digits as RTL context (UAX #9 N1), matching the jsPDF engine', () => {
     expect(mirrorBrackets('ממיר 10 (kW)')).toBe('ממיר 10 )kW(')
+    expect(mirrorBrackets('כבל DC 6 ממ״ר (H1Z2Z2-K)')).toBe('כבל DC 6 ממ״ר )H1Z2Z2-K(')
   })
 
   it('is a no-op without brackets', () => {

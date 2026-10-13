@@ -1,0 +1,16 @@
+{
+  "name": "@bee/quote-core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "B.E.E quote-lite — pure TypeScript sizing + pricing engine: survey input → immutable QuoteVersion draft (spec 12 subset)",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.2",
+    "vitest": "4.1.10"
+  }
+}

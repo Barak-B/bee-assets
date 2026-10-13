@@ -7,7 +7,12 @@
  * comes out as ")Wave 54(". `mirrorBrackets` swaps those glyphs ahead of time,
  * following the Unicode N1 rule: a neutral between two strong characters of the
  * same type takes that type; otherwise it takes the paragraph direction (RTL).
- * Digits count as R for this purpose, as in UAX #9.
+ * Digits count as R for this purpose, as in UAX #9 (the engine does not apply
+ * W7, so neither do we — the glyph must match the level the engine assigns).
+ *
+ * Known limit, verified against the engine: a Latin word directly followed by a
+ * bracketed Latin tail, e.g. "450W (450W)", cannot be placed correctly whatever
+ * glyphs we pick — keep such tails next to Hebrew or digits instead.
  */
 
 const MIRROR: Record<string, string> = {

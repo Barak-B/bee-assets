@@ -1,0 +1,93 @@
+/**
+ * Survey → quote-lite adapter. Builds a draft QuoteVersion from a saved survey
+ * and wraps it as a `dispatch.draft` hive job (Law #2: human picks, never customer).
+ */
+import {
+  buildQuote,
+  seedCatalog,
+  seedPricingRules,
+  type Catalog,
+  type InverterBrand,
+  type PricingRules,
+  type QuoteInput,
+  type QuoteVersion,
+} from '@bee/quote-core'
+import { mapRoofType, parseOptionalNumber, toDesignSuitePayload } from './schema'
+import type { HiveJob, SiteSurveyProject, SurveyPhoto } from './types'
+
+/** Rough phase inference from the main breaker label; ≥ 40A on an Israeli supply is almost always 3-phase. */
+export function inferPhases(mainBreaker: string): 1 | 3 | undefined {
+  const a = parseOptionalNumber(mainBreaker.replace(/[^\d.]/g, ''))
+  if (a === null) return undefined
+  return a >= 40 ? 3 : 1
+}
+
+export function surveyToQuoteInput(project: SiteSurveyProject, photos: SurveyPhoto[]): QuoteInput {
+  const payload = toDesignSuitePayload(project, photos)
+  const brand = (project.inverterBrandPref || '') as InverterBrand | ''
+  return {
+    projectId: project.id,
+    projectName: project.projectName,
+    address: project.address,
+    roofType: project.roofTypeHe ? mapRoofType(project.roofTypeHe) : 'other',
+    usableAreaM2: payload.site.usableAreaM2,
+    targetKwp: payload.target.sizeKwp ?? null,
+    budgetIls: parseOptionalNumber(project.budgetIls),
+    annualConsumptionKwh: payload.site.annualConsumptionKwh ?? null,
+    inverterBrand: brand,
+    includeBattery: project.includeBattery,
+    acCableLengthM: parseOptionalNumber(project.cableLengthM),
+    mainBreaker: project.mainBreaker || undefined,
+    phases: inferPhases(project.mainBreaker),
+    craneAccess: photos.some((p) => p.field === 'craneAccess') ? true : null,
+  }
+}
+
+export interface QuoteDraftBundle {
+  exportedAt: string
+  app: 'bee-solar-survey'
+  kind: 'quote-draft'
+  quote: QuoteVersion
+  job: HiveJob
+}
+
+export async function buildQuoteDraft(
+  project: SiteSurveyProject,
+  photos: SurveyPhoto[],
+  catalog: Catalog = seedCatalog,
+  rules: PricingRules = seedPricingRules,
+): Promise<QuoteDraftBundle> {
+  const input = surveyToQuoteInput(project, photos)
+  const quote = await buildQuote(input, catalog, rules)
+  const now = new Date().toISOString()
+  const job: HiveJob = {
+    id: crypto.randomUUID(),
+    kind: 'dispatch',
+    loop: 'dispatch.draft',
+    status: 'queued',
+    trustTier: 'L1',
+    costTier: 0,
+    source: 'bee-solar-survey',
+    payload: {
+      projectId: project.id,
+      quoteNumber: quote.quote_number,
+      snapshotHash: quote.snapshot_hash,
+      titleHe: `טיוטת הצעת מחיר — ${project.projectName}`,
+      messageHe: quote.needs_owner_input
+        ? 'הצעה ראשונית מהסקר. חסרים מחירים/פרמטרים — ברק משלים לפני כל שימוש. אין שליחה ללקוח.'
+        : 'הצעה ראשונית מהסקר מוכנה לעיון ברק. אין שליחה ללקוח.',
+      needsOwnerInput: quote.needs_owner_input,
+      flags: quote.flags,
+      nextAgent: 'wave-54',
+    },
+    result: null,
+    error: null,
+    createdAt: now,
+    outbound: {
+      channel: 'whatsapp',
+      destinationClass: 'drafts_group',
+      requiresHumanPick: true,
+    },
+  }
+  return { exportedAt: now, app: 'bee-solar-survey', kind: 'quote-draft', quote, job }
+}
