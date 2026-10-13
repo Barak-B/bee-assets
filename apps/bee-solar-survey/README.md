@@ -37,13 +37,20 @@ wave-54.designSuite     ← pv_design / wire_sizing / protection / BOM / forecas
 - ציון מוכנות ל־Wave 54 + ייצוא חבילת jobs לכוורת
 - מיתוג B.E.E
 
+## דוחות והצעת מחיר ראשונית
+
+- **PDF סקר** (`src/pdf.ts` על `src/pdfkit.ts`): טקסט עברי אמיתי עם Heebo מוטמע (jsPDF + bidi), גלישת שורות, תמונות ביחס נכון, מספרי עמודים ו-hash תוכן בכותרת התחתונה. ~35 KB לדוח של 2 עמודים.
+- **הצעה ראשונית** (`src/quote.ts`, `src/quotePdf.ts` + `packages/quote-core`): כפתור "הצעה ראשונית" ברשימה ובטופס → `QuoteVersion` (JSON, עטוף כ-job `dispatch.draft`) + PDF עם סימן מים "טיוטה". כל מחיר הוא "לאימות" עד שממלאים את `packages/quote-core/src/seed/*.json`.
+- **שיתוף** (`src/share.ts`): Web Share API (WhatsApp/קבצים) → לשונית חדשה ב-iOS מותקן → הורדה רגילה. זה מחליף `a.click()` שלא עבד ב-iOS.
+- **אופליין**: service worker (`vite-plugin-pwa`) מקאש את האפליקציה, הגופנים (`public/fonts`, OFL) ואת מודול ה-PDF. אין בקשות ל-Google Fonts.
+
 ## הרצה
 
 ```bash
 cd apps/bee-solar-survey
 npm install
 npm run dev      # מקומי
-npm test         # schema + hive export
+npm test         # schema, hive export, RTL, PDF, quote adapter
 npm run build    # dist/ ל־Cloudflare Pages
 ```
 

@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  survey-app:
+    name: bee-solar-survey · typecheck, test, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/bee-solar-survey
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/bee-solar-survey/package-lock.json
+      - run: npm ci
+      - run: npx tsc
+      - run: npm test
+      - run: npm run build
+      - name: Service worker and manifest were emitted
+        run: test -f dist/sw.js && test -f dist/manifest.webmanifest
+
+  quote-core:
+    name: quote-core · typecheck, test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/quote-core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/quote-core/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - run: npm run typecheck
+      - run: npm test
