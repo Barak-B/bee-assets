@@ -31,3 +31,7 @@ dist/
 # playwright
 test-results/
 playwright-report/
+
+# wrangler local state
+.wrangler/
+.dev.vars

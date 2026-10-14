@@ -42,6 +42,7 @@ wave-54.designSuite     ← pv_design / wire_sizing / protection / BOM / forecas
 - **PDF סקר** (`src/pdf.ts` על `src/pdfkit.ts`): טקסט עברי אמיתי עם Heebo מוטמע (jsPDF + bidi), גלישת שורות, תמונות ביחס נכון, מספרי עמודים ו-hash תוכן בכותרת התחתונה. ~35 KB לדוח של 2 עמודים.
 - **מחירון** (`src/pricingScreen.ts`, `src/pricing.ts`): כפתור "מחירון" ברשימה. עלויות לכל מק"ט, מרווחים, מע"מ, שערי מט"ח, עבודה למודול לפי גג, פרמטרי תכנון ולוח תשלומים — נשמר ב-IndexedDB ועובד אופליין. ייבוא מחירון ספק מ-CSV או Excel (שורת כותרת עם מק"ט + עלות, כולל כותרות בעברית), הורדת תבנית, גיבוי/שחזור. מד מוכנות מראה בדיוק מה חסר.
 - **הצעות מחיר** (`src/quotesDialog.ts`, `src/quote.ts`, `src/quotePdf.ts` + `packages/quote-core`): כפתור "הצעות מחיר" ברשימה ובטופס פותח חלון לסקר: חישוב גרסה חדשה מהסקר + המחירון, רשימת גרסאות שמורות (אינן משתנות; אותו תוכן = אין גרסה חדשה), ולכל גרסה PDF, Excel ללקוח, Excel פנימי ו-JSON. מגרסה 2 ה-PDF כולל "מה השתנה". כל זה טיוטה בלבד (`dispatch.draft`, `requiresHumanPick`).
+- **קישור ללקוח אונליין** (`functions/`, `src/publish.ts`): הצעה מתומחרת מתפרסמת כ-`https://app.barak-e.com/q/<קוד>` — דף הצעה בעברית + PDF ללקוח, ספירת פתיחות וביטול קישור. כתובות מקומיות (127.0.0.1, localhost) נחסמות בשרת ובאפליקציה. הפעלה: `docs/QUOTES_ONLINE.md`.
 - **כתב כמויות Excel** (`src/boqXlsx.ts`, ExcelJS): גיליונות `סיכום`, `פרמטרים` ופרק לכל `08.CC` לפי `docs/plan/templates/boq-xlsx-layout.md`; RTL, נוסחאות חיות עם ערכים מחושבים, שמות מוגדרים (`CH_08_02_TOTAL`, `TOTAL_INCL_VAT`…). תצוגת לקוח נעולה וללא עלויות; תצוגה פנימית עם עלות, רווח ₪/%, מק"ט, מקור כמות ואימות.
 - **שיתוף** (`src/share.ts`): Web Share API (WhatsApp/קבצים) → לשונית חדשה ב-iOS מותקן → הורדה רגילה. זה מחליף `a.click()` שלא עבד ב-iOS.
 - **אופליין**: service worker (`vite-plugin-pwa`) מקאש את האפליקציה, הגופנים (`public/fonts`, OFL) ואת מודול ה-PDF. אין בקשות ל-Google Fonts.
@@ -62,6 +63,7 @@ npm run build    # dist/ ל־Cloudflare Pages
 - Root: `apps/bee-solar-survey`
 - Build: `npm run build`
 - Output: `dist`
+- Functions: `functions/` (נבנות אוטומטית), R2 binding `QUOTES`, משתנים `PUBLIC_BASE_URL` + `PUBLISH_KEY` — ראו `docs/QUOTES_ONLINE.md`.
 
 ## ייצוא כוורת
 

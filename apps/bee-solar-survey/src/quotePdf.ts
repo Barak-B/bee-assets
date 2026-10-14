@@ -4,7 +4,7 @@
  * what's missing). Every unverified value is marked "לאימות"; the document is
  * watermarked as a draft.
  */
-import { flagLabelHe, formatIls, pct, type QuoteLine, type QuoteVersion } from '@bee/quote-core'
+import { ROOF_LABELS_HE, flagLabelHe, formatIls, pct, type QuoteLine, type QuoteVersion } from '@bee/quote-core'
 import { MUTED, WARN_RED, Writer, createDoc, safeFilename } from './pdfkit'
 import { formatNumber } from './rtl'
 import type { SiteSurveyProject } from './types'
@@ -50,23 +50,40 @@ function money(n: number | null): string {
   return n === null ? 'לאימות *' : formatIls(n)
 }
 
-export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProject): Promise<QuotePdfResult> {
+export interface QuotePdfOptions {
+  /**
+   * internal (default): watermarked draft with the "to complete" list.
+   * customer: the copy attached to the public link — no watermark, no internal notes.
+   * A customer PDF is only built for a quote that passed publishBlockers().
+   */
+  audience?: 'internal' | 'customer'
+}
+
+export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProject, opts: QuotePdfOptions = {}): Promise<QuotePdfResult> {
+  const customer = opts.audience === 'customer'
   const d = quote.design
   const t = quote.totals
   const doc = createDoc({
     title: `B.E.E הצעת מחיר ${quote.quote_number} — ${quote.input.projectName}`,
-    subject: 'הצעת מחיר ראשונית · טיוטה',
+    subject: customer ? 'הצעת מחיר' : 'הצעת מחיר ראשונית · טיוטה',
   })
   const w = new Writer(
     doc,
-    {
-      title: `הצעת מחיר ראשונית · ${quote.quote_number} · גרסה ${quote.version_no} · טיוטה`,
-      sub: `${quote.input.projectName} · ${quote.input.address} · ${quote.created_at.slice(0, 10)}${project.surveyor ? ` · סקר: ${project.surveyor} ${project.surveyDate}` : ` · סקר: ${project.surveyDate}`}`,
-    },
-    {
-      right: 'טיוטה בלבד · Law #2 · לא נשלח ללקוח ללא אישור ברק · * = לאימות',
-      left: `${quote.quote_number} v${quote.version_no} · ${quote.snapshot_hash.slice(0, 8)}`,
-    },
+    customer
+      ? {
+          title: `הצעת מחיר · ${quote.quote_number} · גרסה ${quote.version_no}`,
+          sub: `${quote.input.projectName} · ${quote.input.address} · ${quote.created_at.slice(0, 10)}`,
+        }
+      : {
+          title: `הצעת מחיר ראשונית · ${quote.quote_number} · גרסה ${quote.version_no} · טיוטה`,
+          sub: `${quote.input.projectName} · ${quote.input.address} · ${quote.created_at.slice(0, 10)}${project.surveyor ? ` · סקר: ${project.surveyor} ${project.surveyDate}` : ` · סקר: ${project.surveyDate}`}`,
+        },
+    customer
+      ? { right: 'B.E.E · ברק אלקטריק אנג׳ינירינג · * = ייקבע סופית בתכנון המפורט', left: `${quote.quote_number} v${quote.version_no} · ${quote.snapshot_hash.slice(0, 12)}` }
+      : {
+          right: 'טיוטה בלבד · Law #2 · לא נשלח ללקוח ללא אישור ברק · * = לאימות',
+          left: `${quote.quote_number} v${quote.version_no} · ${quote.snapshot_hash.slice(0, 8)}`,
+        },
   )
 
   // ── Summary cards ───────────────────────────────────────
@@ -83,7 +100,7 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
     budget: 'התקציב',
     none: 'לא נקבע — חסר יעד/שטח/צריכה',
   }
-  w.paragraph(`ההספק נגזר מ${basis[d.kwp_basis]}. ההצעה חושבה אוטומטית מנתוני סקר האתר ומקטלוג B.E.E ומיועדת לעיון פנימי לפני תכנון מפורט.`, 'normal', 10, MUTED)
+  if (!customer) w.paragraph(`ההספק נגזר מ${basis[d.kwp_basis]}. ההצעה חושבה אוטומטית מנתוני סקר האתר ומקטלוג B.E.E ומיועדת לעיון פנימי לפני תכנון מפורט.`, 'normal', 10, MUTED)
   w.space()
 
   // ── System ──────────────────────────────────────────────
@@ -95,7 +112,7 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
   w.row('ממיר', inverterLine ? `${d.inverter_count} × ${inverterLine.name_he}${d.inverter_ac_kw ? ` · ${d.inverter_ac_kw} kW AC` : ''}` : 'לא נבחר')
   if (d.optimizer_count) w.row('אופטימייזרים', `${d.optimizer_count}`)
   w.row('אגירה', batteryLine ? batteryLine.name_he : 'לא כלול')
-  w.row('סוג גג', quote.input.roofType)
+  w.row('סוג גג', ROOF_LABELS_HE[quote.input.roofType] ?? quote.input.roofType)
   w.row('שטח נדרש / זמין', d.area_needed_m2 ? `${d.area_needed_m2} / ${quote.input.usableAreaM2 ?? '—'} מ״ר${d.area_ok === false ? ' — השטח אינו מספיק' : ''}` : 'לאימות *')
   if (d.strings_estimate) w.row('מחרוזות (הערכה)', `${d.strings_estimate}`)
   w.space()
@@ -200,13 +217,13 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
   // ── What Barak must complete ────────────────────────────
   const missing = [...new Set(quote.flags.map(flagLabelHe))]
   const unpricedSkus = quote.lines.filter((l) => l.needs_owner_input).map((l) => l.sku)
-  if (missing.length || unpricedSkus.length) {
+  if (!customer && (missing.length || unpricedSkus.length)) {
     w.section('לפני שימוש מול לקוח — להשלים')
     if (missing.length) w.bullets(missing, WARN_RED)
     if (unpricedSkus.length) w.paragraph(`${unpricedSkus.length} פריטים ללא מחיר או ללא אימות — מסומנים ב-* בכתב הכמויות.`, 'normal', 9.5, MUTED)
   }
 
-  w.watermark('טיוטה')
+  if (!customer) w.watermark('טיוטה')
   const bytes = w.finish()
   const blob = new Blob([bytes], { type: 'application/pdf' })
   return { blob, bytes, meta: { pages: doc.getNumberOfPages(), bytes: bytes.byteLength, hash: quote.snapshot_hash.slice(0, 8) } }

@@ -25,6 +25,8 @@ jobs:
       - run: npm run build
       - name: Service worker and manifest were emitted
         run: test -f dist/sw.js && test -f dist/manifest.webmanifest
+      - name: Pages Functions bundle (customer quote links)
+        run: npm run functions:check
       - name: Install Chromium for E2E
         run: npx playwright install --with-deps chromium
       - name: E2E — report, price book, quotes, BOQ Excel, offline

@@ -1,0 +1,95 @@
+/**
+ * Publish a saved quote version to the B.E.E Pages project and get the
+ * customer link (https://<domain>/q/<token>). The link is checked here too:
+ * anything that is not https on a public host is rejected, so a link built
+ * from a local server address can never reach a customer.
+ */
+import { isPublicBaseUrl, publishBlockers, toPublicQuote, type QuoteVersion } from '@bee/quote-core'
+import type { Publication, PublishSettings } from './db'
+import type { SiteSurveyProject } from './types'
+
+export class PublishError extends Error {}
+
+/** The app's own origin when it is served from the real domain; else empty. */
+export function defaultBaseUrl(): string {
+  if (typeof location === 'undefined') return ''
+  return isPublicBaseUrl(location.origin) ? location.origin : ''
+}
+
+export function settingsProblem(s: PublishSettings | null): string | null {
+  if (!s || !s.baseUrl) return 'לא הוגדרה כתובת אתר לפרסום (מסך מחירון → פרסום אונליין)'
+  if (!isPublicBaseUrl(s.baseUrl)) return `הכתובת ${s.baseUrl} אינה כתובת ציבורית https — הגדירו את דומיין החברה`
+  if (!s.key) return 'חסר מפתח פרסום (מסך מחירון → פרסום אונליין)'
+  return null
+}
+
+function toBase64(bytes: ArrayBuffer): string {
+  const b = new Uint8Array(bytes)
+  let s = ''
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000))
+  return btoa(s)
+}
+
+async function call(settings: PublishSettings, path: string, init: RequestInit): Promise<Response> {
+  const base = settings.baseUrl.replace(/\/+$/, '')
+  let res: Response
+  try {
+    res = await fetch(`${base}${path}`, {
+      ...init,
+      headers: { ...(init.headers ?? {}), authorization: `Bearer ${settings.key}` },
+    })
+  } catch {
+    throw new PublishError('אין חיבור לשרת — הפרסום דורש אינטרנט')
+  }
+  if (!res.ok) {
+    let msg = `השרת החזיר ${res.status}`
+    try {
+      const j = (await res.json()) as { message_he?: string; error?: string }
+      msg = j.message_he ?? j.error ?? msg
+    } catch {
+      /* not json */
+    }
+    throw new PublishError(res.status === 401 ? 'מפתח הפרסום שגוי' : msg)
+  }
+  return res
+}
+
+export async function publishQuote(quote: QuoteVersion, project: SiteSurveyProject, settings: PublishSettings): Promise<Publication> {
+  const problem = settingsProblem(settings)
+  if (problem) throw new PublishError(problem)
+  const blockers = publishBlockers(quote)
+  if (blockers.length) throw new PublishError(blockers.join(' · '))
+
+  const { buildQuotePdf } = await import('./quotePdf')
+  const pdf = await buildQuotePdf(quote, project, { audience: 'customer' })
+  const res = await call(settings, '/api/quotes', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ quote: toPublicQuote(quote), pdfBase64: toBase64(pdf.bytes) }),
+  })
+  const data = (await res.json()) as { token: string; url: string; published_at: string }
+  let origin = ''
+  try {
+    origin = new URL(data.url).origin
+  } catch {
+    /* handled below */
+  }
+  if (!isPublicBaseUrl(origin)) {
+    // Never hand a customer a link to a local machine — fail loudly instead.
+    throw new PublishError(`השרת החזיר קישור לא ציבורי (${data.url}). יש להגדיר PUBLIC_BASE_URL בשרת לדומיין החברה.`)
+  }
+  return { token: data.token, url: data.url, publishedAt: data.published_at }
+}
+
+export async function revokeQuote(token: string, settings: PublishSettings): Promise<void> {
+  await call(settings, `/api/quotes/${encodeURIComponent(token)}`, { method: 'DELETE' })
+}
+
+export async function quoteViews(token: string, settings: PublishSettings): Promise<{ views: number; last_viewed_at: string | null } | null> {
+  try {
+    const res = await call(settings, `/api/quotes/${encodeURIComponent(token)}`, { method: 'GET' })
+    return (await res.json()) as { views: number; last_viewed_at: string | null }
+  } catch {
+    return null
+  }
+}

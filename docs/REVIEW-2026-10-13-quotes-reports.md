@@ -130,6 +130,7 @@ S09–S12 בדיקה / מסירה / ניטור ──── bee-live (חי, 184 
 | 3 — הצעה ראשונית | ✅ מנוע + כתב כמויות + PDF טיוטה + job `dispatch.draft`; **מחירים = לאימות** עד מילוי הזרע | `packages/quote-core`, `src/quote*.ts` |
 | 3b — מחירון באפליקציה | ✅ מסך מחירון, ייבוא CSV/Excel מספק, מד מוכנות, גיבוי | `src/pricingScreen.ts`, `quote-core/src/pricebook.ts` |
 | 3c — כתב כמויות Excel + גרסאות | ✅ Excel ללקוח/פנימי לפי תבנית 08.CC, גרסאות בלתי-משתנות + "מה השתנה" | `src/boqXlsx.ts`, `src/quotesDialog.ts`, `quote-core/src/diff.ts` |
+| הצעות אונליין | ✅ קישור `https://<דומיין>/q/<קוד>` (Pages Functions + R2), חסימת 127.0.0.1/localhost, PDF ללקוח, צפיות, ביטול — **ממתין להפעלה בחשבון Cloudflare** | `functions/`, `docs/QUOTES_ONLINE.md` |
 | E2E | ✅ Playwright ב-CI: דוח, ייבוא מחירון → הצעה מתומחרת, Excel, גרסה 2, אופליין | `apps/bee-solar-survey/e2e` |
 | 4–6 | ⏳ דורשים גישה ל-bee-live והחלטות (סעיף 5) | |
 

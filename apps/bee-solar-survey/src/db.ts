@@ -254,3 +254,40 @@ export async function saveQuote(projectId: string, quote: QuoteVersion): Promise
   await txDone(tx)
   return row
 }
+
+// ── Online publishing (customer links under our domain) ────────────────
+
+export interface PublishSettings {
+  /** Public origin of the Pages project, e.g. https://app.barak-e.com */
+  baseUrl: string
+  /** Bearer key matching the server's PUBLISH_KEY secret. */
+  key: string
+}
+
+export interface Publication {
+  token: string
+  url: string
+  publishedAt: string
+  revokedAt?: string | null
+}
+
+async function metaGet<T>(key: string): Promise<T | null> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('meta', 'readonly').objectStore('meta').get(key)
+    req.onsuccess = () => resolve(((req.result as { value?: T } | undefined)?.value ?? null) as T | null)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function metaPut(key: string, value: unknown): Promise<void> {
+  const db = await openDB()
+  const tx = db.transaction('meta', 'readwrite')
+  tx.objectStore('meta').put({ key, value })
+  await txDone(tx)
+}
+
+export const getPublishSettings = () => metaGet<PublishSettings>('publish')
+export const savePublishSettings = (s: PublishSettings) => metaPut('publish', s)
+export const getPublication = (quoteId: string) => metaGet<Publication>(`pub:${quoteId}`)
+export const savePublication = (quoteId: string, p: Publication) => metaPut(`pub:${quoteId}`, p)

@@ -789,3 +789,32 @@ textarea {
   opacity: 0.5;
   pointer-events: none;
 }
+
+/* ── Online publishing ─────────────────────────────────────── */
+.pub {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pub-head {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pub-url {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--sand);
+  width: 100%;
+}
+
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+}

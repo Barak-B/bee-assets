@@ -18,7 +18,9 @@ import {
   type ProductKind,
   type RoofType,
 } from '@bee/quote-core'
-import { clearPricing } from './db'
+import { clearPricing, getPublishSettings, savePublishSettings } from './db'
+import { defaultBaseUrl } from './publish'
+import { isPublicBaseUrl } from '@bee/quote-core'
 import { escapeAttr, escapeHtml, numValue, readNum } from './html'
 import { importPriceListFile, loadPricing, persistPricing, type Pricing } from './pricing'
 import { outcomeToast, shareOrDownload, shareOrDownloadJson } from './share'
@@ -86,6 +88,20 @@ function productRow(p: Product): string {
     </div>`
 }
 
+interface PubForm {
+  baseUrl: string
+  key: string
+}
+
+let pub: PubForm = { baseUrl: '', key: '' }
+
+function pubStatus(s: PubForm): string {
+  if (!s.baseUrl) return 'לא הוגדר — הצעות לא יקבלו קישור אונליין'
+  if (!isPublicBaseUrl(s.baseUrl)) return `⚠ ${s.baseUrl} אינה כתובת ציבורית https — לא ייווצרו קישורים`
+  if (!s.key) return 'חסר מפתח פרסום'
+  return `קישורים ייווצרו בכתובת ${s.baseUrl.replace(/\/+$/, '')}/q/…`
+}
+
 function render(ctx: Ctx, p: Pricing) {
   const r = p.rules
   const byKind = new Map<ProductKind, Product[]>()
@@ -117,6 +133,14 @@ function render(ctx: Ctx, p: Pricing) {
           <button class="btn btn-secondary" id="pRestore">שחזור מחירון</button>
           <button class="btn btn-danger" id="pReset">איפוס לזרע</button>
         </div>
+      </section>
+
+      <section class="section" id="pubSection">
+        <h2>פרסום הצעות אונליין</h2>
+        <p class="hint">קישור ללקוח נוצר רק תחת כתובת האתר שלנו (https). כתובות מקומיות כמו 127.0.0.1 או localhost נחסמות.</p>
+        <div class="field"><label>כתובת האתר</label><input id="p_pubBase" dir="ltr" inputmode="url" placeholder="https://app.barak-e.com" value="${escapeAttr(pub.baseUrl)}" /></div>
+        <div class="field"><label>מפתח פרסום</label><input id="p_pubKey" dir="ltr" type="password" autocomplete="off" placeholder="PUBLISH_KEY" value="${escapeAttr(pub.key)}" /></div>
+        <div class="meta" id="p_pubStatus">${escapeHtml(pubStatus(pub))}</div>
       </section>
 
       <section class="section">
@@ -233,10 +257,23 @@ function bind(ctx: Ctx) {
   $('pSave')?.addEventListener('click', async () => {
     if (!state) return
     const { catalog, rules } = readForm(ctx, state)
+    pub = {
+      baseUrl: (ctx.app.querySelector<HTMLInputElement>('#p_pubBase')?.value ?? '').trim().replace(/\/+$/, ''),
+      key: (ctx.app.querySelector<HTMLInputElement>('#p_pubKey')?.value ?? '').trim(),
+    }
+    const badUrl = !!pub.baseUrl && !isPublicBaseUrl(pub.baseUrl)
+    if (badUrl) pub.baseUrl = ''
+    await savePublishSettings(pub)
     state = await persistPricing(catalog, rules)
     const r = pricingReadiness(state.catalog, state.rules)
     render(ctx, state) // re-render first: it replaces the toast element
-    ctx.toast(r.ready ? 'המחירון נשמר · מוכן להצעות' : `המחירון נשמר · חסרים ${r.missing.length} סעיפים`)
+    ctx.toast(
+      badUrl
+        ? 'המחירון נשמר · כתובת האתר לא נשמרה — חייבת להיות https על דומיין ציבורי (לא 127.0.0.1 / localhost)'
+        : r.ready
+          ? 'המחירון נשמר · מוכן להצעות'
+          : `המחירון נשמר · חסרים ${r.missing.length} סעיפים`,
+    )
   })
 
   $('pSuggest')?.addEventListener('click', () => {
@@ -314,6 +351,8 @@ function bind(ctx: Ctx) {
 }
 
 export async function renderPricingScreen(ctx: Ctx): Promise<void> {
+  const saved = await getPublishSettings()
+  pub = { baseUrl: saved?.baseUrl || defaultBaseUrl(), key: saved?.key ?? '' }
   state = await loadPricing()
   render(ctx, state)
 }

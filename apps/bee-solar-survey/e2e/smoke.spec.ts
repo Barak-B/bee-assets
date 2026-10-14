@@ -71,31 +71,7 @@ async function createSurvey(page: Page, name: string) {
   await expect(page.locator('.project-item', { hasText: name })).toBeVisible()
 }
 
-test.beforeEach(async ({ page }) => {
-  page.on('dialog', (d) => void d.accept())
-  const errors: string[] = []
-  page.on('pageerror', (e) => errors.push(e.message))
-  ;(page as unknown as { __errors: string[] }).__errors = errors
-})
-
-test.afterEach(async ({ page }) => {
-  expect((page as unknown as { __errors: string[] }).__errors).toEqual([])
-})
-
-test('survey → Hebrew PDF report with real text', async ({ page }) => {
-  await createSurvey(page, 'גג בדיקה PDF')
-  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('.project-item', { hasText: 'גג בדיקה PDF' }).locator('[data-pdf]').click()])
-  expect(dl.suggestedFilename()).toMatch(/^bee-survey-.+\.pdf$/)
-  const pdf = await bytesOf(dl)
-  expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-')
-  expect(pdf.length).toBeGreaterThan(10_000)
-  expect(pdf.length).toBeLessThan(400_000) // old renderer: ~2 MB per page of text
-  expect(pdf.toString('latin1')).toContain('Heebo')
-})
-
-test('price book import → priced quote, BOQ Excel and versioning', async ({ page }) => {
-  await createSurvey(page, 'גג בדיקה הצעה')
-
+async function fillPriceBook(page: Page, publish?: { baseUrl: string; key: string }) {
   // Pricing: download template, fill every cost, import it back.
   await page.click('#btnPricing')
   await expect(page.locator('#pricingReadiness')).toContainText('חסר')
@@ -127,9 +103,42 @@ test('price book import → priced quote, BOQ Excel and versioning', async ({ pa
   }
   await page.click('#pSuggest')
   for (const [i, v] of ['30', '40', '20', '5', '5'].entries()) await page.fill(`#p_pay_${i}`, v)
+  if (publish) {
+    await page.fill('#p_pubBase', publish.baseUrl)
+    await page.fill('#p_pubKey', publish.key)
+  }
   await page.click('#pSave')
   await expect(page.locator('#pricingReadiness')).toContainText('מוכן')
   await page.click('#pBack')
+
+}
+
+test.beforeEach(async ({ page }) => {
+  page.on('dialog', (d) => void d.accept())
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  ;(page as unknown as { __errors: string[] }).__errors = errors
+})
+
+test.afterEach(async ({ page }) => {
+  expect((page as unknown as { __errors: string[] }).__errors).toEqual([])
+})
+
+test('survey → Hebrew PDF report with real text', async ({ page }) => {
+  await createSurvey(page, 'גג בדיקה PDF')
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('.project-item', { hasText: 'גג בדיקה PDF' }).locator('[data-pdf]').click()])
+  expect(dl.suggestedFilename()).toMatch(/^bee-survey-.+\.pdf$/)
+  const pdf = await bytesOf(dl)
+  expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-')
+  expect(pdf.length).toBeGreaterThan(10_000)
+  expect(pdf.length).toBeLessThan(400_000) // old renderer: ~2 MB per page of text
+  expect(pdf.toString('latin1')).toContain('Heebo')
+})
+
+test('price book import → priced quote, BOQ Excel and versioning', async ({ page }) => {
+  await createSurvey(page, 'גג בדיקה הצעה')
+
+  await fillPriceBook(page)
 
   // Quote v1
   await page.locator('.project-item', { hasText: 'גג בדיקה הצעה' }).locator('[data-quote]').click()
@@ -175,4 +184,70 @@ test('app shell works offline after first load', async ({ page, context }) => {
   await page.reload()
   await expect(page.locator('#btnNew')).toBeVisible()
   await context.setOffline(false)
+})
+
+test('publish a priced quote → customer link on our domain, never 127.0.0.1', async ({ page }) => {
+  const BASE = 'https://app.barak-e.com'
+  const TOKEN = 'AbCdEfGhIjKlMnOpQrStUv'
+  let published: { quote: Record<string, unknown>; pdfBase64: string } | null = null
+  let auth = ''
+  await page.route(`${BASE}/api/quotes`, async (route) => {
+    auth = route.request().headers()['authorization'] ?? ''
+    published = route.request().postDataJSON()
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ token: TOKEN, url: `${BASE}/q/${TOKEN}`, published_at: '2026-10-14T10:00:00.000Z' }) })
+  })
+  await page.route(`${BASE}/api/quotes/${TOKEN}`, async (route) => {
+    if (route.request().method() === 'DELETE') return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' })
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ views: 3, last_viewed_at: '2026-10-14T11:00:00.000Z' }) })
+  })
+
+  await createSurvey(page, 'גג בדיקה פרסום')
+  await fillPriceBook(page, { baseUrl: BASE, key: 'e2e-key' })
+  await page.click('#btnPricing')
+  await expect(page.locator('#p_pubStatus')).toContainText(`${BASE}/q/`)
+  await page.click('#pBack')
+
+  await page.locator('.project-item', { hasText: 'גג בדיקה פרסום' }).locator('[data-quote]').click()
+  await page.click('#qdNew')
+  const card = page.locator('.quote-card[data-ver="1"]')
+  await card.locator('[data-q-publish]').click()
+  await expect(card.locator('.pub-url')).toHaveValue(`${BASE}/q/${TOKEN}`)
+  await expect(card.locator('[data-views="1"]')).toContainText('3')
+
+  expect(auth).toBe('Bearer e2e-key')
+  const body = JSON.stringify(published)
+  expect(body).toContain('"schema":"bee.public-quote/1"')
+  for (const banned of ['unit_cost', 'margin_pct', 'fx_rate', '"sku"', 'flags']) expect(body).not.toContain(banned)
+  const pdf = Buffer.from(published!.pdfBase64, 'base64')
+  expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-')
+
+  // Survives a reload (stored locally), then revoke.
+  await page.click('#qdClose')
+  await page.locator('.project-item', { hasText: 'גג בדיקה פרסום' }).locator('[data-quote]').click()
+  await expect(page.locator('.quote-card[data-ver="1"] .pub-url')).toHaveValue(`${BASE}/q/${TOKEN}`)
+  await page.locator('.quote-card[data-ver="1"] [data-q-revoke]').click()
+  await expect(page.locator('.quote-card[data-ver="1"] [data-q-publish]')).toBeVisible()
+})
+
+test('a server that answers with a local link is refused', async ({ page }) => {
+  const BASE = 'https://app.barak-e.com'
+  await page.route(`${BASE}/api/quotes`, (route) =>
+    route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ token: 'fvBWhmaLosj9mcwEloHsiA', url: 'http://127.0.0.1:50973/q/fvBWhmaLosj9mcwEloHsiA', published_at: '2026-10-14T10:00:00.000Z' }) }),
+  )
+  await createSurvey(page, 'גג בדיקה קישור מקומי')
+  await fillPriceBook(page, { baseUrl: BASE, key: 'e2e-key' })
+  await page.locator('.project-item', { hasText: 'גג בדיקה קישור מקומי' }).locator('[data-quote]').click()
+  await page.click('#qdNew')
+  await page.locator('.quote-card[data-ver="1"] [data-q-publish]').click()
+  await expect(page.locator('#toast')).toContainText('לא ציבורי')
+  await expect(page.locator('.pub-url')).toHaveCount(0)
+})
+
+test('local addresses cannot be saved as the publishing domain', async ({ page }) => {
+  await page.goto('/')
+  await page.click('#btnPricing')
+  await page.fill('#p_pubBase', 'http://127.0.0.1:50973')
+  await page.click('#pSave')
+  await expect(page.locator('#toast')).toContainText('כתובת האתר לא נשמרה')
+  await expect(page.locator('#p_pubStatus')).toContainText('לא הוגדר')
 })

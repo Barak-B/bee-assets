@@ -4,8 +4,20 @@
  * (customer, internal) / JSON. Every export button is its own tap, so the
  * share sheet always has a fresh user gesture (iOS requirement).
  */
-import { diffIsEmpty, formatIls, pricingReadiness, quoteSummaryHe, type QuoteVersion } from '@bee/quote-core'
-import { getProject, listPhotos, listQuotes, saveQuote, type StoredQuote } from './db'
+import { diffIsEmpty, formatIls, pricingReadiness, publishBlockers, quoteSummaryHe, type QuoteVersion } from '@bee/quote-core'
+import {
+  getProject,
+  getPublication,
+  getPublishSettings,
+  listPhotos,
+  listQuotes,
+  savePublication,
+  saveQuote,
+  type Publication,
+  type PublishSettings,
+  type StoredQuote,
+} from './db'
+import { PublishError, publishQuote, quoteViews, revokeQuote, settingsProblem } from './publish'
 import { escapeHtml } from './html'
 import { loadPricing } from './pricing'
 import { buildQuoteDraft } from './quote'
@@ -49,7 +61,32 @@ function bidiParts(s: string): string {
     .join(' · ')
 }
 
-function versionCard(row: StoredQuote): string {
+function publishBlock(row: StoredQuote, pub: Publication | null, settingsIssue: string | null): string {
+  const v = row.version_no
+  if (pub && !pub.revokedAt) {
+    return `
+      <div class="pub" data-pub="${v}">
+        <div class="pub-head">קישור ללקוח · פורסם ${escapeHtml(pub.publishedAt.replace('T', ' ').slice(0, 16))} <span class="meta" data-views="${v}"></span></div>
+        <input class="pub-url" dir="ltr" readonly value="${escapeHtml(pub.url)}" aria-label="קישור ההצעה" />
+        <div class="item-actions">
+          <button class="btn btn-primary" data-q-share="${v}">שתף קישור</button>
+          <button class="btn btn-secondary" data-q-copy="${v}">העתק</button>
+          <button class="btn btn-secondary" data-q-open="${v}">פתח</button>
+          <button class="btn btn-danger" data-q-revoke="${v}">בטל קישור</button>
+        </div>
+      </div>`
+  }
+  const blockers = publishBlockers(row.quote)
+  const reason = blockers[0] ?? settingsIssue
+  return `
+    <div class="pub">
+      <button class="btn btn-primary" data-q-publish="${v}" ${reason ? 'aria-disabled="true"' : ''}>קישור ללקוח (אונליין)</button>
+      ${reason ? `<div class="meta">${escapeHtml(reason)}</div>` : ''}
+      ${pub?.revokedAt ? `<div class="meta">הקישור הקודם בוטל ${escapeHtml(pub.revokedAt.slice(0, 10))}</div>` : ''}
+    </div>`
+}
+
+function versionCard(row: StoredQuote, pub: Publication | null, settingsIssue: string | null): string {
   const q = row.quote
   return `
     <article class="quote-card" data-ver="${row.version_no}">
@@ -65,13 +102,17 @@ function versionCard(row: StoredQuote): string {
         <button class="btn btn-secondary" data-q-xlsx="internal" data-v="${row.version_no}">Excel פנימי</button>
         <button class="btn btn-ghost" data-q-json="${row.version_no}">JSON</button>
       </div>
+      ${publishBlock(row, pub, settingsIssue)}
     </article>`
 }
 
 async function render(projectId: string, ctx: Ctx) {
   const project = await getProject(projectId)
   if (!project) return close()
-  const [photos, quotes, pricing] = await Promise.all([listPhotos(projectId), listQuotes(projectId), loadPricing()])
+  const [photos, quotes, pricing, settings] = await Promise.all([listPhotos(projectId), listQuotes(projectId), loadPricing(), getPublishSettings()])
+  const pubs = new Map<number, Publication | null>()
+  await Promise.all(quotes.map(async (q) => pubs.set(q.version_no, await getPublication(q.id))))
+  const settingsIssue = settingsProblem(settings)
   const ready = pricingReadiness(pricing.catalog, pricing.rules)
   const survey = assessCompleteness(project, photos)
 
@@ -94,9 +135,9 @@ async function render(projectId: string, ctx: Ctx) {
           ${quotes.length ? `חשב גרסה ${quotes[0]!.version_no + 1} מהסקר והמחירון` : 'חשב הצעה ראשונית'}
         </button>
         <div class="quote-list">
-          ${quotes.length ? quotes.map(versionCard).join('') : '<div class="empty">עדיין אין הצעות לסקר הזה.</div>'}
+          ${quotes.length ? quotes.map((q) => versionCard(q, pubs.get(q.version_no) ?? null, settingsIssue)).join('') : '<div class="empty">עדיין אין הצעות לסקר הזה.</div>'}
         </div>
-        <p class="meta">כל גרסה נשמרת ואינה משתנה. הכל טיוטה בלבד — אין שליחה ללקוח מהאפליקציה (Law #2).</p>
+        <p class="meta">כל גרסה נשמרת ואינה משתנה. האפליקציה לא שולחת דבר ללקוח — "שתף קישור" פותח את חלון השיתוף ואתם בוחרים למי (Law #2).</p>
       </div>
     </div>`
 
@@ -170,6 +211,107 @@ async function render(projectId: string, ctx: Ctx) {
       ctx.toast(outcomeToast(await shareOrDownloadJson(`quote-${row.quote.quote_number}-v${row.version_no}.json`, bundle, 'הצעה (JSON)'), 'ה-JSON'))
     }),
   )
+  bindPublishing(h, projectId, project, quotes, settings, pubs, ctx)
+}
+
+function bindPublishing(h: HTMLElement, projectId: string, project: SiteSurveyProject, quotes: StoredQuote[], settings: PublishSettings | null, pubs: Map<number, Publication | null>, ctx: Ctx) {
+  const find = (v: string | undefined) => quotes.find((q) => String(q.version_no) === v)
+  const pubOf = (v: string | undefined) => (v ? pubs.get(Number(v)) ?? null : null)
+
+  h.querySelectorAll<HTMLElement>('[data-q-publish]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const row = find(b.dataset.qPublish)
+      if (!row) return
+      const blockers = publishBlockers(row.quote)
+      if (blockers.length) return ctx.toast(blockers[0]!)
+      const issue = settingsProblem(settings)
+      if (issue) {
+        ctx.toast(issue)
+        return
+      }
+      b.setAttribute('aria-disabled', 'true')
+      ctx.toast('מפרסם...')
+      try {
+        const pub = await publishQuote(row.quote, project, settings!)
+        await savePublication(row.id, pub)
+        await render(projectId, ctx)
+        ctx.toast('הקישור מוכן — "שתף קישור" לשליחה')
+      } catch (err) {
+        console.error(err)
+        b.removeAttribute('aria-disabled')
+        ctx.toast(err instanceof PublishError ? err.message : 'הפרסום נכשל')
+      }
+    }),
+  )
+
+  h.querySelectorAll<HTMLElement>('[data-q-share]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const row = find(b.dataset.qShare)
+      const pub = pubOf(b.dataset.qShare)
+      if (!row || !pub) return
+      const text = `הצעת מחיר ${row.quote.quote_number} — ${project.projectName}`
+      if (typeof navigator.share === 'function') {
+        try {
+          await navigator.share({ title: text, text, url: pub.url })
+          return
+        } catch (err) {
+          if ((err as DOMException)?.name === 'AbortError') return
+        }
+      }
+      await navigator.clipboard?.writeText(pub.url).catch(() => undefined)
+      ctx.toast('הקישור הועתק')
+    }),
+  )
+
+  h.querySelectorAll<HTMLElement>('[data-q-copy]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const pub = pubOf(b.dataset.qCopy)
+      if (!pub) return
+      try {
+        await navigator.clipboard.writeText(pub.url)
+        ctx.toast('הקישור הועתק')
+      } catch {
+        const input = h.querySelector<HTMLInputElement>(`[data-pub="${b.dataset.qCopy}"] .pub-url`)
+        input?.select()
+        ctx.toast('סמנו והעתיקו את הקישור')
+      }
+    }),
+  )
+
+  h.querySelectorAll<HTMLElement>('[data-q-open]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const pub = pubOf(b.dataset.qOpen)
+      if (pub) window.open(pub.url, '_blank', 'noopener')
+    }),
+  )
+
+  h.querySelectorAll<HTMLElement>('[data-q-revoke]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const row = find(b.dataset.qRevoke)
+      const pub = pubOf(b.dataset.qRevoke)
+      if (!row || !pub || !settings) return
+      if (!confirm('לבטל את הקישור? הלקוח לא יוכל לפתוח אותו יותר.')) return
+      try {
+        await revokeQuote(pub.token, settings)
+        await savePublication(row.id, { ...pub, revokedAt: new Date().toISOString() })
+        await render(projectId, ctx)
+        ctx.toast('הקישור בוטל')
+      } catch (err) {
+        ctx.toast(err instanceof PublishError ? err.message : 'ביטול הקישור נכשל')
+      }
+    }),
+  )
+
+  // View counts are best-effort and need the network; fill them in after render.
+  if (settings && !settingsProblem(settings)) {
+    for (const [v, pub] of pubs) {
+      if (!pub || pub.revokedAt) continue
+      void quoteViews(pub.token, settings).then((st) => {
+        const el = h.querySelector(`[data-views="${v}"]`)
+        if (el && st) el.textContent = st.views ? `· נפתח ${st.views} פעמים, לאחרונה ${(st.last_viewed_at ?? '').replace('T', ' ').slice(0, 16)}` : '· טרם נפתח'
+      })
+    }
+  }
 }
 
 export async function openQuotesDialog(project: SiteSurveyProject | string, ctx: Ctx): Promise<void> {

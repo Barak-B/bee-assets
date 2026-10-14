@@ -38,6 +38,8 @@ export default defineConfig({
         globIgnores: ['**/html2canvas-*.js', '**/index.es-*.js', '**/purify.es-*.js'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallback: '/index.html',
+        // Customer quote pages and the API are served by Pages Functions — never the app shell.
+        navigateFallbackDenylist: [/^\/q\//, /^\/api\//],
         cleanupOutdatedCaches: true,
       },
       devOptions: { enabled: false },
@@ -49,6 +51,6 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'functions/**/*.test.ts'],
   },
 })

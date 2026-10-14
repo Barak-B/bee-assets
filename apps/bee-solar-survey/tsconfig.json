@@ -34,7 +34,8 @@
   },
   "include": [
     "src",
-    "../../packages/quote-core/src"
+    "../../packages/quote-core/src",
+    "functions"
   ],
   "exclude": [
     "../../packages/quote-core/src/**/*.test.ts"
