@@ -19,6 +19,17 @@ export {
 export type { PricingReadiness, ReadinessItem, PriceRow, ApplyResult } from './pricebook'
 export type { BuildQuoteOptions, SizingResult } from './engine'
 export { round2, roundToStep, pct, canonicalJson, sha256Hex } from './money'
+export {
+  toPublicQuote,
+  publishBlockers,
+  isPublicQuote,
+  isPublicBaseUrl,
+  quoteLink,
+  newQuoteToken,
+  QUOTE_TOKEN_RE,
+  NotPublishableError,
+} from './public'
+export type { PublicQuote, PublicQuoteLine, PublicQuoteSection } from './public'
 export { formatIls, quoteSummaryHe, flagLabelHe } from './format'
 import catalogJson from './seed/catalog.seed.json'
 import rulesJson from './seed/pricing-rules.seed.json'
