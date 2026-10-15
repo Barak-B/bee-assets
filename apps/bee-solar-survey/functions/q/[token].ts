@@ -3,7 +3,7 @@ import { QUOTE_TOKEN_RE } from '../../../../packages/quote-core/src/public'
 import type { Handler } from '../_lib/env'
 import { html, param } from '../_lib/http'
 import { renderMessagePage, renderQuotePage } from '../_lib/render'
-import { getQuote, recordView } from '../_lib/store'
+import { getAcceptance, getQuote, recordView } from '../_lib/store'
 
 export const onRequestGet: Handler = async ({ request, env, params, waitUntil }) => {
   const token = param(params.token)
@@ -19,5 +19,7 @@ export const onRequestGet: Handler = async ({ request, env, params, waitUntil })
     if (waitUntil) waitUntil(p)
     else await p
   }
-  return html(renderQuotePage(rec.quote, { token, hasPdf: rec.has_pdf }))
+  const acceptance = await getAcceptance(env, token)
+  const justAccepted = !!acceptance && new URL(request.url).searchParams.get('accepted') === '1'
+  return html(renderQuotePage(rec.quote, { token, hasPdf: rec.has_pdf, acceptance, justAccepted }))
 }

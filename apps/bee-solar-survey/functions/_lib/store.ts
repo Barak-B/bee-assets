@@ -13,7 +13,29 @@ export interface ViewStats {
   last_viewed_at: string | null
 }
 
-const key = (token: string, name: 'quote.json' | 'quote.pdf' | 'views.json') => `quotes/${token}/${name}`
+/**
+ * Customer approval from the quote page (spec 12 §7.1 stage A, without OTP).
+ * It records an approval in principle of one exact version — the binding
+ * agreement is signed separately. Kept even if the link is later revoked.
+ */
+export interface Acceptance {
+  name: string
+  id_last4: string
+  accepted_at: string
+  ip: string | null
+  user_agent: string | null
+  quote_number: string
+  version_no: number
+  /** The public quote reference (first 12 hex of the snapshot hash) shown on the page. */
+  reference: string
+  total_incl_vat_ils: number | null
+  /** sha256 of the customer PDF that was on offer, when there was one. */
+  pdf_sha256: string | null
+  /** Copy of what the customer saw, for the record. */
+  quote: PublicQuote
+}
+
+const key = (token: string, name: 'quote.json' | 'quote.pdf' | 'views.json' | 'acceptance.json') => `quotes/${token}/${name}`
 
 export async function putQuote(env: Env, token: string, rec: PublishedRecord, pdf: Uint8Array | null): Promise<void> {
   if (pdf) await env.QUOTES.put(key(token, 'quote.pdf'), pdf, { httpMetadata: { contentType: 'application/pdf' } })
@@ -38,8 +60,23 @@ export async function getPdf(env: Env, token: string): Promise<ArrayBuffer | nul
   return obj ? obj.arrayBuffer() : null
 }
 
+/** Revoke the link. An acceptance, if any, is kept as the record of what was approved. */
 export async function deleteQuote(env: Env, token: string): Promise<void> {
   await env.QUOTES.delete([key(token, 'quote.json'), key(token, 'quote.pdf'), key(token, 'views.json')])
+}
+
+export async function getAcceptance(env: Env, token: string): Promise<Acceptance | null> {
+  const obj = await env.QUOTES.get(key(token, 'acceptance.json'))
+  if (!obj) return null
+  try {
+    return JSON.parse(await obj.text()) as Acceptance
+  } catch {
+    return null
+  }
+}
+
+export async function putAcceptance(env: Env, token: string, a: Acceptance): Promise<void> {
+  await env.QUOTES.put(key(token, 'acceptance.json'), JSON.stringify(a), { httpMetadata: { contentType: 'application/json' } })
 }
 
 export async function getViews(env: Env, token: string): Promise<ViewStats> {
@@ -59,4 +96,22 @@ export async function recordView(env: Env, token: string, now = new Date()): Pro
   await env.QUOTES.put(key(token, 'views.json'), JSON.stringify({ views: v.views + 1, first_viewed_at: v.first_viewed_at ?? ts, last_viewed_at: ts }), {
     httpMetadata: { contentType: 'application/json' },
   })
+}
+
+/** Every customer approval since `since` (ISO), newest first — for the hive feed. */
+export async function listAcceptances(env: Env, since?: string): Promise<(Acceptance & { token: string })[]> {
+  const out: (Acceptance & { token: string })[] = []
+  let cursor: string | undefined
+  do {
+    const res = await env.QUOTES.list({ prefix: 'quotes/', cursor, limit: 1000 })
+    for (const o of res.objects) {
+      if (!o.key.endsWith('/acceptance.json')) continue
+      if (since && o.uploaded.toISOString() <= since) continue
+      const token = o.key.split('/')[1]!
+      const a = await getAcceptance(env, token)
+      if (a && (!since || a.accepted_at > since)) out.push({ ...a, token })
+    }
+    cursor = res.truncated ? res.cursor : undefined
+  } while (cursor)
+  return out.sort((a, b) => b.accepted_at.localeCompare(a.accepted_at))
 }

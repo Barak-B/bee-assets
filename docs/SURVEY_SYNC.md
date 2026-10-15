@@ -30,7 +30,7 @@
 | `GET /api/surveys[?since=ISO]` | רשימת הסקרים: שם, כתובת, סוקר, מוכן ל-54, ציון, מספר תמונות ומספר גרסאות |
 | `GET /api/surveys/<id>` | הסקר האחרון + כל גרסאות ההצעה (לשחזור ולכוורת) |
 | `GET /api/surveys/<id>/photos/<key>` | תמונה |
-| `GET /api/hive/jobs[?since=ISO]` | ג'ובים `collect` / `edit` / `dispatch.draft` מסקרים שהתקבלו או השתנו מאז `since`, עם `survey_id`. מחזיר `until`: שומרים אותו ושולחים כ-`since` בפעם הבאה |
+| `GET /api/hive/jobs[?since=ISO]` | ג'ובים `collect` / `edit` / `dispatch.draft` מסקרים שהתקבלו או השתנו מאז `since`, עם `survey_id`, ו-`events` של אישורי לקוח (`quote.accepted`). מחזיר `until`: שומרים אותו ושולחים כ-`since` בפעם הבאה |
 
 **Law #1/#2:** השרת רק שומר ומחזיר. שום נתיב כאן לא שולח ללקוח או לווטסאפ. הג'ובים נשארים `requiresHumanPick: true`, `destinationClass: drafts_group`.
 

@@ -42,12 +42,17 @@ export function html(body: string, status = 200): Response {
     status,
     headers: {
       'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'private, max-age=60',
+      // no-store: the page changes when the customer approves the quote.
+      'cache-control': 'no-store',
       'content-security-policy':
-        "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+        "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
       ...SECURITY_HEADERS,
     },
   })
+}
+
+export function redirect(location: string, status = 303): Response {
+  return new Response(null, { status, headers: { location, 'cache-control': 'no-store', ...SECURITY_HEADERS } })
 }
 
 function timingSafeEqual(a: string, b: string): boolean {

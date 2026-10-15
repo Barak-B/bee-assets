@@ -85,10 +85,17 @@ export async function revokeQuote(token: string, settings: PublishSettings): Pro
   await call(settings, `/api/quotes/${encodeURIComponent(token)}`, { method: 'DELETE' })
 }
 
-export async function quoteViews(token: string, settings: PublishSettings): Promise<{ views: number; last_viewed_at: string | null } | null> {
+export interface QuoteStatus {
+  views: number
+  last_viewed_at: string | null
+  /** The customer approved this version on the quote page. */
+  accepted?: { name: string; accepted_at: string; version_no: number; reference: string } | null
+}
+
+export async function quoteViews(token: string, settings: PublishSettings): Promise<QuoteStatus | null> {
   try {
     const res = await call(settings, `/api/quotes/${encodeURIComponent(token)}`, { method: 'GET' })
-    return (await res.json()) as { views: number; last_viewed_at: string | null }
+    return (await res.json()) as QuoteStatus
   } catch {
     return null
   }

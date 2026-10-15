@@ -69,6 +69,7 @@ function publishBlock(row: StoredQuote, pub: Publication | null, settingsIssue: 
       <div class="pub" data-pub="${v}">
         <div class="pub-head">קישור ללקוח · פורסם ${escapeHtml(pub.publishedAt.replace('T', ' ').slice(0, 16))} <span class="meta" data-views="${v}"></span></div>
         <input class="pub-url" dir="ltr" readonly value="${escapeHtml(pub.url)}" aria-label="קישור ההצעה" />
+        <div class="badge badge-ok hidden" data-accepted="${v}"></div>
         <div class="item-actions">
           <button class="btn btn-primary" data-q-share="${v}">שתף קישור</button>
           <button class="btn btn-secondary" data-q-copy="${v}">העתק</button>
@@ -312,6 +313,11 @@ function bindPublishing(h: HTMLElement, projectId: string, project: SiteSurveyPr
       void quoteViews(pub.token, settings).then((st) => {
         const el = h.querySelector(`[data-views="${v}"]`)
         if (el && st) el.textContent = st.views ? `· נפתח ${st.views} פעמים, לאחרונה ${(st.last_viewed_at ?? '').replace('T', ' ').slice(0, 16)}` : '· טרם נפתח'
+        const acc = h.querySelector<HTMLElement>(`[data-accepted="${v}"]`)
+        if (acc && st?.accepted) {
+          acc.textContent = `✓ הלקוח אישר את ההצעה: ${st.accepted.name} · ${new Date(st.accepted.accepted_at).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}`
+          acc.classList.remove('hidden')
+        }
       })
     }
   }

@@ -6,6 +6,8 @@ import { onRequestPost } from './api/quotes/index'
 import { onRequestDelete, onRequestGet as statusGet } from './api/quotes/[token]'
 import { onRequestGet as pageGet } from './q/[token]'
 import { onRequestGet as pdfGet } from './q/[token]/pdf'
+import { onRequestPost as acceptPost } from './q/[token]/accept'
+import { onRequestGet as hiveJobs } from './api/hive/jobs'
 
 const KEY = 'test-publish-key-0123456789'
 
@@ -94,6 +96,74 @@ describe('publish API', () => {
     expect(htmlText).not.toMatch(/<script|npv|irr/i)
     const without = (await (await publish(e, { quote: await publicQuote() })).json()) as { token: string; url: string }
     expect(await (await pageGet(ctx(e, without.url, {}, { token: without.token }))).text()).not.toContain('תחזית ייצור וחיסכון')
+  })
+
+  it('lets the customer approve the exact version once, and reports it to the app', async () => {
+    const e = env()
+    const pq = await publicQuote()
+    const { token, url } = (await (await publish(e, { quote: pq, pdfBase64: PDF_B64 })).json()) as { token: string; url: string }
+    const form = (fields: Record<string, string>, headers: Record<string, string> = {}) =>
+      acceptPost(ctx(e, `${url}/accept`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://app.barak-e.com', 'cf-connecting-ip': '203.0.113.7', 'user-agent': 'Mobile Safari', ...headers }, body: new URLSearchParams(fields).toString() }, { token }))
+    const good = { name: '  ישראל   ישראלי ', id4: '1234', agree: 'yes', ref: pq.reference }
+
+    let page = await (await pageGet(ctx(e, url, {}, { token }))).text()
+    expect(page).toContain(`action="/q/${token}/accept"`)
+    expect(page).toContain('אני מאשר/ת את ההצעה')
+
+    // Validation re-renders the page with the message and keeps the name.
+    for (const [bad, msg] of [
+      [{ ...good, agree: '' }, 'נא לסמן'],
+      [{ ...good, id4: '12a4' }, '4 ספרות'],
+      [{ ...good, name: 'א' }, 'שם מלא'],
+      [{ ...good, ref: 'aaaaaaaaaaaa' }, 'ההצעה עודכנה'],
+    ] as const) {
+      const r = await form(bad)
+      expect(r.status).toBe(400)
+      expect(await r.text()).toContain(msg)
+    }
+    expect((await form(good, { origin: 'https://evil.example' })).status).toBe(403)
+    expect((await form(good, { origin: '', 'sec-fetch-site': 'cross-site' })).status).toBe(403)
+
+    const ok = await form(good)
+    expect(ok.status).toBe(303)
+    expect(ok.headers.get('location')).toBe(`/q/${token}?accepted=1#accept`)
+    page = await (await pageGet(ctx(e, `${url}?accepted=1`, {}, { token }))).text()
+    expect(page).toContain('תודה! ההצעה אושרה')
+    expect(page).toContain('ישראל ישראלי')
+    expect(page).toMatch(/<bdi dir="ltr">\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}<\/bdi>/) // Israel time, no bidi reordering
+    expect(page).not.toContain(`action="/q/${token}/accept"`)
+
+    // A second post does not overwrite the first approval.
+    expect((await form({ ...good, name: 'מישהו אחר' })).status).toBe(303)
+    const status = (await (await statusGet(ctx(e, `https://app.barak-e.com/api/quotes/${token}`, { headers: { authorization: `Bearer ${KEY}` } }, { token }))).json()) as {
+      accepted: { name: string; version_no: number; reference: string } | null
+    }
+    expect(status.accepted).toMatchObject({ name: 'ישראל ישראלי', version_no: pq.version_no, reference: pq.reference })
+
+    const raw = JSON.parse(await (await e.QUOTES.get(`quotes/${token}/acceptance.json`))!.text())
+    expect(raw).toMatchObject({ id_last4: '1234', ip: '203.0.113.7', user_agent: 'Mobile Safari' })
+    expect(raw.pdf_sha256).toMatch(/^[0-9a-f]{64}$/)
+    expect(raw.quote.reference).toBe(pq.reference)
+
+    const feed = (await (await hiveJobs(ctx(e, 'https://app.barak-e.com/api/hive/jobs', { headers: { authorization: `Bearer ${KEY}` } }))).json()) as { events: { type: string; customer_name: string; token: string; requiresHumanPick: boolean }[]; until: string }
+    expect(feed.events).toEqual([expect.objectContaining({ type: 'quote.accepted', customer_name: 'ישראל ישראלי', token, requiresHumanPick: true })])
+    await new Promise((r) => setTimeout(r, 5))
+    const later = (await (await hiveJobs(ctx(e, `https://app.barak-e.com/api/hive/jobs?since=${encodeURIComponent(feed.until)}`, { headers: { authorization: `Bearer ${KEY}` } }))).json()) as { events: unknown[] }
+    expect(later.events).toEqual([])
+
+    // Revoking the link keeps the approval record.
+    await onRequestDelete(ctx(e, `https://app.barak-e.com/api/quotes/${token}`, { method: 'DELETE', headers: { authorization: `Bearer ${KEY}` } }, { token }))
+    expect(await e.QUOTES.get(`quotes/${token}/acceptance.json`)).not.toBeNull()
+    expect((await form(good)).status).toBe(404)
+  })
+
+  it('an expired quote cannot be approved', async () => {
+    const e = env()
+    const pq = { ...(await publicQuote()), valid_until: '2020-01-01' }
+    const { token, url } = (await (await publish(e, { quote: pq })).json()) as { token: string; url: string }
+    expect(await (await pageGet(ctx(e, url, {}, { token }))).text()).not.toContain('/accept"')
+    const r = await acceptPost(ctx(e, `${url}/accept`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ name: 'ישראל', id4: '1234', agree: 'yes', ref: pq.reference }).toString() }, { token }))
+    expect(r.status).toBe(410)
   })
 
   it('refuses to mint links on a local or private base URL (the 127.0.0.1 bug)', async () => {

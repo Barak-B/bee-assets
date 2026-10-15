@@ -3,6 +3,7 @@
  * no JavaScript, RTL Hebrew, self-hosted fonts from the same Pages project.
  */
 import type { PublicQuote, PublicQuoteLine, PublicRoi } from '../../../../packages/quote-core/src/public'
+import type { Acceptance } from './store'
 
 const UNIT_HE: Record<PublicQuoteLine['unit'], string> = {
   unit: 'יח׳',
@@ -89,6 +90,14 @@ tr.grand td{font-size:17px;color:var(--ok)}
 h3{font-size:15px;margin:14px 0 4px}
 .chart{width:100%;height:auto;display:block;font-size:9px;fill:var(--muted);font-family:Heebo,Arial,sans-serif}
 details{margin-top:10px}summary{cursor:pointer;color:var(--muted)}
+.ok{border-color:#9fd3b6;background:#f1faf4}
+.banner{padding:10px 16px;font-weight:700;color:var(--ok)}
+form{display:grid;gap:12px;margin-top:10px}
+.fld{display:grid;gap:4px;font-weight:700;font-size:14px}
+.fld input{font:inherit;font-weight:400;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:15px}
+.check input{width:20px;height:20px;margin-top:3px}
+button.btn{border:0;font:inherit;font-weight:700;cursor:pointer;justify-self:start}
 .btn{display:inline-block;background:var(--honey);color:var(--ink);font-weight:700;text-decoration:none;padding:12px 18px;border-radius:12px}
 footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 16px}
 .sm-only{display:none}
@@ -182,6 +191,47 @@ export interface RenderOpts {
   token: string
   hasPdf: boolean
   now?: Date
+  /** Set once the customer approved this version on the page. */
+  acceptance?: Acceptance | null
+  /** Validation message after a rejected approval form, with what was typed. */
+  acceptError?: string
+  form?: { name?: string }
+  /** Just approved (after the redirect) — say thank you. */
+  justAccepted?: boolean
+}
+
+function formatDateTime(iso: string): string {
+  // Israel time for the customer; Intl is available in Workers.
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+      .formatToParts(new Date(iso))
+      .map((p) => [p.type, p.value]),
+  )
+  return `<bdi dir="ltr">${esc(`${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}`)}</bdi>`
+}
+
+function acceptCard(q: PublicQuote, opts: RenderOpts, expired: boolean): string {
+  const a = opts.acceptance
+  if (a) {
+    return `<section class="card ok" id="accept">
+    <h2>${opts.justAccepted ? 'תודה! ההצעה אושרה' : 'ההצעה אושרה'}</h2>
+    <p>אושרה על ידי <strong>${esc(a.name)}</strong> ב-${formatDateTime(a.accepted_at)} · גרסה ${esc(a.version_no)} · אסמכתא <bdi>${esc(a.reference)}</bdi>.</p>
+    <p class="muted">ניצור קשר לתיאום ההסכם והמשך התהליך.</p>
+  </section>`
+  }
+  if (expired) return ''
+  return `<section class="card" id="accept">
+    <h2>אישור ההצעה</h2>
+    <p class="muted">האישור מתייחס לגרסה ${esc(q.version_no)} של ההצעה (אסמכתא <bdi>${esc(q.reference)}</bdi>) ומאפשר לנו להתקדם להסכם. ההסכם עצמו ותנאיו ייחתמו בנפרד.</p>
+    ${opts.acceptError ? `<div class="note" role="alert">${esc(opts.acceptError)}</div>` : ''}
+    <form method="post" action="/q/${esc(opts.token)}/accept">
+      <input type="hidden" name="ref" value="${esc(q.reference)}">
+      <label class="fld">שם מלא<input name="name" required minlength="2" maxlength="80" autocomplete="name" value="${esc(opts.form?.name ?? '')}"></label>
+      <label class="fld">4 ספרות אחרונות של ת״ז / ח״פ<input name="id4" required inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" dir="ltr"></label>
+      <label class="check"><input type="checkbox" name="agree" value="yes" required> קראתי את ההצעה ואני מאשר/ת אותה</label>
+      <button class="btn" type="submit">אני מאשר/ת את ההצעה</button>
+    </form>
+  </section>`
 }
 
 export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
@@ -218,6 +268,7 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
   </div>
 </header>
 <main class="wrap">
+  ${opts.acceptance ? `<div class="card ok banner">ההצעה אושרה ב-${formatDateTime(opts.acceptance.accepted_at)} · <a href="#accept">פרטים</a></div>` : ''}
   ${expired ? `<div class="card note">תוקף ההצעה הסתיים ב-${formatDate(q.valid_until)}. לעדכון ההצעה פנו אלינו.</div>` : ''}
 
   <section class="card">
@@ -280,6 +331,8 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
       <li>* ייצור משוער לפי ממוצע אזורי; הייצור בפועל משתנה בין שנים.</li>
     </ul>
   </section>
+
+  ${acceptCard(q, opts, expired)}
 
   ${opts.hasPdf ? `<p style="text-align:center"><a class="btn" href="/q/${esc(opts.token)}/pdf">הורדת ההצעה כ-PDF</a></p>` : ''}
 </main>

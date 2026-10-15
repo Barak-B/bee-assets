@@ -207,7 +207,7 @@ test('publish a priced quote → customer link on our domain, never 127.0.0.1', 
   })
   await page.route(`${BASE}/api/quotes/${TOKEN}`, async (route) => {
     if (route.request().method() === 'DELETE') return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' })
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ views: 3, last_viewed_at: '2026-10-14T11:00:00.000Z' }) })
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ views: 3, last_viewed_at: '2026-10-14T11:00:00.000Z', accepted: { name: 'ישראל ישראלי', accepted_at: '2026-10-14T12:00:00.000Z', version_no: 1, reference: 'abc' } }) })
   })
 
   await createSurvey(page, 'גג בדיקה פרסום')
@@ -223,6 +223,7 @@ test('publish a priced quote → customer link on our domain, never 127.0.0.1', 
   await card.locator('[data-q-publish]').click()
   await expect(card.locator('.pub-url')).toHaveValue(`${BASE}/q/${TOKEN}`)
   await expect(card.locator('[data-views="1"]')).toContainText('3')
+  await expect(card.locator('[data-accepted="1"]')).toContainText('הלקוח אישר את ההצעה: ישראל ישראלי')
 
   expect(auth).toBe('Bearer e2e-key')
   const body = JSON.stringify(published)
