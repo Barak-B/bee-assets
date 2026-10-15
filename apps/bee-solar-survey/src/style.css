@@ -856,3 +856,227 @@ textarea {
 .btn[aria-disabled='true'] {
   opacity: 0.55;
 }
+
+/* ── Field reports ─────────────────────────────────────────── */
+.unit {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.9em;
+}
+
+.badge-fail {
+  background: #fde7e7;
+  color: #a12626;
+}
+
+.report-new {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 13px;
+  min-height: 0;
+}
+
+.icon-btn-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.ck-item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin: 8px 0;
+  background: #fff;
+  display: grid;
+  gap: 8px;
+}
+
+.ck-item.ck-ok {
+  border-color: #9fd3b6;
+}
+
+.ck-item.ck-fail {
+  border-color: #e7a5a5;
+  background: #fff7f7;
+}
+
+.ck-item.ck-na {
+  opacity: 0.75;
+}
+
+.ck-head {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.ck-code {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.ck-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.segs {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.seg {
+  border: 0;
+  background: #fff;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  min-height: 42px;
+}
+
+.seg + .seg {
+  border-inline-start: 1px solid var(--line);
+}
+
+.seg.on.seg-ok {
+  background: #e4f5eb;
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.seg.on.seg-fail {
+  background: #fde7e7;
+  color: #a12626;
+  font-weight: 700;
+}
+
+.seg.on.seg-na {
+  background: var(--sand-deep);
+  font-weight: 700;
+}
+
+.ck-value,
+.ck-note,
+.tb-cell input,
+.tb-cell select {
+  font: inherit;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  width: 100%;
+}
+
+.tb-row {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin: 8px 0;
+  background: #fff;
+}
+
+.tb-row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.tb-cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.tb-cell {
+  display: grid;
+  gap: 3px;
+  font-size: 13px;
+}
+
+.tb-label {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.tb-comp output {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: var(--sand);
+  font-weight: 700;
+  direction: ltr;
+  text-align: right;
+}
+
+.sig-box {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin: 8px 0;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.sig-img {
+  max-width: 260px;
+  width: 100%;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.sig-canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 600 / 220;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  touch-action: none;
+}
+
+.report-editor .note ul {
+  margin: 6px 0 0;
+  padding-inline-start: 18px;
+}
+
+/* The editor re-renders on every tap — no entrance animation there. */
+.report-editor .section {
+  animation: none;
+}
+
+.report-editor input:disabled,
+.report-editor select:disabled,
+.report-editor textarea:disabled,
+.report-editor .seg:disabled {
+  color: var(--ink);
+  -webkit-text-fill-color: var(--ink);
+  opacity: 1;
+  background: var(--sand);
+}
+
+.report-editor .seg.on.seg-ok:disabled {
+  background: #e4f5eb;
+}
+
+.report-editor .seg.on.seg-fail:disabled {
+  background: #fde7e7;
+}
+
+.report-editor .seg.on.seg-na:disabled {
+  background: var(--sand-deep);
+}

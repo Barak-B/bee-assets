@@ -400,3 +400,91 @@ test('surveys back up to our server, queue while offline, and restore on a new p
   await expect(phone.locator('#f_address')).toHaveValue('רחוב הרצל 1, תל אביב')
   await fresh.close()
 })
+
+async function signReport(page: Page, key: string, name: string) {
+  await page.click(`[data-sign="${key}"]`)
+  await page.fill('#sgName', name)
+  const b = (await page.locator('#sgCanvas').boundingBox())!
+  await page.mouse.move(b.x + 20, b.y + 40)
+  await page.mouse.down()
+  await page.mouse.move(b.x + 120, b.y + 80, { steps: 5 })
+  await page.mouse.move(b.x + 220, b.y + 30, { steps: 5 })
+  await page.mouse.up()
+  await page.click('#sgSave')
+  await expect(page.locator(`[data-sclear="${key}"]`)).toBeVisible()
+}
+
+test('field reports: inspection → lock → defects from the failures → handover warns until fixed', async ({ page }) => {
+  await createSurvey(page, 'גג בדיקה דוחות')
+  await page.locator('.project-item', { hasText: 'גג בדיקה דוחות' }).locator('[data-reports]').click()
+  await expect(page.locator('[data-r-new]')).toHaveCount(5)
+  await page.click('[data-r-new="inspection_62446"]')
+
+  // Prefilled from the survey.
+  await expect(page.locator('[data-f="system|main_breaker"]')).toHaveValue('63A')
+  await page.fill('[data-f="inspector|name"]', 'דני הבודק')
+  await page.fill('[data-f="inspector|license"]', '12345')
+  await page.fill('[data-f="system|module_voc"]', '50')
+  await page.fill('[data-f="system|beta_voc"]', '-0.25')
+  await page.selectOption('[data-f="environment|irradiance_method"]', 'pyranometer')
+  await page.fill('[data-f="environment|irradiance"]', '820')
+  await page.fill('[data-f="environment|module_temp"]', '45')
+  await page.fill('[data-f="thresholds|riso_min"]', '1')
+  await page.selectOption('[data-t="instruments|0|kind"]', 'megger')
+  await page.fill('[data-t="instruments|0|model"]', 'Fluke 1587')
+  await page.fill('[data-t="strings|0|label"]', 'S1')
+  await page.fill('[data-t="strings|0|modules"]', '10')
+  await page.selectOption('[data-t="strings|0|polarity"]', 'yes')
+  await page.fill('[data-t="strings|0|voc"]', '475')
+  await page.fill('[data-t="strings|0|riso"]', '35')
+  // Expected Voc at 45 °C = 50 × 10 × (1 − 0.0025 × 20) = 475 V → pass
+  await expect(page.locator('[data-tc="strings|0|voc_exp"]')).toHaveText('475')
+  await expect(page.locator('[data-tc="strings|0|result"]')).toHaveText('תקין')
+  await page.fill('[data-t="strings|0|riso"]', '0.4')
+  await expect(page.locator('[data-tc="strings|0|result"]')).toHaveText('נכשל')
+
+  await page.click('[data-ckall="visual"]')
+  await page.click('[data-ck="visual|V-LAB-01"][data-res="fail"]')
+  await page.fill('[data-ckn="visual|V-LAB-01"]', 'חסר שלט DC בממיר')
+  await page.click('[data-ckall="functional"]')
+
+  // Locking needs the inspector's signature.
+  await page.click('#rpFinalize')
+  await expect(page.locator('#rpMissing')).toContainText('חתימה: הבודק')
+  await signReport(page, 'inspector', 'דני הבודק')
+  await page.click('#rpFinalize')
+  await expect(page.locator('#toast')).toContainText('ננעל')
+  await expect(page.locator('#rpOutcome')).toContainText('נכשל')
+  await expect(page.locator('[data-f="inspector|name"]')).toBeDisabled()
+
+  const [pdf] = await Promise.all([page.waitForEvent('download'), page.click('#rpPdf')])
+  expect(pdf.suggestedFilename()).toMatch(/^bee-inspection-62446-r1-.+\.pdf$/)
+  const bytes = await bytesOf(pdf)
+  expect(bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-')
+
+  // Failures → defects list, linked to the locked inspection.
+  await page.click('#rpDefects')
+  await expect(page.locator('#toast')).toContainText('2 פריטים')
+  await expect(page.locator('[data-t="defects|0|code"]')).toHaveValue('V-LAB-01')
+  await expect(page.locator('[data-t="defects|1|code"]')).toHaveValue('STR-S1')
+  await expect(page.locator('[data-t="defects|1|severity"]')).toHaveValue('critical')
+
+  // Handover lists the failed inspection and the open defects.
+  await page.click('#rpBack')
+  await page.locator('.project-item', { hasText: 'גג בדיקה דוחות' }).locator('[data-reports]').click()
+  await expect(page.locator('#rdList .quote-card')).toHaveCount(2)
+  await expect(page.locator('#rdList')).toContainText('2 פתוחים')
+  await page.click('[data-r-new="handover"]')
+  await page.click('[data-ckall="commissioning"]')
+  await page.click('#rpFinalize')
+  await expect(page.locator('#rpMissing')).toBeVisible() // values, photos and signatures still missing
+
+  // Survives a reload (IndexedDB) and a draft can be deleted.
+  await page.reload()
+  await page.locator('.project-item', { hasText: 'גג בדיקה דוחות' }).locator('[data-reports]').click()
+  await expect(page.locator('#rdList .quote-card')).toHaveCount(3)
+  await page.locator('#rdList .quote-card', { hasText: 'הפעלה ומסירה' }).locator('[data-r-open]').click()
+  await page.click('#rpDelete')
+  await page.locator('.project-item', { hasText: 'גג בדיקה דוחות' }).locator('[data-reports]').click()
+  await expect(page.locator('#rdList .quote-card')).toHaveCount(2)
+})

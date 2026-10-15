@@ -1,9 +1,11 @@
 import type { Catalog, PricingRules, QuoteVersion } from '@bee/quote-core'
+import type { ReportInstance } from './reports/types'
 import type { SiteSurveyProject, SurveyPhoto } from './types'
 
 const DB_NAME = 'bee-solar-survey'
 // v2: + quotes store (quote versions per project)
-const DB_VER = 2
+// v3: + reports store (field reports per project)
+const DB_VER = 3
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -22,6 +24,10 @@ function openDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains('quotes')) {
         const store = db.createObjectStore('quotes', { keyPath: 'id' })
+        store.createIndex('byProject', 'projectId', { unique: false })
+      }
+      if (!db.objectStoreNames.contains('reports')) {
+        const store = db.createObjectStore('reports', { keyPath: 'id' })
         store.createIndex('byProject', 'projectId', { unique: false })
       }
     }
@@ -75,9 +81,9 @@ export async function saveProject(project: SiteSurveyProject): Promise<void> {
 
 export async function deleteProject(id: string): Promise<void> {
   const db = await openDB()
-  const tx = db.transaction(['projects', 'photos', 'quotes'], 'readwrite')
+  const tx = db.transaction(['projects', 'photos', 'quotes', 'reports'], 'readwrite')
   tx.objectStore('projects').delete(id)
-  for (const storeName of ['photos', 'quotes'] as const) {
+  for (const storeName of ['photos', 'quotes', 'reports'] as const) {
     const req = tx.objectStore(storeName).index('byProject').getAllKeys(id)
     await new Promise<void>((resolve, reject) => {
       req.onsuccess = () => {
@@ -150,14 +156,20 @@ export async function exportBackup(): Promise<object> {
     req.onsuccess = () => resolve(req.result as StoredQuote[])
     req.onerror = () => reject(req.error)
   })
+  const reports = await new Promise<ReportInstance[]>((resolve, reject) => {
+    const req = db.transaction('reports', 'readonly').objectStore('reports').getAll()
+    req.onsuccess = () => resolve(req.result as ReportInstance[])
+    req.onerror = () => reject(req.error)
+  })
   const pricing = await getPricing()
   return {
     app: 'bee-solar-survey',
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     projects,
     photos,
     quotes,
+    reports,
     pricing,
   }
 }
@@ -166,16 +178,19 @@ export async function importBackup(data: {
   projects?: SiteSurveyProject[]
   photos?: StoredPhoto[]
   quotes?: StoredQuote[]
+  reports?: ReportInstance[]
   pricing?: StoredPricing | null
 }): Promise<number> {
   const projects = data.projects ?? []
   const photos = data.photos ?? []
   const quotes = data.quotes ?? []
+  const reports = data.reports ?? []
   const db = await openDB()
-  const tx = db.transaction(['projects', 'photos', 'quotes'], 'readwrite')
+  const tx = db.transaction(['projects', 'photos', 'quotes', 'reports'], 'readwrite')
   for (const p of projects) tx.objectStore('projects').put(p)
   for (const ph of photos) tx.objectStore('photos').put(ph)
   for (const q of quotes) tx.objectStore('quotes').put(q)
+  for (const r of reports) tx.objectStore('reports').put(r)
   await txDone(tx)
   if (data.pricing?.catalog && data.pricing?.rules) await savePricing(data.pricing)
   return projects.length
@@ -313,3 +328,42 @@ export interface SyncState {
 
 export const getSyncState = (projectId: string) => metaGet<SyncState>(`sync:${projectId}`)
 export const saveSyncState = (projectId: string, s: SyncState) => metaPut(`sync:${projectId}`, s)
+
+// ── Field reports ──────────────────────────────────────────────────────
+
+export async function listReports(projectId: string): Promise<ReportInstance[]> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('reports', 'readonly').objectStore('reports').index('byProject').getAll(projectId)
+    req.onsuccess = () => resolve((req.result as ReportInstance[]).sort((a, b) => b.createdAt.localeCompare(a.createdAt)))
+    req.onerror = () => reject(req.error)
+  })
+}
+
+export async function getReport(id: string): Promise<ReportInstance | undefined> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('reports', 'readonly').objectStore('reports').get(id)
+    req.onsuccess = () => resolve(req.result as ReportInstance | undefined)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+/** Save a draft, or lock it (draft → final). A stored final report is never overwritten. */
+export async function saveReport(r: ReportInstance): Promise<void> {
+  const prev = await getReport(r.id)
+  if (prev?.status === 'final') throw new Error('report is final')
+  const db = await openDB()
+  const tx = db.transaction('reports', 'readwrite')
+  tx.objectStore('reports').put(r)
+  await txDone(tx)
+}
+
+export async function deleteDraftReport(id: string): Promise<void> {
+  const prev = await getReport(id)
+  if (!prev || prev.status === 'final') return
+  const db = await openDB()
+  const tx = db.transaction('reports', 'readwrite')
+  tx.objectStore('reports').delete(id)
+  await txDone(tx)
+}

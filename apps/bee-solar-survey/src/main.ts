@@ -20,6 +20,7 @@ import { fileToSurveyPhoto, getCurrentGps } from './photos'
 import { escapeAttr, escapeHtml } from './html'
 import { renderPricingScreen } from './pricingScreen'
 import { openQuotesDialog } from './quotesDialog'
+import { openReportsDialog, renderReportEditor } from './reports/ui'
 import { outcomeToast, shareOrDownload, shareOrDownloadJson } from './share'
 import { assessCompleteness, emptyProject, parseGps, sha256OfDataUrl } from './schema'
 import { STATUS_LABEL, SyncError, isSyncConfigured, markDirty, restoreFromServer, statusOf, syncAll, type SyncStatus } from './sync'
@@ -31,7 +32,7 @@ import {
   type SiteSurveyProject,
 } from './types'
 
-type Screen = 'list' | 'form' | 'pricing'
+type Screen = 'list' | 'form' | 'pricing' | 'report'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -43,6 +44,7 @@ let toastTimer = 0
 let autoSaveTimer = 0
 let drawTarget: StoredPhoto | null = null
 let syncTimer = 0
+let reportId = ''
 
 function toast(msg: string) {
   const el = document.getElementById('toast')
@@ -261,6 +263,7 @@ async function render() {
                 <button class="btn btn-secondary" data-hive="${p.id}">ייצוא כוורת</button>
                 <button class="btn btn-secondary" data-pdf="${p.id}">PDF</button>
                 <button class="btn btn-secondary" data-quote="${p.id}">הצעות מחיר</button>
+                <button class="btn btn-secondary" data-reports="${p.id}">דוחות שטח</button>
                 <button class="btn btn-danger" data-del="${p.id}">מחק</button>
               </div>
             </article>`,
@@ -346,6 +349,12 @@ async function render() {
         await exportPdfFor((btn as HTMLElement).dataset.pdf!)
       }),
     )
+    app.querySelectorAll('[data-reports]').forEach((btn) =>
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation()
+        await openReportsDialog((btn as HTMLElement).dataset.reports!, reportsCtx)
+      }),
+    )
     app.querySelectorAll('[data-quote]').forEach((btn) =>
       btn.addEventListener('click', async (e) => {
         e.stopPropagation()
@@ -357,6 +366,19 @@ async function render() {
         await openEditor((el as HTMLElement).dataset.open!)
       }),
     )
+    return
+  }
+
+  if (screen === 'report') {
+    await renderReportEditor(reportId, {
+      app,
+      toast,
+      openReport: reportsCtx.openReport,
+      onBack: () => {
+        screen = 'list'
+        void render()
+      },
+    })
     return
   }
 
@@ -457,6 +479,7 @@ async function render() {
         <button class="btn btn-secondary" id="btnCancel">ביטול</button>
         <button class="btn btn-secondary" id="btnHive">ייצוא כוורת</button>
         <button class="btn btn-secondary" id="btnQuote">הצעות מחיר</button>
+        <button class="btn btn-secondary" id="btnReports">דוחות שטח</button>
         <button class="btn btn-primary" id="btnSave">שמור סקר</button>
       </div>
       <div class="toast" id="toast"></div>
@@ -533,6 +556,15 @@ function bindFormEvents() {
     const bundle = buildHiveExportBundle(editing, photos)
     const outcome = await shareOrDownloadJson(`hive-site-survey-${editing.id.slice(0, 8)}.json`, bundle, 'ייצוא כוורת')
     toast(`${outcomeToast(outcome, 'ייצוא הכוורת')} · ${bundle.jobs.length === 3 ? 'מלא' : 'חלקי — חסרים שדות'}`)
+  })
+  document.getElementById('btnReports')?.addEventListener('click', async () => {
+    readFormIntoEditing()
+    if (!editing.projectName.trim()) {
+      toast('יש למלא שם פרויקט לפני דוחות')
+      return
+    }
+    await persistCurrent()
+    await openReportsDialog(editing.id, reportsCtx)
   })
   document.getElementById('btnQuote')?.addEventListener('click', async () => {
     readFormIntoEditing()
@@ -783,6 +815,16 @@ async function exportPdfFor(id: string) {
     console.error(err)
     toast('יצירת ה-PDF נכשלה')
   }
+}
+
+const reportsCtx = {
+  toast,
+  openReport: async (id: string) => {
+    reportId = id
+    screen = 'report'
+    window.scrollTo(0, 0)
+    await render()
+  },
 }
 
 const quotesCtx = {

@@ -205,6 +205,40 @@ export class Writer {
   }
 
   /**
+   * Signature boxes, two per row (RTL: first at the right): the drawn
+   * signature, the signer's name, role and time. An unsigned box stays empty
+   * with a line, so a printed copy can still be signed by hand.
+   */
+  signatures(list: { role: string; name: string; at: string; dataUrl: string | null }[]) {
+    const gap = 6
+    const w = (CONTENT_W - gap) / 2
+    const h = 34
+    for (let i = 0; i < list.length; i += 2) {
+      this.ensure(h + 4)
+      list.slice(i, i + 2).forEach((sg, k) => {
+        const x = k === 0 ? RIGHT - w : MARGIN_X
+        this.doc.setDrawColor(RULE)
+        this.doc.setLineWidth(0.3)
+        this.doc.roundedRect(x, this.y, w, h, 1.5, 1.5, 'S')
+        if (sg.dataUrl) {
+          try {
+            const props = this.doc.getImageProperties(sg.dataUrl)
+            const scale = Math.min((w - 8) / props.width, 18 / props.height)
+            this.doc.addImage(sg.dataUrl, 'PNG', x + (w - props.width * scale) / 2, this.y + 2, props.width * scale, props.height * scale)
+          } catch {
+            /* unreadable image: leave the space */
+          }
+        }
+        this.doc.line(x + 4, this.y + 21, x + w - 4, this.y + 21)
+        this.text(sg.role, x + w - 3, this.y + 26, 'bold', 9)
+        this.text(sg.name || '—', x + w - 3, this.y + 31, 'normal', 9, MUTED)
+        if (sg.at) this.textLeft(sg.at, x + 3, this.y + 31, 'normal', 8, MUTED)
+      })
+      this.y += h + 4
+    }
+  }
+
+  /**
    * Bar chart, laid out right-to-left (first value at the right, like the text).
    * Negative values hang below the zero line in red. Labels are optional per bar
    * (pass '' to skip); `valueLabel` prints a value above selected bars.
@@ -259,17 +293,23 @@ export class Writer {
       cursor -= w
     })
 
+    // Header labels wrap inside their column (narrow measurement columns would otherwise overlap).
+    const headerLines = columns.map((c, i) => this.wrap(c.label, xs[i]!.right - xs[i]!.left - pad * 2, 'bold', size))
+    const headerH = Math.max(...headerLines.map((l) => l.length)) * lineH + pad * 2
     const drawHeader = () => {
-      this.ensure(lineH + pad * 2 + 2)
+      this.ensure(headerH + 2)
       this.doc.setFillColor(BRAND_DARK)
-      this.doc.rect(MARGIN_X, this.y, CONTENT_W, lineH + pad * 2, 'F')
+      this.doc.rect(MARGIN_X, this.y, CONTENT_W, headerH, 'F')
       columns.forEach((c, i) => {
         const cell = xs[i]!
         const tx = c.align === 'left' ? cell.left + pad : cell.right - pad
-        if (c.align === 'left') this.textLeft(c.label, tx, this.y + pad + lineH * 0.8, 'bold', size, '#ffffff')
-        else this.text(c.label, tx, this.y + pad + lineH * 0.8, 'bold', size, '#ffffff')
+        headerLines[i]!.forEach((line, li) => {
+          const ty = this.y + pad + lineH * 0.8 + li * lineH
+          if (c.align === 'left') this.textLeft(line, tx, ty, 'bold', size, '#ffffff')
+          else this.text(line, tx, ty, 'bold', size, '#ffffff')
+        })
       })
-      this.y += lineH + pad * 2
+      this.y += headerH
     }
 
     drawHeader()

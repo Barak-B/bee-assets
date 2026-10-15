@@ -13,5 +13,6 @@ Public assets for email signatures and external use.
 ## Docs
 
 - [`docs/QUOTES_ONLINE.md`](docs/QUOTES_ONLINE.md) — הצעות מחיר אונליין תחת הדומיין (`/q/<קוד>`), הפעלה ב-Cloudflare.
+- [`docs/FIELD_REPORTS.md`](docs/FIELD_REPORTS.md) — דוחות שטח: יומי, צ׳קליסט התקנה, בדיקת 62446-1, ליקויים, מסירה — מנוע אחד ו-PDF אחד.
 - [`docs/SURVEY_SYNC.md`](docs/SURVEY_SYNC.md) — גיבוי סקרים, תמונות והצעות לשרת, תור אופליין, שחזור לטלפון חדש ו-feed לכוורת.
 - [`docs/REVIEW-2026-10-13-quotes-reports.md`](docs/REVIEW-2026-10-13-quotes-reports.md) — סקירת הצעות מחיר ודוחות ותוכנית שלב-שלב.
