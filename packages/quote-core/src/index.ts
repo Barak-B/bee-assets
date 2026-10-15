@@ -15,8 +15,9 @@ export {
   applyPriceList,
   priceListTemplateCsv,
   markRulesFilled,
+  PRICE_JUMP_ALERT_PCT,
 } from './pricebook'
-export type { PricingReadiness, ReadinessItem, PriceRow, ApplyResult } from './pricebook'
+export type { PricingReadiness, ReadinessItem, PriceRow, ApplyResult, PriceChange } from './pricebook'
 export type { BuildQuoteOptions, SizingResult } from './engine'
 export { round2, roundToStep, pct, canonicalJson, sha256Hex } from './money'
 export {

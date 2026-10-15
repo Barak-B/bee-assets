@@ -159,12 +159,33 @@ export interface PriceRow {
   row?: number
 }
 
+/** Price changes above this percentage are highlighted for review (spec 12 §1.5.4 price_jump_alert_pct). */
+export const PRICE_JUMP_ALERT_PCT = 15
+
+/** One cost change the import would make — shown for approval before anything is saved. */
+export interface PriceChange {
+  sku: string
+  name_he: string
+  /** `new` = had no cost before; `changed` = cost or currency changed. */
+  type: 'new' | 'changed'
+  before: { unit_cost: number | null; currency: Currency }
+  after: { unit_cost: number; currency: Currency }
+  /** Relative change in %, when comparable (same currency, both known). */
+  pct: number | null
+  /** Above PRICE_JUMP_ALERT_PCT, or the currency changed. */
+  alert: boolean
+}
+
 export interface ApplyResult {
   catalog: Catalog
   applied: number
   unchanged: number
   unknownSkus: string[]
   invalid: { row: number; reason: string }[]
+  /** Every change, alerts first, then by size of change. */
+  changes: PriceChange[]
+  /** Active, already-priced items the file did not mention (their cost stays as is). */
+  notInFile: string[]
 }
 
 const SKU_HEADERS = ['sku', 'מקט', 'מק"ט', 'מק״ט', 'קוד', 'code', 'item']
@@ -281,7 +302,10 @@ export function applyPriceList(catalog: Catalog, rows: PriceRow[], source: strin
   const invalid: { row: number; reason: string }[] = []
   let applied = 0
   let unchanged = 0
+  const changes: PriceChange[] = []
+  const seen = new Set<string>()
   for (const r of rows) {
+    seen.add(r.sku.toUpperCase())
     const p = bySku.get(r.sku.toUpperCase())
     if (!p) {
       unknownSkus.push(r.sku)
@@ -293,6 +317,17 @@ export function applyPriceList(catalog: Catalog, rows: PriceRow[], source: strin
       unchanged++
       continue
     }
+    const before = { unit_cost: p.unit_cost ?? null, currency: p.currency }
+    const pct = before.unit_cost && before.currency === currency ? Math.round(((r.unit_cost - before.unit_cost) / before.unit_cost) * 1000) / 10 : null
+    changes.push({
+      sku: p.sku,
+      name_he: p.name_he,
+      type: before.unit_cost === null ? 'new' : 'changed',
+      before,
+      after: { unit_cost: r.unit_cost, currency },
+      pct,
+      alert: before.unit_cost !== null && (before.currency !== currency || (pct !== null && Math.abs(pct) > PRICE_JUMP_ALERT_PCT)),
+    })
     p.unit_cost = r.unit_cost
     p.currency = currency
     p.cost_source = `${source} · ${today}`
@@ -301,7 +336,9 @@ export function applyPriceList(catalog: Catalog, rows: PriceRow[], source: strin
     applied++
   }
   next.updated_at = today
-  return { catalog: next, applied, unchanged, unknownSkus, invalid }
+  changes.sort((a, b) => Number(b.alert) - Number(a.alert) || Math.abs(b.pct ?? 0) - Math.abs(a.pct ?? 0))
+  const notInFile = catalog.products.filter((p) => p.is_active !== false && p.unit_cost !== null && p.unit_cost !== undefined && !seen.has(p.sku.toUpperCase())).map((p) => p.sku)
+  return { catalog: next, applied, unchanged, unknownSkus, invalid, changes, notInFile }
 }
 
 function csvCell(v: unknown): string {

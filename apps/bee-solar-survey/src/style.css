@@ -710,6 +710,29 @@ textarea {
   text-align: left;
 }
 
+/* ── Price list review ─────────────────────────────────────── */
+.pi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.pi-table th,
+.pi-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  vertical-align: top;
+}
+.pi-table .n {
+  text-align: left;
+  white-space: nowrap;
+}
+.pi-table tr.pi-alert td {
+  background: #fff4e5;
+  color: #7a4b00;
+  font-weight: 700;
+}
+
 /* ── Quotes dialog ──────────────────────────────────────────── */
 .dialog-backdrop {
   position: fixed;

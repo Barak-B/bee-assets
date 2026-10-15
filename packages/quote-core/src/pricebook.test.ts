@@ -154,3 +154,33 @@ describe('end to end: filled price book → real quote, then a revision', () => 
     expect(v2.changes!.total_delta_incl_vat_ils).toBeCloseTo(v2.totals.total_incl_vat_ils! - v1.totals.total_incl_vat_ils!, 2)
   })
 })
+
+describe('price list diff before approval', () => {
+  it('lists new and changed costs, flags big jumps and currency switches, and items not in the file', async () => {
+    const { applyPriceList: apply, PRICE_JUMP_ALERT_PCT: jump } = await import('./pricebook')
+    const { seedCatalog: seed } = await import('./index')
+    const first = apply(seed, [
+      { sku: 'BEE-CBL-AC', unit_cost: 20 },
+      { sku: 'BEE-CAB-AC', unit_cost: 1000 },
+      { sku: 'BEE-CAB-DC', unit_cost: 500 },
+      { sku: 'BEE-ACC-PE', unit_cost: 100 },
+    ], 'a').catalog
+    const res = apply(first, [
+      { sku: 'bee-cbl-ac', unit_cost: 21 }, // +5%: changed, no alert (case-insensitive SKU)
+      { sku: 'BEE-CAB-AC', unit_cost: 1300 }, // +30%: alert
+      { sku: 'BEE-CAB-DC', unit_cost: 500, currency: 'USD' }, // currency switch: alert
+      { sku: 'BEE-MTR-PROD', unit_cost: 900 }, // new
+      { sku: 'NOPE-1', unit_cost: 1 },
+    ], 'b')
+    expect(jump).toBe(15)
+    expect(res.applied).toBe(4)
+    expect(res.unknownSkus).toEqual(['NOPE-1'])
+    expect(res.notInFile).toEqual(['BEE-ACC-PE'])
+    const by = Object.fromEntries(res.changes.map((c) => [c.sku, c]))
+    expect(by['BEE-CBL-AC']).toMatchObject({ type: 'changed', pct: 5, alert: false })
+    expect(by['BEE-CAB-AC']).toMatchObject({ type: 'changed', pct: 30, alert: true })
+    expect(by['BEE-CAB-DC']).toMatchObject({ type: 'changed', pct: null, alert: true, after: { currency: 'USD' } })
+    expect(by['BEE-MTR-PROD']).toMatchObject({ type: 'new', pct: null, alert: false })
+    expect(res.changes.slice(0, 2).every((c) => c.alert)).toBe(true) // alerts first
+  })
+})

@@ -6,6 +6,7 @@
 import {
   KIND_LABELS_HE,
   ROOF_LABELS_HE,
+  PRICE_JUMP_ALERT_PCT,
   SUGGESTED_ROI,
   SUGGESTED_SIZING,
   EMPTY_ROI_RULES,
@@ -14,8 +15,10 @@ import {
   pricingReadiness,
   seedCatalog,
   seedPricingRules,
+  type ApplyResult,
   type Catalog,
   type Currency,
+  type PriceChange,
   type PricingRules,
   type Product,
   type ProductKind,
@@ -294,6 +297,74 @@ function readForm(ctx: Ctx, base: Pricing): { catalog: Catalog; rules: PricingRu
   return { catalog, rules }
 }
 
+function money(n: number | null, cur: Currency): string {
+  if (n === null) return '—'
+  return `${n.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${cur === 'ILS' ? '₪' : cur}`
+}
+
+function changeRow(c: PriceChange): string {
+  const pct = c.pct === null ? (c.type === 'new' ? 'חדש' : 'מטבע') : `${c.pct > 0 ? '+' : ''}${c.pct}%`
+  return `<tr class="${c.alert ? 'pi-alert' : ''}">
+    <td>${escapeHtml(c.name_he)}<div class="meta"><bdi>${escapeHtml(c.sku)}</bdi></div></td>
+    <td class="n"><bdi>${escapeHtml(money(c.before.unit_cost, c.before.currency))}</bdi></td>
+    <td class="n"><bdi>${escapeHtml(money(c.after.unit_cost, c.after.currency))}</bdi></td>
+    <td class="n"><bdi>${escapeHtml(pct)}</bdi></td>
+  </tr>`
+}
+
+/**
+ * Spec 12 §1.5.4: show what the file would change — new costs, changes,
+ * jumps above the alert threshold, unknown SKUs, rejected rows — and save
+ * only after Barak approves.
+ */
+function reviewImport(res: ApplyResult, fileName: string): Promise<boolean> {
+  const changed = res.changes.filter((c) => c.type === 'changed')
+  const added = res.changes.filter((c) => c.type === 'new')
+  const alerts = res.changes.filter((c) => c.alert)
+  const maxPct = changed.reduce((m, c) => (c.pct !== null && Math.abs(c.pct) > Math.abs(m) ? c.pct : m), 0)
+  const host = document.createElement('div')
+  host.innerHTML = `
+    <div class="dialog-backdrop" id="piBackdrop">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="piTitle">
+        <header class="dialog-head"><h2 id="piTitle">בדיקת מחירון לפני שמירה</h2></header>
+        <div class="meta"><bdi dir="ltr">${escapeHtml(fileName)}</bdi></div>
+        <div class="note ${alerts.length ? 'note-warn' : 'note-ok'}" id="piSummary"><div>
+          ${added.length} מחירים חדשים · ${changed.length} שינויים${changed.length ? ` · השינוי הגדול: <bdi>${maxPct > 0 ? '+' : ''}${maxPct}%</bdi>` : ''} · ${res.unchanged} ללא שינוי
+          ${alerts.length ? `<div><strong>${alerts.length} לבדיקה: שינוי מעל ${PRICE_JUMP_ALERT_PCT}% או החלפת מטבע</strong></div>` : ''}
+        </div></div>
+        ${
+          changed.length
+            ? `<table class="pi-table"><thead><tr><th>פריט</th><th class="n">לפני</th><th class="n">אחרי</th><th class="n">שינוי</th></tr></thead><tbody>${changed.map(changeRow).join('')}</tbody></table>`
+            : ''
+        }
+        ${
+          added.length
+            ? `<details ${changed.length ? '' : 'open'}><summary>${added.length} פריטים מקבלים מחיר לראשונה</summary><table class="pi-table"><tbody>${added.map(changeRow).join('')}</tbody></table></details>`
+            : ''
+        }
+        ${res.unknownSkus.length ? `<div class="note note-warn">מק״טים שלא בקטלוג (${res.unknownSkus.length}) — לא ייובאו: <bdi>${escapeHtml(res.unknownSkus.slice(0, 20).join(', '))}${res.unknownSkus.length > 20 ? '…' : ''}</bdi></div>` : ''}
+        ${res.invalid.length ? `<div class="note note-warn">שורות שנדחו (${res.invalid.length}): ${escapeHtml(res.invalid.slice(0, 8).map((x) => `שורה ${x.row} — ${x.reason}`).join('; '))}</div>` : ''}
+        ${res.notInFile.length ? `<div class="meta">${res.notInFile.length} פריטים מתומחרים לא מופיעים בקובץ — המחיר שלהם נשאר כמו שהוא.</div>` : ''}
+        <div class="row">
+          <button class="btn btn-secondary" id="piCancel">ביטול</button>
+          <button class="btn btn-primary" id="piApprove" ${res.applied ? '' : 'disabled'}>${res.applied ? `אשר ושמור ${res.applied} מחירים` : 'אין מה לעדכן'}</button>
+        </div>
+      </div>
+    </div>`
+  document.body.appendChild(host)
+  return new Promise((resolve) => {
+    const done = (ok: boolean) => {
+      host.remove()
+      resolve(ok)
+    }
+    host.querySelector('#piCancel')?.addEventListener('click', () => done(false))
+    host.querySelector('#piApprove')?.addEventListener('click', () => done(true))
+    host.querySelector('#piBackdrop')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) done(false)
+    })
+  })
+}
+
 function pickFile(accept: string): Promise<File | null> {
   return new Promise((resolve) => {
     const el = document.createElement('input')
@@ -369,16 +440,10 @@ function bind(ctx: Ctx) {
     const current = readForm(ctx, state)
     try {
       const res = await importPriceListFile(file, current.catalog)
-      const lines = [
-        `עודכנו ${res.applied} מחירים · ללא שינוי ${res.unchanged}`,
-        res.unknownSkus.length ? `מק״טים לא מוכרים (${res.unknownSkus.length}): ${res.unknownSkus.slice(0, 12).join(', ')}${res.unknownSkus.length > 12 ? '…' : ''}` : '',
-        res.invalid.length ? `שורות שנדחו (${res.invalid.length}): ${res.invalid.slice(0, 8).map((x) => `שורה ${x.row} — ${x.reason}`).join('; ')}` : '',
-      ].filter(Boolean)
-      if (!res.applied) {
-        alert(`לא עודכן אף מחיר.\n${lines.join('\n')}`)
+      if (!(await reviewImport(res, file.name))) {
+        ctx.toast(res.applied ? 'הייבוא בוטל — המחירון לא השתנה' : 'לא נמצא מחיר לעדכן בקובץ')
         return
       }
-      if (!confirm(`${lines.join('\n')}\n\nלשמור את המחירון?`)) return
       state = await persistPricing(res.catalog, current.rules)
       render(ctx, state)
       ctx.toast(`יובאו ${res.applied} מחירים`)

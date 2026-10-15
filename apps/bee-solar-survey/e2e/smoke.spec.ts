@@ -89,6 +89,8 @@ async function fillPriceBook(page: Page, publish?: { baseUrl: string; key: strin
   })].join('\r\n')
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#pImport')])
   await chooser.setFiles({ name: 'supplier.csv', mimeType: 'text/csv', buffer: Buffer.from('﻿' + filled, 'utf8') })
+  await expect(page.locator('#piSummary')).toContainText('מחירים חדשים')
+  await page.click('#piApprove')
   await expect(page.locator('#toast')).toContainText('יובאו')
 
   // Rules
@@ -150,6 +152,19 @@ test('price book import → priced quote, BOQ Excel and versioning', async ({ pa
   await createSurvey(page, 'גג בדיקה הצעה')
 
   await fillPriceBook(page)
+
+  // Re-import with a big jump → flagged for review; cancelling keeps the price book as it was.
+  await page.click('#btnPricing')
+  const before = await page.inputValue('[data-cost="BEE-CAB-AC"]')
+  const [again] = await Promise.all([page.waitForEvent('filechooser'), page.click('#pImport')])
+  await again.setFiles({ name: 'supplier-v2.csv', mimeType: 'text/csv', buffer: Buffer.from(`sku,unit_cost\r\nBEE-CAB-AC,${Number(before) * 2}\r\nNOPE-123,5\r\n`, 'utf8') })
+  await expect(page.locator('#piSummary')).toContainText('1 לבדיקה')
+  await expect(page.locator('tr.pi-alert')).toContainText('+100%')
+  await expect(page.locator('.dialog')).toContainText('NOPE-123')
+  await page.click('#piCancel')
+  await expect(page.locator('#toast')).toContainText('הייבוא בוטל')
+  await expect(page.locator('[data-cost="BEE-CAB-AC"]')).toHaveValue(before)
+  await page.click('#pBack')
 
   // Quote v1
   await page.locator('.project-item', { hasText: 'גג בדיקה הצעה' }).locator('[data-quote]').click()
