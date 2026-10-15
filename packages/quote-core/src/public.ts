@@ -190,13 +190,21 @@ export function toPublicQuote(q: QuoteVersion, opts: { customerName?: string } =
 export function isPublicQuote(x: unknown): x is PublicQuote {
   if (!x || typeof x !== 'object') return false
   const o = x as Record<string, unknown>
+  const obj = (v: unknown) => !!v && typeof v === 'object' && !Array.isArray(v)
+  // Everything the customer page dereferences must be there, or the link would crash for the customer.
   return (
     o.schema === 'bee.public-quote/1' &&
     typeof o.quote_number === 'string' &&
     typeof o.version_no === 'number' &&
+    typeof o.issued_at === 'string' &&
+    typeof o.reference === 'string' &&
+    obj(o.project) &&
+    obj(o.system) &&
+    obj(o.totals) &&
+    obj(o.terms) &&
     Array.isArray(o.sections) &&
-    !!o.totals &&
-    typeof o.totals === 'object'
+    (o.sections as unknown[]).every((s) => obj(s) && Array.isArray((s as { lines?: unknown }).lines)) &&
+    Array.isArray(o.payment_schedule)
   )
 }
 

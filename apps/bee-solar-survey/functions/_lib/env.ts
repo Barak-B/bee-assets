@@ -7,7 +7,11 @@ export interface R2ObjectLike {
   text(): Promise<string>
   arrayBuffer(): Promise<ArrayBuffer>
   customMetadata?: Record<string, string>
+  etag?: string
 }
+
+/** R2 conditional write: Headers (`if-none-match: *` = create only) or etag conditions. */
+export type R2OnlyIf = Headers | { etagMatches?: string; etagDoesNotMatch?: string }
 
 export interface R2ListedObject {
   key: string
@@ -29,8 +33,8 @@ export interface R2BucketLike {
   put(
     key: string,
     value: string | ArrayBuffer | Uint8Array,
-    options?: { httpMetadata?: { contentType?: string }; customMetadata?: Record<string, string> },
-  ): Promise<unknown>
+    options?: { httpMetadata?: { contentType?: string }; customMetadata?: Record<string, string>; onlyIf?: R2OnlyIf },
+  ): Promise<unknown | null>
   delete(key: string | string[]): Promise<void>
 }
 

@@ -164,7 +164,7 @@ describe('publish API', () => {
     const feed = (await (await hiveJobs(ctx(e, 'https://app.barak-e.com/api/hive/jobs', { headers: { authorization: `Bearer ${KEY}` } }))).json()) as { events: { type: string; customer_name: string; token: string; requiresHumanPick: boolean }[]; until: string }
     expect(feed.events).toEqual([expect.objectContaining({ type: 'quote.accepted', customer_name: 'ישראל ישראלי', token, requiresHumanPick: true })])
     await new Promise((r) => setTimeout(r, 5))
-    const later = (await (await hiveJobs(ctx(e, `https://app.barak-e.com/api/hive/jobs?since=${encodeURIComponent(feed.until)}`, { headers: { authorization: `Bearer ${KEY}` } }))).json()) as { events: unknown[] }
+    const later = (await (await hiveJobs(ctx(e, `https://app.barak-e.com/api/hive/jobs?since=${encodeURIComponent(new Date().toISOString())}`, { headers: { authorization: `Bearer ${KEY}` } }))).json()) as { events: unknown[] }
     expect(later.events).toEqual([])
 
     // Revoking the link keeps the approval record.
@@ -241,5 +241,44 @@ describe('activation health check', () => {
     expect(JSON.stringify(await run(env()))).not.toContain(KEY)
     const local = await run(env({ ALLOW_LOCAL_LINKS: '1' }))
     expect(local.checks.find((c) => c.key === 'allow_local_links')).toMatchObject({ ok: false })
+  })
+})
+
+describe('review fixes — customer link', () => {
+  it('a double tap approves once; the second request never overwrites the first', async () => {
+    const e = env()
+    const pq = await publicQuote()
+    const { token, url } = (await (await publish(e, { quote: pq })).json()) as { token: string; url: string }
+    const post = (name: string) =>
+      acceptPost(ctx(e, `${url}/accept`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://app.barak-e.com' }, body: new URLSearchParams({ name, id4: '1234', agree: 'yes', ref: pq.reference }).toString() }, { token }))
+    const [a, b] = await Promise.all([post('ראשון'), post('שני')])
+    expect([a.headers.get('location'), b.headers.get('location')].filter((l) => l?.includes('accepted=1'))).toHaveLength(1)
+    const raw = JSON.parse(await (await e.QUOTES.get(`quotes/${token}/acceptance.json`))!.text())
+    expect(['ראשון', 'שני']).toContain(raw.name)
+  })
+
+  it('the approval form takes a small urlencoded body only', async () => {
+    const e = env()
+    const pq = await publicQuote()
+    const { token, url } = (await (await publish(e, { quote: pq })).json()) as { token: string; url: string }
+    const fd = new FormData()
+    fd.set('name', 'x')
+    expect((await acceptPost(ctx(e, `${url}/accept`, { method: 'POST', body: fd }, { token }))).status).toBe(400)
+    const big = new URLSearchParams({ name: 'x'.repeat(9000), id4: '1234', agree: 'yes', ref: pq.reference }).toString()
+    expect((await acceptPost(ctx(e, `${url}/accept`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: big }, { token }))).status).toBe(413)
+  })
+
+  it('a quote missing what the page needs is refused at publish time', async () => {
+    const e = env()
+    const { system: _s, ...noSystem } = await publicQuote()
+    expect((await publish(e, { quote: noSystem })).status).toBe(400)
+  })
+
+  it('rapid re-opens are not each written to R2', async () => {
+    const e = env()
+    const { token, url } = (await (await publish(e, { quote: await publicQuote() })).json()) as { token: string; url: string }
+    for (let i = 0; i < 5; i++) await pageGet(ctx(e, url, {}, { token }))
+    const views = JSON.parse(await (await e.QUOTES.get(`quotes/${token}/views.json`))!.text())
+    expect(views.views).toBe(1)
   })
 })

@@ -4,6 +4,7 @@
  */
 import type { PublicQuote, PublicQuoteLine, PublicRoi } from '../../../../packages/quote-core/src/public'
 import type { Acceptance } from './store'
+import { israelToday } from './http'
 
 const UNIT_HE: Record<PublicQuoteLine['unit'], string> = {
   unit: 'יח׳',
@@ -251,7 +252,7 @@ function acceptCard(q: PublicQuote, opts: RenderOpts, expired: boolean): string 
 
 export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
   const now = opts.now ?? new Date()
-  const expired = !!q.valid_until && q.valid_until < now.toISOString().slice(0, 10)
+  const expired = !!q.valid_until && q.valid_until < israelToday(now)
   const s = q.system
   const t = q.totals
 

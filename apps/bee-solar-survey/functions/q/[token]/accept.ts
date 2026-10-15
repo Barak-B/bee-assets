@@ -7,7 +7,7 @@
  */
 import { QUOTE_TOKEN_RE } from '../../../../../packages/quote-core/src/public'
 import type { Handler } from '../../_lib/env'
-import { html, param, redirect } from '../../_lib/http'
+import { html, israelToday, param, redirect } from '../../_lib/http'
 import { renderMessagePage, renderQuotePage } from '../../_lib/render'
 import { getAcceptance, getPdf, getQuote, putAcceptance } from '../../_lib/store'
 
@@ -42,16 +42,19 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
   if (await getAcceptance(env, token)) return redirect(`${page}#accept`)
 
   const now = new Date()
-  if (rec.quote.valid_until && rec.quote.valid_until < now.toISOString().slice(0, 10)) {
+  // Validity is an Israeli calendar date.
+  if (rec.quote.valid_until && rec.quote.valid_until < israelToday(now)) {
     return html(renderMessagePage('תוקף ההצעה הסתיים', 'לא ניתן לאשר הצעה שתוקפה הסתיים. פנו אלינו לקבלת הצעה מעודכנת.'), 410)
   }
 
-  let form: FormData
-  try {
-    form = await request.formData()
-  } catch {
+  // The page posts a small urlencoded form; anything else (or anything big) is not ours.
+  const type = (request.headers.get('content-type') ?? '').split(';')[0]!.trim().toLowerCase()
+  if (type !== 'application/x-www-form-urlencoded' || Number(request.headers.get('content-length') ?? 0) > 8192) {
     return html(renderMessagePage('הבקשה נדחתה', 'יש לאשר את ההצעה מתוך דף ההצעה.'), 400)
   }
+  const raw = await request.text()
+  if (raw.length > 8192) return html(renderMessagePage('הבקשה נדחתה', 'יש לאשר את ההצעה מתוך דף ההצעה.'), 413)
+  const form = new URLSearchParams(raw)
   const name = String(form.get('name') ?? '').replace(/\s+/g, ' ').trim()
   const id4 = String(form.get('id4') ?? '').trim()
   const agree = form.get('agree') === 'yes'
@@ -67,10 +70,10 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
   }
 
   const pdf = rec.has_pdf ? await getPdf(env, token) : null
-  await putAcceptance(env, token, {
+  const first = await putAcceptance(env, token, {
     name,
     id_last4: id4,
-    accepted_at: now.toISOString(),
+    accepted_at: new Date().toISOString(),
     ip: request.headers.get('cf-connecting-ip'),
     user_agent: (request.headers.get('user-agent') ?? '').slice(0, 300) || null,
     quote_number: rec.quote.quote_number,
@@ -80,5 +83,7 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
     pdf_sha256: pdf ? await sha256Hex(pdf) : null,
     quote: rec.quote,
   })
+  // Lost the race to an earlier approval: show that one, never overwrite it.
+  if (!first) return redirect(`${page}#accept`)
   return redirect(`${page}?accepted=1#accept`)
 }

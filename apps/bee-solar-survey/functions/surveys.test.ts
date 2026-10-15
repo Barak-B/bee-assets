@@ -11,7 +11,8 @@ import { onRequestPut as reportPut } from './api/surveys/[id]/reports/[report]'
 const KEY = 'test-publish-key-0123456789'
 const ID = '0f8fad5b-d9cb-469f-a165-70867728950e'
 const PHOTO = '7c9e6679-7425-40de-944b-e07fc1f90ae7'
-const SHA = 'a'.repeat(64)
+const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])
+const SHA = '474ebe266cd7f9ed28807fa3fdfe0c04cdb3cef9313cdda5c08b15910fcc8184' // sha256 of JPEG
 const PKEY = `${PHOTO}.${SHA.slice(0, 12)}`
 const AUTH = { authorization: `Bearer ${KEY}` }
 
@@ -48,15 +49,20 @@ describe('survey backup API', () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ ok: true, changed: true, missing_photos: [PKEY] })
 
-    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])
+    const jpeg = JPEG
+    // Bytes that do not match the key's fingerprint are refused (photos are content-addressed).
+    const other = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 9, 9, 9])
+    res = await photoPut(ctx(e, `/api/surveys/${ID}/photos/${PKEY}`, { method: 'PUT', headers: { ...AUTH, 'content-type': 'image/jpeg' }, body: other }, { id: ID, photo: PKEY }))
+    expect(res.status).toBe(400)
     res = await photoPut(ctx(e, `/api/surveys/${ID}/photos/${PKEY}`, { method: 'PUT', headers: { ...AUTH, 'content-type': 'image/jpeg' }, body: jpeg }, { id: ID, photo: PKEY }))
     expect(res.status).toBe(201)
 
     res = await putSurvey(e, record())
     expect(await res.json()).toMatchObject({ changed: false, missing_photos: [] })
 
-    const got = await photoGet(ctx(e, `/api/surveys/${ID}/photos/${PKEY}`, { headers: AUTH }, { id: ID, photo: PKEY }))
+    const got = await photoGet(ctx({ ...e, ALLOWED_ORIGINS: 'https://survey.barak-e.com' }, `/api/surveys/${ID}/photos/${PKEY}`, { headers: { ...AUTH, origin: 'https://survey.barak-e.com' } }, { id: ID, photo: PKEY }))
     expect(new Uint8Array(await got.arrayBuffer())).toEqual(jpeg)
+    expect(got.headers.get('access-control-allow-origin')).toBe('https://survey.barak-e.com') // restore from another origin works
   })
 
   it('keeps history only for distinct content and lists surveys for restore', async () => {
@@ -95,14 +101,20 @@ describe('survey backup API', () => {
     await putSurvey(e, record())
     const res = await jobsGet(ctx(e, '/api/hive/jobs', { headers: AUTH }))
     const body = (await res.json()) as { jobs: { kind: string; survey_id: string; outbound: { requiresHumanPick: boolean } }[]; until: string }
-    expect(body.jobs).toEqual([expect.objectContaining({ kind: 'collect', survey_id: ID, outbound: expect.objectContaining({ requiresHumanPick: true }) })])
+    expect(body.jobs).toEqual([expect.objectContaining({ kind: 'collect', survey_id: ID, content_hash: 'h1', outbound: expect.objectContaining({ requiresHumanPick: true }) })])
+    // `until` lags a minute behind, so a write that lands while the feed is listed is re-sent, never lost.
+    expect(Date.now() - Date.parse(body.until)).toBeGreaterThanOrEqual(59_000)
+    const mark = new Date().toISOString()
+    await new Promise((r) => setTimeout(r, 5))
     await putSurvey(e, record()) // same content re-sent (e.g. after a lost reply) is not news for the hive
-    const later = (await (await jobsGet(ctx(e, `/api/hive/jobs?since=${encodeURIComponent(body.until)}`, { headers: AUTH }))).json()) as { jobs: unknown[] }
+    const later = (await (await jobsGet(ctx(e, `/api/hive/jobs?since=${encodeURIComponent(mark)}`, { headers: AUTH }))).json()) as { jobs: unknown[] }
     expect(later.jobs).toEqual([])
-    await new Promise((r) => setTimeout(r, 5)) // receivedAt must be strictly after `until`
     await putSurvey(e, record({ contentHash: 'h2' }))
-    const changed = (await (await jobsGet(ctx(e, `/api/hive/jobs?since=${encodeURIComponent(body.until)}`, { headers: AUTH }))).json()) as { jobs: unknown[] }
-    expect(changed.jobs).toHaveLength(1)
+    // `since` without milliseconds is normalised, so nothing slips through string comparison.
+    const noMs = mark.replace(/\.\d{3}Z$/, 'Z')
+    const changed = (await (await jobsGet(ctx(e, `/api/hive/jobs?since=${encodeURIComponent(noMs)}`, { headers: AUTH }))).json()) as { jobs: { content_hash: string }[] }
+    expect(changed.jobs.map((j) => j.content_hash)).toEqual(['h2'])
+    expect((await jobsGet(ctx(e, '/api/hive/jobs?since=yesterday', { headers: AUTH }))).status).toBe(400)
   })
 
   it('lets the app on our domain PUT across origins (CORS preflight)', async () => {
@@ -143,6 +155,7 @@ function reportWire(over: Record<string, unknown> = {}) {
     finalizedAt: null,
     contentHash: null,
     photos: [{ id: RPHOTO, key: RKEY, sha256: 'b'.repeat(64), mimeType: 'image/jpeg', sectionKey: 'photos', createdAt: '2026-10-15T09:00:00.000Z' }],
+    signatures: { inspector: { name: 'דני', dataUrl: 'data:image/png;base64,iVBORw0KGgo=', signedAt: '2026-10-15T09:00:00.000Z' } },
     title_he: 'בדיקת מתקן — IEC 62446-1',
     outcome: { tone: 'fail', label_he: 'נכשל · 2 ליקויים' },
     fields: {},
@@ -178,12 +191,12 @@ describe('field report backup API', () => {
 
     const feed = (await (await jobsGet(ctx(e, '/api/hive/jobs', { headers: AUTH }))).json()) as { events: { type: string; report_id: string; title_he: string; outcome: { tone: string; label_he: string } }[]; until: string }
     const ev = feed.events.filter((x) => x.type === 'report.finalized')
-    expect(ev).toEqual([expect.objectContaining({ report_id: RID, title_he: 'בדיקת מתקן — IEC 62446-1', outcome: { tone: 'fail', label_he: 'נכשל · 2 ליקויים' } })])
+    expect(ev).toEqual([expect.objectContaining({ report_id: RID, event_id: `report.finalized:${RID}:${'c'.repeat(64)}`, title_he: 'בדיקת מתקן — IEC 62446-1', outcome: { tone: 'fail', label_he: 'נכשל · 2 ליקויים' } })])
     await new Promise((r) => setTimeout(r, 5))
-    const later = (await (await jobsGet(ctx(e, `/api/hive/jobs?since=${encodeURIComponent(feed.until)}`, { headers: AUTH }))).json()) as { events: unknown[] }
+    const later = (await (await jobsGet(ctx(e, `/api/hive/jobs?since=${encodeURIComponent(new Date().toISOString())}`, { headers: AUTH }))).json()) as { events: unknown[] }
     expect(later.events).toEqual([])
     // Hebrew is stored URL-encoded in R2 metadata, never raw.
-    const meta = (await e.QUOTES.get(`report-index/${RID}`))!.customMetadata!
+    const meta = (await e.QUOTES.get(`report-index/${ID}/${RID}`))!.customMetadata!
     expect(meta.title_he).not.toMatch(/[\u0590-\u05FF]/)
     expect(decodeURIComponent(meta.title_he!)).toBe('בדיקת מתקן — IEC 62446-1')
   })
@@ -205,5 +218,48 @@ describe('field report backup API', () => {
     await putSurvey(e, record())
     const { surveys } = (await (await listGet(ctx(e, '/api/surveys', { headers: AUTH }))).json()) as { surveys: { projectName: string; readyForWave54: boolean; score: number }[] }
     expect(surveys[0]).toMatchObject({ projectName: 'גג הרצל', readyForWave54: true, score: 90 })
+  })
+})
+
+describe('review fixes', () => {
+  it('a malformed hive bundle is refused, so it can never break the feed', async () => {
+    const e = env()
+    expect((await putSurvey(e, record({ hive: { jobs: {} } }))).status).toBe(400)
+  })
+
+  it('names with emoji at the cut-off never break the index write', async () => {
+    const e = env()
+    const name = 'א'.repeat(199) + '😀'
+    const res = await putSurvey(e, record({ project: { id: ID, projectName: name } }))
+    expect(res.status).toBe(200)
+    const { surveys } = (await (await listGet(ctx(e, '/api/surveys', { headers: AUTH }))).json()) as { surveys: { projectName: string }[] }
+    expect(surveys[0]!.projectName.length).toBeGreaterThan(198)
+  })
+
+  it('a report signature must be a PNG data URL — nothing that could become markup', async () => {
+    const e = env()
+    await putSurvey(e, record())
+    const evil = reportWire({ signatures: { inspector: { name: 'x', dataUrl: 'x" onerror="alert(1)', signedAt: '' } } })
+    expect((await putReport(e, evil)).status).toBe(400)
+    expect((await putReport(e, reportWire({ photos: [{ id: 'not-a-uuid"><img', key: RKEY, sha256: 'b'.repeat(64) }] }))).status).toBe(400)
+  })
+
+  it('the same report id under another survey cannot touch the first survey\'s hive row', async () => {
+    const e = env()
+    await putSurvey(e, record())
+    const final = reportWire({ status: 'final', finalizedAt: '2026-10-15T10:00:00.000Z', contentHash: 'c'.repeat(64) })
+    await putReport(e, final)
+    const other = '1b4e28ba-2fa1-41d2-883f-0016d3cca427'
+    await surveyPut(ctx(e, `/api/surveys/${other}`, { method: 'PUT', headers: { ...AUTH, 'content-type': 'application/json' }, body: JSON.stringify(record({ project: { id: other } })) }, { id: other }))
+    await reportPut(ctx(e, `/api/surveys/${other}/reports/${RID}`, { method: 'PUT', headers: { ...AUTH, 'content-type': 'application/json' }, body: JSON.stringify({ ...reportWire(), projectId: other }) }, { id: other, report: RID }))
+    const meta = (await e.QUOTES.get(`report-index/${ID}/${RID}`))!.customMetadata!
+    expect(decodeURIComponent(meta.status!)).toBe('final')
+  })
+
+  it('two phones racing on the same quote version: exactly one wins', async () => {
+    const e = env()
+    await putSurvey(e, record())
+    const [a, b] = await Promise.all([putQuote(e, 1, quote(1, 'phone-a')), putQuote(e, 1, quote(1, 'phone-b'))])
+    expect([a.status, b.status].sort()).toEqual([201, 409])
   })
 })

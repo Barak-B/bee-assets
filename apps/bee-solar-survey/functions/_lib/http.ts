@@ -7,7 +7,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   'x-robots-tag': 'noindex, nofollow',
 }
 
-function corsHeaders(request: Request, env: Env): Record<string, string> {
+export function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get('origin')
   if (!origin) return {}
   const allowed = new Set((env.ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean))
@@ -76,4 +76,21 @@ export function requireKey(request: Request, env: Env): Response | null {
 
 export function param(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '')
+}
+
+/**
+ * `?since=` normalised to the server's ISO form (…T00:00:00.000Z), so string
+ * comparison against stored timestamps is exact. Invalid → a 400 response.
+ */
+export function parseSince(request: Request, env: Env): { since?: string; error?: Response } {
+  const raw = new URL(request.url).searchParams.get('since')
+  if (!raw) return {}
+  const t = Date.parse(raw)
+  if (!Number.isFinite(t)) return { error: json(request, env, { error: 'bad_since', message_he: 'since חייב להיות תאריך ISO' }, 400) }
+  return { since: new Date(t).toISOString() }
+}
+
+/** Today's date in Israel (YYYY-MM-DD) — quote validity is a local-date matter, not UTC. */
+export function israelToday(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
 }

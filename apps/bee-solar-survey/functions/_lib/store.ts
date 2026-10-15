@@ -75,8 +75,13 @@ export async function getAcceptance(env: Env, token: string): Promise<Acceptance
   }
 }
 
-export async function putAcceptance(env: Env, token: string, a: Acceptance): Promise<void> {
-  await env.QUOTES.put(key(token, 'acceptance.json'), JSON.stringify(a), { httpMetadata: { contentType: 'application/json' } })
+/** Create-only: the first approval wins; returns false when one already exists (double tap, two people). */
+export async function putAcceptance(env: Env, token: string, a: Acceptance): Promise<boolean> {
+  const res = await env.QUOTES.put(key(token, 'acceptance.json'), JSON.stringify(a), {
+    httpMetadata: { contentType: 'application/json' },
+    onlyIf: new Headers({ 'if-none-match': '*' }),
+  })
+  return res !== null
 }
 
 export async function getViews(env: Env, token: string): Promise<ViewStats> {
@@ -89,9 +94,14 @@ export async function getViews(env: Env, token: string): Promise<ViewStats> {
   }
 }
 
-/** Best-effort counter (R2 has no atomic increment; a lost update under concurrent views is acceptable). */
+/**
+ * Best-effort counter (R2 has no atomic increment; a lost update under
+ * concurrent views is acceptable). Opens within 10 s of the last one are not
+ * written, so a script looping on a link cannot run up R2 write operations.
+ */
 export async function recordView(env: Env, token: string, now = new Date()): Promise<void> {
   const v = await getViews(env, token)
+  if (v.last_viewed_at && now.getTime() - Date.parse(v.last_viewed_at) < 10_000) return
   const ts = now.toISOString()
   await env.QUOTES.put(key(token, 'views.json'), JSON.stringify({ views: v.views + 1, first_viewed_at: v.first_viewed_at ?? ts, last_viewed_at: ts }), {
     httpMetadata: { contentType: 'application/json' },
