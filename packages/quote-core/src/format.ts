@@ -19,6 +19,9 @@ const FLAG_LABELS: Record<string, string> = {
   'pricing:labour_per_module_missing': 'חסר מחיר עבודה למודול לסוג הגג',
   'pricing:cost_missing': 'חסר מחיר עלות בקטלוג',
   'pricing:margin_missing': 'חסר מרווח לסוג הפריט',
+  'roi:orientation_assumed_optimal': 'תחזית הייצור מניחה כיוון ושיפוע אופטימליים (לא נמדד שיפוע בסקר)',
+  'roi:consumption_unknown': 'צריכה שנתית לא ידועה — הקיזוז חושב על כל הייצור',
+  'roi:tax_not_included': 'החיסכון לא כולל מס על הכנסה ממכירת חשמל',
 }
 
 export function flagLabelHe(flag: string): string {

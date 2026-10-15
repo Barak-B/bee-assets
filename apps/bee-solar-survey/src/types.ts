@@ -79,6 +79,8 @@ export interface SiteSurveyProject {
   budgetIls: string
   inverterBrandPref: InverterBrand
   includeBattery: boolean
+  /** Private customers see savings incl. VAT; businesses before VAT (spec 12 §5.2). */
+  customerType?: 'private' | 'business'
 
   generalNotes: string
   customFields: CustomField[]

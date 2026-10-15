@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SUGGESTED_SIZING, applyPriceList, buildQuote, markRulesFilled, seedCatalog, seedPricingRules, toPublicQuote, type Catalog, type PricingRules, type PublicQuote } from '@bee/quote-core'
+import { EMPTY_ROI_RULES, SUGGESTED_ROI, SUGGESTED_SIZING, applyPriceList, buildQuote, markRulesFilled, seedCatalog, seedPricingRules, toPublicQuote, type Catalog, type PricingRules, type PublicQuote } from '@bee/quote-core'
 import type { Ctx, Env } from './_lib/env'
 import { MemoryBucket } from './_lib/memoryBucket'
 import { onRequestPost } from './api/quotes/index'
@@ -17,13 +17,14 @@ function ctx(e: Env, url: string, init: RequestInit = {}, params: Record<string,
   return { request: new Request(url, init), env: e, params }
 }
 
-async function publicQuote(): Promise<PublicQuote> {
+async function publicQuote(withRoi = false): Promise<PublicQuote> {
   const catalog: Catalog = { ...applyPriceList(seedCatalog, seedCatalog.products.map((p, i) => ({ sku: p.sku, unit_cost: 50 + i * 10 })), 't').catalog, fx_rates: { USD: 3.7, EUR: 4 } }
   const rules: PricingRules = structuredClone(seedPricingRules)
   Object.assign(rules, { vat_rate: 0.18, default_margin_pct: 0.25, validity_days: 30 })
   rules.labour_per_module_ils = { flat: 300, tile: 350, 'metal-standing-seam': 280, 'metal-trapezoidal': 280, ground: 320, other: 300 }
   rules.sizing = { ...SUGGESTED_SIZING }
   rules.payment_schedule = rules.payment_schedule.map((m, i) => ({ ...m, pct: [30, 40, 20, 5, 5][i] ?? null }))
+  if (withRoi) rules.roi = { ...EMPTY_ROI_RULES, ...SUGGESTED_ROI, track: 'net_metering', consumption_tariff_ils_kwh: 0.6 }
   const q = await buildQuote(
     { projectId: 'p1', projectName: 'גג <b>תל אביב</b>', address: 'הרצל 1', roofType: 'flat', usableAreaM2: 120, targetKwp: 15, inverterBrand: 'SolarEdge', includeBattery: false, acCableLengthM: 35, phases: 3 },
     catalog,
@@ -79,6 +80,20 @@ describe('publish API', () => {
     const del = await onRequestDelete(ctx(e, `https://app.barak-e.com/api/quotes/${token}`, { method: 'DELETE', headers: { authorization: `Bearer ${KEY}` } }, { token }))
     expect(del.status).toBe(200)
     expect((await pageGet(ctx(e, url, {}, { token }))).status).toBe(404)
+  })
+
+  it('shows the savings estimate with inline charts and no script', async () => {
+    const e = env()
+    const pq = await publicQuote(true)
+    expect(pq.roi).toBeDefined()
+    const { token, url } = (await (await publish(e, { quote: pq })).json()) as { token: string; url: string }
+    const htmlText = await (await pageGet(ctx(e, url, {}, { token }))).text()
+    expect(htmlText).toContain('תחזית ייצור וחיסכון')
+    expect(htmlText.match(/<svg class="chart"/g)).toHaveLength(2)
+    expect(htmlText).toContain('אינו ייעוץ מס')
+    expect(htmlText).not.toMatch(/<script|npv|irr/i)
+    const without = (await (await publish(e, { quote: await publicQuote() })).json()) as { token: string; url: string }
+    expect(await (await pageGet(ctx(e, without.url, {}, { token: without.token }))).text()).not.toContain('תחזית ייצור וחיסכון')
   })
 
   it('refuses to mint links on a local or private base URL (the 127.0.0.1 bug)', async () => {

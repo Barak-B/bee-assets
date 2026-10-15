@@ -26,6 +26,8 @@ const KIND_LABEL: Record<QuoteLine['kind'], string> = {
   fee: 'אגרות (לפי חשבון בפועל)',
 }
 
+const MONTHS_HE = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳']
+
 const UNIT_LABEL: Record<QuoteLine['unit'], string> = {
   unit: 'יח׳',
   m: 'מ׳',
@@ -90,7 +92,11 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
   w.section('תקציר')
   w.statCards([
     { label: 'הספק DC מתוכנן', value: d.dc_kwp ? `${d.dc_kwp} kWp` : '—' },
-    { label: 'ייצור שנתי משוער', value: d.annual_yield_kwh_estimate ? `${formatNumber(d.annual_yield_kwh_estimate)} kWh *` : 'לאימות *' },
+    {
+      label: 'ייצור שנתי משוער',
+      // Same number as the savings section (first year, after initial degradation) when there is one.
+      value: quote.roi ? `${formatNumber(quote.roi.kpi.annual_yield_kwh_y1)} kWh *` : d.annual_yield_kwh_estimate ? `${formatNumber(d.annual_yield_kwh_estimate)} kWh *` : 'לאימות *',
+    },
     { label: 'סה״כ כולל מע״מ', value: t.total_incl_vat_ils === null ? 'לאימות *' : formatIls(t.total_incl_vat_ils) },
   ])
   const basis: Record<typeof d.kwp_basis, string> = {
@@ -116,6 +122,38 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
   w.row('שטח נדרש / זמין', d.area_needed_m2 ? `${d.area_needed_m2} / ${quote.input.usableAreaM2 ?? '—'} מ״ר${d.area_ok === false ? ' — השטח אינו מספיק' : ''}` : 'לאימות *')
   if (d.strings_estimate) w.row('מחרוזות (הערכה)', `${d.strings_estimate}`)
   w.space()
+
+  // ── Production and savings (spec 12 §5, quote-pdf-sections §2.4–2.5) ──
+  const roi = quote.roi
+  if (roi) {
+    w.section('תחזית ייצור וחיסכון *')
+    w.statCards([
+      { label: 'ייצור שנה ראשונה', value: `${formatNumber(roi.kpi.annual_yield_kwh_y1)} kWh` },
+      { label: `חיסכון שנה ראשונה${roi.customer_type === 'private' ? ' (כולל מע״מ)' : ''}`, value: formatIls(roi.kpi.savings_y1_ils) },
+      { label: 'החזר השקעה', value: roi.kpi.payback_years === null ? `מעל ${roi.series.length} שנה` : `${formatNumber(roi.kpi.payback_years, 1)} שנים` },
+    ])
+    w.paragraph('ייצור חודשי משוער (kWh)', 'bold', 9.5)
+    w.barChart(roi.monthly_kwh, MONTHS_HE, { height: 30, valueLabel: (v, i) => (i % 3 === 0 || i === 6 ? formatNumber(v) : '') })
+    w.paragraph(`תזרים מצטבר ל-${roi.series.length} שנה (₪) — מתחת לקו: לפני החזר ההשקעה`, 'bold', 9.5)
+    w.barChart(
+      roi.series.map((y) => y.cum_cf_ils),
+      roi.series.map((y) => (y.year === 1 || y.year % 5 === 0 ? String(y.year) : '')),
+      { height: 34, valueLabel: (v, i) => (i === roi.series.length - 1 ? formatIls(v) : '') },
+    )
+    if (roi.bill.before_y1_ils !== null) w.row('חשבון חשמל שנתי', `היום כ-${formatIls(roi.bill.before_y1_ils)} · אחרי המערכת כ-${formatIls(roi.bill.after_y1_ils)}`)
+    if (roi.kpi.offset_pct !== null) w.row('כיסוי הצריכה', `${roi.kpi.offset_pct}%`)
+    w.row(`חיסכון נטו ל-${roi.series.length} שנה`, formatIls(roi.kpi.lifetime_net_savings_ils))
+    if (!customer) w.row('NPV / IRR (פנימי)', `${formatIls(roi.kpi.npv_ils)} · ${roi.kpi.irr_pct === null ? '—' : `${roi.kpi.irr_pct}%`}`)
+    if (roi.kpi.co2_t_year !== null) w.row('הפחתת פליטות', `${formatNumber(roi.kpi.co2_t_year, 1)} טון CO₂ בשנה`)
+    w.paragraph('הנחות החישוב:', 'bold', 9.5)
+    w.bullets(
+      roi.assumptions.map((a) => `${a.label_he}${a.value === '' ? '' : `: ${typeof a.value === 'number' ? formatNumber(a.value, 3) : a.value}`}${a.unit ? ` ${a.unit}` : ''}`),
+      MUTED,
+    )
+    w.paragraph('* הערכה מהירה לפי הספק, כיוון ושיפוע; ייצור בפועל משתנה משנה לשנה. התעריפים לפי יום ההצעה. אינו ייעוץ מס.', 'normal', 8.5, MUTED)
+    if (!customer) for (const f of roi.flags) w.paragraph(`· ${flagLabelHe(f)}`, 'normal', 8.5, MUTED)
+    w.space()
+  }
 
   // ── Bill of quantities ──────────────────────────────────
   w.section('כתב כמויות (תמצית)')

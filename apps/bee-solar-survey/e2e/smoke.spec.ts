@@ -71,7 +71,7 @@ async function createSurvey(page: Page, name: string) {
   await expect(page.locator('.project-item', { hasText: name })).toBeVisible()
 }
 
-async function fillPriceBook(page: Page, publish?: { baseUrl: string; key: string }) {
+async function fillPriceBook(page: Page, publish?: { baseUrl: string; key: string }, roi = false) {
   // Pricing: download template, fill every cost, import it back.
   await page.click('#btnPricing')
   await expect(page.locator('#pricingReadiness')).toContainText('חסר')
@@ -103,6 +103,13 @@ async function fillPriceBook(page: Page, publish?: { baseUrl: string; key: strin
   }
   await page.click('#pSuggest')
   for (const [i, v] of ['30', '40', '20', '5', '5'].entries()) await page.fill(`#p_pay_${i}`, v)
+  if (roi) {
+    await page.selectOption('#p_roi_track', 'net_metering')
+    await expect(page.locator('#p_roi_feed_in_tariff_ils_kwh')).toBeHidden() // only the chosen track's fields
+    await page.fill('#p_roi_consumption_tariff_ils_kwh', '0.6') // test tariff, not a real one
+    await page.click('#pSuggestRoi')
+    await expect(page.locator('#p_roi_horizon_years')).toHaveValue('25')
+  }
   if (publish) {
     await page.fill('#p_pubBase', publish.baseUrl)
     await page.fill('#p_pubKey', publish.key)
@@ -204,9 +211,10 @@ test('publish a priced quote → customer link on our domain, never 127.0.0.1', 
   })
 
   await createSurvey(page, 'גג בדיקה פרסום')
-  await fillPriceBook(page, { baseUrl: BASE, key: 'e2e-key' })
+  await fillPriceBook(page, { baseUrl: BASE, key: 'e2e-key' }, true)
   await page.click('#btnPricing')
   await expect(page.locator('#p_pubStatus')).toContainText(`${BASE}/q/`)
+  await expect(page.locator('#pricingRecommended')).toHaveCount(0) // savings estimate configured
   await page.click('#pBack')
 
   await page.locator('.project-item', { hasText: 'גג בדיקה פרסום' }).locator('[data-quote]').click()
@@ -219,7 +227,11 @@ test('publish a priced quote → customer link on our domain, never 127.0.0.1', 
   expect(auth).toBe('Bearer e2e-key')
   const body = JSON.stringify(published)
   expect(body).toContain('"schema":"bee.public-quote/1"')
-  for (const banned of ['unit_cost', 'margin_pct', 'fx_rate', '"sku"', 'flags']) expect(body).not.toContain(banned)
+  const roi = (published!.quote as { roi?: { savings_y1_ils: number; cumulative: unknown[]; monthly_kwh: number[] } }).roi
+  expect(roi?.savings_y1_ils).toBeGreaterThan(0)
+  expect(roi?.cumulative).toHaveLength(25)
+  expect(roi?.monthly_kwh).toHaveLength(12)
+  for (const banned of ['unit_cost', 'margin_pct', 'fx_rate', '"sku"', 'flags', 'npv', 'irr']) expect(body).not.toContain(banned)
   const pdf = Buffer.from(published!.pdfBase64, 'base64')
   expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-')
 

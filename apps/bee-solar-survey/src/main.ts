@@ -149,6 +149,7 @@ function readFormIntoEditing() {
   editing.budgetIls = g('f_budget')
   editing.inverterBrandPref = g('f_inverterBrand') as SiteSurveyProject['inverterBrandPref']
   editing.includeBattery = (document.getElementById('f_battery') as HTMLInputElement | null)?.checked ?? false
+  editing.customerType = g('f_customerType') === 'business' ? 'business' : 'private'
   editing.generalNotes = g('f_generalNotes')
 }
 
@@ -436,6 +437,7 @@ async function render() {
             <div class="field"><label>יעד kWp</label><input id="f_targetKwp" inputmode="decimal" value="${escapeAttr(editing.targetKwp)}" /></div>
             <div class="field"><label>תקציב ₪</label><input id="f_budget" inputmode="decimal" value="${escapeAttr(editing.budgetIls)}" /></div>
           </div>
+          <div class="field"><label>סוג לקוח</label><select id="f_customerType"><option value="private" ${editing.customerType !== 'business' ? 'selected' : ''}>פרטי (מחירים כולל מע״מ)</option><option value="business" ${editing.customerType === 'business' ? 'selected' : ''}>עסקי (לפני מע״מ)</option></select></div>
           <div class="field"><label>העדפת ממיר (צי B.E.E)</label><select id="f_inverterBrand">${options(['SolarEdge', 'KStar', 'ABB', 'Deye'], editing.inverterBrandPref)}</select></div>
           <label class="checkbox-row"><input type="checkbox" id="f_battery" ${editing.includeBattery ? 'checked' : ''}/> לכלול סוללה בתכנון</label>
           ${photoBlock('roof', true)}

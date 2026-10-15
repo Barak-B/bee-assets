@@ -1,5 +1,6 @@
 import { diffQuotes } from './diff'
 import { canonicalJson, round2, roundToStep, sha256Hex } from './money'
+import { computeRoi, orientationFactor } from './roi'
 import type {
   Catalog,
   PricingRules,
@@ -121,7 +122,9 @@ export function sizeSystem(input: QuoteInput, catalog: Catalog, rules: PricingRu
   }
 
   const perString = s.strings_modules_per_string
-  const yieldKwh = s.specific_yield_kwh_per_kwp && dcKwp ? Math.round(dcKwp * s.specific_yield_kwh_per_kwp) : null
+  // Specific yield is for an optimal array; scale by the surveyed azimuth/tilt when known.
+  const orient = orientationFactor(input.azimuthDeg, input.tiltDeg) ?? 1
+  const yieldKwh = s.specific_yield_kwh_per_kwp && dcKwp ? Math.round(dcKwp * s.specific_yield_kwh_per_kwp * orient) : null
 
   return {
     design: {
@@ -377,7 +380,9 @@ export async function buildQuote(
     payment_schedule: rules.payment_schedule,
   }
 
-  const body = { input, design: sizing.design, lines, totals, terms, catalog_version: catalog.version, rules_version: rules.version }
+  const roi = computeRoi(rules.roi, { input, design: sizing.design, totals, vatRate: rules.vat_rate, specificYield: rules.sizing.specific_yield_kwh_per_kwp })
+  // `roi` joins the hashed snapshot only when produced, so price books without ROI keep their hashes.
+  const body = { input, design: sizing.design, lines, totals, terms, catalog_version: catalog.version, rules_version: rules.version, ...(roi ? { roi } : {}) }
   const snapshot_hash = await sha256Hex(canonicalJson(body))
 
   const prev = opts.previous ?? null

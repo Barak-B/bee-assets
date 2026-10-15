@@ -87,6 +87,72 @@ export interface Catalog {
   products: Product[]
 }
 
+export type CustomerType = 'private' | 'business'
+
+/** Spec 12 §5.1 regulatory/tariff track, simplified. */
+export type TariffTrack = 'net_metering' | 'self_consumption' | 'feed_in_full'
+
+/** ROI parameters (spec 12 §5.4). All `null` until Barak fills them — nothing is hard-coded. */
+export interface RoiRules {
+  track: TariffTrack | null
+  /** ₪ per kWh, excl. VAT. */
+  consumption_tariff_ils_kwh: number | null
+  feed_in_tariff_ils_kwh: number | null
+  surplus_tariff_ils_kwh: number | null
+  /** Fraction 0–1 of production consumed on site (self_consumption track). */
+  self_consumption_share: number | null
+  tariff_escalation_pct: number | null
+  degradation_pct_year: number | null
+  first_year_degradation_pct: number | null
+  om_cost_pct_capex: number | null
+  discount_rate_pct: number | null
+  horizon_years: number | null
+  co2_kg_per_kwh: number | null
+  verification: Verification
+}
+
+export interface RoiAssumption {
+  key: string
+  label_he: string
+  value: number | string
+  unit: string
+}
+
+export interface RoiYear {
+  year: number
+  kwh: number
+  savings_ils: number
+  opex_ils: number
+  cf_ils: number
+  cum_cf_ils: number
+}
+
+/** Spec 12 §5.3 outputs (quick mode). Part of the QuoteVersion snapshot when produced. */
+export interface RoiResult {
+  method: 'quick-il/1'
+  track: TariffTrack
+  customer_type: CustomerType
+  /** What the customer pays (incl. VAT for private, excl. for business). */
+  capex_ils: number
+  kpi: {
+    annual_yield_kwh_y1: number
+    specific_yield_kwh_per_kwp: number
+    savings_y1_ils: number
+    payback_years: number | null
+    npv_ils: number
+    irr_pct: number | null
+    offset_pct: number | null
+    lifetime_net_savings_ils: number
+    co2_t_year: number | null
+  }
+  monthly_kwh: number[]
+  series: RoiYear[]
+  bill: { before_y1_ils: number | null; after_y1_ils: number | null }
+  assumptions: RoiAssumption[]
+  flags: string[]
+  verification: Verification
+}
+
 export interface PaymentMilestone {
   milestone_key: string
   label_he: string
@@ -117,6 +183,8 @@ export interface PricingRules {
   /** Round the final total (excl. VAT) to this step, e.g. 100 ₪. `null` = no rounding. */
   final_round_step_ils: number | null
   payment_schedule: PaymentMilestone[]
+  /** Production / savings estimate parameters (optional; absent in price books saved before ROI). */
+  roi?: RoiRules
   verification: Verification
   needs_owner_input: boolean
 }
@@ -132,6 +200,10 @@ export interface QuoteInput {
   targetKwp: number | null
   budgetIls?: number | null
   annualConsumptionKwh?: number | null
+  /** Compass bearing of the array (180 = south) and tilt in degrees, from the survey. */
+  azimuthDeg?: number | null
+  tiltDeg?: number | null
+  customerType?: CustomerType
   inverterBrand?: InverterBrand | ''
   includeBattery: boolean
   acCableLengthM: number | null
@@ -243,6 +315,8 @@ export interface QuoteVersion {
   supersedes_hash: string | null
   /** Line-level diff against the previous version (null for v1). */
   changes: QuoteDiff | null
+  /** Production / savings estimate; absent when the price book has no ROI parameters. */
+  roi?: RoiResult
   trust: {
     law2: 'Human picks — no customer auto-send'
     requiresHumanPick: true

@@ -205,6 +205,45 @@ export class Writer {
   }
 
   /**
+   * Bar chart, laid out right-to-left (first value at the right, like the text).
+   * Negative values hang below the zero line in red. Labels are optional per bar
+   * (pass '' to skip); `valueLabel` prints a value above selected bars.
+   */
+  barChart(values: number[], labels: string[], opts: { height?: number; valueLabel?: (v: number, i: number) => string; caption?: string } = {}) {
+    const h = opts.height ?? 42
+    const labelH = 6
+    this.ensure(h + labelH + (opts.caption ? LINE_H : 0) + 2)
+    const d = this.doc
+    const top = this.y
+    const max = Math.max(0, ...values)
+    const min = Math.min(0, ...values)
+    const span = max - min || 1
+    const zeroY = top + (max / span) * h
+    const slot = CONTENT_W / values.length
+    const barW = Math.max(1.2, slot * 0.62)
+    d.setDrawColor(RULE)
+    d.setLineWidth(0.3)
+    d.line(MARGIN_X, zeroY, RIGHT, zeroY)
+    values.forEach((v, i) => {
+      const xRight = RIGHT - i * slot - (slot - barW) / 2
+      const bh = (Math.abs(v) / span) * h
+      d.setFillColor(v < 0 ? WARN_RED : BRAND_YELLOW)
+      d.rect(xRight - barW, v < 0 ? zeroY : zeroY - bh, barW, Math.max(0.2, bh), 'F')
+      const lbl = labels[i]
+      if (lbl) this.text(lbl, xRight - barW / 2 + this.doc.getTextWidth(lbl) / 2, top + h + 4.5, 'normal', 7.5, MUTED)
+      const vl = opts.valueLabel?.(v, i)
+      if (vl) {
+        this.setFont('normal', 7)
+        const tw = this.doc.getTextWidth(vl)
+        this.textLeft(vl, xRight - barW / 2 - tw / 2, v < 0 ? zeroY + bh + 3 : zeroY - bh - 1.2, 'normal', 7, INK)
+      }
+    })
+    this.y = top + h + labelH
+    if (opts.caption) this.paragraph(opts.caption, 'normal', 8.5, MUTED)
+    this.y += 2
+  }
+
+  /**
    * Simple table with header row and zebra stripes; columns are laid out
    * right-to-left in array order. Cell text wraps within its column.
    */

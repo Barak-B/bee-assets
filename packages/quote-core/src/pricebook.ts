@@ -3,6 +3,7 @@
  * template export and suggested sizing defaults. Pure functions — the app
  * stores the result; nothing here touches the network.
  */
+import { roiReadiness } from './roi'
 import type { Catalog, Currency, PricingRules, Product, ProductKind, RoofType } from './types'
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -62,6 +63,8 @@ export interface ReadinessItem {
 export interface PricingReadiness {
   ready: boolean
   missing: ReadinessItem[]
+  /** Not blocking: without these the quote goes out without the matching section (e.g. savings estimate). */
+  recommended: ReadinessItem[]
   pricedCount: number
   totalCount: number
   unpricedSkus: string[]
@@ -120,6 +123,7 @@ export function pricingReadiness(catalog: Catalog, rules: PricingRules): Pricing
   return {
     ready: missing.length === 0,
     missing,
+    recommended: roiReadiness(rules.roi, s.specific_yield_kwh_per_kwp),
     pricedCount: priced,
     totalCount: products.filter((p) => needsCost(p)).length,
     unpricedSkus: unpriced.map((p) => p.sku),

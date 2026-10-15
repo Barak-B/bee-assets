@@ -6,7 +6,10 @@
 import {
   KIND_LABELS_HE,
   ROOF_LABELS_HE,
+  SUGGESTED_ROI,
   SUGGESTED_SIZING,
+  EMPTY_ROI_RULES,
+  TRACK_LABELS_HE,
   priceListTemplateCsv,
   pricingReadiness,
   seedCatalog,
@@ -17,6 +20,8 @@ import {
   type Product,
   type ProductKind,
   type RoofType,
+  type RoiRules,
+  type TariffTrack,
 } from '@bee/quote-core'
 import { clearPricing, getPublishSettings, savePublishSettings } from './db'
 import { defaultBaseUrl } from './publish'
@@ -44,6 +49,22 @@ const SIZING_FIELDS: { key: keyof PricingRules['sizing']; label: string }[] = [
   { key: 'strings_modules_per_string', label: 'מודולים למחרוזת (הערכה)' },
 ]
 
+type RoiNumKey = Exclude<keyof RoiRules, 'track' | 'verification'>
+/** `scale` 100 = stored as a fraction, shown as %. */
+const ROI_FIELDS: { key: RoiNumKey; label: string; scale?: number; tracks?: TariffTrack[] }[] = [
+  { key: 'consumption_tariff_ils_kwh', label: 'תעריף צריכה (₪ לקוט״ש, לפני מע״מ)', tracks: ['net_metering', 'self_consumption'] },
+  { key: 'surplus_tariff_ils_kwh', label: 'תעריף עודפים (₪ לקוט״ש)', tracks: ['self_consumption'] },
+  { key: 'self_consumption_share', label: 'חלק הצריכה העצמית (%)', scale: 100, tracks: ['self_consumption'] },
+  { key: 'feed_in_tariff_ils_kwh', label: 'תעריף הזנה (₪ לקוט״ש)', tracks: ['feed_in_full'] },
+  { key: 'tariff_escalation_pct', label: 'עליית תעריף שנתית (%)' },
+  { key: 'degradation_pct_year', label: 'דעיכה שנתית (%)' },
+  { key: 'first_year_degradation_pct', label: 'דעיכת שנה ראשונה (%)' },
+  { key: 'om_cost_pct_capex', label: 'אחזקה שנתית (% מעלות המערכת)' },
+  { key: 'discount_rate_pct', label: 'שיעור היוון (%)' },
+  { key: 'horizon_years', label: 'אופק (שנים)' },
+  { key: 'co2_kg_per_kwh', label: 'מקדם פליטה (ק״ג CO₂ לקוט״ש, אופציונלי)' },
+]
+
 let state: Pricing | null = null
 
 function input(id: string, value: string, attrs = ''): string {
@@ -57,6 +78,7 @@ function readinessBox(p: Pricing): string {
       <strong>מוכנות מחירון: ${r.ready ? 'מוכן — הצעות יצאו עם מחירים' : 'חסר — הצעות יסומנו "לאימות"'} · ${r.pricedCount}/${r.totalCount} פריטים מתומחרים</strong>
       <div class="score-bar"><span style="width:${r.totalCount ? Math.round((r.pricedCount / r.totalCount) * 100) : 0}%"></span></div>
       ${r.missing.length ? `<div>חסר: <ul>${r.missing.map((m) => `<li>${escapeHtml(m.label_he)}</li>`).join('')}</ul></div>` : ''}
+      ${r.recommended.length ? `<div id="pricingRecommended">מומלץ (בלי זה ההצעה תצא בלי הסעיף): <ul>${r.recommended.map((m) => `<li>${escapeHtml(m.label_he)}</li>`).join('')}</ul></div>` : ''}
       ${p.isSeed ? '<div class="meta">עדיין לא נשמר מחירון — מוצג הזרע הריק.</div>' : `<div class="meta">נשמר לאחרונה: ${escapeHtml((p.updatedAt ?? '').replace('T', ' ').slice(0, 16))}</div>`}
     </div>`
 }
@@ -179,6 +201,19 @@ function render(ctx: Ctx, p: Pricing) {
         <button type="button" class="btn btn-ghost" id="pSuggest">מלא ערכים מומלצים (לאימות)</button>
       </section>
 
+      <section class="section" id="roiSection">
+        <h2>תחזית ייצור וחיסכון ללקוח</h2>
+        <p class="hint">בלי מסלול ותעריף, ההצעה יוצאת בלי עמוד חיסכון. התעריפים לא ממולאים אוטומטית — יש להזין את הערכים בתוקף. הייצור מחושב מהתפוקה הסגולית, מתוקן לפי האזימוט והשיפוע מהסקר.</p>
+        <div class="field"><label>מסלול</label><select id="p_roi_track">
+          <option value="">— ללא תחזית חיסכון —</option>
+          ${(Object.keys(TRACK_LABELS_HE) as TariffTrack[]).map((t) => `<option value="${t}" ${r.roi?.track === t ? 'selected' : ''}>${escapeHtml(TRACK_LABELS_HE[t])}</option>`).join('')}
+        </select></div>
+        <div class="grid-2">
+          ${ROI_FIELDS.map((f) => `<div class="field" data-roi-tracks="${(f.tracks ?? []).join(' ')}"><label>${f.label}</label>${input(`p_roi_${f.key}`, numValue(r.roi?.[f.key] ?? null, f.scale))}</div>`).join('')}
+        </div>
+        <button type="button" class="btn btn-ghost" id="pSuggestRoi">מלא ערכים כלליים מומלצים (בלי תעריפים)</button>
+      </section>
+
       <section class="section">
         <h2>לוח תשלומים (%)</h2>
         <div class="grid-2">
@@ -218,6 +253,11 @@ function readForm(ctx: Ctx, base: Pricing): { catalog: Catalog; rules: PricingRu
   for (const roof of ROOFS) rules.labour_per_module_ils[roof] = readNum(q(`p_l_${roof}`))
   for (const f of SIZING_FIELDS) rules.sizing[f.key] = readNum(q(`p_s_${f.key}`))
   rules.payment_schedule = rules.payment_schedule.map((m, i) => ({ ...m, pct: readNum(q(`p_pay_${i}`)) }))
+  const roi: RoiRules = { ...EMPTY_ROI_RULES, ...(rules.roi ?? {}) }
+  const track = ctx.app.querySelector<HTMLSelectElement>('#p_roi_track')?.value ?? ''
+  roi.track = track ? (track as TariffTrack) : null
+  for (const f of ROI_FIELDS) roi[f.key] = readNum(q(`p_roi_${f.key}`), f.scale)
+  rules.roi = roi
 
   for (const prod of catalog.products) {
     const costEl = ctx.app.querySelector<HTMLInputElement>(`[data-cost="${CSS.escape(prod.sku)}"]`)
@@ -283,6 +323,24 @@ function bind(ctx: Ctx) {
     }
     ctx.toast('מולאו ערכים מומלצים בשדות הריקים — לחצו שמור')
   })
+
+  $('pSuggestRoi')?.addEventListener('click', () => {
+    for (const [key, v] of Object.entries(SUGGESTED_ROI)) {
+      const el = ctx.app.querySelector<HTMLInputElement>(`#p_roi_${key}`)
+      if (el && !el.value.trim() && typeof v === 'number') el.value = String(v)
+    }
+    ctx.toast('מולאו ערכים כלליים בשדות הריקים — התעריפים נשארים לכם · לחצו שמור')
+  })
+  const trackSel = ctx.app.querySelector<HTMLSelectElement>('#p_roi_track')
+  const syncTrackFields = () => {
+    const t = trackSel?.value ?? ''
+    ctx.app.querySelectorAll<HTMLElement>('[data-roi-tracks]').forEach((el) => {
+      const tracks = (el.dataset.roiTracks ?? '').split(' ').filter(Boolean)
+      el.classList.toggle('hidden', !!tracks.length && !tracks.includes(t))
+    })
+  }
+  trackSel?.addEventListener('change', syncTrackFields)
+  syncTrackFields()
 
   $('pImport')?.addEventListener('click', async () => {
     if (!state) return

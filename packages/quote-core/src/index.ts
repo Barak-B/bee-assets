@@ -29,8 +29,9 @@ export {
   QUOTE_TOKEN_RE,
   NotPublishableError,
 } from './public'
-export type { PublicQuote, PublicQuoteLine, PublicQuoteSection } from './public'
+export type { PublicQuote, PublicQuoteLine, PublicQuoteSection, PublicRoi } from './public'
 export { formatIls, quoteSummaryHe, flagLabelHe } from './format'
+export { computeRoi, roiReadiness, orientationFactor, irrPct, SUGGESTED_ROI, EMPTY_ROI_RULES, TRACK_LABELS_HE, ROI_FIELD_LABELS_HE, MONTHLY_SHARE_IL } from './roi'
 import catalogJson from './seed/catalog.seed.json'
 import rulesJson from './seed/pricing-rules.seed.json'
 import type { Catalog, PricingRules } from './types'

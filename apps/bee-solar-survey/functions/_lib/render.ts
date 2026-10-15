@@ -2,7 +2,7 @@
  * Server-rendered customer quote page (/q/<token>). Plain HTML + inline CSS,
  * no JavaScript, RTL Hebrew, self-hosted fonts from the same Pages project.
  */
-import type { PublicQuote, PublicQuoteLine } from '../../../../packages/quote-core/src/public'
+import type { PublicQuote, PublicQuoteLine, PublicRoi } from '../../../../packages/quote-core/src/public'
 
 const UNIT_HE: Record<PublicQuoteLine['unit'], string> = {
   unit: 'יח׳',
@@ -86,6 +86,9 @@ tr.sum td{font-weight:700;border-top:2px solid var(--ink)}
 tr.grand td{font-size:17px;color:var(--ok)}
 .note{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px}
 .muted{color:var(--muted);font-size:13px}
+h3{font-size:15px;margin:14px 0 4px}
+.chart{width:100%;height:auto;display:block;font-size:9px;fill:var(--muted);font-family:Heebo,Arial,sans-serif}
+details{margin-top:10px}summary{cursor:pointer;color:var(--muted)}
 .btn{display:inline-block;background:var(--honey);color:var(--ink);font-weight:700;text-decoration:none;padding:12px 18px;border-radius:12px}
 footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 16px}
 .sm-only{display:none}
@@ -119,6 +122,60 @@ function page(title: string, body: string): string {
 </head>
 <body>${body}</body>
 </html>`
+}
+
+const MONTHS_HE = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳']
+
+/** Inline SVG bar chart, right-to-left (first value at the right). No script, CSP-safe. */
+function bars(values: number[], labels: string[], aria: string): string {
+  const W = 360
+  const H = 120
+  const top = 6
+  const chartH = 92
+  const max = Math.max(0, ...values)
+  const min = Math.min(0, ...values)
+  const span = max - min || 1
+  const zero = top + (max / span) * chartH
+  const slot = W / values.length
+  const bw = slot * 0.62
+  const rects = values
+    .map((v, i) => {
+      const x = W - (i + 1) * slot + (slot - bw) / 2
+      const h = Math.max(0.5, (Math.abs(v) / span) * chartH)
+      const y = v < 0 ? zero : zero - h
+      const lbl = labels[i] ? `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle">${esc(labels[i])}</text>` : ''
+      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${v < 0 ? '#b3261e' : '#e4b23c'}"><title>${esc(labels[i] || String(i + 1))}: ${num(v)}</title></rect>${lbl}`
+    })
+    .join('')
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(aria)}"><line x1="0" x2="${W}" y1="${zero.toFixed(1)}" y2="${zero.toFixed(1)}" stroke="#c9c2b4" stroke-width="1"/>${rects}</svg>`
+}
+
+function roiCard(r: PublicRoi): string {
+  const years = r.cumulative
+  const vatNote = r.customer_type === 'private' ? ' (כולל מע״מ)' : ' (לפני מע״מ)'
+  return `<section class="card" id="roi">
+    <h2>תחזית ייצור וחיסכון*</h2>
+    <div class="stats">
+      <div class="stat"><strong><bdi>${num(r.annual_yield_kwh_y1)} kWh</bdi></strong><span>ייצור בשנה הראשונה</span></div>
+      <div class="stat total"><strong>${ils(r.savings_y1_ils)}</strong><span>חיסכון בשנה הראשונה${vatNote}</span></div>
+      <div class="stat"><strong>${r.payback_years === null ? `מעל <bdi>${num(r.horizon_years)}</bdi> שנה` : `<bdi>${num(r.payback_years, 1)}</bdi> שנים`}</strong><span>החזר ההשקעה</span></div>
+    </div>
+    <h3>ייצור חודשי משוער (kWh)</h3>
+    ${bars(r.monthly_kwh, MONTHS_HE, 'ייצור חודשי משוער')}
+    <h3>תזרים מצטבר ל-<bdi>${num(r.horizon_years)}</bdi> שנה (₪)</h3>
+    ${bars(years.map((y) => y.cum_cf_ils), years.map((y) => (y.year === 1 || y.year % 5 === 0 ? String(y.year) : '')), 'תזרים מצטבר')}
+    <p class="muted">מתחת לקו: לפני החזר ההשקעה. אחרי <bdi>${num(r.horizon_years)}</bdi> שנה: חיסכון נטו של ${ils(r.lifetime_net_savings_ils)}.</p>
+    <dl>
+      <dt>מסלול</dt><dd>${esc(r.track_he)}</dd>
+      ${r.bill.before_y1_ils !== null ? `<dt>חשבון חשמל שנתי</dt><dd>היום כ-${ils(r.bill.before_y1_ils)} · אחרי המערכת כ-${ils(r.bill.after_y1_ils)}</dd>` : ''}
+      ${r.offset_pct !== null ? `<dt>כיסוי הצריכה</dt><dd><bdi>${num(r.offset_pct)}%</bdi></dd>` : ''}
+      ${r.co2_t_year !== null ? `<dt>הפחתת פליטות</dt><dd><bdi>${num(r.co2_t_year, 1)}</bdi> טון CO₂ בשנה</dd>` : ''}
+    </dl>
+    <details><summary>הנחות החישוב</summary><ul>${r.assumptions
+      .map((a) => `<li>${esc(a.label_he)}${a.value === '' ? '' : `: <bdi>${esc(typeof a.value === 'number' ? a.value.toLocaleString('en-US', { maximumFractionDigits: 3 }) : a.value)}</bdi>`}${a.unit ? ` ${esc(a.unit)}` : ''}</li>`)
+      .join('')}</ul></details>
+    <p class="muted">${r.notes_he.map(esc).join(' ')}</p>
+  </section>`
 }
 
 export interface RenderOpts {
@@ -168,7 +225,7 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
     <div class="muted">${esc(q.project.address)}${q.project.customer_name ? ` · ${esc(q.project.customer_name)}` : ''}</div>
     <div class="stats" style="margin-top:12px">
       <div class="stat"><strong><bdi>${num(s.dc_kwp, 2)} kWp</bdi></strong><span>הספק המערכת</span></div>
-      <div class="stat"><strong>${s.annual_yield_kwh_estimate ? `<bdi>${num(s.annual_yield_kwh_estimate)} kWh</bdi>` : '—'}</strong><span>ייצור שנתי משוער*</span></div>
+      <div class="stat"><strong>${q.roi?.annual_yield_kwh_y1 ?? s.annual_yield_kwh_estimate ? `<bdi>${num(q.roi?.annual_yield_kwh_y1 ?? s.annual_yield_kwh_estimate)} kWh</bdi>` : '—'}</strong><span>ייצור שנתי משוער*</span></div>
       <div class="stat total"><strong>${ils(t.total_incl_vat_ils)}</strong><span>סה״כ כולל מע״מ</span></div>
     </div>
   </section>
@@ -182,6 +239,8 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
       <dt>התקנה</dt><dd>${esc(ROOF_HE[s.roof_type] ?? s.roof_type)}</dd>
     </dl>
   </section>
+
+  ${q.roi && Array.isArray(q.roi.monthly_kwh) && Array.isArray(q.roi.cumulative) && Array.isArray(q.roi.assumptions) ? roiCard(q.roi) : ''}
 
   <section class="card">
     <h2>פירוט ומחיר</h2>

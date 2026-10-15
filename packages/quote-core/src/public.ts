@@ -6,7 +6,8 @@
  */
 import { boqSectionTitle } from './pricebook'
 import { round2 } from './money'
-import type { QuoteLine, QuoteVersion } from './types'
+import { TRACK_LABELS_HE } from './roi'
+import type { QuoteLine, QuoteVersion, RoiAssumption } from './types'
 
 export interface PublicQuoteLine {
   name_he: string
@@ -53,8 +54,27 @@ export interface PublicQuote {
   }
   payment_schedule: { label_he: string; pct: number | null; amount_ils: number | null }[]
   terms: { linkage: 'none' | 'fx'; validity_days: number | null }
+  /** Production and savings estimate — only when the quote carries one. */
+  roi?: PublicRoi
   /** Short, non-reversible fingerprint the customer can quote back (first 12 hex of the snapshot hash). */
   reference: string
+}
+
+export interface PublicRoi {
+  track_he: string
+  customer_type: 'private' | 'business'
+  annual_yield_kwh_y1: number
+  monthly_kwh: number[]
+  savings_y1_ils: number
+  payback_years: number | null
+  lifetime_net_savings_ils: number
+  horizon_years: number
+  offset_pct: number | null
+  co2_t_year: number | null
+  bill: { before_y1_ils: number | null; after_y1_ils: number | null }
+  cumulative: { year: number; cum_cf_ils: number }[]
+  assumptions: RoiAssumption[]
+  notes_he: string[]
 }
 
 export class NotPublishableError extends Error {
@@ -138,6 +158,30 @@ export function toPublicQuote(q: QuoteVersion, opts: { customerName?: string } =
       amount_ils: m.pct === null || total === null ? null : Math.round((total * m.pct) / 100),
     })),
     terms: { linkage: q.terms.linkage, validity_days: q.terms.validity_days },
+    ...(q.roi
+      ? {
+          roi: {
+            track_he: TRACK_LABELS_HE[q.roi.track],
+            customer_type: q.roi.customer_type,
+            annual_yield_kwh_y1: q.roi.kpi.annual_yield_kwh_y1,
+            monthly_kwh: q.roi.monthly_kwh,
+            savings_y1_ils: q.roi.kpi.savings_y1_ils,
+            payback_years: q.roi.kpi.payback_years,
+            lifetime_net_savings_ils: q.roi.kpi.lifetime_net_savings_ils,
+            horizon_years: q.roi.series.length,
+            offset_pct: q.roi.kpi.offset_pct,
+            co2_t_year: q.roi.kpi.co2_t_year,
+            bill: q.roi.bill,
+            cumulative: q.roi.series.map((y) => ({ year: y.year, cum_cf_ils: y.cum_cf_ils })),
+            assumptions: q.roi.assumptions,
+            notes_he: [
+              'הערכה מהירה לפי הספק המערכת, כיוון ושיפוע. ייצור בפועל משתנה משנה לשנה.',
+              'התעריפים לפי המחירון ביום ההצעה; שינוי תעריפים ישנה את החיסכון.',
+              'אינו ייעוץ מס.',
+            ],
+          },
+        }
+      : {}),
     reference: q.snapshot_hash.slice(0, 12),
   }
 }

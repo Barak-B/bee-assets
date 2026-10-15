@@ -33,6 +33,8 @@ export function mergeWithSeed(stored: StoredPricing): Pricing {
   rules.sizing = { ...seedPricingRules.sizing, ...stored.rules.sizing }
   rules.margins = { ...seedPricingRules.margins, ...stored.rules.margins }
   rules.labour_per_module_ils = { ...seedPricingRules.labour_per_module_ils, ...stored.rules.labour_per_module_ils }
+  // Price books saved before the savings estimate existed get the (empty) ROI block.
+  rules.roi = { ...structuredClone(seedPricingRules.roi!), ...(stored.rules.roi ?? {}) }
   return { catalog, rules, isSeed: false, updatedAt: stored.updatedAt }
 }
 
