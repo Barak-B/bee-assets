@@ -232,7 +232,9 @@ test('publish a priced quote → customer link on our domain, never 127.0.0.1', 
   expect(roi?.savings_y1_ils).toBeGreaterThan(0)
   expect(roi?.cumulative).toHaveLength(25)
   expect(roi?.monthly_kwh).toHaveLength(12)
-  for (const banned of ['unit_cost', 'margin_pct', 'fx_rate', '"sku"', 'flags', 'npv', 'irr']) expect(body).not.toContain(banned)
+  // Check the quote JSON only — the base64 PDF next to it can contain any letters.
+  const quoteJson = JSON.stringify(published!.quote)
+  for (const banned of ['"unit_cost"', '"margin_pct"', '"fx_rate"', '"sku"', '"flags"', '"npv_ils"', '"irr_pct"']) expect(quoteJson).not.toContain(banned)
   const pdf = Buffer.from(published!.pdfBase64, 'base64')
   expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-')
 
