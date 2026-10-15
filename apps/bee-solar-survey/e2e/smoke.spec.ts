@@ -297,6 +297,7 @@ function fakeSurveyServer(key: string) {
   const surveys = new Map<string, Record<string, unknown>>()
   const photos = new Map<string, { body: Buffer; type: string }>()
   const quotes = new Map<string, Record<string, unknown>>()
+  const reports = new Map<string, Record<string, unknown>>()
   const state = { down: false, auth: new Set<string>() }
   const handler = async (route: import('@playwright/test').Route) => {
     if (state.down) return route.abort('internetdisconnected')
@@ -317,6 +318,11 @@ function fakeSurveyServer(key: string) {
       const ph = photos.get(`${m[1]}/${m[2]}`)
       return ph ? route.fulfill({ status: 200, contentType: ph.type, body: ph.body }) : json(404, { error: 'not_found' })
     }
+    if ((m = path.match(/^\/api\/surveys\/([^/]+)\/reports\/([^/]+)$/))) {
+      const rec = req.postDataJSON() as { photos: { key: string }[] }
+      reports.set(`${m[1]}/${m[2]}`, rec)
+      return json(201, { ok: true, result: 'stored', missing_photos: rec.photos.map((p) => p.key).filter((k) => !photos.has(`${m![1]}/${k}`)) })
+    }
     if ((m = path.match(/^\/api\/surveys\/([^/]+)\/quotes\/(\d+)$/))) {
       quotes.set(`${m[1]}/${m[2]}`, req.postDataJSON())
       return json(201, { ok: true, result: 'created' })
@@ -330,11 +336,12 @@ function fakeSurveyServer(key: string) {
       }
       const rec = surveys.get(id)
       if (!rec) return json(404, { error: 'not_found' })
-      return json(200, { survey: rec, quotes: [...quotes.entries()].filter(([k]) => k.startsWith(`${id}/`)).map(([, q]) => q) })
+      const mine = <T,>(map: Map<string, T>) => [...map.entries()].filter(([k]) => k.startsWith(`${id}/`)).map(([, v]) => v)
+      return json(200, { survey: rec, quotes: mine(quotes), reports: mine(reports) })
     }
     return json(404, { error: 'not_found' })
   }
-  return { surveys, photos, quotes, state, handler }
+  return { surveys, photos, quotes, reports, state, handler }
 }
 
 async function configureServer(page: Page, baseUrl: string, key: string) {
@@ -383,6 +390,26 @@ test('surveys back up to our server, queue while offline, and restore on a new p
   await page.click('#btnSync')
   await expect(page.locator('#toast')).toContainText('הכול כבר מגובה')
 
+  // A field report (with a photo) joins the same queue.
+  await page.locator('.project-item', { hasText: 'גג בדיקה גיבוי' }).locator('[data-reports]').click()
+  await page.click('[data-r-new="defects"]')
+  await page.selectOption('[data-f="general|source"]', 'internal')
+  await page.fill('[data-t="defects|0|description"]', 'חסר שלט DC בממיר')
+  const [pick] = await Promise.all([page.waitForEvent('filechooser'), page.locator('[data-padd="photos|"]').last().click()])
+  await pick.setFiles({ name: 'defect.png', mimeType: 'image/png', buffer: pngFixture() })
+  await expect(page.locator('[data-sec="photos"] .thumb')).toHaveCount(1)
+  await page.click('#rpBack')
+  await expect(chip).toHaveText('ממתין לגיבוי')
+  await page.click('#btnSync')
+  await expect(page.locator('#toast')).toContainText('1 דוחות')
+  await expect(chip).toHaveText('מגובה ✓')
+  expect(server.reports.size).toBe(1)
+  const sentReport = [...server.reports.values()][0] as { templateKey: string; title_he: string; photos: { key: string; dataUrl?: string }[] }
+  expect(sentReport).toMatchObject({ templateKey: 'defects', title_he: 'רשימת ליקויים' })
+  expect(sentReport.photos).toHaveLength(1)
+  expect(sentReport.photos[0]!.dataUrl).toBeUndefined() // bytes go through the photo route
+  expect(server.photos.size).toBe(2)
+
   // A new phone: empty storage, same server → the survey and its photo come back.
   const fresh = await browser.newContext()
   const phone = await fresh.newPage()
@@ -392,12 +419,18 @@ test('surveys back up to our server, queue while offline, and restore on a new p
   await expect(phone.locator('.project-item')).toHaveCount(0)
   await phone.click('#btnRestoreServer')
   await expect(phone.locator('#toast')).toContainText('שוחזרו 1 סקרים')
+  await expect(phone.locator('#toast')).toContainText('1 דוחות')
   const item = phone.locator('.project-item', { hasText: 'גג בדיקה גיבוי' })
   await expect(item).toBeVisible()
   await expect(item.locator('[data-sync-chip]')).toHaveText('מגובה ✓')
   await item.locator('[data-edit]').click()
   await expect(phone.locator('.photo-block[data-field="roof"] .thumb')).toHaveCount(1)
   await expect(phone.locator('#f_address')).toHaveValue('רחוב הרצל 1, תל אביב')
+  await phone.click('#btnCancel')
+  await phone.locator('.project-item', { hasText: 'גג בדיקה גיבוי' }).locator('[data-reports]').click()
+  await phone.locator('#rdList [data-r-open]').click()
+  await expect(phone.locator('[data-t="defects|0|description"]')).toHaveValue('חסר שלט DC בממיר')
+  await expect(phone.locator('[data-sec="photos"] .thumb')).toHaveCount(1)
   await fresh.close()
 })
 

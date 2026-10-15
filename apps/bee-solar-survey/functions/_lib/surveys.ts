@@ -6,7 +6,9 @@
  *   surveys/<id>/history/<receivedAt>.json   every distinct version received
  *   surveys/<id>/photos/<photoId>.<sha12>    photo bytes (content-addressed)
  *   surveys/<id>/quotes/v<N>.json            quote versions (immutable)
+ *   surveys/<id>/reports/<reportId>.json     field reports (a final one never changes)
  *   survey-index/<id>                        tiny object; customMetadata = list row
+ *   report-index/<reportId>                  tiny object; customMetadata = report row (hive feed)
  */
 import type { Env } from './env'
 
@@ -49,6 +51,8 @@ export interface SurveyIndexRow {
 }
 
 const k = {
+  report: (id: string, rid: string) => `surveys/${id}/reports/${rid}.json`,
+  reportIndex: (rid: string) => `report-index/${rid}`,
   survey: (id: string) => `surveys/${id}/survey.json`,
   history: (id: string, at: string) => `surveys/${id}/history/${at}.json`,
   photo: (id: string, key: string) => `surveys/${id}/photos/${key}`,
@@ -121,10 +125,28 @@ export async function putSurvey(env: Env, id: string, rec: SurveyRecord, now = n
   return { changed, missingPhotos, row }
 }
 
+/**
+ * R2 custom metadata travels like HTTP headers; values are URL-encoded so
+ * Hebrew names never depend on non-ASCII header support.
+ */
+export function encodeMeta(o: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(Object.entries(o).map(([key, v]) => [key, encodeURIComponent(String(v ?? ''))]))
+}
+
+export function decodeMeta(m: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(m).map(([key, v]) => {
+      try {
+        return [key, decodeURIComponent(v)]
+      } catch {
+        return [key, v]
+      }
+    }),
+  )
+}
+
 async function writeIndex(env: Env, row: SurveyIndexRow): Promise<void> {
-  const meta: Record<string, string> = {}
-  for (const [key, v] of Object.entries(row)) meta[key] = String(v)
-  await env.QUOTES.put(k.index(row.id), '', { customMetadata: meta })
+  await env.QUOTES.put(k.index(row.id), '', { customMetadata: encodeMeta({ ...row }) })
 }
 
 async function readIndex(env: Env, id: string): Promise<SurveyIndexRow | null> {
@@ -132,7 +154,8 @@ async function readIndex(env: Env, id: string): Promise<SurveyIndexRow | null> {
   return obj?.customMetadata ? rowFromMeta(obj.customMetadata) : null
 }
 
-function rowFromMeta(m: Record<string, string>): SurveyIndexRow {
+function rowFromMeta(raw: Record<string, string>): SurveyIndexRow {
+  const m = decodeMeta(raw)
   return {
     id: m.id ?? '',
     projectName: m.projectName ?? '',
@@ -195,4 +218,123 @@ export async function listQuoteVersions(env: Env, id: string): Promise<unknown[]
     if (obj) out.push(JSON.parse(await obj.text()))
   }
   return out
+}
+
+// ── Field reports ──────────────────────────────────────────────────────
+
+export const REPORT_TEMPLATES = new Set(['daily_report', 'installation_checklist', 'inspection_62446', 'defects', 'handover'])
+
+/** What the app sends: the report without photo bytes (photos go through the photo route by key). */
+export interface ReportWire {
+  id: string
+  projectId: string
+  templateKey: string
+  revision: number
+  status: 'draft' | 'final'
+  updatedAt: string
+  finalizedAt: string | null
+  contentHash: string | null
+  photos: { id: string; key: string; sha256: string; mimeType: string; sectionKey: string; itemCode?: string; createdAt: string }[]
+  title_he?: string
+  outcome?: { tone: string; label_he: string } | null
+  [extra: string]: unknown
+}
+
+export interface ReportIndexRow {
+  surveyId: string
+  reportId: string
+  templateKey: string
+  title_he: string
+  revision: number
+  status: string
+  updatedAt: string
+  finalizedAt: string
+  contentHash: string
+  outcomeTone: string
+  outcomeLabel: string
+  /** Server time the final version first arrived — the hive feed's clock. */
+  receivedFinalAt: string
+}
+
+export function isReportWire(x: unknown, id: string, rid: string): x is ReportWire {
+  if (!x || typeof x !== 'object') return false
+  const o = x as Partial<ReportWire>
+  return (
+    o.id === rid &&
+    o.projectId === id &&
+    typeof o.templateKey === 'string' &&
+    REPORT_TEMPLATES.has(o.templateKey) &&
+    (o.status === 'draft' || o.status === 'final') &&
+    Number.isInteger(o.revision) &&
+    Array.isArray(o.photos) &&
+    o.photos.every((p) => p && typeof p.key === 'string' && PHOTO_KEY_RE.test(p.key)) &&
+    (o.status === 'draft' || (typeof o.contentHash === 'string' && /^[0-9a-f]{64}$/.test(o.contentHash)))
+  )
+}
+
+export type PutReportResult = { result: 'stored' | 'unchanged' | 'conflict'; missingPhotos: string[] }
+
+/** Drafts may be replaced; a final report is immutable (same hash → unchanged, other content → conflict). */
+export async function putReport(env: Env, id: string, rec: ReportWire, now = new Date()): Promise<PutReportResult> {
+  const prevObj = await env.QUOTES.get(k.report(id, rec.id))
+  let prev: ReportWire | null = null
+  if (prevObj) {
+    try {
+      prev = JSON.parse(await prevObj.text()) as ReportWire
+    } catch {
+      prev = null
+    }
+  }
+  const missingPhotos: string[] = []
+  for (const p of rec.photos) if (!(await env.QUOTES.head(k.photo(id, p.key)))) missingPhotos.push(p.key)
+  if (prev?.status === 'final') return { result: prev.contentHash === rec.contentHash ? 'unchanged' : 'conflict', missingPhotos }
+  await env.QUOTES.put(k.report(id, rec.id), JSON.stringify(rec), { httpMetadata: { contentType: 'application/json' } })
+  const row: ReportIndexRow = {
+    surveyId: id,
+    reportId: rec.id,
+    templateKey: rec.templateKey,
+    title_he: String(rec.title_he ?? '').slice(0, 80),
+    revision: rec.revision,
+    status: rec.status,
+    updatedAt: String(rec.updatedAt ?? '').slice(0, 40),
+    finalizedAt: String(rec.finalizedAt ?? ''),
+    contentHash: String(rec.contentHash ?? ''),
+    outcomeTone: String(rec.outcome?.tone ?? '').slice(0, 10),
+    outcomeLabel: String(rec.outcome?.label_he ?? '').slice(0, 80),
+    receivedFinalAt: rec.status === 'final' ? now.toISOString() : '',
+  }
+  await env.QUOTES.put(k.reportIndex(rec.id), '', { customMetadata: encodeMeta({ ...row }) })
+  return { result: 'stored', missingPhotos }
+}
+
+export async function listReports(env: Env, id: string): Promise<ReportWire[]> {
+  const res = await env.QUOTES.list({ prefix: `surveys/${id}/reports/` })
+  const out: ReportWire[] = []
+  for (const o of res.objects) {
+    const obj = await env.QUOTES.get(o.key)
+    if (!obj) continue
+    try {
+      out.push(JSON.parse(await obj.text()) as ReportWire)
+    } catch {
+      /* skip a damaged object */
+    }
+  }
+  return out
+}
+
+/** Final reports that arrived after `since` (server time), newest first. */
+export async function listFinalReports(env: Env, since?: string): Promise<ReportIndexRow[]> {
+  const rows: ReportIndexRow[] = []
+  let cursor: string | undefined
+  do {
+    const res = await env.QUOTES.list({ prefix: 'report-index/', cursor, limit: 1000, include: ['customMetadata'] })
+    for (const o of res.objects) {
+      if (!o.customMetadata) continue
+      const m = decodeMeta(o.customMetadata)
+      if (m.status !== 'final' || !m.receivedFinalAt || (since && m.receivedFinalAt <= since)) continue
+      rows.push({ ...(m as unknown as ReportIndexRow), revision: Number(m.revision ?? 0) })
+    }
+    cursor = res.truncated ? res.cursor : undefined
+  } while (cursor)
+  return rows.sort((a, b) => b.receivedFinalAt.localeCompare(a.receivedFinalAt))
 }

@@ -26,11 +26,12 @@
 |---|---|
 | `PUT /api/surveys/<id>/photos/<photoId>.<sha12>` | בייטים של תמונה (jpeg/png/webp, עד 6 MB). המפתח כולל את ה-hash, אז תמונה שסומנה מחדש נשמרת כקובץ חדש |
 | `PUT /api/surveys/<id>` | רשומת הסקר (`bee.survey-record/1`): הסקר, רשימת התמונות, חבילת הכוורת והשלמות. מחזיר `missing_photos`, והאפליקציה משלימה אותן |
+| `PUT /api/surveys/<id>/reports/<reportId>` | דוח שטח (בלי בייטים של תמונות). טיוטה מתעדכנת; דוח נעול לא משתנה (409 על תוכן אחר). מחזיר `missing_photos` |
 | `PUT /api/surveys/<id>/quotes/<N>` | גרסת הצעה. **גרסה לא משתנה:** אותו מספר עם תוכן אחר מחזיר 409. שליחה חוזרת של אותה גרסה מחזירה 200 |
 | `GET /api/surveys[?since=ISO]` | רשימת הסקרים: שם, כתובת, סוקר, מוכן ל-54, ציון, מספר תמונות ומספר גרסאות |
 | `GET /api/surveys/<id>` | הסקר האחרון + כל גרסאות ההצעה (לשחזור ולכוורת) |
 | `GET /api/surveys/<id>/photos/<key>` | תמונה |
-| `GET /api/hive/jobs[?since=ISO]` | ג'ובים `collect` / `edit` / `dispatch.draft` מסקרים שהתקבלו או השתנו מאז `since`, עם `survey_id`, ו-`events` של אישורי לקוח (`quote.accepted`). מחזיר `until`: שומרים אותו ושולחים כ-`since` בפעם הבאה |
+| `GET /api/hive/jobs[?since=ISO]` | ג'ובים `collect` / `edit` / `dispatch.draft` מסקרים שהתקבלו או השתנו מאז `since`, עם `survey_id`, ו-`events`: אישורי לקוח (`quote.accepted`) ודוחות שננעלו (`report.finalized`). מחזיר `until`: שומרים אותו ושולחים כ-`since` בפעם הבאה |
 
 **Law #1/#2:** השרת רק שומר ומחזיר. שום נתיב כאן לא שולח ללקוח או לווטסאפ. הג'ובים נשארים `requiresHumanPick: true`, `destinationClass: drafts_group`.
 
@@ -41,6 +42,8 @@ surveys/<id>/survey.json                  הגרסה האחרונה
 surveys/<id>/history/<receivedAt>.json    כל גרסה שונה שהתקבלה (היסטוריה מלאה)
 surveys/<id>/photos/<photoId>.<sha12>     תמונות
 surveys/<id>/quotes/v<N>.json             גרסאות הצעה
+surveys/<id>/reports/<reportId>.json      דוחות שטח
+report-index/<reportId>                   שורת דוח (metadata) — לכוורת
 survey-index/<id>                         שורת רשימה (metadata) — לרשימה מהירה
 ```
 

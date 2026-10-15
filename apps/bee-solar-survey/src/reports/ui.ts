@@ -10,6 +10,7 @@ import { compressImageFile } from '../photos'
 import { loadPricing } from '../pricing'
 import { sha256OfDataUrl } from '../schema'
 import { outcomeToast, shareOrDownload } from '../share'
+import { markDirty } from '../sync'
 import { blankRow, buildContext, defectsFromInspection, finalizeReport, newReport, reviseReport, template, validateReport, visibleSections } from './model'
 import { TEMPLATES, TEMPLATE_ORDER } from './templates'
 import type { ChecklistItemDef, ColumnDef, FieldDef, ItemResult, ReportInstance, SectionDef, TemplateKey } from './types'
@@ -28,6 +29,8 @@ export interface ReportEditorCtx {
 }
 
 const requestSync = () => window.dispatchEvent(new Event('bee-sync-request'))
+// The survey's backup chip should show "ממתין לגיבוי" until the report reaches the server.
+const markChanged = (projectId: string) => void markDirty(projectId).catch(() => undefined)
 
 const TONE_CLASS = { ok: 'badge-ok', warn: 'badge-warn', fail: 'badge-fail' } as const
 
@@ -114,6 +117,7 @@ function scheduleSave(ctx: ReportEditorCtx) {
     await saveReport(r)
     const ind = ctx.app.querySelector('#rpSaved')
     if (ind) ind.textContent = 'נשמר ✓'
+    markChanged(r.projectId)
     requestSync()
   }, 500)
 }
@@ -123,6 +127,7 @@ async function saveNow() {
   if (current && current.status !== 'final') {
     current.updatedAt = new Date().toISOString()
     await saveReport(current)
+    markChanged(current.projectId)
     requestSync()
   }
 }
@@ -431,6 +436,7 @@ function bind(ctx: ReportEditorCtx) {
       const final = await finalizeReport(r, others)
       await saveReport(final)
       current = final
+      markChanged(final.projectId)
       requestSync()
       draw(ctx)
       ctx.toast('הדוח ננעל')

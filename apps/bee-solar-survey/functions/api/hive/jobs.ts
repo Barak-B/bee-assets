@@ -1,13 +1,14 @@
 /**
  * GET /api/hive/jobs[?since=ISO] — hive jobs (collect / edit / dispatch.draft)
  * from surveys received since a timestamp, for the supervisor / Alfred to pull,
- * plus `events`: customer approvals of published quotes (quote.accepted).
+ * plus `events`: customer approvals of published quotes (quote.accepted) and
+ * locked field reports (report.finalized — e.g. a failed inspection or a signed handover).
  * Read-only; nothing here sends anything anywhere (Law #1/#2).
  */
 import type { Handler } from '../../_lib/env'
 import { json, preflight, requireKey } from '../../_lib/http'
 import { listAcceptances } from '../../_lib/store'
-import { getSurvey, listSurveys } from '../../_lib/surveys'
+import { getSurvey, listFinalReports, listSurveys } from '../../_lib/surveys'
 
 export const onRequestOptions: Handler = async ({ request, env }) => preflight(request, env)
 
@@ -21,7 +22,7 @@ export const onRequestGet: Handler = async ({ request, env }) => {
     const rec = await getSurvey(env, r.id)
     for (const j of rec?.hive?.jobs ?? []) jobs.push({ ...(j as object), survey_id: r.id, received_at: r.receivedAt })
   }
-  const events = (await listAcceptances(env, since)).map((a) => ({
+  const events: Record<string, unknown>[] = (await listAcceptances(env, since)).map((a) => ({
     type: 'quote.accepted',
     at: a.accepted_at,
     token: a.token,
@@ -33,5 +34,19 @@ export const onRequestGet: Handler = async ({ request, env }) => {
     // Next step is a human one: Barak prepares the agreement (Law #2 — nothing is sent automatically).
     requiresHumanPick: true,
   }))
+  for (const r of await listFinalReports(env, since)) {
+    events.push({
+      type: 'report.finalized',
+      at: r.receivedFinalAt,
+      survey_id: r.surveyId,
+      report_id: r.reportId,
+      template: r.templateKey,
+      title_he: r.title_he,
+      revision: r.revision,
+      content_hash: r.contentHash,
+      outcome: r.outcomeTone ? { tone: r.outcomeTone, label_he: r.outcomeLabel } : null,
+      requiresHumanPick: true,
+    })
+  }
   return json(request, env, { since: since ?? null, until: new Date().toISOString(), jobs, events })
 }

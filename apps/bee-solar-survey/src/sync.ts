@@ -18,6 +18,7 @@ import {
   listPhotos,
   listProjects,
   listQuotes,
+  listReports,
   saveSyncState,
   type PublishSettings,
   type StoredPhoto,
@@ -25,6 +26,8 @@ import {
   type SyncState,
 } from './db'
 import { buildHiveExportBundle } from './hive'
+import { template } from './reports/model'
+import type { ReportInstance, ReportPhoto } from './reports/types'
 import { assessCompleteness, sha256OfDataUrl } from './schema'
 import { settingsProblem } from './publish'
 import type { SiteSurveyProject } from './types'
@@ -60,6 +63,25 @@ export interface SurveyRecordOut {
 }
 
 export const photoKey = (id: string, sha256: string) => `${id}.${sha256.slice(0, 12)}`
+
+/** A report as sent to the server: photo bytes go separately, by key. */
+export type ReportWire = Omit<ReportInstance, 'photos'> & {
+  photos: (Omit<ReportPhoto, 'dataUrl'> & { key: string })[]
+  title_he: string
+  outcome: { tone: string; label_he: string } | null
+}
+
+export const reportTag = (r: ReportInstance) => `${r.status}:${r.updatedAt}`
+
+export function toReportWire(r: ReportInstance): ReportWire {
+  const t = template(r)
+  return {
+    ...r,
+    photos: r.photos.map(({ dataUrl: _d, ...p }) => ({ ...p, key: photoKey(p.id, p.sha256) })),
+    title_he: t.title_he,
+    outcome: t.outcome?.(r) ?? null,
+  }
+}
 
 async function photoMeta(p: StoredPhoto): Promise<PhotoMeta> {
   const sha = p.sha256 && /^[0-9a-f]{64}$/.test(p.sha256) ? p.sha256 : await sha256OfDataUrl(p.dataUrl)
@@ -136,6 +158,7 @@ export interface SyncReport {
   offline: boolean
   photos: number
   quotes: number
+  reports: number
   errors: string[]
 }
 
@@ -147,7 +170,10 @@ async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: S
   const done = new Set(state?.photoKeys ?? [])
   const doneQuotes = new Set(state?.quoteVersions ?? [])
   const quotesLeft = quotes.filter((q) => !doneQuotes.has(q.version_no))
-  if (state && !state.error && !state.dirty && state.hash === record.contentHash && record.photos.every((p) => done.has(p.key)) && quotesLeft.length === 0) {
+  const reports = await listReports(project.id)
+  const reportRevs: Record<string, string> = { ...(state?.reportRevs ?? {}) }
+  const reportsLeft = reports.filter((r) => reportRevs[r.id] !== reportTag(r))
+  if (state && !state.error && !state.dirty && state.hash === record.contentHash && record.photos.every((p) => done.has(p.key)) && quotesLeft.length === 0 && reportsLeft.length === 0) {
     if (state.projectUpdatedAt !== project.updatedAt) await saveSyncState(project.id, { ...state, projectUpdatedAt: project.updatedAt })
     report.skipped++
     return
@@ -172,15 +198,33 @@ async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: S
       doneQuotes.add(q.version_no)
       report.quotes++
     }
+    // Field reports: photos first (same photo route, by key), then the report. Oldest first.
+    for (const r of reportsLeft.sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+      const wire = toReportWire(r)
+      const putPhoto = async (key: string) => {
+        const p = r.photos.find((x) => photoKey(x.id, x.sha256) === key)
+        if (!p) return
+        const blob = await (await fetch(p.dataUrl)).blob()
+        await call(s, `${base}/photos/${enc(key)}`, { method: 'PUT', headers: { 'content-type': blob.type || p.mimeType || 'image/jpeg' }, body: blob })
+        done.add(key)
+        report.photos++
+      }
+      for (const p of wire.photos) if (!done.has(p.key)) await putPhoto(p.key)
+      const rr = await call(s, `${base}/reports/${enc(r.id)}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(wire) })
+      for (const key of ((await rr.json()) as { missing_photos?: string[] }).missing_photos ?? []) await putPhoto(key)
+      reportRevs[r.id] = reportTag(r)
+      report.reports++
+    }
     await saveSyncState(project.id, {
       hash: record.contentHash,
       projectUpdatedAt: project.updatedAt,
       syncedAt: new Date().toISOString(),
-      photoKeys: record.photos.map((p) => p.key),
+      photoKeys: [...new Set([...record.photos.map((p) => p.key), ...done])],
       quoteVersions: [...doneQuotes].sort((a, b) => a - b),
       error: null,
       offline: false,
       dirty: false,
+      reportRevs,
     })
     report.synced++
   } catch (err) {
@@ -194,6 +238,7 @@ async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: S
       error: e.message,
       offline: e.offline,
       dirty: true,
+      reportRevs,
     })
     if (e.offline) report.offline = true
     else report.failed++
@@ -208,7 +253,7 @@ let running: Promise<SyncReport> | null = null
 export function syncAll(only?: string[]): Promise<SyncReport> {
   if (running) return running
   running = (async () => {
-    const report: SyncReport = { synced: 0, skipped: 0, failed: 0, offline: false, photos: 0, quotes: 0, errors: [] }
+    const report: SyncReport = { synced: 0, skipped: 0, failed: 0, offline: false, photos: 0, quotes: 0, reports: 0, errors: [] }
     const s = await getPublishSettings()
     const problem = settingsProblem(s)
     if (problem || !s) throw new SyncError(problem ?? 'לא הוגדר שרת')
@@ -261,6 +306,7 @@ export interface RestoreReport {
   skipped: number
   photos: number
   quotes: number
+  reports: number
 }
 
 /**
@@ -275,14 +321,14 @@ export async function restoreFromServer(): Promise<RestoreReport> {
   const res = await call(s, '/api/surveys')
   const { surveys } = (await res.json()) as { surveys: RemoteRow[] }
   const local = new Set((await listProjects()).map((p) => p.id))
-  const out: RestoreReport = { restored: 0, skipped: 0, photos: 0, quotes: 0 }
+  const out: RestoreReport = { restored: 0, skipped: 0, photos: 0, quotes: 0, reports: 0 }
   for (const row of surveys) {
     if (local.has(row.id)) {
       out.skipped++
       continue
     }
     const r = await call(s, `/api/surveys/${enc(row.id)}`)
-    const { survey, quotes } = (await r.json()) as { survey: SurveyRecordOut; quotes: QuoteVersion[] }
+    const { survey, quotes, reports: wires = [] } = (await r.json()) as { survey: SurveyRecordOut; quotes: QuoteVersion[]; reports?: ReportWire[] }
     const photos: StoredPhoto[] = []
     for (const m of survey.photos) {
       const pr = await call(s, `/api/surveys/${enc(row.id)}/photos/${enc(m.key)}`)
@@ -298,7 +344,18 @@ export async function restoreFromServer(): Promise<RestoreReport> {
       snapshot_hash: q.snapshot_hash,
       quote: q,
     }))
-    await importBackup({ projects: [survey.project], photos, quotes: stored })
+    const reports: ReportInstance[] = []
+    for (const w of wires) {
+      const rphotos: ReportPhoto[] = []
+      for (const p of w.photos) {
+        const pr = await call(s, `/api/surveys/${enc(row.id)}/photos/${enc(p.key)}`)
+        const { key: _k, ...meta } = p
+        rphotos.push({ ...meta, dataUrl: await blobToDataUrl(new Blob([await pr.arrayBuffer()], { type: p.mimeType })) })
+      }
+      const { title_he: _t, outcome: _o, ...rest } = w
+      reports.push({ ...rest, photos: rphotos })
+    }
+    await importBackup({ projects: [survey.project], photos, quotes: stored, reports })
     await saveSyncState(row.id, {
       hash: survey.contentHash,
       projectUpdatedAt: survey.project.updatedAt,
@@ -308,8 +365,10 @@ export async function restoreFromServer(): Promise<RestoreReport> {
       error: null,
       offline: false,
       dirty: false,
+      reportRevs: Object.fromEntries(reports.map((x) => [x.id, reportTag(x)])),
     })
     out.restored++
+    out.reports += reports.length
     out.photos += photos.length
     out.quotes += stored.length
   }

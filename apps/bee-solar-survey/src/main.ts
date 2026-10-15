@@ -100,7 +100,7 @@ async function runSync(manual: boolean) {
           : r.failed
             ? `גיבוי נכשל: ${r.errors[0]}`
             : r.synced
-              ? `גובו ${r.synced} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות`
+              ? `גובו ${r.synced} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות · ${r.reports} דוחות`
               : 'הכול כבר מגובה ✓',
       )
     } else if (r.failed) {
@@ -294,7 +294,7 @@ async function render() {
         toast('מושך סקרים מהשרת...')
         const r = await restoreFromServer()
         await render() // re-render first: it replaces the toast element
-        toast(r.restored ? `שוחזרו ${r.restored} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות` : `אין סקרים חדשים בשרת${r.skipped ? ` (${r.skipped} כבר במכשיר)` : ''}`)
+        toast(r.restored ? `שוחזרו ${r.restored} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות · ${r.reports} דוחות` : `אין סקרים חדשים בשרת${r.skipped ? ` (${r.skipped} כבר במכשיר)` : ''}`)
       } catch (err) {
         toast(err instanceof SyncError ? err.message : 'השחזור נכשל')
       }

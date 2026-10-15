@@ -324,6 +324,8 @@ export interface SyncState {
   offline: boolean
   /** Something changed that updatedAt does not show (e.g. a new quote version). */
   dirty: boolean
+  /** Field reports the server holds: reportId → `${status}:${updatedAt}`. */
+  reportRevs?: Record<string, string>
 }
 
 export const getSyncState = (projectId: string) => metaGet<SyncState>(`sync:${projectId}`)

@@ -6,6 +6,7 @@ import { onRequestGet as surveyGet, onRequestOptions as surveyOptions, onRequest
 import { onRequestGet as photoGet, onRequestPut as photoPut } from './api/surveys/[id]/photos/[photo]'
 import { onRequestPut as quotePut } from './api/surveys/[id]/quotes/[version]'
 import { onRequestGet as jobsGet } from './api/hive/jobs'
+import { onRequestPut as reportPut } from './api/surveys/[id]/reports/[report]'
 
 const KEY = 'test-publish-key-0123456789'
 const ID = '0f8fad5b-d9cb-469f-a165-70867728950e'
@@ -123,5 +124,86 @@ describe('survey backup API', () => {
     const html = await photoPut(ctx(e, `/api/surveys/${ID}/photos/${PKEY}`, { method: 'PUT', headers: { ...AUTH, 'content-type': 'text/html' }, body: '<b>' }, { id: ID, photo: PKEY }))
     expect(html.status).toBe(415)
     expect((await surveyGet(ctx(e, `/api/surveys/${ID}`, { headers: AUTH }, { id: ID }))).status).toBe(404)
+  })
+})
+
+const RID = '9b2e1c3a-5d4f-4a6b-8c7d-0e1f2a3b4c5d'
+const RPHOTO = 'c56a4180-65aa-42ec-a945-5fd21dec0538'
+const RKEY = `${RPHOTO}.${'b'.repeat(12)}`
+
+function reportWire(over: Record<string, unknown> = {}) {
+  return {
+    id: RID,
+    projectId: ID,
+    templateKey: 'inspection_62446',
+    templateVersion: 1,
+    revision: 1,
+    status: 'draft',
+    updatedAt: '2026-10-15T09:00:00.000Z',
+    finalizedAt: null,
+    contentHash: null,
+    photos: [{ id: RPHOTO, key: RKEY, sha256: 'b'.repeat(64), mimeType: 'image/jpeg', sectionKey: 'photos', createdAt: '2026-10-15T09:00:00.000Z' }],
+    title_he: 'בדיקת מתקן — IEC 62446-1',
+    outcome: { tone: 'fail', label_he: 'נכשל · 2 ליקויים' },
+    fields: {},
+    ...over,
+  }
+}
+
+const putReport = (e: Env, body: unknown, rid = RID) =>
+  reportPut(ctx(e, `/api/surveys/${ID}/reports/${rid}`, { method: 'PUT', headers: { ...AUTH, 'content-type': 'application/json' }, body: JSON.stringify(body) }, { id: ID, report: rid }))
+
+describe('field report backup API', () => {
+  it('needs the survey first, then stores drafts and reports missing photos', async () => {
+    const e = env()
+    expect((await putReport(e, reportWire())).status).toBe(409)
+    await putSurvey(e, record())
+    const r1 = await putReport(e, reportWire())
+    expect(r1.status).toBe(201)
+    expect(await r1.json()).toMatchObject({ result: 'stored', missing_photos: [RKEY] })
+    // A draft may be replaced.
+    expect((await putReport(e, reportWire({ updatedAt: '2026-10-15T09:05:00.000Z', fields: { a: { b: 'c' } } }))).status).toBe(201)
+    const got = (await (await surveyGet(ctx(e, `/api/surveys/${ID}`, { headers: AUTH }, { id: ID }))).json()) as { reports: { id: string; fields: unknown }[] }
+    expect(got.reports).toEqual([expect.objectContaining({ id: RID, fields: { a: { b: 'c' } } })])
+  })
+
+  it('a final report never changes, and shows up once in the hive feed', async () => {
+    const e = env()
+    await putSurvey(e, record())
+    const final = reportWire({ status: 'final', finalizedAt: '2026-10-15T10:00:00.000Z', contentHash: 'c'.repeat(64) })
+    expect((await putReport(e, final)).status).toBe(201)
+    expect((await putReport(e, final)).status).toBe(200) // retry after a lost reply
+    expect((await putReport(e, { ...final, contentHash: 'd'.repeat(64) })).status).toBe(409)
+    expect((await putReport(e, { ...final, status: 'draft', contentHash: null })).status).toBe(409) // cannot un-finalize
+
+    const feed = (await (await jobsGet(ctx(e, '/api/hive/jobs', { headers: AUTH }))).json()) as { events: { type: string; report_id: string; title_he: string; outcome: { tone: string; label_he: string } }[]; until: string }
+    const ev = feed.events.filter((x) => x.type === 'report.finalized')
+    expect(ev).toEqual([expect.objectContaining({ report_id: RID, title_he: 'בדיקת מתקן — IEC 62446-1', outcome: { tone: 'fail', label_he: 'נכשל · 2 ליקויים' } })])
+    await new Promise((r) => setTimeout(r, 5))
+    const later = (await (await jobsGet(ctx(e, `/api/hive/jobs?since=${encodeURIComponent(feed.until)}`, { headers: AUTH }))).json()) as { events: unknown[] }
+    expect(later.events).toEqual([])
+    // Hebrew is stored URL-encoded in R2 metadata, never raw.
+    const meta = (await e.QUOTES.get(`report-index/${RID}`))!.customMetadata!
+    expect(meta.title_he).not.toMatch(/[\u0590-\u05FF]/)
+    expect(decodeURIComponent(meta.title_he!)).toBe('בדיקת מתקן — IEC 62446-1')
+  })
+
+  it('rejects bad ids, unknown templates, mismatched ids, bad photo keys and final reports without a hash', async () => {
+    const e = env()
+    await putSurvey(e, record())
+    expect((await putReport(e, reportWire(), '../x')).status).toBe(400)
+    expect((await putReport(e, reportWire({ templateKey: 'evil' }))).status).toBe(400)
+    expect((await putReport(e, reportWire({ projectId: 'other' }))).status).toBe(400)
+    expect((await putReport(e, reportWire({ photos: [{ key: '../../quotes/x' }] }))).status).toBe(400)
+    expect((await putReport(e, reportWire({ status: 'final', contentHash: null }))).status).toBe(400)
+    const noAuth = await reportPut(ctx(e, `/api/surveys/${ID}/reports/${RID}`, { method: 'PUT', body: '{}' }, { id: ID, report: RID }))
+    expect(noAuth.status).toBe(401)
+  })
+
+  it('survey list rows survive the metadata encoding', async () => {
+    const e = env()
+    await putSurvey(e, record())
+    const { surveys } = (await (await listGet(ctx(e, '/api/surveys', { headers: AUTH }))).json()) as { surveys: { projectName: string; readyForWave54: boolean; score: number }[] }
+    expect(surveys[0]).toMatchObject({ projectName: 'גג הרצל', readyForWave54: true, score: 90 })
   })
 })
