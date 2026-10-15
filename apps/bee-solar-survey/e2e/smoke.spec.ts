@@ -298,7 +298,7 @@ function fakeSurveyServer(key: string) {
   const photos = new Map<string, { body: Buffer; type: string }>()
   const quotes = new Map<string, Record<string, unknown>>()
   const reports = new Map<string, Record<string, unknown>>()
-  const state = { down: false, auth: new Set<string>() }
+  const state = { down: false, refuseReports: false, reportPuts: 0, auth: new Set<string>() }
   const handler = async (route: import('@playwright/test').Route) => {
     if (state.down) return route.abort('internetdisconnected')
     const req = route.request()
@@ -320,6 +320,8 @@ function fakeSurveyServer(key: string) {
     }
     if ((m = path.match(/^\/api\/surveys\/([^/]+)\/reports\/([^/]+)$/))) {
       const rec = req.postDataJSON() as { photos: { key: string }[] }
+      state.reportPuts++
+      if (state.refuseReports) return json(409, { error: 'report_is_final', message_he: 'הדוח כבר נעול בשרת' })
       reports.set(`${m[1]}/${m[2]}`, rec)
       return json(201, { ok: true, result: 'stored', missing_photos: rec.photos.map((p) => p.key).filter((k) => !photos.has(`${m![1]}/${k}`)) })
     }
@@ -400,6 +402,27 @@ test('surveys back up to our server, queue while offline, and restore on a new p
   await expect(page.locator('[data-sec="photos"] .thumb')).toHaveCount(1)
   await page.click('#rpBack')
   await expect(chip).toHaveText('ממתין לגיבוי')
+
+  // The server refuses the report for good (409): it is shown as an error, the rest
+  // of the survey still goes up, and the same content is not resent on every run.
+  server.state.refuseReports = true
+  await page.click('#btnSync')
+  await expect(page.locator('#toast')).toContainText('הדוח כבר נעול בשרת')
+  await expect(chip).toHaveText('שגיאת גיבוי')
+  expect(server.state.reportPuts).toBe(1)
+  expect(server.photos.size).toBe(2)
+  await page.click('#btnSync')
+  await expect(page.locator('#toast')).toContainText('הדוח כבר נעול בשרת')
+  expect(server.state.reportPuts).toBe(1)
+
+  // Once the report changes it is tried again.
+  server.state.refuseReports = false
+  await page.locator('.project-item', { hasText: 'גג בדיקה גיבוי' }).locator('[data-reports]').click()
+  await page.locator('#rdList [data-r-open]').click()
+  await page.fill('[data-t="defects|0|description"]', 'חסר שלט DC בממיר')
+  await page.locator('[data-t="defects|0|description"]').press('End')
+  await page.locator('[data-t="defects|0|description"]').pressSequentially(' ')
+  await page.click('#rpBack')
   await page.click('#btnSync')
   await expect(page.locator('#toast')).toContainText('1 דוחות')
   await expect(chip).toHaveText('מגובה ✓')
@@ -429,7 +452,7 @@ test('surveys back up to our server, queue while offline, and restore on a new p
   await phone.click('#btnCancel')
   await phone.locator('.project-item', { hasText: 'גג בדיקה גיבוי' }).locator('[data-reports]').click()
   await phone.locator('#rdList [data-r-open]').click()
-  await expect(phone.locator('[data-t="defects|0|description"]')).toHaveValue('חסר שלט DC בממיר')
+  await expect(phone.locator('[data-t="defects|0|description"]')).toHaveValue('חסר שלט DC בממיר ')
   await expect(phone.locator('[data-sec="photos"] .thumb')).toHaveCount(1)
   await fresh.close()
 })

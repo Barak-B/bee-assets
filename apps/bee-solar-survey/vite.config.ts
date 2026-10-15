@@ -13,7 +13,8 @@ export default defineConfig({
   },
   plugins: [
     VitePWA({
-      registerType: 'autoUpdate',
+      // A new version waits for the user (banner in main.ts) — no reload mid-survey.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icon.svg', 'icons.svg', 'fonts/*.woff2'],
       manifest: {
         name: 'B.E.E סקר אתר סולארי',

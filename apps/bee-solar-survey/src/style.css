@@ -1103,3 +1103,22 @@ textarea {
   border-color: #a12626;
   box-shadow: 0 0 0 2px #fde7e7;
 }
+
+.update-bar {
+  position: fixed;
+  top: 0;
+  inset-inline: 0;
+  z-index: 60;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.update-bar .btn {
+  padding: 6px 12px;
+}

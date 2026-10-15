@@ -1,6 +1,7 @@
 import type { Catalog, PricingRules, QuoteVersion } from '@bee/quote-core'
 import type { ReportInstance } from './reports/types'
 import type { SiteSurveyProject, SurveyPhoto } from './types'
+import { decidePhoto, decidePricing, decideProject, decideQuote, decideReport, type BackupData, type Decision, type ImportResult } from './backup'
 
 const DB_NAME = 'bee-solar-survey'
 // v2: + quotes store (quote versions per project)
@@ -79,20 +80,25 @@ export async function saveProject(project: SiteSurveyProject): Promise<void> {
   await txDone(tx)
 }
 
+/** Delete a survey with everything stored for it on this device (photos, quotes, reports, backup and link state). */
 export async function deleteProject(id: string): Promise<void> {
   const db = await openDB()
-  const tx = db.transaction(['projects', 'photos', 'quotes', 'reports'], 'readwrite')
+  const tx = db.transaction(['projects', 'photos', 'quotes', 'reports', 'meta'], 'readwrite')
   tx.objectStore('projects').delete(id)
   for (const storeName of ['photos', 'quotes', 'reports'] as const) {
     const req = tx.objectStore(storeName).index('byProject').getAllKeys(id)
     await new Promise<void>((resolve, reject) => {
       req.onsuccess = () => {
-        for (const key of req.result) tx.objectStore(storeName).delete(key)
+        for (const key of req.result) {
+          tx.objectStore(storeName).delete(key)
+          if (storeName === 'quotes') tx.objectStore('meta').delete(`pub:${String(key)}`)
+        }
         resolve()
       }
       req.onerror = () => reject(req.error)
     })
   }
+  tx.objectStore('meta').delete(`sync:${id}`)
   await txDone(tx)
 }
 
@@ -174,26 +180,50 @@ export async function exportBackup(): Promise<object> {
   }
 }
 
-export async function importBackup(data: {
-  projects?: SiteSurveyProject[]
-  photos?: StoredPhoto[]
-  quotes?: StoredQuote[]
-  reports?: ReportInstance[]
-  pricing?: StoredPricing | null
-}): Promise<number> {
-  const projects = data.projects ?? []
-  const photos = data.photos ?? []
-  const quotes = data.quotes ?? []
-  const reports = data.reports ?? []
+/**
+ * Merge a backup (or a survey pulled from the server) into this device without
+ * losing newer local work — see backup.ts for the rules. One transaction: every
+ * decision is made against what is stored at that moment.
+ */
+export async function importBackup(data: BackupData): Promise<ImportResult> {
   const db = await openDB()
+  const out: ImportResult = { added: 0, updated: 0, skipped: 0, pricing: false }
   const tx = db.transaction(['projects', 'photos', 'quotes', 'reports'], 'readwrite')
-  for (const p of projects) tx.objectStore('projects').put(p)
-  for (const ph of photos) tx.objectStore('photos').put(ph)
-  for (const q of quotes) tx.objectStore('quotes').put(q)
-  for (const r of reports) tx.objectStore('reports').put(r)
+  const get = <T>(store: string, key: string) =>
+    new Promise<T | undefined>((resolve, reject) => {
+      const req = tx.objectStore(store).get(key)
+      req.onsuccess = () => resolve(req.result as T | undefined)
+      req.onerror = () => reject(req.error)
+    })
+  const count = (d: Decision) => {
+    if (d === 'add') out.added++
+    else if (d === 'update') out.updated++
+    else out.skipped++
+  }
+  const takenProjects = new Set<string>()
+  for (const p of data.projects) {
+    const d = decideProject(await get<SiteSurveyProject>('projects', p.id), p)
+    if (d !== 'skip') {
+      tx.objectStore('projects').put(p)
+      takenProjects.add(p.id)
+    }
+    count(d)
+  }
+  for (const q of data.quotes) {
+    if (decideQuote(await get<StoredQuote>('quotes', q.id)) === 'add') tx.objectStore('quotes').put(q)
+  }
+  for (const r of data.reports) {
+    if (decideReport(await get<ReportInstance>('reports', r.id), r) !== 'skip') tx.objectStore('reports').put(r)
+  }
+  for (const ph of data.photos) {
+    if (decidePhoto(await get<StoredPhoto>('photos', ph.id), takenProjects.has(ph.projectId)) !== 'skip') tx.objectStore('photos').put(ph)
+  }
   await txDone(tx)
-  if (data.pricing?.catalog && data.pricing?.rules) await savePricing(data.pricing)
-  return projects.length
+  if (decidePricing(await getPricing(), data.pricing)) {
+    await metaPut('pricing', data.pricing)
+    out.pricing = true
+  }
+  return out
 }
 
 // ── Pricing (catalog + rules edited in the app) ─────────────────────────
@@ -326,10 +356,28 @@ export interface SyncState {
   dirty: boolean
   /** Field reports the server holds: reportId → `${status}:${updatedAt}`. */
   reportRevs?: Record<string, string>
+  /** When markDirty last ran — a change made while a sync was in flight keeps the survey pending. */
+  dirtyAt?: string
+  /** Items the server refused for good (4xx), by item tag → reason. Not retried until the item changes. */
+  rejected?: Record<string, string>
 }
 
 export const getSyncState = (projectId: string) => metaGet<SyncState>(`sync:${projectId}`)
 export const saveSyncState = (projectId: string, s: SyncState) => metaPut(`sync:${projectId}`, s)
+
+/** Read-modify-write of a survey's sync state in one transaction (`fn` returning null leaves it as is). */
+export async function updateSyncState(projectId: string, fn: (prev: SyncState | null) => SyncState | null): Promise<void> {
+  const db = await openDB()
+  const tx = db.transaction('meta', 'readwrite')
+  const store = tx.objectStore('meta')
+  const key = `sync:${projectId}`
+  const req = store.get(key)
+  req.onsuccess = () => {
+    const next = fn(((req.result as { value?: SyncState } | undefined)?.value ?? null) as SyncState | null)
+    if (next) store.put({ key, value: next })
+  }
+  await txDone(tx)
+}
 
 // ── Field reports ──────────────────────────────────────────────────────
 

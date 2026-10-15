@@ -5,17 +5,22 @@ import {
   deleteProject,
   exportBackup,
   getProject,
+  getPublication,
+  getPublishSettings,
   getSurveyors,
   getSyncState,
   importBackup,
   listPhotos,
   listProjects,
+  listQuotes,
   rememberSurveyor,
   savePhoto,
   saveProject,
   type StoredPhoto,
 } from './db'
+import { BackupError, parseBackup } from './backup'
 import { buildHiveExportBundle } from './hive'
+import { revokeQuote, settingsProblem } from './publish'
 import { fileToSurveyPhoto, getCurrentGps } from './photos'
 import { escapeAttr, escapeHtml, safeImageSrc } from './html'
 import { renderPricingScreen } from './pricingScreen'
@@ -44,6 +49,9 @@ let toastTimer = 0
 let autoSaveTimer = 0
 let drawTarget: StoredPhoto | null = null
 let syncTimer = 0
+/** Surveys waiting for the debounced background sync ('all' = every survey). */
+let syncIds: Set<string> | 'all' = new Set()
+let lastBgSyncError = ''
 let reportId = ''
 
 function toast(msg: string) {
@@ -76,23 +84,31 @@ async function persistCurrent() {
   editing.hiveReady = assessCompleteness(editing, photos).readyForWave54
   await saveProject(editing)
   if (editing.surveyor) await rememberSurveyor(editing.surveyor)
-  requestSync()
+  requestSync(4000, [editing.id])
 }
 
-/** Debounced background backup; quiet unless something actually failed. */
-function requestSync(delayMs = 4000) {
+/** Debounced background backup; quiet unless something actually failed. `ids` limits it to those surveys. */
+function requestSync(delayMs = 4000, ids?: string[]) {
+  if (!ids) syncIds = 'all'
+  else if (syncIds !== 'all') for (const id of ids) syncIds.add(id)
   window.clearTimeout(syncTimer)
   syncTimer = window.setTimeout(() => void runSync(false), delayMs)
 }
 
 async function runSync(manual: boolean) {
-  if (!navigator.onLine && !manual) return
+  const ids = syncIds
+  syncIds = new Set()
+  if (!navigator.onLine && !manual) {
+    if (ids !== 'all') for (const id of ids) requestSyncLater(id)
+    return
+  }
   if (!(await isSyncConfigured())) {
     if (manual) toast('לא הוגדר שרת גיבוי — מחירון → שרת החברה')
     return
   }
   try {
-    const r = await syncAll()
+    // Manual: every survey, re-read in full. Background: the surveys asked for, trusting the change markers.
+    const r = manual ? await syncAll(undefined, { deep: true }) : await syncAll(ids === 'all' ? undefined : [...ids])
     if (manual) {
       toast(
         r.offline
@@ -103,13 +119,20 @@ async function runSync(manual: boolean) {
               ? `גובו ${r.synced} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות · ${r.reports} דוחות`
               : 'הכול כבר מגובה ✓',
       )
-    } else if (r.failed) {
+    } else if (r.failed && r.errors[0] !== lastBgSyncError) {
+      // Background runs repeat; say each distinct failure once.
       toast(`גיבוי נכשל: ${r.errors[0]}`)
     }
+    lastBgSyncError = r.failed ? (r.errors[0] ?? '') : ''
   } catch (err) {
     if (manual) toast(err instanceof SyncError ? err.message : 'הגיבוי נכשל')
   }
   if (screen === 'list') await refreshSyncChips()
+}
+
+/** Keep an offline survey in the queue for the next run (the 'online' event or the periodic retry). */
+function requestSyncLater(id: string) {
+  if (syncIds !== 'all') syncIds.add(id)
 }
 
 async function refreshSyncChips() {
@@ -302,9 +325,14 @@ async function render() {
     })
     void refreshSyncChips()
     document.getElementById('btnBackup')?.addEventListener('click', async () => {
-      const data = await exportBackup()
-      const outcome = await shareOrDownloadJson(`bee-survey-backup-${new Date().toISOString().slice(0, 10)}.json`, data, 'גיבוי סקרים B.E.E')
-      toast(outcomeToast(outcome, 'הגיבוי'))
+      try {
+        const data = await exportBackup()
+        // Compact: photos are inline base64, and indentation only adds size.
+        const outcome = await shareOrDownloadJson(`bee-survey-backup-${new Date().toISOString().slice(0, 10)}.json`, data, 'גיבוי סקרים B.E.E', false)
+        toast(outcomeToast(outcome, 'הגיבוי'))
+      } catch {
+        toast('הגיבוי לקובץ נכשל — ייתכן שהוא גדול מדי למכשיר; השתמש ב"סנכרן לשרת"')
+      }
     })
     document.getElementById('btnRestore')?.addEventListener('click', () => {
       const input = document.createElement('input')
@@ -313,10 +341,24 @@ async function render() {
       input.onchange = async () => {
         const file = input.files?.[0]
         if (!file) return
-        const data = JSON.parse(await file.text())
-        const n = await importBackup(data)
-        await render()
-        toast(`שוחזרו ${n} פרויקטים`)
+        try {
+          let raw: unknown
+          try {
+            raw = JSON.parse(await file.text())
+          } catch {
+            throw new BackupError('הקובץ אינו קובץ JSON תקין')
+          }
+          const r = await importBackup(parseBackup(raw))
+          await render() // re-render first: it replaces the toast element
+          toast(
+            `נוספו ${r.added} סקרים · עודכנו ${r.updated}` +
+              (r.skipped ? ` · ${r.skipped} נשארו כמו במכשיר (חדשים יותר)` : '') +
+              (r.pricing ? ' · המחירון עודכן' : ''),
+          )
+          requestSync(1000)
+        } catch (err) {
+          toast(err instanceof BackupError ? err.message : 'השחזור מהקובץ נכשל')
+        }
       }
       input.click()
     })
@@ -332,7 +374,27 @@ async function render() {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation()
         const id = (btn as HTMLElement).dataset.del!
-        if (!confirm('למחוק את הסקר?')) return
+        // Customer links of this survey's quotes: once the survey is gone the app
+        // no longer knows their tokens, so they are taken down first.
+        const live: string[] = []
+        for (const q of await listQuotes(id)) {
+          const pub = await getPublication(q.id)
+          if (pub && !pub.revokedAt) live.push(pub.token)
+        }
+        const msg = live.length
+          ? `לסקר יש ${live.length} קישורים פעילים ללקוח. המחיקה תבטל אותם — הלקוח לא יוכל לפתוח את ההצעה. הגיבוי בשרת נשמר. למחוק?`
+          : 'למחוק את הסקר מהמכשיר? (הגיבוי בשרת, אם יש, נשמר)'
+        if (!confirm(msg)) return
+        if (live.length) {
+          const settings = await getPublishSettings()
+          try {
+            if (settingsProblem(settings) || !settings) throw new Error('no settings')
+            for (const token of live) await revokeQuote(token, settings)
+          } catch {
+            toast('לא ניתן לבטל את הקישורים ללקוח כרגע — הסקר לא נמחק. נסה שוב כשיש חיבור')
+            return
+          }
+        }
         await deleteProject(id)
         toast('נמחק')
         void render()
@@ -837,11 +899,36 @@ const quotesCtx = {
   },
 }
 
-// Offline-first: precached app shell; a new version activates on the next launch.
-registerSW({ immediate: true })
+// Offline-first: precached app shell. A new version waits until the user taps
+// "עדכן" — never a reload in the middle of a survey or a signature.
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    if (document.getElementById('updateBar')) return
+    const bar = document.createElement('div')
+    bar.id = 'updateBar'
+    bar.className = 'update-bar'
+    bar.innerHTML = '<span>גרסה חדשה של האפליקציה זמינה</span><button class="btn btn-primary" type="button">עדכן עכשיו</button>'
+    bar.querySelector('button')!.addEventListener('click', async () => {
+      if (screen === 'form' && editing.projectName.trim()) {
+        readFormIntoEditing()
+        await persistCurrent()
+      }
+      await updateSW(true)
+    })
+    document.body.appendChild(bar)
+  },
+})
 
-// Backup queue: drain on start, when the network returns, and on explicit requests (new quote version).
+// Backup queue: drain on start, when the network returns, on explicit requests
+// (new quote version, report change), and every few minutes while something waits.
 window.addEventListener('online', () => requestSync(500))
 window.addEventListener('bee-sync-request', () => requestSync(1000))
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestSync(1500)
+})
+window.setInterval(() => {
+  if (navigator.onLine && document.visibilityState === 'visible') requestSync(0)
+}, 5 * 60_000)
 
 void render().then(() => requestSync(1500))

@@ -15,6 +15,7 @@ import {
   getPublishSettings,
   getSyncState,
   importBackup,
+  updateSyncState,
   listPhotos,
   listProjects,
   listQuotes,
@@ -36,9 +37,16 @@ export type SyncStatus = 'off' | 'pending' | 'synced' | 'error'
 
 export class SyncError extends Error {
   readonly offline: boolean
-  constructor(message: string, offline = false) {
+  /** HTTP status when the server answered. */
+  readonly status: number | null
+  constructor(message: string, offline = false, status: number | null = null) {
     super(message)
     this.offline = offline
+    this.status = status
+  }
+  /** The server refused this item for good: retrying the same content cannot succeed. */
+  get permanent(): boolean {
+    return this.status !== null && [400, 409, 410, 413, 415, 422].includes(this.status)
   }
 }
 
@@ -84,7 +92,9 @@ export function toReportWire(r: ReportInstance): ReportWire {
 }
 
 async function photoMeta(p: StoredPhoto): Promise<PhotoMeta> {
-  const sha = p.sha256 && /^[0-9a-f]{64}$/.test(p.sha256) ? p.sha256 : await sha256OfDataUrl(p.dataUrl)
+  // Always from the bytes: the server checks the key against the upload, and a
+  // photo annotated by an older version may still carry the pre-drawing hash.
+  const sha = await sha256OfDataUrl(p.dataUrl)
   return { id: p.id, field: p.field, key: photoKey(p.id, sha), sha256: sha, mimeType: p.mimeType || 'image/jpeg', annotated: !!p.annotated, createdAt: p.createdAt }
 }
 
@@ -125,7 +135,7 @@ async function call(s: PublishSettings, path: string, init: RequestInit = {}): P
     } catch {
       /* not json */
     }
-    throw new SyncError(res.status === 401 ? 'מפתח הגיבוי שגוי' : msg)
+    throw new SyncError(res.status === 401 ? 'מפתח הגיבוי שגוי' : msg, false, res.status)
   }
   return res
 }
@@ -138,6 +148,7 @@ export function statusOf(project: SiteSurveyProject, state: SyncState | null, co
   if (!configured) return 'off'
   if (!state) return 'pending'
   if (state.error && !state.offline) return 'error'
+  if (state.rejected && Object.keys(state.rejected).length) return 'error'
   if (state.projectUpdatedAt !== project.updatedAt || state.dirty) return 'pending'
   return 'synced'
 }
@@ -162,8 +173,15 @@ export interface SyncReport {
   errors: string[]
 }
 
-async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: SyncReport): Promise<void> {
+async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: SyncReport, deep: boolean): Promise<void> {
+  const startedAt = new Date().toISOString()
   const state = await getSyncState(project.id)
+  // Cheap path for background runs: every change marks the survey (updatedAt or
+  // markDirty), so an unmarked survey that synced cleanly needs no photo reads.
+  if (!deep && state && state.hash && !state.error && !state.dirty && state.projectUpdatedAt === project.updatedAt) {
+    report.skipped++
+    return
+  }
   const photos = await listPhotos(project.id)
   const quotes = await listQuotes(project.id)
   const record = await buildSurveyRecord(project, photos)
@@ -173,63 +191,127 @@ async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: S
   const reports = await listReports(project.id)
   const reportRevs: Record<string, string> = { ...(state?.reportRevs ?? {}) }
   const reportsLeft = reports.filter((r) => reportRevs[r.id] !== reportTag(r))
-  if (state && !state.error && !state.dirty && state.hash === record.contentHash && record.photos.every((p) => done.has(p.key)) && quotesLeft.length === 0 && reportsLeft.length === 0) {
-    if (state.projectUpdatedAt !== project.updatedAt) await saveSyncState(project.id, { ...state, projectUpdatedAt: project.updatedAt })
+  const rejected: Record<string, string> = { ...(state?.rejected ?? {}) }
+  const surveyTag = `survey:${record.contentHash}`
+  const label = project.projectName || project.id
+  const nothingToSend =
+    state && !state.error && state.hash === record.contentHash && record.photos.every((p) => done.has(p.key)) && quotesLeft.length === 0 && reportsLeft.length === 0
+  if (nothingToSend) {
+    await updateSyncState(project.id, (prev) =>
+      prev ? { ...prev, projectUpdatedAt: project.updatedAt, dirty: !!prev.dirtyAt && prev.dirtyAt >= startedAt } : null,
+    )
     report.skipped++
     return
   }
+  if (rejected[surveyTag]) {
+    // Refused before with this exact content; wait for the survey to change.
+    report.failed++
+    report.errors.push(`${label}: ${rejected[surveyTag]}`)
+    return
+  }
+
+  /** Run one item; a permanent refusal is recorded against its tag and the run moves on. */
+  const attempt = async (tag: string, fn: () => Promise<void>): Promise<boolean> => {
+    if (rejected[tag]) return false
+    try {
+      await fn()
+      return true
+    } catch (err) {
+      if (err instanceof SyncError && err.permanent) {
+        rejected[tag] = err.message
+        return false
+      }
+      throw err
+    }
+  }
 
   const base = `/api/surveys/${enc(project.id)}`
-  const upload = async (key: string) => {
-    const p = photos.find((x) => photoKey(x.id, record.photos.find((m) => m.id === x.id)!.sha256) === key)
-    if (!p) return
-    const blob = await (await fetch(p.dataUrl)).blob()
-    await call(s, `${base}/photos/${enc(key)}`, { method: 'PUT', headers: { 'content-type': blob.type || p.mimeType || 'image/jpeg' }, body: blob })
+  const putBlob = async (key: string, dataUrl: string, mimeType: string) => {
+    const blob = await (await fetch(dataUrl)).blob()
+    await call(s, `${base}/photos/${enc(key)}`, { method: 'PUT', headers: { 'content-type': blob.type || mimeType || 'image/jpeg' }, body: blob })
     done.add(key)
     report.photos++
   }
-  try {
-    for (const m of record.photos) if (!done.has(m.key)) await upload(m.key)
-    const res = await call(s, base, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(record) })
-    const body = (await res.json()) as { missing_photos?: string[] }
-    for (const key of body.missing_photos ?? []) await upload(key)
-    for (const q of quotesLeft.sort((a, b) => a.version_no - b.version_no)) {
-      await call(s, `${base}/quotes/${q.version_no}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(q.quote) })
-      doneQuotes.add(q.version_no)
-      report.quotes++
-    }
-    // Field reports: photos first (same photo route, by key), then the report. Oldest first.
-    for (const r of reportsLeft.sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
-      const wire = toReportWire(r)
-      const putPhoto = async (key: string) => {
-        const p = r.photos.find((x) => photoKey(x.id, x.sha256) === key)
-        if (!p) return
-        const blob = await (await fetch(p.dataUrl)).blob()
-        await call(s, `${base}/photos/${enc(key)}`, { method: 'PUT', headers: { 'content-type': blob.type || p.mimeType || 'image/jpeg' }, body: blob })
-        done.add(key)
-        report.photos++
-      }
-      for (const p of wire.photos) if (!done.has(p.key)) await putPhoto(p.key)
-      const rr = await call(s, `${base}/reports/${enc(r.id)}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(wire) })
-      for (const key of ((await rr.json()) as { missing_photos?: string[] }).missing_photos ?? []) await putPhoto(key)
-      reportRevs[r.id] = reportTag(r)
-      report.reports++
-    }
-    await saveSyncState(project.id, {
-      hash: record.contentHash,
-      projectUpdatedAt: project.updatedAt,
-      syncedAt: new Date().toISOString(),
-      photoKeys: [...new Set([...record.photos.map((p) => p.key), ...done])],
-      quoteVersions: [...doneQuotes].sort((a, b) => a - b),
-      error: null,
-      offline: false,
-      dirty: false,
-      reportRevs,
+  const upload = (key: string) =>
+    attempt(`photo:${key}`, async () => {
+      const i = record.photos.findIndex((m) => m.key === key)
+      const p = photos.find((x) => x.id === record.photos[i]?.id)
+      if (p) await putBlob(key, p.dataUrl, p.mimeType)
     })
-    report.synced++
+  const liveTags = new Set<string>([surveyTag])
+  let surveyOk = false
+  try {
+    let uploaded = false
+    for (const m of record.photos) {
+      liveTags.add(`photo:${m.key}`)
+      if (!done.has(m.key) && (await upload(m.key))) uploaded = true
+    }
+    if (uploaded || !state || state.hash !== record.contentHash) {
+      surveyOk = await attempt(surveyTag, async () => {
+        const res = await call(s, base, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(record) })
+        const body = (await res.json()) as { missing_photos?: string[] }
+        for (const key of body.missing_photos ?? []) await upload(key)
+      })
+    } else surveyOk = true
+    if (surveyOk) {
+      for (const q of quotesLeft.sort((a, b) => a.version_no - b.version_no)) {
+        liveTags.add(`quote:${q.version_no}`)
+        const ok = await attempt(`quote:${q.version_no}`, async () => {
+          await call(s, `${base}/quotes/${q.version_no}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(q.quote) })
+        })
+        if (ok) {
+          doneQuotes.add(q.version_no)
+          report.quotes++
+        }
+      }
+      // Field reports: photos first (same photo route, by key), then the report. Oldest first.
+      for (const r of reportsLeft.sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+        const wire = toReportWire(r)
+        const tag = `report:${r.id}:${reportTag(r)}`
+        liveTags.add(tag)
+        const putPhoto = (key: string) =>
+          attempt(`photo:${key}`, async () => {
+            const p = r.photos.find((x) => photoKey(x.id, x.sha256) === key)
+            if (p) await putBlob(key, p.dataUrl, p.mimeType)
+          })
+        for (const p of wire.photos) {
+          liveTags.add(`photo:${p.key}`)
+          if (!done.has(p.key)) await putPhoto(p.key)
+        }
+        const ok = await attempt(tag, async () => {
+          const rr = await call(s, `${base}/reports/${enc(r.id)}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(wire) })
+          for (const key of ((await rr.json()) as { missing_photos?: string[] }).missing_photos ?? []) await putPhoto(key)
+        })
+        if (ok) {
+          reportRevs[r.id] = reportTag(r)
+          report.reports++
+        }
+      }
+    }
+    // Forget refusals of content that no longer exists (the item was edited or removed).
+    for (const tag of Object.keys(rejected)) if (!liveTags.has(tag)) delete rejected[tag]
+    const refusals = Object.values(rejected)
+    await updateSyncState(project.id, (prev) => ({
+      hash: surveyOk ? record.contentHash : (state?.hash ?? ''),
+      projectUpdatedAt: surveyOk ? project.updatedAt : (state?.projectUpdatedAt ?? ''),
+      syncedAt: new Date().toISOString(),
+      photoKeys: [...done],
+      quoteVersions: [...doneQuotes].sort((a, b) => a - b),
+      error: refusals[0] ?? null,
+      offline: false,
+      // Something marked while this run was in flight is not covered by it.
+      dirty: !!prev?.dirtyAt && prev.dirtyAt >= startedAt,
+      dirtyAt: prev?.dirtyAt,
+      reportRevs,
+      rejected,
+    }))
+    if (refusals.length) {
+      report.failed++
+      report.errors.push(`${label}: ${refusals[0]}`)
+    } else report.synced++
   } catch (err) {
     const e = err instanceof SyncError ? err : new SyncError(String(err))
-    await saveSyncState(project.id, {
+    await updateSyncState(project.id, (prev) => ({
       hash: state?.hash ?? '',
       projectUpdatedAt: state?.projectUpdatedAt ?? '',
       syncedAt: state?.syncedAt ?? null,
@@ -238,20 +320,37 @@ async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: S
       error: e.message,
       offline: e.offline,
       dirty: true,
+      dirtyAt: prev?.dirtyAt,
       reportRevs,
-    })
+      rejected,
+    }))
     if (e.offline) report.offline = true
     else report.failed++
-    report.errors.push(`${project.projectName || project.id}: ${e.message}`)
-    if (e.offline) throw e
+    report.errors.push(`${label}: ${e.message}`)
+    if (e.offline || e.status === 401) throw e
   }
 }
 
 let running: Promise<SyncReport> | null = null
+/** Requests that arrived while a run was in flight: run again for them afterwards. */
+let queued: { ids: Set<string> | 'all'; deep: boolean } | null = null
 
-/** Push every pending survey. One run at a time; a second call joins the first. */
-export function syncAll(only?: string[]): Promise<SyncReport> {
-  if (running) return running
+function enqueue(only: string[] | undefined, deep: boolean) {
+  const ids = !only || queued?.ids === 'all' ? 'all' : new Set([...(queued?.ids ?? []), ...only])
+  queued = { ids, deep: deep || !!queued?.deep }
+}
+
+/**
+ * Push pending surveys (`only` limits the run to some). One run at a time; a
+ * call made while one is running joins it and queues a follow-up run, so a
+ * change made mid-run is still sent. `deep` re-reads every survey's photos and
+ * reports instead of trusting the change markers (the manual "סנכרן" button).
+ */
+export function syncAll(only?: string[], opts: { deep?: boolean } = {}): Promise<SyncReport> {
+  if (running) {
+    enqueue(only, !!opts.deep)
+    return running
+  }
   running = (async () => {
     const report: SyncReport = { synced: 0, skipped: 0, failed: 0, offline: false, photos: 0, quotes: 0, reports: 0, errors: [] }
     const s = await getPublishSettings()
@@ -261,23 +360,26 @@ export function syncAll(only?: string[]): Promise<SyncReport> {
     for (const p of projects) {
       if (!p.projectName.trim()) continue
       try {
-        await syncOne(s, p, report)
+        await syncOne(s, p, report, !!opts.deep)
       } catch (err) {
-        if (err instanceof SyncError && err.offline) break // no network: stop, retry later
+        if (err instanceof SyncError && (err.offline || err.status === 401)) break // no network / wrong key: stop, retry later
         throw err
       }
     }
     return report
   })().finally(() => {
     running = null
+    const next = queued
+    queued = null
+    if (next) void syncAll(next.ids === 'all' ? undefined : [...next.ids], { deep: next.deep }).catch(() => undefined)
   })
   return running
 }
 
 /** Mark a survey as changed (e.g. a new quote version) so the next run sends it. */
 export async function markDirty(projectId: string): Promise<void> {
-  const st = await getSyncState(projectId)
-  if (st) await saveSyncState(projectId, { ...st, dirty: true })
+  const now = new Date().toISOString()
+  await updateSyncState(projectId, (prev) => (prev ? { ...prev, dirty: true, dirtyAt: now } : null))
 }
 
 export async function isSyncConfigured(): Promise<boolean> {
@@ -355,7 +457,7 @@ export async function restoreFromServer(): Promise<RestoreReport> {
       const { title_he: _t, outcome: _o, ...rest } = w
       reports.push({ ...rest, photos: rphotos })
     }
-    await importBackup({ projects: [survey.project], photos, quotes: stored, reports })
+    await importBackup({ projects: [survey.project], photos, quotes: stored, reports, pricing: null })
     await saveSyncState(row.id, {
       hash: survey.contentHash,
       projectUpdatedAt: survey.project.updatedAt,

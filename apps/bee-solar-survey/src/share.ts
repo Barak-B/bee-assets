@@ -70,8 +70,8 @@ export async function shareOrDownload(blob: Blob, filename: string, title?: stri
   return 'downloaded'
 }
 
-export async function shareOrDownloadJson(filename: string, data: unknown, title?: string): Promise<ShareOutcome> {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+export async function shareOrDownloadJson(filename: string, data: unknown, title?: string, pretty = true): Promise<ShareOutcome> {
+  const blob = new Blob([pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data)], { type: 'application/json' })
   return shareOrDownload(blob, filename, title)
 }
 
