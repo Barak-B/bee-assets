@@ -101,7 +101,9 @@ describe('lifecycle', () => {
     const f = await finalizeReport(r, [], new Date('2026-10-15T12:00:00Z'))
     expect(f.status).toBe('final')
     expect(f.contentHash).toMatch(/^[0-9a-f]{64}$/)
-    expect((await finalizeReport({ ...r }, [], new Date('2026-10-16T00:00:00Z'))).contentHash).toBe(f.contentHash) // time does not change the hash
+    // Deterministic, and the lock time printed on the PDF is covered too.
+    expect((await finalizeReport(structuredClone(r), [], new Date('2026-10-15T12:00:00Z'))).contentHash).toBe(f.contentHash)
+    expect((await finalizeReport(structuredClone(r), [], new Date('2026-10-16T00:00:00Z'))).contentHash).not.toBe(f.contentHash)
     await expect(finalizeReport(f)).rejects.toThrow('נעול')
     const rev = reviseReport(f, [f])
     expect(rev).toMatchObject({ revision: 2, supersedes: f.id, status: 'draft', contentHash: null, signatures: {} })
@@ -145,5 +147,78 @@ describe('lifecycle', () => {
     d.tables.defects = [{ code: 'X', severity: 'minor', blocks: '', location: '', description: 'שריטה', status: 'waived', fix: '' }]
     expect(validateReport(d).warnings.join()).toContain('חסרה סיבה')
     expect(openDefects(d)).toHaveLength(0)
+  })
+})
+
+describe('review fixes — reports', () => {
+  it('the locked copy shares nothing with the draft', async () => {
+    const r = inspection()
+    const f = await finalizeReport(r)
+    r.photos.push({ id: 'x', sectionKey: 'photos', dataUrl: 'data:image/png;base64,AAAA', mimeType: 'image/png', sha256: 'x', createdAt: '' })
+    r.tables.strings![0]!.voc = '1'
+    expect(f.photos).toHaveLength(0)
+    expect(f.tables.strings![0]!.voc).toBe('475')
+  })
+
+  it('the hash covers the signature image and the photo bytes, not just their length or stored sha', async () => {
+    const PNG_A = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVQImWP4z8DwnwEIGP7//w8iAABaBAX/dMtuSgAAAABJRU5ErkJggg=='
+    const PNG_B = PNG_A.replace('AABaBAX', 'AABaBAY') // same length, different bytes
+    const a = inspection()
+    a.signatures.inspector = { ...sig, dataUrl: PNG_A }
+    const b = structuredClone(a)
+    b.signatures.inspector!.dataUrl = PNG_B
+    const at = new Date('2026-10-15T12:00:00Z')
+    expect((await finalizeReport(a, [], at)).contentHash).not.toBe((await finalizeReport(b, [], at)).contentHash)
+    const c = structuredClone(a)
+    c.photos.push({ id: 'p', sectionKey: 'photos', dataUrl: PNG_A, mimeType: 'image/png', sha256: 'stale', createdAt: '2026-10-15T10:00:00.000Z' })
+    const d = structuredClone(c)
+    d.photos[0]!.dataUrl = PNG_B // bytes swapped, stored sha left as is
+    const fc = await finalizeReport(c, [], at)
+    expect(fc.photos[0]!.sha256).toMatch(/^[0-9a-f]{64}$/) // recomputed at lock time
+    expect((await finalizeReport(d, [], at)).contentHash).not.toBe(fc.contentHash)
+  })
+
+  it('βVoc is always negative, optimizer strings expect ~1 V each, and ">2000"/"OL" Riso is a pass', () => {
+    const r = inspection()
+    r.fields.system!.beta_voc = '0.25' // typed without a minus on a phone keypad
+    expect(expectedVoc(r, r.tables.strings![0]!)).toBeCloseTo(475, 6)
+    const row = { ...r.tables.strings![0]!, riso: '>2000' }
+    expect(stringResult(r, row)).toBe('pass')
+    expect(stringResult(r, { ...row, riso: 'OL' })).toBe('pass')
+    const se = newReport('inspection_62446', project.id, ctx({ hasOptimizers: true }))
+    expect(expectedVoc(se, { modules: '12' })).toBe(12)
+  })
+
+  it('an unreadable number blocks locking instead of leaving a string unevaluated', () => {
+    const r = inspection()
+    r.tables.strings!.push({ label: 'S2', modules: '10', polarity: 'yes', voc: '451V', riso: '40' })
+    expect(validateReport(r).missing.join()).toContain('"451V" אינו מספר')
+    r.tables.strings![1]!.voc = '451'
+    expect(validateReport(r).missing).toEqual([])
+    expect(inspectionVerdict(r).overall).not.toBe('')
+  })
+
+  it('"1,000" W/m² is a thousand', () => {
+    const r = inspection()
+    r.fields.environment!.irradiance = '1,000'
+    r.tables.strings![0]!.isc = '14'
+    expect(stringResult(r, r.tables.strings![0]!)).toBe('pass') // 14 A × 1000/1000 = 14 A expected
+  })
+
+  it('a newer defects revision supersedes the old one for the handover check', () => {
+    const d1 = newReport('defects', project.id, ctx())
+    d1.tables.defects = [{ code: 'X', severity: 'major', blocks: '', location: '', description: 'פתוח', status: 'open', fix: '' }]
+    const d2 = reviseReport(d1, [d1])
+    d2.tables.defects![0]!.status = 'closed'
+    const h = newReport('handover', project.id, ctx())
+    expect(validateReport(h, [d1]).warnings.join()).toContain('ליקויים פתוחים')
+    expect(validateReport(h, [d1, d2]).warnings.join()).not.toContain('ליקויים פתוחים')
+  })
+
+  it('warnings become minor defects, so "create defects list" is never empty', async () => {
+    const r = inspection()
+    r.tables.strings![0]!.voc = '400' // −15.8% → warn
+    const d = defectsFromInspection(await finalizeReport(r))
+    expect(d.tables.defects!.map((x) => [x.code, x.severity])).toEqual([['STR-S1', 'minor']])
   })
 })

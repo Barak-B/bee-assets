@@ -237,15 +237,31 @@ const installation: ReportTemplate = {
 
 // ── 3. IEC 62446-1 inspection, category 1 (spec 15 §b.3) ────────────────
 
-/** Expected Voc at the measured module temperature (schema: moduleStc.vocV × N × (1 + βVoc × (T − 25))). */
+/** Optimizer systems (SolarEdge) read ≈1 V per optimizer before pairing, not module Voc. */
+export const OPTIMIZER_SAFE_V = 1
+
+/**
+ * Expected Voc at the measured module temperature (schema: moduleStc.vocV × N × (1 + βVoc × (T − 25))).
+ * βVoc of a PV module is always negative: −|β| is used, so "0.28" typed on a phone keypad
+ * without a minus key means −0.28 %/°C.
+ */
 export function expectedVoc(r: ReportInstance, row: Row): number | null {
-  const voc = num(field(r, 'system', 'module_voc'))
   const n = num(row.modules)
-  if (voc === null || n === null) return null
-  const beta = num(field(r, 'system', 'beta_voc')) ?? 0
+  if (n === null) return null
+  if (r.context.hasOptimizers) return n * OPTIMIZER_SAFE_V
+  const voc = num(field(r, 'system', 'module_voc'))
+  if (voc === null) return null
+  const beta = -Math.abs(num(field(r, 'system', 'beta_voc')) ?? 0)
   const t = num(field(r, 'environment', 'module_temp'))
   const factor = t === null ? 1 : 1 + (beta / 100) * (t - 25)
   return voc * n * factor
+}
+
+/** Megger readings above range (">2000", "OL") are a pass, not a missing value. */
+export function readRiso(s: string | undefined): number | null {
+  const t = String(s ?? '').trim()
+  if (/^(OL|>\s*\d)/i.test(t)) return Number.POSITIVE_INFINITY
+  return num(t)
 }
 
 /** Expected Isc scaled by irradiance (schema: moduleStc.iscA × G/1000). */
@@ -270,7 +286,7 @@ export type StringResult = 'pass' | 'warn' | 'fail' | ''
  */
 export function stringResult(r: ReportInstance, row: Row): StringResult {
   if (row.polarity === 'no') return 'fail'
-  const riso = num(row.riso)
+  const riso = readRiso(row.riso)
   const rmin = num(field(r, 'thresholds', 'riso_min'))
   if (riso !== null && rmin !== null && riso < rmin) return 'fail'
   if (row.polarity !== 'yes' || num(row.voc) === null || riso === null) return ''
@@ -298,8 +314,10 @@ export function inspectionVerdict(r: ReportInstance): { overall: 'pass' | 'pass_
   for (const row of r.tables.earthing ?? []) if (row.result === 'fail') fails.push(`רציפות ${row.from || ''}→${row.to || ''}`)
   for (const row of r.tables.rcd ?? []) if (row.result === 'fail') fails.push(`פחת ${row.board || ''}`)
   for (const row of r.tables.inverters ?? []) if (row.start === 'no' || row.anti_islanding === 'no') fails.push(`ממיר ${row.sn || ''}`)
-  const hasData = (r.tables.strings ?? []).some((row) => stringResult(r, row) !== '')
-  const overall = fails.length ? 'fail' : !hasData ? '' : warns.length ? 'pass_with_defects' : 'pass'
+  // A pass needs every listed string evaluated — one unreadable value means no verdict yet.
+  const rows = (r.tables.strings ?? []).filter((row) => Object.values(row).some((v) => (v ?? '').trim()))
+  const allEvaluated = rows.length > 0 && rows.every((row) => stringResult(r, row) !== '')
+  const overall = fails.length ? 'fail' : !allEvaluated ? '' : warns.length ? 'pass_with_defects' : 'pass'
   return { overall, fails, warns }
 }
 
@@ -336,7 +354,7 @@ const inspection: ReportTemplate = {
         { key: 'module_count', label_he: 'מספר מודולים', kind: 'number', prefill: (c) => (c.moduleCount ? String(c.moduleCount) : '') },
         { key: 'module_voc', label_he: 'Voc של מודול (STC)', kind: 'number', unit: 'V', hint_he: 'מדף הנתונים' },
         { key: 'module_isc', label_he: 'Isc של מודול (STC)', kind: 'number', unit: 'A', hint_he: 'מדף הנתונים' },
-        { key: 'beta_voc', label_he: 'מקדם טמפ׳ Voc', kind: 'number', unit: '%/°C', hint_he: 'שלילי, למשל ‎-0.25' },
+        { key: 'beta_voc', label_he: 'מקדם טמפ׳ Voc', kind: 'number', unit: '%/°C', hint_he: 'מדף הנתונים, למשל 0.25 — נחשב תמיד כשלילי' },
         { key: 'inverters', label_he: 'ממירים (דגם וסריאל)', kind: 'textarea', prefill: (c) => (c.inverterModel ? `${c.inverterCount ?? 1} × ${c.inverterModel}` : '') },
       ],
     },
@@ -487,6 +505,10 @@ const inspection: ReportTemplate = {
   validate: (r) => {
     const out: string[] = []
     if (field(r, 'environment', 'irradiance_method') !== 'none' && num(field(r, 'environment', 'irradiance')) === null) out.push('חסרה מדידת קרינה (או לסמן "לא נמדד")')
+    if (!r.context.hasOptimizers && num(field(r, 'thresholds', 'voc_tol')) !== null && (num(field(r, 'environment', 'module_temp')) === null || num(field(r, 'system', 'beta_voc')) === null)) {
+      out.push('Voc צפוי מחושב בלי תיקון טמפרטורה — חסרים טמפ׳ מודול או מקדם טמפ׳')
+    }
+    if (r.context.hasOptimizers) out.push('מערכת עם אופטימייזרים: Voc צפוי ≈ 1V לאופטימייזר (לפני pairing)')
     if (!num(field(r, 'thresholds', 'riso_min'))) out.push('לא הוגדר סף Riso — הבידוד לא נבדק מול סף (פרמטר לאימות)')
     return out
   },
@@ -675,7 +697,9 @@ const handover: ReportTemplate = {
       .sort((a, b) => (b.finalizedAt ?? '').localeCompare(a.finalizedAt ?? ''))[0]
     if (!latest) out.push('אין דוח בדיקה 62446-1 נעול לפרויקט (HND-01)')
     else if (inspectionVerdict(latest).overall === 'fail') out.push('דוח הבדיקה האחרון נכשל — נדרשת בדיקה חוזרת שעברה')
-    const open = others.filter((o) => o.templateKey === 'defects').flatMap(openDefects)
+    // Only the latest revision of each defects list counts (rev 2 that closes everything supersedes rev 1).
+    const superseded = new Set(others.map((o) => o.supersedes).filter(Boolean))
+    const open = others.filter((o) => o.templateKey === 'defects' && !superseded.has(o.id)).flatMap(openDefects)
     if (open.length) out.push(`${open.length} ליקויים פתוחים בדוחות הליקויים`)
     return out
   },

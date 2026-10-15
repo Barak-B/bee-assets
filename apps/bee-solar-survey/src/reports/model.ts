@@ -4,9 +4,9 @@
  * storage and UI live elsewhere.
  */
 import { canonicalJson, sha256Hex, type QuoteVersion } from '@bee/quote-core'
-import { mapRoofType } from '../schema'
+import { mapRoofType, sha256OfDataUrl } from '../schema'
 import type { SiteSurveyProject } from '../types'
-import { TEMPLATES, inspectionVerdict, stringResult } from './templates'
+import { TEMPLATES, inspectionVerdict, num, readRiso, stringResult } from './templates'
 import type { Applies, ChecklistEntry, ReportContext, ReportInstance, ReportTemplate, Row, SectionDef, TemplateKey } from './types'
 
 export function buildContext(project: SiteSurveyProject, quote: QuoteVersion | null, warrantyLines: string[] = []): ReportContext {
@@ -110,7 +110,11 @@ export function validateReport(r: ReportInstance, others: ReportInstance[] = [])
   const warnings: string[] = []
   for (const s of visibleSections(t, r)) {
     if (s.kind === 'fields') {
-      for (const f of s.fields) if (f.required && !(r.fields[s.key]?.[f.key] ?? '').trim()) missing.push(`${s.title_he}: ${f.label_he}`)
+      for (const f of s.fields) {
+        const v = (r.fields[s.key]?.[f.key] ?? '').trim()
+        if (f.required && !v) missing.push(`${s.title_he}: ${f.label_he}`)
+        else if (v && f.kind === 'number' && num(v) === null) missing.push(`${s.title_he}: ${f.label_he} — "${v}" אינו מספר`)
+      }
     }
     if (s.kind === 'checklist') {
       for (const i of s.items) {
@@ -125,7 +129,12 @@ export function validateReport(r: ReportInstance, others: ReportInstance[] = [])
       const rows = (r.tables[s.key] ?? []).filter(rowFilled)
       if ((s.minRows ?? 0) > rows.length) missing.push(`${s.title_he}: נדרשת לפחות שורה אחת`)
       rows.forEach((row, i) => {
-        for (const c of s.columns) if (c.required && c.kind !== 'computed' && !(row[c.key] ?? '').trim()) missing.push(`${s.title_he} · שורה ${i + 1}: ${c.label_he}`)
+        for (const c of s.columns) {
+          const v = (row[c.key] ?? '').trim()
+          if (c.required && c.kind !== 'computed' && !v) missing.push(`${s.title_he} · שורה ${i + 1}: ${c.label_he}`)
+          // A number nobody can read ("451V") would silently leave the row unevaluated.
+          else if (v && c.kind === 'number' && num(v) === null && !(c.key === 'riso' && readRiso(v) !== null)) missing.push(`${s.title_he} · שורה ${i + 1}: ${c.label_he} — "${v}" אינו מספר`)
+        }
       })
     }
     if (s.kind === 'photos') {
@@ -140,7 +149,11 @@ export function validateReport(r: ReportInstance, others: ReportInstance[] = [])
   return { missing, warnings }
 }
 
-/** What the hash covers: everything a reader of the PDF sees. Photos by fingerprint, not bytes. */
+/**
+ * What the hash covers: everything a reader of the PDF sees. Photos and the
+ * drawn signatures are covered by the sha256 of their bytes (recomputed at
+ * lock time, never trusted from storage), plus their timestamps.
+ */
 export function canonicalContent(r: ReportInstance): unknown {
   return {
     template: `${r.templateKey}@${r.templateVersion}`,
@@ -151,8 +164,9 @@ export function canonicalContent(r: ReportInstance): unknown {
     fields: r.fields,
     checklists: r.checklists,
     tables: Object.fromEntries(Object.entries(r.tables).map(([k, rows]) => [k, rows.filter(rowFilled)])),
-    photos: r.photos.map((p) => ({ sectionKey: p.sectionKey, itemCode: p.itemCode ?? null, sha256: p.sha256 })),
-    signatures: Object.fromEntries(Object.entries(r.signatures).map(([k, s]) => [k, { name: s.name, signedAt: s.signedAt, png: s.dataUrl.length }])),
+    photos: r.photos.map((p) => ({ sectionKey: p.sectionKey, itemCode: p.itemCode ?? null, sha256: p.sha256, createdAt: p.createdAt })),
+    signatures: Object.fromEntries(Object.entries(r.signatures).map(([k, s]) => [k, { name: s.name, signedAt: s.signedAt, sha256: s.sha256 ?? null }])),
+    finalizedAt: r.finalizedAt,
     sourceReportId: r.sourceReportId ?? null,
   }
 }
@@ -164,8 +178,15 @@ export async function finalizeReport(r: ReportInstance, others: ReportInstance[]
   if (r.status === 'final') throw new ReportLockedError('הדוח כבר נעול')
   const v = validateReport(r, others)
   if (v.missing.length) throw new ReportLockedError(`חסרים ${v.missing.length} פריטים`)
-  const contentHash = await sha256Hex(canonicalJson(canonicalContent(r)))
-  return { ...r, status: 'final', finalizedAt: now.toISOString(), updatedAt: now.toISOString(), contentHash }
+  // A deep copy: the locked report shares nothing with the draft still on screen.
+  const f: ReportInstance = structuredClone(r)
+  for (const p of f.photos) p.sha256 = await sha256OfDataUrl(p.dataUrl)
+  for (const s of Object.values(f.signatures)) s.sha256 = await sha256Hex(s.dataUrl)
+  f.status = 'final'
+  f.finalizedAt = now.toISOString()
+  f.updatedAt = f.finalizedAt
+  f.contentHash = await sha256Hex(canonicalJson(canonicalContent(f)))
+  return f
 }
 
 /** A change after locking is a new revision (same idea as quote versions). Signatures do not carry over. */
@@ -200,9 +221,13 @@ export function defectsFromInspection(insp: ReportInstance, existing: ReportInst
   }
   for (const row of insp.tables.strings ?? []) {
     const res = stringResult(insp, row)
+    const where = `מחרוזת ${row.label || ''} ${row.inverter || ''}`.trim()
     if (res === 'fail') {
       const why = row.polarity === 'no' ? 'קוטביות הפוכה' : `Riso ${row.riso} MΩ מתחת לסף`
-      rows.push({ code: `STR-${row.label || '?'}`, severity: 'critical', blocks: 'yes', location: `מחרוזת ${row.label || ''} ${row.inverter || ''}`.trim(), description: why, status: 'open', fix: '' })
+      rows.push({ code: `STR-${row.label || '?'}`, severity: 'critical', blocks: 'yes', location: where, description: why, status: 'open', fix: '' })
+    } else if (res === 'warn') {
+      // A warning is worth a look, not a blocker: listed as minor so the list is never empty.
+      rows.push({ code: `STR-${row.label || '?'}`, severity: 'minor', blocks: '', location: where, description: 'סטיית Voc / Isc מעל הסבולת — לבדוק', status: 'open', fix: '' })
     }
   }
   for (const row of insp.tables.earthing ?? []) if (row.result === 'fail') rows.push({ code: 'EAR', severity: 'critical', blocks: 'yes', location: `${row.from} → ${row.to}`, description: `רציפות הארקה נכשלה (${row.ohm} Ω)`, status: 'open', fix: '' })

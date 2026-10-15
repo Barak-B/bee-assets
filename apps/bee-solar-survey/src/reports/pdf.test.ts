@@ -47,3 +47,17 @@ describe('report PDF', () => {
     expect((await buildReportPdf(d)).meta.pages).toBeGreaterThanOrEqual(1)
   })
 })
+
+describe('report PDF — long content', () => {
+  it('very long text continues on the next pages instead of running off the page', async () => {
+    const r = newReport('daily_report', project.id, ctx)
+    r.fields.issues!.notes = 'שורה ארוכה של הערות מהשטח עם פרטים רבים. '.repeat(400)
+    r.tables = {}
+    const d = newReport('defects', project.id, ctx)
+    d.tables.defects = [{ code: 'X', severity: 'minor', blocks: '', location: 'גג', description: 'תיאור ארוך מאוד של ליקוי. '.repeat(500), status: 'open', fix: '' }]
+    const a = await buildReportPdf(r)
+    const b = await buildReportPdf(d)
+    expect(a.meta.pages).toBeGreaterThan(2)
+    expect(b.meta.pages).toBeGreaterThan(2)
+  })
+})

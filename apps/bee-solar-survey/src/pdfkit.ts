@@ -153,14 +153,28 @@ export class Writer {
     const shown = value && value.trim() ? value.trim() : '—'
     const valueW = CONTENT_W - LABEL_W - 3
     const lines = this.wrap(shown, valueW)
-    const h = lines.length * LINE_H
-    this.ensure(h + 1)
-    this.text(label, RIGHT, this.y + 4.3, 'bold', 10)
-    lines.forEach((line, i) => this.text(line, RIGHT - LABEL_W - 3, this.y + 4.3 + i * LINE_H, 'normal', 10.5))
-    this.doc.setDrawColor(RULE)
-    this.doc.setLineWidth(0.2)
-    this.doc.line(MARGIN_X, this.y + h + 0.8, RIGHT, this.y + h + 0.8)
-    this.y += h + 2
+    // Long values continue on the next page instead of running off the bottom.
+    let i = 0
+    while (i < lines.length) {
+      this.ensure(LINE_H + 1)
+      const fit = Math.max(1, Math.floor((CONTENT_BOTTOM - this.y - 1) / LINE_H))
+      const chunk = lines.slice(i, i + fit)
+      if (i === 0) this.text(label, RIGHT, this.y + 4.3, 'bold', 10)
+      chunk.forEach((line, k) => this.text(line, RIGHT - LABEL_W - 3, this.y + 4.3 + k * LINE_H, 'normal', 10.5))
+      const h = chunk.length * LINE_H
+      i += chunk.length
+      if (i >= lines.length) {
+        this.doc.setDrawColor(RULE)
+        this.doc.setLineWidth(0.2)
+        this.doc.line(MARGIN_X, this.y + h + 0.8, RIGHT, this.y + h + 0.8)
+        this.y += h + 2
+      } else {
+        this.y += h
+        this.doc.addPage()
+        this.y = CONTENT_TOP
+        this.decoratePage()
+      }
+    }
   }
 
   paragraph(s: string, style: FontStyle = 'normal', size = 10.5, color = INK) {
@@ -277,6 +291,26 @@ export class Writer {
     this.y += 2
   }
 
+  /** One table row slice (used when a row continues on the next page). */
+  private drawRow(columns: TableColumn[], xs: { right: number; left: number }[], wrapped: string[][], size: number, lineH: number, pad: number, bold: boolean, zebra: boolean) {
+    const n = Math.max(1, ...wrapped.map((w) => w.length))
+    const rowH = n * lineH + pad * 2
+    if (zebra) {
+      this.doc.setFillColor('#f7f8fa')
+      this.doc.rect(MARGIN_X, this.y, CONTENT_W, rowH, 'F')
+    }
+    columns.forEach((c, i) => {
+      const cell = xs[i]!
+      const style: FontStyle = c.bold || bold ? 'bold' : 'normal'
+      wrapped[i]!.forEach((line, li) => {
+        const ty = this.y + pad + lineH * 0.8 + li * lineH
+        if (c.align === 'left') this.textLeft(line, cell.left + pad, ty, style, size, INK)
+        else this.text(line, cell.right - pad, ty, style, size, INK)
+      })
+    })
+    this.y += rowH
+  }
+
   /**
    * Simple table with header row and zebra stripes; columns are laid out
    * right-to-left in array order. Cell text wraps within its column.
@@ -314,7 +348,22 @@ export class Writer {
 
     drawHeader()
     rows.forEach((r, ri) => {
-      const wrapped = r.map((cell, i) => this.wrap(cell ?? '', (xs[i]!.right - xs[i]!.left) - pad * 2, 'normal', size))
+      let wrapped = r.map((cell, i) => this.wrap(cell ?? '', (xs[i]!.right - xs[i]!.left) - pad * 2, 'normal', size))
+      // A row taller than what is left on a page is drawn in slices, continuing under a
+      // repeated header — long text is never cut off at the bottom of the page.
+      for (;;) {
+        const n = Math.max(...wrapped.map((w) => w.length))
+        if (this.y + n * lineH + pad * 2 <= CONTENT_BOTTOM) break
+        const fits = Math.floor((CONTENT_BOTTOM - this.y - pad * 2) / lineH)
+        if (fits >= 3) {
+          this.drawRow(columns, xs, wrapped.map((w) => w.slice(0, fits)), size, lineH, pad, false, ri % 2 === 1)
+          wrapped = wrapped.map((w) => w.slice(fits))
+        }
+        this.doc.addPage()
+        this.y = CONTENT_TOP
+        this.decoratePage()
+        drawHeader()
+      }
       const n = Math.max(...wrapped.map((w) => w.length))
       const rowH = n * lineH + pad * 2
       if (this.y + rowH > CONTENT_BOTTOM) {

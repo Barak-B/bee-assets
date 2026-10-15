@@ -18,7 +18,7 @@ import {
   type StoredQuote,
 } from './db'
 import { PublishError, publishQuote, quoteViews, revokeQuote, settingsProblem } from './publish'
-import { escapeHtml } from './html'
+import { escapeAttr, escapeHtml } from './html'
 import { loadPricing } from './pricing'
 import { buildQuoteDraft } from './quote'
 import { markDirty } from './sync'
@@ -63,7 +63,8 @@ function bidiParts(s: string): string {
 }
 
 function publishBlock(row: StoredQuote, pub: Publication | null, settingsIssue: string | null): string {
-  const v = row.version_no
+  // Stored rows can come from a backup file — never trust them into an attribute raw.
+  const v = escapeAttr(String(row.version_no))
   if (pub && !pub.revokedAt) {
     return `
       <div class="pub" data-pub="${v}">
@@ -91,18 +92,18 @@ function publishBlock(row: StoredQuote, pub: Publication | null, settingsIssue: 
 function versionCard(row: StoredQuote, pub: Publication | null, settingsIssue: string | null): string {
   const q = row.quote
   return `
-    <article class="quote-card" data-ver="${row.version_no}">
-      <h3>גרסה ${row.version_no} · <bdi>${escapeHtml(q.quote_number)}</bdi></h3>
+    <article class="quote-card" data-ver="${escapeAttr(String(row.version_no))}">
+      <h3>גרסה ${escapeHtml(String(row.version_no))} · <bdi>${escapeHtml(q.quote_number)}</bdi></h3>
       <div class="meta">
         <span>${escapeHtml(q.created_at.replace('T', ' ').slice(0, 16))}</span>
         <span>${bidiParts(quoteSummaryHe(q) + deltaText(q))}</span>
         <span class="badge ${q.needs_owner_input ? 'badge-warn' : 'badge-ok'}">${q.needs_owner_input ? 'מחירים לאימות' : 'מתומחר'}</span>
       </div>
       <div class="item-actions">
-        <button class="btn btn-secondary" data-q-pdf="${row.version_no}">PDF</button>
-        <button class="btn btn-secondary" data-q-xlsx="customer" data-v="${row.version_no}">Excel ללקוח</button>
-        <button class="btn btn-secondary" data-q-xlsx="internal" data-v="${row.version_no}">Excel פנימי</button>
-        <button class="btn btn-ghost" data-q-json="${row.version_no}">JSON</button>
+        <button class="btn btn-secondary" data-q-pdf="${escapeAttr(String(row.version_no))}">PDF</button>
+        <button class="btn btn-secondary" data-q-xlsx="customer" data-v="${escapeAttr(String(row.version_no))}">Excel ללקוח</button>
+        <button class="btn btn-secondary" data-q-xlsx="internal" data-v="${escapeAttr(String(row.version_no))}">Excel פנימי</button>
+        <button class="btn btn-ghost" data-q-json="${escapeAttr(String(row.version_no))}">JSON</button>
       </div>
       ${publishBlock(row, pub, settingsIssue)}
     </article>`

@@ -468,10 +468,10 @@ test('field reports: inspection → lock → defects from the failures → hando
   await page.fill('[data-t="strings|0|label"]', 'S1')
   await page.fill('[data-t="strings|0|modules"]', '10')
   await page.selectOption('[data-t="strings|0|polarity"]', 'yes')
-  await page.fill('[data-t="strings|0|voc"]', '475')
+  await page.fill('[data-t="strings|0|voc"]', '10')
   await page.fill('[data-t="strings|0|riso"]', '35')
-  // Expected Voc at 45 °C = 50 × 10 × (1 − 0.0025 × 20) = 475 V → pass
-  await expect(page.locator('[data-tc="strings|0|voc_exp"]')).toHaveText('475')
+  // The test survey is SolarEdge: before pairing a string reads ≈1 V per optimizer → 10 V, pass
+  await expect(page.locator('[data-tc="strings|0|voc_exp"]')).toHaveText('10')
   await expect(page.locator('[data-tc="strings|0|result"]')).toHaveText('תקין')
   await page.fill('[data-t="strings|0|riso"]', '0.4')
   await expect(page.locator('[data-tc="strings|0|result"]')).toHaveText('נכשל')

@@ -135,6 +135,8 @@ export interface ReportPhoto {
 }
 
 export interface Signature {
+  /** sha256 of the PNG data URL, set when the report is locked (covered by the content hash). */
+  sha256?: string
   name: string
   /** PNG of the drawn signature. */
   dataUrl: string

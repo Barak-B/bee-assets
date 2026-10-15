@@ -5,7 +5,7 @@
  * saved to IndexedDB. A locked report is read-only — changes are a new revision.
  */
 import { getProject, getReport, listQuotes, listReports, saveReport, deleteDraftReport } from '../db'
-import { escapeAttr, escapeHtml } from '../html'
+import { escapeAttr, escapeHtml, safeImageSrc } from '../html'
 import { compressImageFile } from '../photos'
 import { loadPricing } from '../pricing'
 import { sha256OfDataUrl } from '../schema'
@@ -55,14 +55,14 @@ export async function openReportsDialog(projectId: string, ctx: ReportsDialogCtx
     const t = template(r)
     const o = t.outcome?.(r)
     return `
-      <article class="quote-card" data-report="${r.id}">
+      <article class="quote-card" data-report="${escapeAttr(r.id)}">
         <h3>${escapeHtml(t.title_he)} · גרסה ${r.revision}</h3>
         <div class="meta">
           <span>${escapeHtml(r.updatedAt.replace('T', ' ').slice(0, 16))}</span>
           <span class="badge ${r.status === 'final' ? 'badge-ok' : 'badge-warn'}">${r.status === 'final' ? 'נעול' : 'טיוטה'}</span>
           ${o ? `<span class="badge ${TONE_CLASS[o.tone]}">${escapeHtml(o.label_he)}</span>` : ''}
         </div>
-        <div class="item-actions"><button class="btn btn-secondary" data-r-open="${r.id}">${r.status === 'final' ? 'צפייה' : 'המשך מילוי'}</button></div>
+        <div class="item-actions"><button class="btn btn-secondary" data-r-open="${escapeAttr(r.id)}">${r.status === 'final' ? 'צפייה' : 'המשך מילוי'}</button></div>
       </article>`
   }
   host.innerHTML = `
@@ -93,12 +93,15 @@ export async function openReportsDialog(projectId: string, ctx: ReportsDialogCtx
     }),
   )
   host.querySelectorAll<HTMLElement>('[data-r-new]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const r = newReport(b.dataset.rNew as TemplateKey, projectId, await jobContext(projectId), reports)
-      await saveReport(r)
-      close()
-      await ctx.openReport(r.id)
-    }),
+    b.addEventListener('click', () =>
+      once(b, async () => {
+        const r = newReport(b.dataset.rNew as TemplateKey, projectId, await jobContext(projectId), await listReports(projectId))
+        await saveReport(r)
+        markChanged(projectId)
+        close()
+        await ctx.openReport(r.id)
+      }),
+    ),
   )
 }
 
@@ -107,6 +110,22 @@ export async function openReportsDialog(projectId: string, ctx: ReportsDialogCtx
 let current: ReportInstance | null = null
 let others: ReportInstance[] = []
 let saveTimer = 0
+/** One structural action at a time (finalize, revise, new, defects): a double tap is ignored. */
+let busy = false
+
+async function once(btn: HTMLElement | null, fn: () => Promise<void>) {
+  if (busy) return
+  busy = true
+  btn?.setAttribute('aria-busy', 'true')
+  if (btn instanceof HTMLButtonElement) btn.disabled = true
+  try {
+    await fn()
+  } finally {
+    busy = false
+    btn?.removeAttribute('aria-busy')
+    if (btn instanceof HTMLButtonElement) btn.disabled = false
+  }
+}
 
 function scheduleSave(ctx: ReportEditorCtx) {
   if (!current || current.status === 'final') return
@@ -157,7 +176,7 @@ function fieldHtml(sec: string, f: FieldDef, r: ReportInstance, dis: string): st
 function thumbs(r: ReportInstance, sec: string, item: string | undefined, dis: string): string {
   const list = r.photos.filter((p) => p.sectionKey === sec && (p.itemCode ?? '') === (item ?? ''))
   if (!list.length) return ''
-  return `<div class="thumbs">${list.map((p) => `<div class="thumb"><img src="${p.dataUrl}" alt="" />${dis ? '' : `<button type="button" title="מחק" data-pdel="${p.id}">×</button>`}</div>`).join('')}</div>`
+  return `<div class="thumbs">${list.map((p) => `<div class="thumb"><img src="${safeImageSrc(p.dataUrl)}" alt="" />${dis ? '' : `<button type="button" title="מחק" data-pdel="${escapeAttr(p.id)}">×</button>`}</div>`).join('')}</div>`
 }
 
 function checklistItemHtml(sec: string, i: ChecklistItemDef, r: ReportInstance, dis: string): string {
@@ -222,7 +241,7 @@ function sectionHtml(s: SectionDef, r: ReportInstance, dis: string): string {
           <div><strong>${escapeHtml(g.label_he)}</strong>${g.required ? ' <span class="req">*</span>' : ''}</div>
           ${
             sg
-              ? `<img class="sig-img" src="${sg.dataUrl}" alt="חתימה" /><div class="meta">${escapeHtml(sg.name)} · ${escapeHtml(sg.signedAt.replace('T', ' ').slice(0, 16))}</div>${dis ? '' : `<button type="button" class="btn btn-ghost btn-sm" data-sclear="${g.key}">נקה חתימה</button>`}`
+              ? `<img class="sig-img" src="${safeImageSrc(sg.dataUrl)}" alt="חתימה" /><div class="meta">${escapeHtml(sg.name)} · ${escapeHtml(sg.signedAt.replace('T', ' ').slice(0, 16))}</div>${dis ? '' : `<button type="button" class="btn btn-ghost btn-sm" data-sclear="${g.key}">נקה חתימה</button>`}`
               : dis
                 ? '<div class="meta">לא נחתם</div>'
                 : `<button type="button" class="btn btn-secondary" data-sign="${g.key}" data-role="${escapeAttr(g.label_he)}">חתימה</button>`
@@ -251,7 +270,7 @@ function draw(ctx: ReportEditorCtx, keepScroll = false) {
   const dis = final ? 'disabled' : ''
   const scroll = window.scrollY
   const o = t.outcome?.(r)
-  const canDefects = final && r.templateKey === 'inspection_62446' && (o?.tone === 'fail' || o?.tone === 'warn')
+  const canDefects = final && r.templateKey === 'inspection_62446' && (o?.tone === 'fail' || o?.tone === 'warn') && defectsFromInspection(r).tables.defects?.some((d) => d.description)
   ctx.app.innerHTML = `
     <header class="topbar">
       <div class="brand">
@@ -382,15 +401,21 @@ function bind(ctx: ReportEditorCtx) {
       el.addEventListener('click', async () => {
         const [sec, code] = el.dataset.padd!.split('|') as [string, string]
         const files = await pickImage(el.dataset.cam === '1')
+        const added: ReportInstance['photos'] = []
         for (const file of files.slice(0, 10)) {
           const { dataUrl, mimeType } = await compressImageFile(file)
-          r.photos.push({ id: crypto.randomUUID(), sectionKey: sec, ...(code ? { itemCode: code } : {}), dataUrl, mimeType, sha256: await sha256OfDataUrl(dataUrl), createdAt: new Date().toISOString() })
+          added.push({ id: crypto.randomUUID(), sectionKey: sec, ...(code ? { itemCode: code } : {}), dataUrl, mimeType, sha256: await sha256OfDataUrl(dataUrl), createdAt: new Date().toISOString() })
         }
-        if (files.length) {
-          await saveNow()
-          draw(ctx, true)
-          ctx.toast(`${files.length} תמונות נוספו`)
+        if (!added.length) return
+        // Compression takes a while: the report may have been locked, closed or deleted meanwhile.
+        if (!current || current.id !== r.id || current.status === 'final') {
+          ctx.toast('הדוח השתנה בזמן עיבוד התמונות — התמונות לא נוספו')
+          return
         }
+        current.photos.push(...added)
+        await saveNow()
+        draw(ctx, true)
+        ctx.toast(`${added.length} תמונות נוספו`)
       }),
     )
     app.querySelectorAll<HTMLElement>('[data-pdel]').forEach((el) =>
@@ -423,7 +448,7 @@ function bind(ctx: ReportEditorCtx) {
       current = null
       ctx.onBack()
     })
-    $('#rpFinalize')?.addEventListener('click', async () => {
+    $('#rpFinalize')?.addEventListener('click', () => once($('#rpFinalize'), async () => {
       await saveNow()
       const v = validateReport(r, others)
       const box = $('#rpIssues')!
@@ -440,21 +465,29 @@ function bind(ctx: ReportEditorCtx) {
       requestSync()
       draw(ctx)
       ctx.toast('הדוח ננעל')
-    })
+    }))
   } else {
-    $('#rpRevise')?.addEventListener('click', async () => {
-      const rev = reviseReport(r, [...others, r])
-      await saveReport(rev)
-      await ctx.openReport(rev.id)
-      ctx.toast(`נפתחה גרסה ${rev.revision} — החתימות לא עוברות`)
-    })
-    $('#rpDefects')?.addEventListener('click', async () => {
-      const d = defectsFromInspection(r, [...others, r])
-      await saveReport(d)
-      requestSync()
-      await ctx.openReport(d.id)
-      ctx.toast(`נוצרה רשימת ליקויים · ${d.tables.defects?.filter((x) => x.description).length ?? 0} פריטים`)
-    })
+    $('#rpRevise')?.addEventListener('click', () =>
+      once($('#rpRevise'), async () => {
+        // Fresh list, so two quick taps can never mint the same revision number.
+        const rev = reviseReport(r, await listReports(r.projectId))
+        await saveReport(rev)
+        markChanged(r.projectId)
+        requestSync()
+        await ctx.openReport(rev.id)
+        ctx.toast(`נפתחה גרסה ${rev.revision} — החתימות לא עוברות`)
+      }),
+    )
+    $('#rpDefects')?.addEventListener('click', () =>
+      once($('#rpDefects'), async () => {
+        const d = defectsFromInspection(r, await listReports(r.projectId))
+        await saveReport(d)
+        markChanged(r.projectId)
+        requestSync()
+        await ctx.openReport(d.id)
+        ctx.toast(`נוצרה רשימת ליקויים · ${d.tables.defects?.filter((x) => x.description).length ?? 0} פריטים`)
+      }),
+    )
   }
 
   $('#rpPdf')?.addEventListener('click', async () => {
@@ -501,14 +534,15 @@ function openSignaturePad(host: HTMLElement, role: string, onSave: (name: string
   reset()
   let drawing = false
   let strokes = 0
+  let last: { x: number; y: number } | null = null
   const pos = (e: PointerEvent) => {
     const b = canvas.getBoundingClientRect()
     return { x: ((e.clientX - b.left) / b.width) * canvas.width, y: ((e.clientY - b.top) / b.height) * canvas.height }
   }
   canvas.addEventListener('pointerdown', (e) => {
     drawing = true
-    strokes++
     const p = pos(e)
+    last = p
     c.beginPath()
     c.moveTo(p.x, p.y)
     canvas.setPointerCapture(e.pointerId)
@@ -517,10 +551,18 @@ function openSignaturePad(host: HTMLElement, role: string, onSave: (name: string
   canvas.addEventListener('pointermove', (e) => {
     if (!drawing) return
     const p = pos(e)
+    // Only real ink counts — a tap that draws nothing must not pass as a signature.
+    if (last && Math.hypot(p.x - last.x, p.y - last.y) > 2) strokes++
+    last = p
     c.lineTo(p.x, p.y)
     c.stroke()
   })
-  canvas.addEventListener('pointerup', () => (drawing = false))
+  const stop = () => {
+    drawing = false
+    last = null
+  }
+  canvas.addEventListener('pointerup', stop)
+  canvas.addEventListener('pointercancel', stop)
   const close = () => (host.innerHTML = '')
   host.querySelector('#sgClear')?.addEventListener('click', () => {
     strokes = 0
@@ -533,7 +575,10 @@ function openSignaturePad(host: HTMLElement, role: string, onSave: (name: string
       host.querySelector<HTMLInputElement>('#sgName')!.focus()
       return
     }
-    if (!strokes) return
+    if (strokes < 3) {
+      host.querySelector('#sgCanvas')?.classList.add('sig-empty')
+      return
+    }
     const dataUrl = canvas.toDataURL('image/png')
     close()
     onSave(name, dataUrl)

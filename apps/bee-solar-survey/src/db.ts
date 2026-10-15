@@ -351,13 +351,28 @@ export async function getReport(id: string): Promise<ReportInstance | undefined>
   })
 }
 
-/** Save a draft, or lock it (draft → final). A stored final report is never overwritten. */
+/**
+ * Save a draft, or lock it (draft → final). A stored final report is never
+ * overwritten — checked and written in one transaction, so two concurrent saves
+ * cannot both pass the check.
+ */
 export async function saveReport(r: ReportInstance): Promise<void> {
-  const prev = await getReport(r.id)
-  if (prev?.status === 'final') throw new Error('report is final')
   const db = await openDB()
   const tx = db.transaction('reports', 'readwrite')
-  tx.objectStore('reports').put(r)
+  const store = tx.objectStore('reports')
+  await new Promise<void>((resolve, reject) => {
+    const req = store.get(r.id)
+    req.onsuccess = () => {
+      if ((req.result as ReportInstance | undefined)?.status === 'final') {
+        tx.abort()
+        reject(new Error('report is final'))
+        return
+      }
+      store.put(r)
+      resolve()
+    }
+    req.onerror = () => reject(req.error)
+  })
   await txDone(tx)
 }
 

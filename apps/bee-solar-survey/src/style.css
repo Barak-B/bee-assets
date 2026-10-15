@@ -1098,3 +1098,8 @@ textarea {
   color: #a12626;
   font-weight: 700;
 }
+
+.sig-canvas.sig-empty {
+  border-color: #a12626;
+  box-shadow: 0 0 0 2px #fde7e7;
+}

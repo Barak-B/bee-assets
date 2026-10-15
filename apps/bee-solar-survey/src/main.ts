@@ -17,7 +17,7 @@ import {
 } from './db'
 import { buildHiveExportBundle } from './hive'
 import { fileToSurveyPhoto, getCurrentGps } from './photos'
-import { escapeAttr, escapeHtml } from './html'
+import { escapeAttr, escapeHtml, safeImageSrc } from './html'
 import { renderPricingScreen } from './pricingScreen'
 import { openQuotesDialog } from './quotesDialog'
 import { openReportsDialog, renderReportEditor } from './reports/ui'
@@ -173,9 +173,9 @@ function photoBlock(field: PhotoFieldKey, required = false): string {
         ${list
           .map(
             (p) => `
-          <div class="thumb" data-photo="${p.id}">
-            <img src="${p.dataUrl}" alt="" />
-            <button type="button" title="מחק" data-action="del-photo" data-id="${p.id}">×</button>
+          <div class="thumb" data-photo="${escapeAttr(p.id)}">
+            <img src="${safeImageSrc(p.dataUrl)}" alt="" />
+            <button type="button" title="מחק" data-action="del-photo" data-id="${escapeAttr(p.id)}">×</button>
           </div>`,
           )
           .join('')}
@@ -250,22 +250,22 @@ async function render() {
               : filtered
                   .map(
                     (p, i) => `
-            <article class="project-item" style="animation-delay:${i * 40}ms" data-open="${p.id}">
+            <article class="project-item" style="animation-delay:${i * 40}ms" data-open="${escapeAttr(p.id)}">
               <h3>${escapeHtml(p.projectName || 'ללא שם')}</h3>
               <div class="meta">
                 <span>${escapeHtml(p.surveyDate || '')}</span>
                 <span>${escapeHtml(p.surveyor || '')}</span>
                 <span>${escapeHtml(p.address || '')}</span>
                 <span class="badge ${p.hiveReady ? 'badge-ok' : 'badge-warn'}">${p.hiveReady ? 'מוכן ל־54' : 'טיוטה'}</span>
-                <span class="badge sync-chip hidden" data-sync-chip="${p.id}"></span>
+                <span class="badge sync-chip hidden" data-sync-chip="${escapeAttr(p.id)}"></span>
               </div>
               <div class="item-actions">
-                <button class="btn btn-secondary" data-edit="${p.id}">עריכה</button>
-                <button class="btn btn-secondary" data-hive="${p.id}">ייצוא כוורת</button>
-                <button class="btn btn-secondary" data-pdf="${p.id}">PDF</button>
-                <button class="btn btn-secondary" data-quote="${p.id}">הצעות מחיר</button>
-                <button class="btn btn-secondary" data-reports="${p.id}">דוחות שטח</button>
-                <button class="btn btn-danger" data-del="${p.id}">מחק</button>
+                <button class="btn btn-secondary" data-edit="${escapeAttr(p.id)}">עריכה</button>
+                <button class="btn btn-secondary" data-hive="${escapeAttr(p.id)}">ייצוא כוורת</button>
+                <button class="btn btn-secondary" data-pdf="${escapeAttr(p.id)}">PDF</button>
+                <button class="btn btn-secondary" data-quote="${escapeAttr(p.id)}">הצעות מחיר</button>
+                <button class="btn btn-secondary" data-reports="${escapeAttr(p.id)}">דוחות שטח</button>
+                <button class="btn btn-danger" data-del="${escapeAttr(p.id)}">מחק</button>
               </div>
             </article>`,
                   )
@@ -499,7 +499,7 @@ function renderCustomFields() {
   host.innerHTML = editing.customFields
     .map(
       (f, idx) => `
-    <div class="grid-2" data-cf="${f.id}">
+    <div class="grid-2" data-cf="${escapeAttr(f.id)}">
       <div class="field"><label>תווית</label><input data-cf-label="${idx}" value="${escapeAttr(f.label)}" /></div>
       <div class="field"><label>ערך</label><div class="gps-row"><input data-cf-value="${idx}" value="${escapeAttr(f.value)}" /><button type="button" class="btn btn-danger" data-cf-del="${idx}">×</button></div></div>
     </div>`,
