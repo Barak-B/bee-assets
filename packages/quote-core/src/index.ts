@@ -1,5 +1,5 @@
 export * from './types'
-export { buildQuote, sizeSystem, buildAssemblies, priceLines, computeTotals, quoteNumberFor, isBlockingFlag } from './engine'
+export { buildQuote, sizeSystem, buildAssemblies, priceLines, computeTotals, quoteNumberFor, isBlockingFlag, cleanTexts } from './engine'
 export { diffQuotes, diffIsEmpty } from './diff'
 export {
   BOQ_SECTIONS,

@@ -7,7 +7,7 @@
 import { boqSectionTitle } from './pricebook'
 import { round2 } from './money'
 import { TRACK_LABELS_HE } from './roi'
-import type { QuoteLine, QuoteVersion, RoiAssumption } from './types'
+import type { QuoteLine, QuoteTexts, QuoteVersion, RoiAssumption } from './types'
 
 export interface PublicQuoteLine {
   name_he: string
@@ -53,7 +53,7 @@ export interface PublicQuote {
     passthrough_note_he: string
   }
   payment_schedule: { label_he: string; pct: number | null; amount_ils: number | null }[]
-  terms: { linkage: 'none' | 'fx'; validity_days: number | null }
+  terms: { linkage: 'none' | 'fx'; validity_days: number | null; texts?: QuoteTexts }
   /** Production and savings estimate — only when the quote carries one. */
   roi?: PublicRoi
   /** Short, non-reversible fingerprint the customer can quote back (first 12 hex of the snapshot hash). */
@@ -157,7 +157,7 @@ export function toPublicQuote(q: QuoteVersion, opts: { customerName?: string } =
       pct: m.pct,
       amount_ils: m.pct === null || total === null ? null : Math.round((total * m.pct) / 100),
     })),
-    terms: { linkage: q.terms.linkage, validity_days: q.terms.validity_days },
+    terms: { linkage: q.terms.linkage, validity_days: q.terms.validity_days, ...(q.terms.texts ? { texts: q.terms.texts } : {}) },
     ...(q.roi
       ? {
           roi: {

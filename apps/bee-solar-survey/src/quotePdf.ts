@@ -248,9 +248,25 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
   w.section('תוקף ותנאים')
   w.row('תוקף ההצעה', quote.terms.valid_until ? `עד ${quote.terms.valid_until} (${quote.terms.validity_days} ימים)` : 'לאימות *')
   w.row('הצמדה', quote.terms.linkage === 'fx' ? 'מחירי הציוד צמודים לשער המט״ח ביום ההצעה *' : 'המחיר קבוע לתקופת התוקף')
-  w.row('לא כלול', 'חיזוקי קונסטרוקציה/שיפוץ גג, הגדלת חיבור ואגרות חח״י, עבודות בנייה, חיבור אינטרנט באתר')
+  const texts = quote.terms.texts
+  if (!texts?.excluded.length) w.row('לא כלול', 'חיזוקי קונסטרוקציה/שיפוץ גג, הגדלת חיבור ואגרות חח״י, עבודות בנייה, חיבור אינטרנט באתר')
   w.row('הנחות תכנון', 'גג תקין נושא עומס; גישה למנוף; לוח קיים תקין; פריסה סופית תיקבע בתכנון המפורט')
   w.space()
+
+  // ── Company wording (quote-pdf-sections §2.7, §2.9, §2.10) ──
+  const textSections: [keyof NonNullable<typeof texts>, string][] = [
+    ['included', 'כלול בהצעה'],
+    ['excluded', 'לא כלול'],
+    ['warranty', 'אחריות'],
+    ['customer_obligations', 'באחריות הלקוח'],
+  ]
+  for (const [k, title] of textSections) {
+    const items = texts?.[k] ?? []
+    if (!items.length) continue
+    w.section(title)
+    w.bullets(items)
+    w.space()
+  }
 
   // ── What Barak must complete ────────────────────────────
   const missing = [...new Set(quote.flags.map(flagLabelHe))]

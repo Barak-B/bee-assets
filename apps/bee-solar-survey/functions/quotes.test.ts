@@ -98,6 +98,21 @@ describe('publish API', () => {
     expect(await (await pageGet(ctx(e, without.url, {}, { token: without.token }))).text()).not.toContain('תחזית ייצור וחיסכון')
   })
 
+  it('prints the company wording as escaped lists, falling back to the default exclusions', async () => {
+    const e = env()
+    const pq = await publicQuote()
+    const withTexts = { ...pq, terms: { ...pq.terms, texts: { included: ['תכנון <b>חשמלי</b>'], excluded: ['חיזוק גג'], warranty: ['עבודה — 5 שנים'], customer_obligations: [] } } }
+    const a = (await (await publish(e, { quote: withTexts })).json()) as { token: string; url: string }
+    const page = await (await pageGet(ctx(e, a.url, {}, { token: a.token }))).text()
+    expect(page).toContain('id="t-warranty"')
+    expect(page).toContain('עבודה — 5 שנים')
+    expect(page).toContain('תכנון &lt;b&gt;חשמלי&lt;/b&gt;')
+    expect(page).not.toContain('id="t-customer_obligations"')
+    expect(page).not.toContain('הגדלת חיבור ואגרות חברת החשמל') // replaced by Barak's list
+    const b = (await (await publish(e, { quote: pq })).json()) as { token: string; url: string }
+    expect(await (await pageGet(ctx(e, b.url, {}, { token: b.token }))).text()).toContain('הגדלת חיבור ואגרות חברת החשמל')
+  })
+
   it('lets the customer approve the exact version once, and reports it to the app', async () => {
     const e = env()
     const pq = await publicQuote()

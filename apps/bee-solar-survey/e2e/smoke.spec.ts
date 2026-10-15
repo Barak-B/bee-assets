@@ -109,6 +109,8 @@ async function fillPriceBook(page: Page, publish?: { baseUrl: string; key: strin
     await page.fill('#p_roi_consumption_tariff_ils_kwh', '0.6') // test tariff, not a real one
     await page.click('#pSuggestRoi')
     await expect(page.locator('#p_roi_horizon_years')).toHaveValue('25')
+    await page.fill('#p_t_warranty', 'עבודה והתקנה — 5 שנים\n\n  ')
+    await page.fill('#p_t_excluded', 'חיזוק גג')
   }
   if (publish) {
     await page.fill('#p_pubBase', publish.baseUrl)
@@ -232,6 +234,12 @@ test('publish a priced quote → customer link on our domain, never 127.0.0.1', 
   expect(roi?.savings_y1_ils).toBeGreaterThan(0)
   expect(roi?.cumulative).toHaveLength(25)
   expect(roi?.monthly_kwh).toHaveLength(12)
+  expect((published!.quote as { terms: { texts?: { warranty: string[]; excluded: string[]; included: string[] } } }).terms.texts).toEqual({
+    included: [],
+    excluded: ['חיזוק גג'],
+    warranty: ['עבודה והתקנה — 5 שנים'],
+    customer_obligations: [],
+  })
   // Check the quote JSON only — the base64 PDF next to it can contain any letters.
   const quoteJson = JSON.stringify(published!.quote)
   for (const banned of ['"unit_cost"', '"margin_pct"', '"fx_rate"', '"sku"', '"flags"', '"npv_ils"', '"irr_pct"']) expect(quoteJson).not.toContain(banned)

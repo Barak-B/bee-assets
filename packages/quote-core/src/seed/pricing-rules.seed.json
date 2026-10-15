@@ -77,6 +77,12 @@
     "co2_kg_per_kwh": null,
     "verification": "unverified"
   },
+  "texts": {
+    "included": [],
+    "excluded": [],
+    "warranty": [],
+    "customer_obligations": []
+  },
   "verification": "unverified",
   "needs_owner_input": true
 }

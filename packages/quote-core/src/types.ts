@@ -153,6 +153,21 @@ export interface RoiResult {
   verification: Verification
 }
 
+/**
+ * Company wording printed on every quote (quote-pdf-sections §2.7, §2.9, §2.10).
+ * One item per entry; empty lists are simply not printed.
+ */
+export interface QuoteTexts {
+  /** "כלול בהצעה" — scope of work. */
+  included: string[]
+  /** "לא כלול" — exclusions. */
+  excluded: string[]
+  /** "אחריות" — one line per component, e.g. "מודולים — 12 שנות מוצר, 25 שנות תפוקה". */
+  warranty: string[]
+  /** "באחריות הלקוח" — access, bills, IEC fees, signatures. */
+  customer_obligations: string[]
+}
+
 export interface PaymentMilestone {
   milestone_key: string
   label_he: string
@@ -185,6 +200,8 @@ export interface PricingRules {
   payment_schedule: PaymentMilestone[]
   /** Production / savings estimate parameters (optional; absent in price books saved before ROI). */
   roi?: RoiRules
+  /** Fixed company wording (optional; absent in older price books). */
+  texts?: QuoteTexts
   verification: Verification
   needs_owner_input: boolean
 }
@@ -304,6 +321,8 @@ export interface QuoteVersion {
     valid_until: string | null
     linkage: 'none' | 'fx'
     payment_schedule: PaymentMilestone[]
+    /** Snapshot of the company wording; absent when the price book has none. */
+    texts?: QuoteTexts
   }
   flags: string[]
   needs_owner_input: boolean

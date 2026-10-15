@@ -9,6 +9,7 @@ import type {
   QuoteDesign,
   QuoteInput,
   QuoteLine,
+  QuoteTexts,
   QuoteTotals,
   QuoteVersion,
   RoofType,
@@ -336,6 +337,15 @@ export function isBlockingFlag(flag: string): boolean {
   return /^(rules|pricing|catalog):/.test(flag) || flag === 'sizing:no_kwp_basis'
 }
 
+const TEXT_KEYS = ['included', 'excluded', 'warranty', 'customer_obligations'] as const
+
+/** Trimmed, non-empty lines; null when there is nothing to print. */
+export function cleanTexts(t: QuoteTexts | undefined): QuoteTexts | null {
+  if (!t) return null
+  const out = Object.fromEntries(TEXT_KEYS.map((k) => [k, (t[k] ?? []).map((x) => String(x).trim()).filter(Boolean)])) as unknown as QuoteTexts
+  return TEXT_KEYS.some((k) => out[k].length) ? out : null
+}
+
 export interface BuildQuoteOptions {
   now?: Date
   quoteNumber?: string
@@ -379,6 +389,9 @@ export async function buildQuote(
     linkage: hasFx ? 'fx' : 'none',
     payment_schedule: rules.payment_schedule,
   }
+  const texts = cleanTexts(rules.texts)
+  // Only when there is wording, so price books without it keep their snapshot hashes.
+  if (texts) terms.texts = texts
 
   const roi = computeRoi(rules.roi, { input, design: sizing.design, totals, vatRate: rules.vat_rate, specificYield: rules.sizing.specific_yield_kwh_per_kwp })
   // `roi` joins the hashed snapshot only when produced, so price books without ROI keep their hashes.

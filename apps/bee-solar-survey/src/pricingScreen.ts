@@ -20,6 +20,7 @@ import {
   type Product,
   type ProductKind,
   type RoofType,
+  type QuoteTexts,
   type RoiRules,
   type TariffTrack,
 } from '@bee/quote-core'
@@ -63,6 +64,13 @@ const ROI_FIELDS: { key: RoiNumKey; label: string; scale?: number; tracks?: Tari
   { key: 'discount_rate_pct', label: 'שיעור היוון (%)' },
   { key: 'horizon_years', label: 'אופק (שנים)' },
   { key: 'co2_kg_per_kwh', label: 'מקדם פליטה (ק״ג CO₂ לקוט״ש, אופציונלי)' },
+]
+
+const TEXT_FIELDS: { key: keyof QuoteTexts; label: string; placeholder: string }[] = [
+  { key: 'included', label: 'כלול בהצעה', placeholder: 'תכנון חשמלי ע״י מהנדס\nהגשה לחח״י וליווי עד חיבור\nאספקה והתקנה' },
+  { key: 'excluded', label: 'לא כלול', placeholder: 'חיזוקי קונסטרוקציה או שיפוץ גג\nהגדלת חיבור ואגרות חח״י' },
+  { key: 'warranty', label: 'אחריות (שורה לכל רכיב)', placeholder: 'מודולים — X שנות מוצר, Y שנות תפוקה\nממיר — X שנים\nעבודה והתקנה — X שנים' },
+  { key: 'customer_obligations', label: 'באחריות הלקוח', placeholder: 'גישה לגג וללוח החשמל\nחשבון חשמל אחרון\nתשלום אגרות חח״י' },
 ]
 
 let state: Pricing | null = null
@@ -214,6 +222,12 @@ function render(ctx: Ctx, p: Pricing) {
         <button type="button" class="btn btn-ghost" id="pSuggestRoi">מלא ערכים כלליים מומלצים (בלי תעריפים)</button>
       </section>
 
+      <section class="section" id="textsSection">
+        <h2>נוסחים קבועים בהצעה</h2>
+        <p class="hint">שורה לכל פריט. מופיעים בכל הצעה — ב-PDF ובדף ללקוח. רשימה ריקה לא תודפס.</p>
+        ${TEXT_FIELDS.map((f) => `<div class="field"><label>${f.label}</label><textarea id="p_t_${f.key}" rows="4" placeholder="${escapeAttr(f.placeholder)}">${escapeHtml((r.texts?.[f.key] ?? []).join('\n'))}</textarea></div>`).join('')}
+      </section>
+
       <section class="section">
         <h2>לוח תשלומים (%)</h2>
         <div class="grid-2">
@@ -258,6 +272,11 @@ function readForm(ctx: Ctx, base: Pricing): { catalog: Catalog; rules: PricingRu
   roi.track = track ? (track as TariffTrack) : null
   for (const f of ROI_FIELDS) roi[f.key] = readNum(q(`p_roi_${f.key}`), f.scale)
   rules.roi = roi
+  const texts = {} as QuoteTexts
+  for (const f of TEXT_FIELDS) {
+    texts[f.key] = (ctx.app.querySelector<HTMLTextAreaElement>(`#p_t_${f.key}`)?.value ?? '').split('\n').map((x) => x.trim()).filter(Boolean)
+  }
+  rules.texts = texts
 
   for (const prod of catalog.products) {
     const costEl = ctx.app.querySelector<HTMLInputElement>(`[data-cost="${CSS.escape(prod.sku)}"]`)

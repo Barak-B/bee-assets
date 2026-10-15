@@ -127,7 +127,7 @@ describe('ROI in the quote', () => {
     // ROI parameters are recommended, never blocking
     expect(pricingReadiness(catalog, rules).ready).toBe(true)
     expect(pricingReadiness(catalog, rules).recommended.map((r) => r.key)).toContain('roi.track')
-    expect(pricingReadiness(catalog, withRoi).recommended).toEqual([])
+    expect(pricingReadiness(catalog, withRoi).recommended.filter((r) => r.key.startsWith('roi.'))).toEqual([])
     expect(b.needs_owner_input).toBe(false)
   })
 

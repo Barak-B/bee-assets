@@ -187,6 +187,21 @@ function roiCard(r: PublicRoi): string {
   </section>`
 }
 
+const TEXT_TITLES: [keyof NonNullable<PublicQuote['terms']['texts']>, string][] = [
+  ['included', 'מה כלול בהצעה'],
+  ['excluded', 'לא כלול'],
+  ['warranty', 'אחריות'],
+  ['customer_obligations', 'באחריות הלקוח'],
+]
+
+function textCards(q: PublicQuote): string {
+  const t = q.terms.texts
+  if (!t) return ''
+  return TEXT_TITLES.filter(([k]) => Array.isArray(t[k]) && t[k].length)
+    .map(([k, title]) => `<section class="card" id="t-${k}"><h2>${esc(title)}</h2><ul>${t[k].map((x) => `<li>${esc(x)}</li>`).join('')}</ul></section>`)
+    .join('')
+}
+
 export interface RenderOpts {
   token: string
   hasPdf: boolean
@@ -326,11 +341,13 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
     <ul>
       <li>${q.valid_until ? `ההצעה בתוקף עד ${formatDate(q.valid_until)}.` : 'תוקף ההצעה ייקבע בהסכם.'}</li>
       <li>${q.terms.linkage === 'fx' ? 'מחירי הציוד צמודים לשער המטבע ביום ההצעה.' : 'המחיר קבוע לתקופת התוקף.'}</li>
-      <li>לא כלול: חיזוקי קונסטרוקציה או שיפוץ גג, הגדלת חיבור ואגרות חברת החשמל, עבודות בנייה.</li>
+      ${q.terms.texts?.excluded?.length ? '' : '<li>לא כלול: חיזוקי קונסטרוקציה או שיפוץ גג, הגדלת חיבור ואגרות חברת החשמל, עבודות בנייה.</li>'}
       <li>פריסה סופית ומפרט מדויק ייקבעו בתכנון המפורט.</li>
       <li>* ייצור משוער לפי ממוצע אזורי; הייצור בפועל משתנה בין שנים.</li>
     </ul>
   </section>
+
+  ${textCards(q)}
 
   ${acceptCard(q, opts, expired)}
 

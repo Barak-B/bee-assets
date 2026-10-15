@@ -123,7 +123,11 @@ export function pricingReadiness(catalog: Catalog, rules: PricingRules): Pricing
   return {
     ready: missing.length === 0,
     missing,
-    recommended: roiReadiness(rules.roi, s.specific_yield_kwh_per_kwp),
+    recommended: [
+      ...(rules.texts?.warranty?.some((x) => x.trim()) ? [] : [{ key: 'texts.warranty', label_he: 'נוסח אחריות (יופיע בהצעה)' }]),
+      ...(rules.texts?.excluded?.some((x) => x.trim()) ? [] : [{ key: 'texts.excluded', label_he: 'רשימת "לא כלול" (אחרת תופיע רשימת ברירת מחדל קצרה)' }]),
+      ...roiReadiness(rules.roi, s.specific_yield_kwh_per_kwp),
+    ],
     pricedCount: priced,
     totalCount: products.filter((p) => needsCost(p)).length,
     unpricedSkus: unpriced.map((p) => p.sku),
