@@ -521,3 +521,32 @@ test('field reports: inspection → lock → defects from the failures → hando
   await page.locator('.project-item', { hasText: 'גג בדיקה דוחות' }).locator('[data-reports]').click()
   await expect(page.locator('#rdList .quote-card')).toHaveCount(2)
 })
+
+test('connection check names what is missing on the server', async ({ page }) => {
+  const BASE = 'https://app.barak-e.com'
+  let healthy = false
+  let auth = ''
+  await page.route(`${BASE}/api/health`, (route) => {
+    auth = route.request().headers()['authorization'] ?? ''
+    const checks = healthy
+      ? [{ key: 'r2_binding', ok: true, message_he: 'אחסון R2 מחובר (QUOTES)' }, { key: 'key_match', ok: true, message_he: 'המפתח באפליקציה תואם לשרת' }]
+      : [{ key: 'r2_binding', ok: false, message_he: 'אין חיבור לאחסון: Settings → Functions → R2 bindings → QUOTES → bee-quotes' }]
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: healthy, checks }) })
+  })
+  await page.goto('/')
+  await page.click('#btnPricing')
+  await page.fill('#p_pubBase', BASE)
+  await page.fill('#p_pubKey', 'k-1')
+  await page.click('#pPubTest')
+  await expect(page.locator('#p_pubCheck .bad')).toContainText('R2 bindings')
+  expect(auth).toBe('Bearer k-1')
+  healthy = true
+  await page.click('#pPubTest')
+  await expect(page.locator('#p_pubCheck')).toContainText('השרת מוכן')
+  await expect(page.locator('#p_pubCheck .bad')).toHaveCount(0)
+  // Not deployed yet → says so instead of failing silently.
+  await page.unroute(`${BASE}/api/health`)
+  await page.route(`${BASE}/api/health`, (route) => route.abort('namenotresolved'))
+  await page.click('#pPubTest')
+  await expect(page.locator('#p_pubCheck .bad')).toContainText('אין תשובה')
+})

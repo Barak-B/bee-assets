@@ -28,7 +28,7 @@ import {
   type TariffTrack,
 } from '@bee/quote-core'
 import { clearPricing, getPublishSettings, savePublishSettings } from './db'
-import { defaultBaseUrl } from './publish'
+import { checkServer, defaultBaseUrl } from './publish'
 import { isPublicBaseUrl } from '@bee/quote-core'
 import { escapeAttr, escapeHtml, numValue, readNum } from './html'
 import { importPriceListFile, loadPricing, persistPricing, type Pricing } from './pricing'
@@ -174,6 +174,8 @@ function render(ctx: Ctx, p: Pricing) {
         <div class="field"><label>כתובת האתר</label><input id="p_pubBase" dir="ltr" inputmode="url" placeholder="https://app.barak-e.com" value="${escapeAttr(pub.baseUrl)}" /></div>
         <div class="field"><label>מפתח שרת (פרסום וגיבוי)</label><input id="p_pubKey" dir="ltr" type="password" autocomplete="off" placeholder="PUBLISH_KEY" value="${escapeAttr(pub.key)}" /></div>
         <div class="meta" id="p_pubStatus">${escapeHtml(pubStatus(pub))}</div>
+        <button type="button" class="btn btn-secondary" id="pPubTest">בדיקת חיבור לשרת</button>
+        <div id="p_pubCheck"></div>
       </section>
 
       <section class="section">
@@ -412,6 +414,17 @@ function bind(ctx: Ctx) {
       if (el && !el.value.trim()) el.value = String(SUGGESTED_SIZING[f.key] ?? '')
     }
     ctx.toast('מולאו ערכים מומלצים בשדות הריקים — לחצו שמור')
+  })
+
+  $('pPubTest')?.addEventListener('click', async () => {
+    const box = ctx.app.querySelector<HTMLElement>('#p_pubCheck')!
+    const settings = {
+      baseUrl: (ctx.app.querySelector<HTMLInputElement>('#p_pubBase')?.value ?? '').trim(),
+      key: (ctx.app.querySelector<HTMLInputElement>('#p_pubKey')?.value ?? '').trim(),
+    }
+    box.innerHTML = '<div class="meta">בודק…</div>'
+    const r = await checkServer(settings)
+    box.innerHTML = `<ul class="health ${r.ok ? 'health-ok' : ''}">${r.checks.map((c) => `<li class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${escapeHtml(c.message_he)}</li>`).join('')}</ul>${r.ok ? '<div class="note note-ok">השרת מוכן — קישורי הצעה, אישור לקוח וגיבוי יעבדו.</div>' : ''}`
   })
 
   $('pSuggestRoi')?.addEventListener('click', () => {

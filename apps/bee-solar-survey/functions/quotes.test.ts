@@ -8,6 +8,7 @@ import { onRequestGet as pageGet } from './q/[token]'
 import { onRequestGet as pdfGet } from './q/[token]/pdf'
 import { onRequestPost as acceptPost } from './q/[token]/accept'
 import { onRequestGet as hiveJobs } from './api/hive/jobs'
+import { onRequestGet as healthGet } from './api/health'
 
 const KEY = 'test-publish-key-0123456789'
 
@@ -213,5 +214,32 @@ describe('publish API', () => {
     const e = env()
     expect((await pageGet(ctx(e, 'https://app.barak-e.com/q/zzz', {}, { token: 'zzz' }))).status).toBe(404)
     expect((await pageGet(ctx(e, 'https://app.barak-e.com/q/AAAAAAAAAAAAAAAAAAAAAA', {}, { token: 'AAAAAAAAAAAAAAAAAAAAAA' }))).status).toBe(404)
+  })
+})
+
+
+describe('activation health check', () => {
+  const run = async (e: Env, headers: Record<string, string> = {}) =>
+    (await (await healthGet(ctx(e, 'https://app.barak-e.com/api/health', { headers }))).json()) as { ok: boolean; checks: { key: string; ok: boolean; message_he: string }[] }
+
+  it('all green on a configured project, including an R2 write probe with the key', async () => {
+    const e = env()
+    const r = await run(e, { authorization: `Bearer ${KEY}` })
+    expect(r.ok).toBe(true)
+    expect(r.checks.map((c) => c.key)).toEqual(['r2_binding', 'public_base_url', 'publish_key', 'key_match', 'r2_write'])
+    expect([...(e.QUOTES as MemoryBucket).store.keys()].filter((k) => k.startsWith('health/'))).toEqual([]) // probe cleaned up
+  })
+
+  it('names exactly what is missing, and never echoes the key', async () => {
+    const r = await run({ QUOTES: undefined as never, PUBLIC_BASE_URL: 'http://127.0.0.1:50973', PUBLISH_KEY: undefined })
+    expect(r.ok).toBe(false)
+    const bad = Object.fromEntries(r.checks.map((c) => [c.key, c.ok]))
+    expect(bad).toMatchObject({ r2_binding: false, public_base_url: false, publish_key: false })
+    const wrong = await run(env(), { authorization: 'Bearer nope' })
+    expect(wrong.checks.find((c) => c.key === 'key_match')).toMatchObject({ ok: false })
+    expect(wrong.checks.find((c) => c.key === 'r2_write')).toBeUndefined() // no probe without the right key
+    expect(JSON.stringify(await run(env()))).not.toContain(KEY)
+    const local = await run(env({ ALLOW_LOCAL_LINKS: '1' }))
+    expect(local.checks.find((c) => c.key === 'allow_local_links')).toMatchObject({ ok: false })
   })
 })

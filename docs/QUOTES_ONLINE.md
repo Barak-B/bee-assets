@@ -60,6 +60,15 @@
    - `PUBLISH_KEY` = מחרוזת אקראית ארוכה, כ-**Secret** (למשל פלט של `openssl rand -base64 32`)
 5. **באפליקציה:** מחירון → "שרת החברה — הצעות אונליין וגיבוי" → כתובת האתר (`https://app.barak-e.com`) ומפתח השרת → שמור. אותם פרטים מפעילים גם את גיבוי הסקרים ([`SURVEY_SYNC.md`](SURVEY_SYNC.md)).
 
+6. **בדיקה:** באותו מסך, לחצו "בדיקת חיבור לשרת". האפליקציה פונה ל-`GET /api/health` ומציגה ✓ או ✗ לכל שלב:
+   - אחסון R2 מחובר;
+   - `PUBLIC_BASE_URL` ציבורי;
+   - `PUBLISH_KEY` מוגדר;
+   - המפתח באפליקציה תואם;
+   - כתיבה ל-R2 עובדת.
+
+   אם אין תשובה בכלל, ההודעה אומרת אם הדומיין עוד לא מחובר או שחסר `ALLOWED_ORIGINS`. השרת לא מחזיר את ערך המפתח, ובלי המפתח הנכון הוא לא כותב לאחסון.
+
 במקום שלבים 1–4 אפשר מהמחשב: `npx wrangler r2 bucket create bee-quotes`, `npx wrangler pages secret put PUBLISH_KEY --project-name bee-solar-survey`, `npm run pages:deploy`. הקובץ `apps/bee-solar-survey/wrangler.toml` כבר מגדיר את ה-binding ואת `PUBLIC_BASE_URL`.
 
 ## פיתוח מקומי

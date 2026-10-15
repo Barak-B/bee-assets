@@ -1080,3 +1080,21 @@ textarea {
 .report-editor .seg.on.seg-na:disabled {
   background: var(--sand-deep);
 }
+
+.health {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.health .ok {
+  color: var(--ok);
+}
+
+.health .bad {
+  color: #a12626;
+  font-weight: 700;
+}

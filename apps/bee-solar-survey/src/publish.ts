@@ -100,3 +100,43 @@ export async function quoteViews(token: string, settings: PublishSettings): Prom
     return null
   }
 }
+
+export interface HealthCheck {
+  key: string
+  ok: boolean
+  message_he: string
+}
+
+/**
+ * Activation check against /api/health. A network error usually means the
+ * domain is not deployed yet, or (when the app runs on another origin) CORS —
+ * both are named so Barak knows which step to fix.
+ */
+export async function checkServer(settings: { baseUrl: string; key: string }): Promise<{ ok: boolean; checks: HealthCheck[] }> {
+  const base = settings.baseUrl.replace(/\/+$/, '')
+  if (!isPublicBaseUrl(base)) return { ok: false, checks: [{ key: 'base', ok: false, message_he: 'כתובת האתר אינה https ציבורית' }] }
+  let res: Response
+  try {
+    res = await fetch(`${base}/api/health`, { headers: settings.key ? { authorization: `Bearer ${settings.key}` } : {} })
+  } catch {
+    const cross = typeof location !== 'undefined' && location.origin !== new URL(base).origin
+    return {
+      ok: false,
+      checks: [
+        {
+          key: 'reach',
+          ok: false,
+          message_he: cross
+            ? `אין תשובה מ-${base}. אם הפרויקט כבר פרוס: הוסיפו את ${location.origin} ל-ALLOWED_ORIGINS בשרת`
+            : `אין תשובה מ-${base} — הדומיין עוד לא מחובר לפרויקט Pages`,
+        },
+      ],
+    }
+  }
+  if (!res.ok) return { ok: false, checks: [{ key: 'reach', ok: false, message_he: `השרת החזיר ${res.status} — ייתכן שה-Functions לא נפרסו` }] }
+  try {
+    return (await res.json()) as { ok: boolean; checks: HealthCheck[] }
+  } catch {
+    return { ok: false, checks: [{ key: 'reach', ok: false, message_he: 'התשובה אינה מהשרת של האפליקציה (אולי הדומיין מצביע לאתר אחר)' }] }
+  }
+}
