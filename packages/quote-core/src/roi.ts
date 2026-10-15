@@ -81,8 +81,8 @@ function requiredFor(track: TariffTrack): (keyof RoiRules)[] {
 export const ROI_FIELD_LABELS_HE: Record<keyof Omit<RoiRules, 'verification'>, string> = {
   track: 'מסלול (מונה נטו / צריכה עצמית / הזנה)',
   consumption_tariff_ils_kwh: 'תעריף צריכה (₪ לקוט״ש, לפני מע״מ)',
-  feed_in_tariff_ils_kwh: 'תעריף הזנה (₪ לקוט״ש)',
-  surplus_tariff_ils_kwh: 'תעריף עודפים (₪ לקוט״ש)',
+  feed_in_tariff_ils_kwh: 'תעריף הזנה (₪ לקוט״ש, ללא מע״מ)',
+  surplus_tariff_ils_kwh: 'תעריף עודפים (₪ לקוט״ש, ללא מע״מ)',
   self_consumption_share: 'חלק הצריכה העצמית (%)',
   tariff_escalation_pct: 'עליית תעריף שנתית (%)',
   degradation_pct_year: 'דעיכה שנתית (%)',
@@ -97,7 +97,11 @@ export const ROI_FIELD_LABELS_HE: Record<keyof Omit<RoiRules, 'verification'>, s
 export function roiReadiness(roi: RoiRules | undefined, specificYield: number | null): ReadinessItem[] {
   const r = roi ?? EMPTY_ROI_RULES
   if (!r.track) return [{ key: 'roi.track', label_he: `תחזית חיסכון: ${ROI_FIELD_LABELS_HE.track}` }]
-  const missing = requiredFor(r.track).filter((k) => r[k] === null || r[k] === undefined)
+  const missing = requiredFor(r.track).filter((k) => r[k] === null || r[k] === undefined || !Number.isFinite(r[k] as number))
+  // Values that would make the model meaningless (or crash) count as missing.
+  if (r.horizon_years !== null && r.horizon_years !== undefined && !(Math.round(r.horizon_years) >= 1 && r.horizon_years <= 50)) missing.push('horizon_years')
+  if (r.self_consumption_share !== null && r.self_consumption_share !== undefined && r.track === 'self_consumption' && !(r.self_consumption_share >= 0 && r.self_consumption_share <= 1)) missing.push('self_consumption_share')
+  for (const k of ['degradation_pct_year', 'first_year_degradation_pct'] as const) if (r[k] !== null && r[k] !== undefined && !((r[k] as number) >= 0 && (r[k] as number) < 100)) missing.push(k)
   const out = missing.map((k) => ({ key: `roi.${k}`, label_he: `תחזית חיסכון: ${ROI_FIELD_LABELS_HE[k as keyof typeof ROI_FIELD_LABELS_HE]}` }))
   if (!specificYield) out.push({ key: 'roi.specific_yield', label_he: 'תחזית חיסכון: תפוקה סגולית (פרמטרי תכנון)' })
   return out
@@ -157,16 +161,21 @@ export function computeRoi(roi: RoiRules | undefined, ctx: RoiContext): RoiResul
   for (let t = 1; t <= N; t++) {
     const E = e1Base * (1 - roi.first_year_degradation_pct! / 100) * Math.pow(1 - roi.degradation_pct_year! / 100, t - 1)
     const esc = Math.pow(1 + roi.tariff_escalation_pct! / 100, t - 1)
-    let savings: number
+    // Avoided consumption is valued at the consumer price (incl. VAT for a private customer);
+    // money received for exported electricity is income — a private household is not a VAT
+    // dealer, so no VAT is added to it (assumption shown in the quote, owner to confirm).
+    let avoided = 0
+    let income = 0
     if (track === 'net_metering') {
-      savings = Math.min(E, consumption ?? E) * roi.consumption_tariff_ils_kwh! * esc
+      avoided = Math.min(E, consumption ?? E) * roi.consumption_tariff_ils_kwh! * esc
     } else if (track === 'self_consumption') {
       const sc = Math.min(E * roi.self_consumption_share!, consumption ?? Infinity)
-      savings = sc * roi.consumption_tariff_ils_kwh! * esc + (E - sc) * roi.surplus_tariff_ils_kwh!
+      avoided = sc * roi.consumption_tariff_ils_kwh! * esc
+      income = (E - sc) * roi.surplus_tariff_ils_kwh!
     } else {
-      savings = E * roi.feed_in_tariff_ils_kwh!
+      income = E * roi.feed_in_tariff_ils_kwh!
     }
-    const gross = savings * vatFactor
+    const gross = avoided * vatFactor + income
     const opex = totals.subtotal_excl_vat_ils * (roi.om_cost_pct_capex! / 100) * (customerType === 'private' ? 1 + vat : 1)
     const cf = gross - opex
     const prevCum = cum
@@ -196,7 +205,7 @@ export function computeRoi(roi: RoiRules | undefined, ctx: RoiContext): RoiResul
     { key: 'om', label_he: 'אחזקה שנתית', value: roi.om_cost_pct_capex!, unit: '% מעלות המערכת' },
     { key: 'horizon', label_he: 'אופק החישוב', value: N, unit: 'שנים' },
     { key: 'discount', label_he: 'שיעור היוון (לערך נוכחי)', value: roi.discount_rate_pct!, unit: '%' },
-    { key: 'vat', label_he: customerType === 'private' ? 'לקוח פרטי — חיסכון ועלות כוללים מע״מ' : 'לקוח עסקי — לפני מע״מ', value: '', unit: '' },
+    { key: 'vat', label_he: customerType === 'private' ? 'לקוח פרטי — העלות והחיסכון בצריכה כוללים מע״מ; הכנסה ממכירת חשמל ללא מע״מ' : 'לקוח עסקי — לפני מע״מ', value: '', unit: '' },
     { key: 'tax', label_he: 'מס על הכנסה ממכירת חשמל', value: 'לא נכלל — אינו ייעוץ מס', unit: '' },
   ]
 

@@ -106,7 +106,10 @@ describe('sizeSystem', () => {
   it('derives kWp from area when no target is given, and from consumption as a last resort', () => {
     const byArea = sizeSystem({ ...baseInput(), targetKwp: null }, pricedCatalog(), rules())
     expect(byArea.design.kwp_basis).toBe('area')
-    expect(byArea.design.module_count).toBe(49) // 120/5.5 = 21.8 kWp → ceil(21818/450)
+    // 120/5.5 = 21.8 kWp → floor(21818/450) = 48: never more modules than the roof holds
+    expect(byArea.design.module_count).toBe(48)
+    expect(byArea.design.area_ok).toBe(true)
+    expect(byArea.flags).not.toContain('sizing:area_insufficient')
 
     const byConsumption = sizeSystem({ ...baseInput(), targetKwp: null, usableAreaM2: null }, pricedCatalog(), rules())
     expect(byConsumption.design.kwp_basis).toBe('consumption')

@@ -4,7 +4,7 @@
  * what's missing). Every unverified value is marked "לאימות"; the document is
  * watermarked as a draft.
  */
-import { ROOF_LABELS_HE, flagLabelHe, formatIls, pct, type QuoteLine, type QuoteVersion } from '@bee/quote-core'
+import { ROOF_LABELS_HE, flagLabelHe, formatIls, pct, scheduleAmounts, type QuoteLine, type QuoteVersion } from '@bee/quote-core'
 import { MUTED, WARN_RED, Writer, createDoc, safeFilename } from './pdfkit'
 import { formatNumber } from './rtl'
 import type { SiteSurveyProject } from './types'
@@ -186,7 +186,10 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
 
   // ── Price ───────────────────────────────────────────────
   w.section('מחיר')
+  const linesSum = quote.lines.filter((l) => !l.passthrough && l.line_total_ils !== null).reduce((s, l) => s + (l.line_total_ils ?? 0), 0)
+  const rounding = t.subtotal_excl_vat_ils === null ? 0 : Math.round((t.subtotal_excl_vat_ils - linesSum) * 100) / 100
   const priceRows: string[][] = [
+    ...(rounding ? [['סה״כ שורות', formatIls(Math.round(linesSum * 100) / 100, 2)], ['עיגול', formatIls(rounding, 2)]] : []),
     ['סה״כ לפני מע״מ', money(t.subtotal_excl_vat_ils)],
     [`מע״מ ${t.vat_rate === null ? '(לאימות *)' : pct(t.vat_rate)}`, money(t.vat_ils)],
     ['סה״כ כולל מע״מ', money(t.total_incl_vat_ils)],
@@ -207,16 +210,18 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
   // ── Payment schedule ────────────────────────────────────
   w.section('לוח תשלומים')
   const total = t.total_incl_vat_ils
+  // Milestones add up to the total exactly (the last one takes the remainder).
+  const amounts = scheduleAmounts(total, quote.terms.payment_schedule.map((m) => m.pct))
   w.table(
     [
       { label: 'אבן דרך', width: 110 },
       { label: '%', width: 20, align: 'left' },
       { label: 'סכום', width: 52, align: 'left' },
     ],
-    quote.terms.payment_schedule.map((m) => [
+    quote.terms.payment_schedule.map((m, i) => [
       m.label_he,
       m.pct === null ? '*' : `${m.pct}%`,
-      m.pct === null || total === null ? 'לאימות *' : formatIls(Math.round((total * m.pct) / 100)),
+      amounts[i] === null || amounts[i] === undefined ? 'לאימות *' : formatIls(amounts[i]!, 2),
     ]),
     { fontSize: 9 },
   )

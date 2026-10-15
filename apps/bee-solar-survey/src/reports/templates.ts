@@ -11,16 +11,15 @@
  * marked "לאימות" — never constants in code. Rule references (R11…R23) point
  * to the rules table of the plan; their values are not restated here.
  */
+import { parseNumber } from '@bee/quote-core'
 import type { ChecklistItemDef, Option, ReportInstance, ReportTemplate, Row, TemplateKey } from './types'
 
 // ── helpers ──────────────────────────────────────────────────────────────
 
+/** Field text → number with the same locale-tolerant parser as everywhere else ("1,000" is a thousand). */
 export function num(s: string | undefined | null): number | null {
   if (s === undefined || s === null) return null
-  const t = String(s).trim().replace(',', '.')
-  if (!t) return null
-  const n = Number(t)
-  return Number.isFinite(n) ? n : null
+  return parseNumber(String(s).trim())
 }
 
 const fmt = (n: number | null, digits = 1) => (n === null ? '' : String(Math.round(n * 10 ** digits) / 10 ** digits))

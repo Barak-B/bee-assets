@@ -5,7 +5,7 @@
  * renderer can leak it by accident.
  */
 import { boqSectionTitle } from './pricebook'
-import { round2 } from './money'
+import { israelDate, round2, scheduleAmounts } from './money'
 import { TRACK_LABELS_HE } from './roi'
 import type { QuoteLine, QuoteTexts, QuoteVersion, RoiAssumption } from './types'
 
@@ -51,6 +51,8 @@ export interface PublicQuote {
     total_incl_vat_ils: number | null
     price_per_kwp_excl_vat_ils: number | null
     passthrough_note_he: string
+    /** Subtotal minus the sum of the sections (the "round to N ₪" step); 0 when none. */
+    rounding_ils: number
   }
   payment_schedule: { label_he: string; pct: number | null; amount_ils: number | null }[]
   terms: { linkage: 'none' | 'fx'; validity_days: number | null; texts?: QuoteTexts }
@@ -122,11 +124,13 @@ export function toPublicQuote(q: QuoteVersion, opts: { customerName?: string } =
     }))
 
   const total = q.totals.total_incl_vat_ils
+  const sectionsSum = round2(sections.reduce((s, x) => s + x.total_ils, 0))
+  const amounts = scheduleAmounts(total, q.terms.payment_schedule.map((m) => m.pct))
   return {
     schema: 'bee.public-quote/1',
     quote_number: q.quote_number,
     version_no: q.version_no,
-    issued_at: q.created_at.slice(0, 10),
+    issued_at: israelDate(new Date(q.created_at)),
     valid_until: q.terms.valid_until,
     project: {
       name: q.input.projectName,
@@ -151,11 +155,12 @@ export function toPublicQuote(q: QuoteVersion, opts: { customerName?: string } =
       total_incl_vat_ils: total,
       price_per_kwp_excl_vat_ils: q.totals.price_per_kwp_excl_vat_ils,
       passthrough_note_he: 'אגרות חברת החשמל — לפי חשבון בפועל, אינן כלולות במחיר.',
+      rounding_ils: q.totals.subtotal_excl_vat_ils === null ? 0 : round2(q.totals.subtotal_excl_vat_ils - sectionsSum),
     },
-    payment_schedule: q.terms.payment_schedule.map((m) => ({
+    payment_schedule: q.terms.payment_schedule.map((m, i) => ({
       label_he: m.label_he,
       pct: m.pct,
-      amount_ils: m.pct === null || total === null ? null : Math.round((total * m.pct) / 100),
+      amount_ils: amounts[i] ?? null,
     })),
     terms: { linkage: q.terms.linkage, validity_days: q.terms.validity_days, ...(q.terms.texts ? { texts: q.terms.texts } : {}) },
     ...(q.roi

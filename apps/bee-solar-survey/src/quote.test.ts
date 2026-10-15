@@ -9,7 +9,7 @@ const project = () =>
     projectName: 'גג תל אביב',
     address: 'הרצל 1, תל אביב',
     roofTypeHe: 'רעפים',
-    mainBreaker: '63A',
+    mainBreaker: '63A', phases: '3',
     usableAreaM2: '120',
     targetKwp: '15',
     budgetIls: '120000',
@@ -29,13 +29,17 @@ describe('survey → quote adapter', () => {
     expect(input.annualConsumptionKwh).toBe(18000)
     expect(input.acCableLengthM).toBe(35)
     expect(input.inverterBrand).toBe('SolarEdge')
-    expect(input.phases).toBe(3)
+    expect(input.phases).toBe(3) // surveyed
     expect(input.craneAccess).toBeNull()
   })
 
-  it('infers phases from the main breaker', () => {
-    expect(inferPhases('25A')).toBe(1)
-    expect(inferPhases('63A')).toBe(3)
+  it('takes phases from the survey or an explicit "1x"/"3x"; amperage alone is never a guess', () => {
+    expect(inferPhases('40A', '1')).toBe(1) // 1×40A homes are common in Israel
+    expect(inferPhases('25A', '3')).toBe(3)
+    expect(inferPhases('3x25A')).toBe(3)
+    expect(inferPhases('1X40A')).toBe(1)
+    expect(inferPhases('63A')).toBeUndefined()
+    expect(inferPhases('40A', '')).toBeUndefined()
     expect(inferPhases('')).toBeUndefined()
   })
 

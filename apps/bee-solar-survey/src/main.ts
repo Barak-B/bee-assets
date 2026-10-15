@@ -134,6 +134,7 @@ function readFormIntoEditing() {
   editing.gps = g('f_gps')
   editing.address = g('f_address')
   editing.mainBreaker = g('f_mainBreaker')
+  editing.phases = (['1', '3'].includes(g('f_phases')) ? g('f_phases') : '') as SiteSurveyProject['phases']
   editing.panelSpace = g('f_panelSpace') as SiteSurveyProject['panelSpace']
   editing.solarBreaker = g('f_solarBreaker')
   editing.meterNumber = g('f_meterNumber')
@@ -429,6 +430,7 @@ async function render() {
           <p class="hint">קלט הנדסי ל־protection / wire_sizing</p>
           <div class="grid-2">
             <div class="field"><label>מפסק ראשי במתקן</label><select id="f_mainBreaker">${options(BREAKER_OPTIONS, editing.mainBreaker)}</select></div>
+            <div class="field"><label>פאזות</label><select id="f_phases"><option value="" ${!editing.phases ? 'selected' : ''}>לא ידוע</option><option value="1" ${editing.phases === '1' ? 'selected' : ''}>חד-פאזי</option><option value="3" ${editing.phases === '3' ? 'selected' : ''}>תלת-פאזי</option></select></div>
             <div class="field"><label>מקום בלוח למפסק סולארי</label><select id="f_panelSpace">${options(['כן', 'לא', 'דורש בדיקה'], editing.panelSpace)}</select></div>
             <div class="field"><label>מפסק ראשי סולארי</label><select id="f_solarBreaker">${options(BREAKER_OPTIONS, editing.solarBreaker)}</select></div>
             <div class="field"><label>סוג מונה סולארי</label><select id="f_meterType">${options(['ישיר', 'ארון מניה'], editing.meterType)}</select></div>

@@ -1,5 +1,5 @@
 import { diffQuotes } from './diff'
-import { canonicalJson, round2, roundToStep, sha256Hex } from './money'
+import { canonicalJson, ceilSafe, israelDate, round2, roundToStep, sha256Hex } from './money'
 import { computeRoi, orientationFactor } from './roi'
 import type {
   Catalog,
@@ -67,8 +67,9 @@ export function sizeSystem(input: QuoteInput, catalog: Catalog, rules: PricingRu
   }
   if (kwp === null) flags.push('sizing:no_kwp_basis')
 
-  // 3. Module count
-  const moduleCount = kwp !== null && moduleW ? Math.max(1, Math.ceil((kwp * 1000) / moduleW)) : 0
+  // 3. Module count — up to the target, but never more than the roof area holds.
+  const exact = kwp !== null && moduleW ? (kwp * 1000) / moduleW : 0
+  const moduleCount = kwp !== null && moduleW ? Math.max(1, basis === 'area' ? Math.floor(exact + 1e-9) : ceilSafe(exact)) : 0
   const dcKwp = moduleW ? round2((moduleCount * moduleW) / 1000) : 0
 
   // 4. Area sanity
@@ -97,7 +98,7 @@ export function sizeSystem(input: QuoteInput, catalog: Catalog, rules: PricingRu
   }
   if (inverter) {
     const acKw = inverter.tech?.ac_power_kw ?? 0
-    inverterCount = acKw > 0 ? Math.max(1, Math.ceil(needAcKw / acKw)) : 1
+    inverterCount = acKw > 0 ? Math.max(1, ceilSafe(needAcKw / acKw)) : 1
     if (inverterCount > 1) flags.push('sizing:multiple_inverters')
   } else if (dcKwp > 0) {
     flags.push('catalog:no_inverter')
@@ -110,7 +111,7 @@ export function sizeSystem(input: QuoteInput, catalog: Catalog, rules: PricingRu
     optimizer =
       active(catalog, 'optimizer').find((p) => !p.tech?.brand || p.tech.brand === inverter?.tech?.brand) ?? null
     const inputs = optimizer?.tech?.inputs ?? 1
-    optimizerCount = Math.ceil(moduleCount / inputs)
+    optimizerCount = ceilSafe(moduleCount / inputs)
     if (!optimizer) flags.push('catalog:no_optimizer')
   }
 
@@ -139,7 +140,7 @@ export function sizeSystem(input: QuoteInput, catalog: Catalog, rules: PricingRu
       inverter_count: inverterCount,
       optimizer_count: optimizerCount,
       battery_sku: battery?.sku ?? null,
-      strings_estimate: perString && moduleCount ? Math.ceil(moduleCount / perString) : null,
+      strings_estimate: perString && moduleCount ? ceilSafe(moduleCount / perString) : null,
       area_needed_m2: areaNeeded,
       area_ok: areaOk,
       annual_yield_kwh_estimate: yieldKwh,
@@ -190,21 +191,22 @@ export function buildAssemblies(input: QuoteInput, sizing: SizingResult, catalog
   const mounting = active(catalog, 'mounting').find((p) => p.tech?.roof_types?.includes(input.roofType))
   if (mounting) {
     const per = mounting.tech?.per_module_qty ?? 1
-    push(mounting, Math.ceil(n * per), `${n} מודולים × ${per}`)
+    push(mounting, ceilSafe(n * per), `${n} מודולים × ${per}`)
   } else if (n) {
-    lines.push(...[]) // keep order
+    // No construction line is a gap in the quote, not something to publish silently.
+    sizing.flags.push(`catalog:no_mounting:${input.roofType}`)
   }
 
   // Cables
   const dcCable = active(catalog, 'cable', 'dc_solar')[0]
   if (dcCable && s.dc_cable_m_per_module) {
-    const m = Math.ceil(n * s.dc_cable_m_per_module)
+    const m = ceilSafe(n * s.dc_cable_m_per_module)
     push(dcCable, m, `${n} מודולים × ${s.dc_cable_m_per_module} מ׳`, 'rule')
   }
   const acCable = active(catalog, 'cable', 'ac_power')[0]
   const acLen = input.acCableLengthM ?? s.default_ac_cable_m
   if (acCable && acLen) {
-    push(acCable, Math.ceil(acLen * 1.1), input.acCableLengthM ? `אורך מהסקר ${input.acCableLengthM} מ׳ + 10%` : `ברירת מחדל ${acLen} מ׳ + 10%`, input.acCableLengthM ? 'input' : 'rule')
+    push(acCable, ceilSafe(acLen * 1.1), input.acCableLengthM ? `אורך מהסקר ${input.acCableLengthM} מ׳ + 10%` : `ברירת מחדל ${acLen} מ׳ + 10%`, input.acCableLengthM ? 'input' : 'rule')
   }
 
   // Protection / cabinets — one AC protection set and one DC box per inverter
@@ -382,7 +384,8 @@ export async function buildQuote(
   if (input.budgetIls && totals.total_incl_vat_ils && totals.total_incl_vat_ils > input.budgetIls) flags.push('budget:exceeded')
   const hasFx = lines.some((l) => l.cost_currency !== 'ILS')
 
-  const validUntil = rules.validity_days ? new Date(now.getTime() + rules.validity_days * 86_400_000).toISOString().slice(0, 10) : null
+  // Validity is an Israeli calendar date: today in Israel + N days.
+  const validUntil = rules.validity_days ? israelDate(new Date(Date.parse(`${israelDate(now)}T12:00:00Z`) + rules.validity_days * 86_400_000)) : null
   const terms: QuoteVersion['terms'] = {
     validity_days: rules.validity_days,
     valid_until: validUntil,
@@ -396,7 +399,10 @@ export async function buildQuote(
   const roi = computeRoi(rules.roi, { input, design: sizing.design, totals, vatRate: rules.vat_rate, specificYield: rules.sizing.specific_yield_kwh_per_kwp })
   // `roi` joins the hashed snapshot only when produced, so price books without ROI keep their hashes.
   const body = { input, design: sizing.design, lines, totals, terms, catalog_version: catalog.version, rules_version: rules.version, ...(roi ? { roi } : {}) }
-  const snapshot_hash = await sha256Hex(canonicalJson(body))
+  // The hash is about content, not the calendar: valid_until moves with the build date
+  // and would make every rebuild on a new day look like a change (validity_days stays in).
+  const { valid_until: _vu, ...hashedTerms } = terms
+  const snapshot_hash = await sha256Hex(canonicalJson({ ...body, terms: hashedTerms }))
 
   const prev = opts.previous ?? null
   const version_no = prev ? prev.version_no + 1 : 1

@@ -15,6 +15,30 @@ export function pct(n: number | null | undefined): string {
 }
 
 /** Canonical JSON: keys sorted recursively, so hashes do not depend on property order. */
+/**
+ * Payment-schedule amounts that add up to the total exactly: each milestone is
+ * rounded to whole shekels and the last one takes the remainder (incl. agorot).
+ */
+export function scheduleAmounts(total: number | null, pcts: (number | null)[]): (number | null)[] {
+  const amounts = pcts.map((p) => (p === null || total === null ? null : Math.round((total * p) / 100)))
+  const sum = pcts.reduce<number>((s, p) => s + (p ?? 0), 0)
+  if (total === null || pcts.some((p) => p === null) || Math.abs(sum - 100) > 0.01 || !amounts.length) return amounts
+  const last = amounts.length - 1
+  const others = amounts.slice(0, last).reduce<number>((s, a) => s + (a ?? 0), 0)
+  amounts[last] = round2(total - others)
+  return amounts
+}
+
+/** Ceil that ignores binary-float noise: 55.00000000000001 → 55, not 56. */
+export function ceilSafe(x: number): number {
+  return Math.ceil(x - 1e-9)
+}
+
+/** Calendar date (YYYY-MM-DD) in Israel — quote dates and validity are local, not UTC. */
+export function israelDate(d: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
+}
+
 export function canonicalJson(value: unknown): string {
   return JSON.stringify(sortKeys(value))
 }

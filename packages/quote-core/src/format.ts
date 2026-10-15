@@ -13,6 +13,7 @@ const FLAG_LABELS: Record<string, string> = {
   'catalog:no_inverter': 'לא נמצא ממיר מתאים בקטלוג',
   'catalog:no_optimizer': 'חסר אופטימייזר בקטלוג',
   'catalog:no_battery': 'חסרה סוללה בקטלוג',
+  'catalog:no_mounting': 'אין קונסטרוקציה פעילה בקטלוג לסוג הגג',
   'rules:vat_missing': 'שיעור מע״מ לא הוגדר',
   'rules:needs_owner_input': 'כללי התמחור הם זרע — ברק צריך למלא',
   'budget:exceeded': 'ההצעה חורגת מהתקציב שצוין בסקר',

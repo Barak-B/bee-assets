@@ -315,6 +315,7 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
       <thead><tr><th>פריט</th><th>יח׳</th><th class="n">כמות</th><th class="n">מחיר יח׳</th><th class="n">סה״כ</th></tr></thead>
       <tbody>
         ${rows}
+        ${t.rounding_ils ? `<tr class="vat"><td class="name" colspan="4">עיגול</td><td class="n total">${ils(t.rounding_ils, 2)}</td></tr>` : ''}
         <tr class="sum"><td class="name" colspan="4">סה״כ לפני מע״מ</td><td class="n total">${ils(t.subtotal_excl_vat_ils, 2)}</td></tr>
         <tr class="vat"><td class="name" colspan="4">${vatLabel}</td><td class="n total">${ils(t.vat_ils, 2)}</td></tr>
         <tr class="sum grand"><td class="name" colspan="4">סה״כ כולל מע״מ</td><td class="n total">${ils(t.total_incl_vat_ils, 2)}</td></tr>

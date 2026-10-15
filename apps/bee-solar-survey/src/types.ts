@@ -58,6 +58,8 @@ export interface SiteSurveyProject {
 
   // Electrical (Tamir)
   mainBreaker: string
+  /** Supply phases as seen on site ('' = unknown). Not derivable from the amperage alone. */
+  phases?: '1' | '3' | ''
   panelSpace: PanelSpace
   solarBreaker: string
   meterNumber: string

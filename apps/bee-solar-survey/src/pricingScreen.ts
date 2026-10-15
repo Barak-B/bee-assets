@@ -57,9 +57,9 @@ type RoiNumKey = Exclude<keyof RoiRules, 'track' | 'verification'>
 /** `scale` 100 = stored as a fraction, shown as %. */
 const ROI_FIELDS: { key: RoiNumKey; label: string; scale?: number; tracks?: TariffTrack[] }[] = [
   { key: 'consumption_tariff_ils_kwh', label: 'תעריף צריכה (₪ לקוט״ש, לפני מע״מ)', tracks: ['net_metering', 'self_consumption'] },
-  { key: 'surplus_tariff_ils_kwh', label: 'תעריף עודפים (₪ לקוט״ש)', tracks: ['self_consumption'] },
+  { key: 'surplus_tariff_ils_kwh', label: 'תעריף עודפים (₪ לקוט״ש, ללא מע״מ)', tracks: ['self_consumption'] },
   { key: 'self_consumption_share', label: 'חלק הצריכה העצמית (%)', scale: 100, tracks: ['self_consumption'] },
-  { key: 'feed_in_tariff_ils_kwh', label: 'תעריף הזנה (₪ לקוט״ש)', tracks: ['feed_in_full'] },
+  { key: 'feed_in_tariff_ils_kwh', label: 'תעריף הזנה (₪ לקוט״ש, ללא מע״מ)', tracks: ['feed_in_full'] },
   { key: 'tariff_escalation_pct', label: 'עליית תעריף שנתית (%)' },
   { key: 'degradation_pct_year', label: 'דעיכה שנתית (%)' },
   { key: 'first_year_degradation_pct', label: 'דעיכת שנה ראשונה (%)' },

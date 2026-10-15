@@ -57,6 +57,10 @@ export function cellToPlain(v: unknown): unknown {
   if (typeof v !== 'object') return v
   if (v instanceof Date) return v.toISOString().slice(0, 10)
   const o = v as Record<string, unknown>
+  // "#REF!" etc. and formulas without a cached value come through as text, so the
+  // import lists them as rejected rows instead of silently skipping them.
+  if ('error' in o) return String(o.error ?? '#ERROR')
+  if ('formula' in o && (o.result === undefined || o.result === null)) return `=${String(o.formula)}`
   if ('result' in o) return cellToPlain(o.result)
   if ('richText' in o && Array.isArray(o.richText)) return (o.richText as { text: string }[]).map((t) => t.text).join('')
   if ('text' in o) return o.text

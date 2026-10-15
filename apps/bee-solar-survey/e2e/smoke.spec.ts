@@ -100,7 +100,7 @@ async function fillPriceBook(page: Page, publish?: { baseUrl: string; key: strin
   await page.fill('#p_round', '10')
   await page.fill('#p_usd', '3.7')
   await page.fill('#p_eur', '4')
-  for (const [roof, v] of [['flat', '300'], ['tile', '350'], ['metal-standing-seam', '280'], ['metal-trapezoidal', '280'], ['ground', '320']]) {
+  for (const [roof, v] of [['flat', '300'], ['tile', '350'], ['metal-standing-seam', '280'], ['metal-trapezoidal', '280'], ['ground', '320'], ['other', '300']]) {
     await page.fill(`#p_l_${roof}`, v)
   }
   await page.click('#pSuggest')

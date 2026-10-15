@@ -92,12 +92,13 @@ describe('computeRoi', () => {
   it('self consumption splits on-site use and surplus', () => {
     const roi: RoiRules = { ...netMetering(), track: 'self_consumption', self_consumption_share: 0.4, surplus_tariff_ils_kwh: 0.2 }
     const r = computeRoi(roi, ctx())!
-    expect(r.kpi.savings_y1_ils).toBe(Math.round((15840 * 0.4 * 0.5 + 15840 * 0.6 * 0.2) * 1.18))
+    // VAT only on the avoided consumption; sale income has none for a private customer.
+    expect(r.kpi.savings_y1_ils).toBe(Math.round(15840 * 0.4 * 0.5 * 1.18 + 15840 * 0.6 * 0.2))
   })
 
   it('feed-in sells everything at the feed-in tariff', () => {
     const roi: RoiRules = { ...netMetering(), track: 'feed_in_full', consumption_tariff_ils_kwh: null, feed_in_tariff_ils_kwh: 0.3 }
-    expect(computeRoi(roi, ctx())!.kpi.savings_y1_ils).toBe(Math.round(15840 * 0.3 * 1.18))
+    expect(computeRoi(roi, ctx())!.kpi.savings_y1_ils).toBe(Math.round(15840 * 0.3))
   })
 
   it('is not produced until the track and its parameters are filled', () => {

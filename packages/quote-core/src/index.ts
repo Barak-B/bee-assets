@@ -19,7 +19,7 @@ export {
 } from './pricebook'
 export type { PricingReadiness, ReadinessItem, PriceRow, ApplyResult, PriceChange } from './pricebook'
 export type { BuildQuoteOptions, SizingResult } from './engine'
-export { round2, roundToStep, pct, canonicalJson, sha256Hex } from './money'
+export { round2, roundToStep, pct, canonicalJson, sha256Hex, scheduleAmounts, ceilSafe, israelDate } from './money'
 export {
   toPublicQuote,
   publishBlockers,

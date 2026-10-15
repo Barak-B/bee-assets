@@ -70,7 +70,8 @@ export interface PricingReadiness {
   unpricedSkus: string[]
 }
 
-const REQUIRED_ROOFS: RoofType[] = ['flat', 'tile', 'metal-standing-seam', 'metal-trapezoidal', 'ground']
+// 'other' included: a survey without a roof type quotes as 'other' and needs a labour price too.
+const REQUIRED_ROOFS: RoofType[] = ['flat', 'tile', 'metal-standing-seam', 'metal-trapezoidal', 'ground', 'other']
 
 /**
  * What still blocks a real (non-"לאימות") quote. Labour sold from the per-roof
@@ -201,8 +202,15 @@ export function parseNumber(raw: unknown): number | null {
   if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null
   const t = String(raw).replace(/[₪$€\s]/g, '').replace(/[‏‎]/g, '')
   if (!t) return null
-  // "1,234.50" → 1234.50 ; "1234,50" → 1234.50
-  const cleaned = /,\d{1,2}$/.test(t) && !t.includes('.') ? t.replace(',', '.') : t.replace(/,/g, '')
+  // Locale-tolerant: "1,234.50" and "1.234,50" (EU suppliers) → 1234.5 ; "12,5" → 12.5 ;
+  // "1,234" / "1.234.567" → thousands. A lone "1.234" stays a decimal (English convention).
+  const lastDot = t.lastIndexOf('.')
+  const lastComma = t.lastIndexOf(',')
+  let cleaned: string
+  if (lastDot >= 0 && lastComma >= 0) cleaned = lastComma > lastDot ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '')
+  else if (lastComma >= 0) cleaned = /^-?\d{1,3}(,\d{3})+$/.test(t) ? t.replace(/,/g, '') : t.split(',').length === 2 ? t.replace(',', '.') : t.replace(/,/g, '')
+  else if (/^-?\d{1,3}(\.\d{3}){2,}$/.test(t)) cleaned = t.replace(/\./g, '')
+  else cleaned = t
   const n = Number(cleaned)
   return Number.isFinite(n) ? n : null
 }

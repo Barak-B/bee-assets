@@ -15,6 +15,8 @@
  * glyphs we pick — keep such tails next to Hebrew or digits instead.
  */
 
+import { parseNumber } from '@bee/quote-core'
+
 const MIRROR: Record<string, string> = {
   '(': ')',
   ')': '(',
@@ -72,8 +74,8 @@ export function mirrorBrackets(s: string): string {
 /** Thousands separators for display (e.g. 120000 → "120,000"). Non-numeric input is returned as-is. */
 export function formatNumber(value: string | number | null | undefined, fractionDigits = 0): string {
   if (value === null || value === undefined || value === '') return ''
-  const n = typeof value === 'number' ? value : Number(String(value).replace(',', '.'))
-  if (!Number.isFinite(n)) return String(value)
+  const n = typeof value === 'number' ? value : parseNumber(String(value))
+  if (n === null || !Number.isFinite(n)) return String(value)
   return n.toLocaleString('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: fractionDigits,

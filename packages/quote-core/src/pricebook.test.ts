@@ -31,7 +31,7 @@ function filledRules(): PricingRules {
   const r: PricingRules = structuredClone(seedPricingRules)
   r.vat_rate = 0.18
   r.default_margin_pct = 0.2
-  r.labour_per_module_ils = { flat: 300, tile: 350, 'metal-standing-seam': 280, 'metal-trapezoidal': 280, ground: 320, other: null }
+  r.labour_per_module_ils = { flat: 300, tile: 350, 'metal-standing-seam': 280, 'metal-trapezoidal': 280, ground: 320, other: 300 }
   r.sizing = { ...SUGGESTED_SIZING }
   r.validity_days = 30
   r.payment_schedule = r.payment_schedule.map((m, i) => ({ ...m, pct: [30, 40, 20, 5, 5][i] ?? null }))

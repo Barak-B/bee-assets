@@ -16,10 +16,15 @@ import { mapRoofType, parseOptionalNumber, toDesignSuitePayload } from './schema
 import type { HiveJob, SiteSurveyProject, SurveyPhoto } from './types'
 
 /** Rough phase inference from the main breaker label; ≥ 40A on an Israeli supply is almost always 3-phase. */
-export function inferPhases(mainBreaker: string): 1 | 3 | undefined {
-  const a = parseOptionalNumber(mainBreaker.replace(/[^\d.]/g, ''))
-  if (a === null) return undefined
-  return a >= 40 ? 3 : 1
+/**
+ * Phases: the surveyed value wins; else an explicit "1x40A" / "3X25A" in the breaker
+ * text; else unknown. Amperage alone is ambiguous in Israel (1×40A homes, 3×25A homes),
+ * so it is never used to guess — an unknown phase count just doesn't filter inverters.
+ */
+export function inferPhases(mainBreaker: string, surveyed?: '1' | '3' | ''): 1 | 3 | undefined {
+  if (surveyed === '1' || surveyed === '3') return Number(surveyed) as 1 | 3
+  const m = /^\s*([13])\s*[x×X*]\s*\d/.exec(mainBreaker ?? '')
+  return m ? (Number(m[1]) as 1 | 3) : undefined
 }
 
 export function surveyToQuoteInput(project: SiteSurveyProject, photos: SurveyPhoto[]): QuoteInput {
@@ -41,7 +46,7 @@ export function surveyToQuoteInput(project: SiteSurveyProject, photos: SurveyPho
     includeBattery: project.includeBattery,
     acCableLengthM: parseOptionalNumber(project.cableLengthM),
     mainBreaker: project.mainBreaker || undefined,
-    phases: inferPhases(project.mainBreaker),
+    phases: inferPhases(project.mainBreaker, project.phases),
     craneAccess: photos.some((p) => p.field === 'craneAccess') ? true : null,
   }
 }
