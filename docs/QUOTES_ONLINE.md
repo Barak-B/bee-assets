@@ -41,7 +41,7 @@
 4. **משתנים:** Settings → Variables:
    - `PUBLIC_BASE_URL` = `https://app.barak-e.com` (בדיוק הדומיין משלב 3)
    - `PUBLISH_KEY` = מחרוזת אקראית ארוכה, כ-**Secret** (למשל פלט של `openssl rand -base64 32`)
-5. **באפליקציה:** מחירון → "פרסום הצעות אונליין" → כתובת האתר (`https://app.barak-e.com`) ומפתח הפרסום → שמור.
+5. **באפליקציה:** מחירון → "שרת החברה — הצעות אונליין וגיבוי" → כתובת האתר (`https://app.barak-e.com`) ומפתח השרת → שמור. אותם פרטים מפעילים גם את גיבוי הסקרים ([`SURVEY_SYNC.md`](SURVEY_SYNC.md)).
 
 במקום שלבים 1–4 אפשר מהמחשב: `npx wrangler r2 bucket create bee-quotes`, `npx wrangler pages secret put PUBLISH_KEY --project-name bee-solar-survey`, `npm run pages:deploy`. הקובץ `apps/bee-solar-survey/wrangler.toml` כבר מגדיר את ה-binding ואת `PUBLIC_BASE_URL`.
 

@@ -104,7 +104,9 @@ S09–S12 בדיקה / מסירה / ניטור ──── bee-live (חי, 184 
 3. **כפתור בסקר**: "הצעה ראשונית" → מייצר `QuoteVersion` + PDF כ-**טיוטה בלבד** (`dispatch.draft`, `requiresHumanPick: true`, חוק #2). אין שליחה ללקוח מהאפליקציה.
 4. כתב כמויות XLSX (ExcelJS, `rightToLeft`) לפי `boq-xlsx-layout.md` — אפשר כבר כאן, כי זו פונקציה טהורה על אותו `QuoteVersion`.
 
-### שלב 4 — חיבור הסקר לשרת (M0-10, אחרי שיש bee-live נגיש)
+### שלב 4 — חיבור הסקר לשרת (M0-10)
+
+> בוצע חלקית בלי לחכות ל-bee-live: סעיף 1 רץ על פרויקט ה-Pages שלנו (ראו `docs/SURVEY_SYNC.md`). כש-bee-live יהיה נגיש, הוא ימשוך מ-`/api/hive/jobs` או יחליף את האחסון. האפליקציה לא תצטרך שינוי.
 
 1. במקום הורדת JSON: `POST /api/surveys` ל-bee-live עם ה-hive bundle; תור אופליין ב-IndexedDB ושליחה חוזרת.
 2. קישור `customer.id` אמיתי (בחירת לקוח מרשימה מהשרת) במקום `[OPEN]`.
@@ -132,7 +134,8 @@ S09–S12 בדיקה / מסירה / ניטור ──── bee-live (חי, 184 
 | 3c — כתב כמויות Excel + גרסאות | ✅ Excel ללקוח/פנימי לפי תבנית 08.CC, גרסאות בלתי-משתנות + "מה השתנה" | `src/boqXlsx.ts`, `src/quotesDialog.ts`, `quote-core/src/diff.ts` |
 | הצעות אונליין | ✅ קישור `https://<דומיין>/q/<קוד>` (Pages Functions + R2), חסימת 127.0.0.1/localhost, PDF ללקוח, צפיות, ביטול — **ממתין להפעלה בחשבון Cloudflare** | `functions/`, `docs/QUOTES_ONLINE.md` |
 | E2E | ✅ Playwright ב-CI: דוח, ייבוא מחירון → הצעה מתומחרת, Excel, גרסה 2, אופליין | `apps/bee-solar-survey/e2e` |
-| 4–6 | ⏳ דורשים גישה ל-bee-live והחלטות (סעיף 5) | |
+| 4 — חיבור לשרת | ✅ על השרת שלנו (Pages + R2), לא מחכים ל-bee-live: גיבוי אוטומטי של סקרים, תמונות וגרסאות הצעה, תור אופליין, שחזור לטלפון חדש, feed ג'ובים לכוורת (`/api/hive/jobs`). **נשאר ל-bee-live:** לקוח אמיתי מרשימה (`customer.id`), Postgres | `src/sync.ts`, `functions/api/surveys`, `docs/SURVEY_SYNC.md` |
+| 5–6 | ⏳ דורשים גישה ל-bee-live והחלטות (סעיף 5) | |
 
 ## 5. מה צריך מברק כדי שההצעה תהיה אמיתית
 

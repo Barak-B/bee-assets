@@ -1,0 +1,127 @@
+import { describe, expect, it } from 'vitest'
+import type { Ctx, Env } from './_lib/env'
+import { MemoryBucket } from './_lib/memoryBucket'
+import { onRequestGet as listGet } from './api/surveys/index'
+import { onRequestGet as surveyGet, onRequestOptions as surveyOptions, onRequestPut as surveyPut } from './api/surveys/[id]'
+import { onRequestGet as photoGet, onRequestPut as photoPut } from './api/surveys/[id]/photos/[photo]'
+import { onRequestPut as quotePut } from './api/surveys/[id]/quotes/[version]'
+import { onRequestGet as jobsGet } from './api/hive/jobs'
+
+const KEY = 'test-publish-key-0123456789'
+const ID = '0f8fad5b-d9cb-469f-a165-70867728950e'
+const PHOTO = '7c9e6679-7425-40de-944b-e07fc1f90ae7'
+const SHA = 'a'.repeat(64)
+const PKEY = `${PHOTO}.${SHA.slice(0, 12)}`
+const AUTH = { authorization: `Bearer ${KEY}` }
+
+const env = (): Env => ({ QUOTES: new MemoryBucket(), PUBLIC_BASE_URL: 'https://app.barak-e.com', PUBLISH_KEY: KEY })
+const ctx = (e: Env, path: string, init: RequestInit = {}, params: Record<string, string> = {}): Ctx => ({
+  request: new Request(`https://app.barak-e.com${path}`, init),
+  env: e,
+  params,
+})
+
+function record(over: Record<string, unknown> = {}) {
+  return {
+    schema: 'bee.survey-record/1',
+    project: { id: ID, projectName: 'גג הרצל', address: 'הרצל 1', surveyor: 'תמיר', updatedAt: '2026-10-15T08:00:00.000Z' },
+    photos: [{ id: PHOTO, field: 'roof', key: PKEY, sha256: SHA, mimeType: 'image/jpeg', annotated: false, createdAt: '2026-10-15T08:00:00.000Z' }],
+    hive: { jobs: [{ id: 'j1', kind: 'collect', outbound: { requiresHumanPick: true, destinationClass: 'drafts_group' } }] },
+    completeness: { score: 90, readyForWave54: true },
+    contentHash: 'h1',
+    ...over,
+  }
+}
+
+const putSurvey = (e: Env, body: unknown, headers: Record<string, string> = AUTH) =>
+  surveyPut(ctx(e, `/api/surveys/${ID}`, { method: 'PUT', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(body) }, { id: ID }))
+
+const quote = (v: number, hash: string) => ({ version_no: v, snapshot_hash: hash, quote_number: 'Q-1', input: { projectId: ID } })
+const putQuote = (e: Env, v: number, body: unknown) =>
+  quotePut(ctx(e, `/api/surveys/${ID}/quotes/${v}`, { method: 'PUT', headers: { ...AUTH, 'content-type': 'application/json' }, body: JSON.stringify(body) }, { id: ID, version: String(v) }))
+
+describe('survey backup API', () => {
+  it('stores the survey, reports missing photos, then accepts them', async () => {
+    const e = env()
+    let res = await putSurvey(e, record())
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ ok: true, changed: true, missing_photos: [PKEY] })
+
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])
+    res = await photoPut(ctx(e, `/api/surveys/${ID}/photos/${PKEY}`, { method: 'PUT', headers: { ...AUTH, 'content-type': 'image/jpeg' }, body: jpeg }, { id: ID, photo: PKEY }))
+    expect(res.status).toBe(201)
+
+    res = await putSurvey(e, record())
+    expect(await res.json()).toMatchObject({ changed: false, missing_photos: [] })
+
+    const got = await photoGet(ctx(e, `/api/surveys/${ID}/photos/${PKEY}`, { headers: AUTH }, { id: ID, photo: PKEY }))
+    expect(new Uint8Array(await got.arrayBuffer())).toEqual(jpeg)
+  })
+
+  it('keeps history only for distinct content and lists surveys for restore', async () => {
+    const e = env()
+    await putSurvey(e, record())
+    await putSurvey(e, record())
+    await putSurvey(e, record({ contentHash: 'h2' }))
+    const bucket = e.QUOTES as MemoryBucket
+    expect([...bucket.store.keys()].filter((k) => k.includes('/history/'))).toHaveLength(2)
+
+    const res = await listGet(ctx(e, '/api/surveys', { headers: AUTH }))
+    const { surveys } = (await res.json()) as { surveys: { id: string; projectName: string; readyForWave54: boolean; photoCount: number }[] }
+    expect(surveys).toEqual([expect.objectContaining({ id: ID, projectName: 'גג הרצל', readyForWave54: true, photoCount: 1 })])
+  })
+
+  it('quote versions are immutable and need the survey first', async () => {
+    const e = env()
+    expect((await putQuote(e, 1, quote(1, 's1'))).status).toBe(409) // survey_first
+    await putSurvey(e, record())
+    expect((await putQuote(e, 1, quote(1, 's1'))).status).toBe(201)
+    expect((await putQuote(e, 1, quote(1, 's1'))).status).toBe(200) // retry after a lost reply
+    expect((await putQuote(e, 1, quote(1, 'other'))).status).toBe(409)
+    expect((await putQuote(e, 2, quote(3, 's3'))).status).toBe(400) // number mismatch
+    expect((await putQuote(e, 2, { ...quote(2, 's2'), input: { projectId: 'someone-else' } })).status).toBe(400)
+
+    const res = await surveyGet(ctx(e, `/api/surveys/${ID}`, { headers: AUTH }, { id: ID }))
+    const body = (await res.json()) as { survey: { contentHash: string }; quotes: { version_no: number }[] }
+    expect(body.survey.contentHash).toBe('h1')
+    expect(body.quotes.map((q) => q.version_no)).toEqual([1])
+    const list = (await (await listGet(ctx(e, '/api/surveys', { headers: AUTH }))).json()) as { surveys: { quoteVersions: number }[] }
+    expect(list.surveys[0]!.quoteVersions).toBe(1)
+  })
+
+  it('hive feed returns jobs with the survey id and honours since', async () => {
+    const e = env()
+    await putSurvey(e, record())
+    const res = await jobsGet(ctx(e, '/api/hive/jobs', { headers: AUTH }))
+    const body = (await res.json()) as { jobs: { kind: string; survey_id: string; outbound: { requiresHumanPick: boolean } }[]; until: string }
+    expect(body.jobs).toEqual([expect.objectContaining({ kind: 'collect', survey_id: ID, outbound: expect.objectContaining({ requiresHumanPick: true }) })])
+    await putSurvey(e, record()) // same content re-sent (e.g. after a lost reply) is not news for the hive
+    const later = (await (await jobsGet(ctx(e, `/api/hive/jobs?since=${encodeURIComponent(body.until)}`, { headers: AUTH }))).json()) as { jobs: unknown[] }
+    expect(later.jobs).toEqual([])
+    await new Promise((r) => setTimeout(r, 5)) // receivedAt must be strictly after `until`
+    await putSurvey(e, record({ contentHash: 'h2' }))
+    const changed = (await (await jobsGet(ctx(e, `/api/hive/jobs?since=${encodeURIComponent(body.until)}`, { headers: AUTH }))).json()) as { jobs: unknown[] }
+    expect(changed.jobs).toHaveLength(1)
+  })
+
+  it('lets the app on our domain PUT across origins (CORS preflight)', async () => {
+    const e = { ...env(), ALLOWED_ORIGINS: 'https://survey.barak-e.com' }
+    const res = await surveyOptions(ctx(e, `/api/surveys/${ID}`, { method: 'OPTIONS', headers: { origin: 'https://survey.barak-e.com', 'access-control-request-method': 'PUT' } }, { id: ID }))
+    expect(res.headers.get('access-control-allow-methods')).toContain('PUT')
+    expect(res.headers.get('access-control-allow-origin')).toBe('https://survey.barak-e.com')
+  })
+
+  it('rejects missing keys, bad ids, mismatched records and non-images', async () => {
+    const e = env()
+    expect((await putSurvey(e, record(), {})).status).toBe(401)
+    expect((await listGet(ctx(e, '/api/surveys'))).status).toBe(401)
+    expect((await jobsGet(ctx(e, '/api/hive/jobs', { headers: { authorization: 'Bearer nope' } }))).status).toBe(401)
+    expect((await putSurvey(e, record({ project: { id: 'other' } }))).status).toBe(400)
+    expect((await putSurvey(e, record({ photos: [{ key: '../../quotes/x' }] }))).status).toBe(400)
+    const bad = await surveyPut(ctx(e, '/api/surveys/x', { method: 'PUT', headers: AUTH, body: '{}' }, { id: '../x' }))
+    expect(bad.status).toBe(400)
+    const html = await photoPut(ctx(e, `/api/surveys/${ID}/photos/${PKEY}`, { method: 'PUT', headers: { ...AUTH, 'content-type': 'text/html' }, body: '<b>' }, { id: ID, photo: PKEY }))
+    expect(html.status).toBe(415)
+    expect((await surveyGet(ctx(e, `/api/surveys/${ID}`, { headers: AUTH }, { id: ID }))).status).toBe(404)
+  })
+})

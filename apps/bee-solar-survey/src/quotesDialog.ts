@@ -21,6 +21,7 @@ import { PublishError, publishQuote, quoteViews, revokeQuote, settingsProblem } 
 import { escapeHtml } from './html'
 import { loadPricing } from './pricing'
 import { buildQuoteDraft } from './quote'
+import { markDirty } from './sync'
 import { assessCompleteness } from './schema'
 import { outcomeToast, shareOrDownload, shareOrDownloadJson } from './share'
 import type { SiteSurveyProject } from './types'
@@ -160,6 +161,8 @@ async function render(projectId: string, ctx: Ctx) {
         ctx.toast(`אין שינוי מגרסה ${previous.version_no} — לא נוצרה גרסה חדשה`)
       } else {
         await saveQuote(project.id, bundle.quote)
+        await markDirty(project.id)
+        window.dispatchEvent(new Event('bee-sync-request'))
         ctx.toast(`נוצרה גרסה ${bundle.quote.version_no} · ${quoteSummaryHe(bundle.quote)}`)
       }
       await render(projectId, ctx)

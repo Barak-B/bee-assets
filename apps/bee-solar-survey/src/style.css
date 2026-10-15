@@ -338,6 +338,21 @@ textarea {
   color: #8a6200;
 }
 
+.sync-synced {
+  background: #e4f5eb;
+  color: var(--ok);
+}
+
+.sync-pending {
+  background: #eef2f7;
+  color: #3d5170;
+}
+
+.sync-error {
+  background: #fde7e7;
+  color: #a12626;
+}
+
 .item-actions {
   display: flex;
   flex-wrap: wrap;

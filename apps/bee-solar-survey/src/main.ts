@@ -6,6 +6,7 @@ import {
   exportBackup,
   getProject,
   getSurveyors,
+  getSyncState,
   importBackup,
   listPhotos,
   listProjects,
@@ -20,7 +21,8 @@ import { escapeAttr, escapeHtml } from './html'
 import { renderPricingScreen } from './pricingScreen'
 import { openQuotesDialog } from './quotesDialog'
 import { outcomeToast, shareOrDownload, shareOrDownloadJson } from './share'
-import { assessCompleteness, emptyProject, parseGps } from './schema'
+import { assessCompleteness, emptyProject, parseGps, sha256OfDataUrl } from './schema'
+import { STATUS_LABEL, SyncError, isSyncConfigured, markDirty, restoreFromServer, statusOf, syncAll, type SyncStatus } from './sync'
 import {
   BREAKER_OPTIONS,
   PHOTO_FIELD_LABELS,
@@ -40,6 +42,7 @@ let search = ''
 let toastTimer = 0
 let autoSaveTimer = 0
 let drawTarget: StoredPhoto | null = null
+let syncTimer = 0
 
 function toast(msg: string) {
   const el = document.getElementById('toast')
@@ -71,6 +74,54 @@ async function persistCurrent() {
   editing.hiveReady = assessCompleteness(editing, photos).readyForWave54
   await saveProject(editing)
   if (editing.surveyor) await rememberSurveyor(editing.surveyor)
+  requestSync()
+}
+
+/** Debounced background backup; quiet unless something actually failed. */
+function requestSync(delayMs = 4000) {
+  window.clearTimeout(syncTimer)
+  syncTimer = window.setTimeout(() => void runSync(false), delayMs)
+}
+
+async function runSync(manual: boolean) {
+  if (!navigator.onLine && !manual) return
+  if (!(await isSyncConfigured())) {
+    if (manual) toast('לא הוגדר שרת גיבוי — מחירון → שרת החברה')
+    return
+  }
+  try {
+    const r = await syncAll()
+    if (manual) {
+      toast(
+        r.offline
+          ? 'אין חיבור — השינויים ממתינים בתור וישלחו כשהחיבור יחזור'
+          : r.failed
+            ? `גיבוי נכשל: ${r.errors[0]}`
+            : r.synced
+              ? `גובו ${r.synced} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות`
+              : 'הכול כבר מגובה ✓',
+      )
+    } else if (r.failed) {
+      toast(`גיבוי נכשל: ${r.errors[0]}`)
+    }
+  } catch (err) {
+    if (manual) toast(err instanceof SyncError ? err.message : 'הגיבוי נכשל')
+  }
+  if (screen === 'list') await refreshSyncChips()
+}
+
+async function refreshSyncChips() {
+  const configured = await isSyncConfigured()
+  const items = app.querySelectorAll<HTMLElement>('[data-sync-chip]')
+  for (const el of items) {
+    const id = el.dataset.syncChip!
+    const p = await getProject(id)
+    if (!p) continue
+    const st: SyncStatus = statusOf(p, await getSyncState(id), configured)
+    el.textContent = STATUS_LABEL[st]
+    el.className = `badge sync-chip sync-${st}${st === 'off' ? ' hidden' : ''}`
+    el.dataset.status = st
+  }
 }
 
 function readFormIntoEditing() {
@@ -181,7 +232,11 @@ async function render() {
         <div class="row">
           <button class="btn btn-secondary" id="btnPricing">מחירון</button>
           <button class="btn btn-secondary" id="btnBackup">גיבוי</button>
-          <button class="btn btn-secondary" id="btnRestore">שחזור</button>
+          <button class="btn btn-secondary" id="btnRestore">שחזור מקובץ</button>
+        </div>
+        <div class="row">
+          <button class="btn btn-secondary" id="btnSync">סנכרן לשרת</button>
+          <button class="btn btn-secondary" id="btnRestoreServer">שחזור מהשרת</button>
         </div>
         <input class="search" id="search" placeholder="חיפוש פרויקט..." value="${escapeAttr(search)}" />
         <div class="project-list">
@@ -198,6 +253,7 @@ async function render() {
                 <span>${escapeHtml(p.surveyor || '')}</span>
                 <span>${escapeHtml(p.address || '')}</span>
                 <span class="badge ${p.hiveReady ? 'badge-ok' : 'badge-warn'}">${p.hiveReady ? 'מוכן ל־54' : 'טיוטה'}</span>
+                <span class="badge sync-chip hidden" data-sync-chip="${p.id}"></span>
               </div>
               <div class="item-actions">
                 <button class="btn btn-secondary" data-edit="${p.id}">עריכה</button>
@@ -228,6 +284,18 @@ async function render() {
       screen = 'pricing'
       void render()
     })
+    document.getElementById('btnSync')?.addEventListener('click', () => void runSync(true))
+    document.getElementById('btnRestoreServer')?.addEventListener('click', async () => {
+      try {
+        toast('מושך סקרים מהשרת...')
+        const r = await restoreFromServer()
+        await render() // re-render first: it replaces the toast element
+        toast(r.restored ? `שוחזרו ${r.restored} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות` : `אין סקרים חדשים בשרת${r.skipped ? ` (${r.skipped} כבר במכשיר)` : ''}`)
+      } catch (err) {
+        toast(err instanceof SyncError ? err.message : 'השחזור נכשל')
+      }
+    })
+    void refreshSyncChips()
     document.getElementById('btnBackup')?.addEventListener('click', async () => {
       const data = await exportBackup()
       const outcome = await shareOrDownloadJson(`bee-survey-backup-${new Date().toISOString().slice(0, 10)}.json`, data, 'גיבוי סקרים B.E.E')
@@ -242,8 +310,8 @@ async function render() {
         if (!file) return
         const data = JSON.parse(await file.text())
         const n = await importBackup(data)
+        await render()
         toast(`שוחזרו ${n} פרויקטים`)
-        void render()
       }
       input.click()
     })
@@ -527,6 +595,7 @@ function bindFormEvents() {
       await deletePhoto(id)
       photos = photos.filter((p) => p.id !== id)
       readFormIntoEditing()
+      await persistCurrent()
       await render()
     })
   })
@@ -666,9 +735,13 @@ function openDrawEditor(photo: StoredPhoto) {
     drawTarget.dataUrl = dataUrl
     drawTarget.annotated = true
     drawTarget.mimeType = 'image/jpeg'
+    // The pixels changed — the fingerprint used by the hive export and server sync must too.
+    drawTarget.sha256 = await sha256OfDataUrl(dataUrl)
     await savePhoto(drawTarget)
     host.innerHTML = ''
     drawTarget = null
+    await markDirty(editing.id)
+    requestSync()
     toast('סימון נשמר')
     await render()
   })
@@ -721,4 +794,8 @@ const quotesCtx = {
 // Offline-first: precached app shell; a new version activates on the next launch.
 registerSW({ immediate: true })
 
-void render()
+// Backup queue: drain on start, when the network returns, and on explicit requests (new quote version).
+window.addEventListener('online', () => requestSync(500))
+window.addEventListener('bee-sync-request', () => requestSync(1000))
+
+void render().then(() => requestSync(1500))

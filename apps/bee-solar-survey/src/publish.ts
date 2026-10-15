@@ -17,9 +17,9 @@ export function defaultBaseUrl(): string {
 }
 
 export function settingsProblem(s: PublishSettings | null): string | null {
-  if (!s || !s.baseUrl) return 'לא הוגדרה כתובת אתר לפרסום (מסך מחירון → פרסום אונליין)'
+  if (!s || !s.baseUrl) return 'לא הוגדרה כתובת אתר לפרסום (מסך מחירון → שרת החברה)'
   if (!isPublicBaseUrl(s.baseUrl)) return `הכתובת ${s.baseUrl} אינה כתובת ציבורית https — הגדירו את דומיין החברה`
-  if (!s.key) return 'חסר מפתח פרסום (מסך מחירון → פרסום אונליין)'
+  if (!s.key) return 'חסר מפתח פרסום (מסך מחירון → שרת החברה)'
   return null
 }
 

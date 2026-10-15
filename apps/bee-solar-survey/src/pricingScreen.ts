@@ -98,8 +98,8 @@ let pub: PubForm = { baseUrl: '', key: '' }
 function pubStatus(s: PubForm): string {
   if (!s.baseUrl) return 'לא הוגדר — הצעות לא יקבלו קישור אונליין'
   if (!isPublicBaseUrl(s.baseUrl)) return `⚠ ${s.baseUrl} אינה כתובת ציבורית https — לא ייווצרו קישורים`
-  if (!s.key) return 'חסר מפתח פרסום'
-  return `קישורים ייווצרו בכתובת ${s.baseUrl.replace(/\/+$/, '')}/q/…`
+  if (!s.key) return 'חסר מפתח שרת'
+  return `קישורים ייווצרו בכתובת ${s.baseUrl.replace(/\/+$/, '')}/q/… · הסקרים מגובים לאותו שרת`
 }
 
 function render(ctx: Ctx, p: Pricing) {
@@ -136,10 +136,10 @@ function render(ctx: Ctx, p: Pricing) {
       </section>
 
       <section class="section" id="pubSection">
-        <h2>פרסום הצעות אונליין</h2>
-        <p class="hint">קישור ללקוח נוצר רק תחת כתובת האתר שלנו (https). כתובות מקומיות כמו 127.0.0.1 או localhost נחסמות.</p>
+        <h2>שרת החברה — הצעות אונליין וגיבוי</h2>
+        <p class="hint">אותו שרת משמש לקישורי הצעה ללקוח ולגיבוי אוטומטי של הסקרים, התמונות וגרסאות ההצעה. קישור ללקוח נוצר רק תחת כתובת האתר שלנו (https). כתובות מקומיות כמו 127.0.0.1 או localhost נחסמות.</p>
         <div class="field"><label>כתובת האתר</label><input id="p_pubBase" dir="ltr" inputmode="url" placeholder="https://app.barak-e.com" value="${escapeAttr(pub.baseUrl)}" /></div>
-        <div class="field"><label>מפתח פרסום</label><input id="p_pubKey" dir="ltr" type="password" autocomplete="off" placeholder="PUBLISH_KEY" value="${escapeAttr(pub.key)}" /></div>
+        <div class="field"><label>מפתח שרת (פרסום וגיבוי)</label><input id="p_pubKey" dir="ltr" type="password" autocomplete="off" placeholder="PUBLISH_KEY" value="${escapeAttr(pub.key)}" /></div>
         <div class="meta" id="p_pubStatus">${escapeHtml(pubStatus(pub))}</div>
       </section>
 

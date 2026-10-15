@@ -1,30 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { SUGGESTED_SIZING, applyPriceList, buildQuote, markRulesFilled, seedCatalog, seedPricingRules, toPublicQuote, type Catalog, type PricingRules, type PublicQuote } from '@bee/quote-core'
-import type { Ctx, Env, R2BucketLike, R2ObjectLike } from './_lib/env'
+import type { Ctx, Env } from './_lib/env'
+import { MemoryBucket } from './_lib/memoryBucket'
 import { onRequestPost } from './api/quotes/index'
 import { onRequestDelete, onRequestGet as statusGet } from './api/quotes/[token]'
 import { onRequestGet as pageGet } from './q/[token]'
 import { onRequestGet as pdfGet } from './q/[token]/pdf'
-
-class MemoryBucket implements R2BucketLike {
-  store = new Map<string, { data: Uint8Array; meta?: Record<string, string> }>()
-  async get(key: string): Promise<R2ObjectLike | null> {
-    const v = this.store.get(key)
-    if (!v) return null
-    return {
-      text: async () => new TextDecoder().decode(v.data),
-      arrayBuffer: async () => v.data.slice().buffer,
-      customMetadata: v.meta,
-    }
-  }
-  async put(key: string, value: string | ArrayBuffer | Uint8Array, opts?: { customMetadata?: Record<string, string> }) {
-    const data = typeof value === 'string' ? new TextEncoder().encode(value) : value instanceof Uint8Array ? value : new Uint8Array(value)
-    this.store.set(key, { data, meta: opts?.customMetadata })
-  }
-  async delete(key: string | string[]) {
-    for (const k of Array.isArray(key) ? key : [key]) this.store.delete(k)
-  }
-}
 
 const KEY = 'test-publish-key-0123456789'
 

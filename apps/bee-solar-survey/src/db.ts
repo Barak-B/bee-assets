@@ -291,3 +291,25 @@ export const getPublishSettings = () => metaGet<PublishSettings>('publish')
 export const savePublishSettings = (s: PublishSettings) => metaPut('publish', s)
 export const getPublication = (quoteId: string) => metaGet<Publication>(`pub:${quoteId}`)
 export const savePublication = (quoteId: string, p: Publication) => metaPut(`pub:${quoteId}`, p)
+
+// ── Server backup state (per survey) ───────────────────────────────────
+
+export interface SyncState {
+  /** contentHash the server holds. */
+  hash: string
+  /** project.updatedAt at the last successful sync. */
+  projectUpdatedAt: string
+  syncedAt: string | null
+  /** Photo keys (`<id>.<sha12>`) the server is known to hold. */
+  photoKeys: string[]
+  /** Quote version numbers the server holds. */
+  quoteVersions: number[]
+  error: string | null
+  /** Last attempt failed only for lack of network (queued, not an error). */
+  offline: boolean
+  /** Something changed that updatedAt does not show (e.g. a new quote version). */
+  dirty: boolean
+}
+
+export const getSyncState = (projectId: string) => metaGet<SyncState>(`sync:${projectId}`)
+export const saveSyncState = (projectId: string, s: SyncState) => metaPut(`sync:${projectId}`, s)

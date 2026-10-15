@@ -114,6 +114,8 @@ async function fillPriceBook(page: Page, publish?: { baseUrl: string; key: strin
 }
 
 test.beforeEach(async ({ page }) => {
+  // Background backup must never reach the real domain from a test; tests that exercise it route it themselves.
+  await page.route('https://app.barak-e.com/api/surveys**', (r) => r.abort('internetdisconnected'))
   page.on('dialog', (d) => void d.accept())
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
@@ -250,4 +252,113 @@ test('local addresses cannot be saved as the publishing domain', async ({ page }
   await page.click('#pSave')
   await expect(page.locator('#toast')).toContainText('כתובת האתר לא נשמרה')
   await expect(page.locator('#p_pubStatus')).toContainText('לא הוגדר')
+})
+
+/** Tiny stand-in for the Pages Functions survey API, enough to drive the app's sync and restore. */
+function fakeSurveyServer(key: string) {
+  const surveys = new Map<string, Record<string, unknown>>()
+  const photos = new Map<string, { body: Buffer; type: string }>()
+  const quotes = new Map<string, Record<string, unknown>>()
+  const state = { down: false, auth: new Set<string>() }
+  const handler = async (route: import('@playwright/test').Route) => {
+    if (state.down) return route.abort('internetdisconnected')
+    const req = route.request()
+    state.auth.add(req.headers()['authorization'] ?? '')
+    if (req.headers()['authorization'] !== `Bearer ${key}`) return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"unauthorized"}' })
+    const path = new URL(req.url()).pathname
+    const json = (status: number, body: unknown) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+    let m: RegExpMatchArray | null
+    if (path === '/api/surveys' && req.method() === 'GET') {
+      return json(200, { surveys: [...surveys.values()].map((r) => ({ id: (r.project as { id: string }).id, projectName: (r.project as { projectName: string }).projectName })) })
+    }
+    if ((m = path.match(/^\/api\/surveys\/([^/]+)\/photos\/([^/]+)$/))) {
+      if (req.method() === 'PUT') {
+        photos.set(`${m[1]}/${m[2]}`, { body: req.postDataBuffer()!, type: req.headers()['content-type'] ?? '' })
+        return json(201, { ok: true })
+      }
+      const ph = photos.get(`${m[1]}/${m[2]}`)
+      return ph ? route.fulfill({ status: 200, contentType: ph.type, body: ph.body }) : json(404, { error: 'not_found' })
+    }
+    if ((m = path.match(/^\/api\/surveys\/([^/]+)\/quotes\/(\d+)$/))) {
+      quotes.set(`${m[1]}/${m[2]}`, req.postDataJSON())
+      return json(201, { ok: true, result: 'created' })
+    }
+    if ((m = path.match(/^\/api\/surveys\/([^/]+)$/))) {
+      const id = decodeURIComponent(m[1]!)
+      if (req.method() === 'PUT') {
+        const rec = req.postDataJSON() as { photos: { key: string }[] }
+        surveys.set(id, rec)
+        return json(200, { ok: true, changed: true, missing_photos: rec.photos.map((p) => p.key).filter((k) => !photos.has(`${id}/${k}`)) })
+      }
+      const rec = surveys.get(id)
+      if (!rec) return json(404, { error: 'not_found' })
+      return json(200, { survey: rec, quotes: [...quotes.entries()].filter(([k]) => k.startsWith(`${id}/`)).map(([, q]) => q) })
+    }
+    return json(404, { error: 'not_found' })
+  }
+  return { surveys, photos, quotes, state, handler }
+}
+
+async function configureServer(page: Page, baseUrl: string, key: string) {
+  await page.goto('/')
+  await page.click('#btnPricing')
+  await page.fill('#p_pubBase', baseUrl)
+  await page.fill('#p_pubKey', key)
+  await page.click('#pSave')
+  await expect(page.locator('#p_pubStatus')).toContainText(new URL(baseUrl).host)
+  await page.click('#pBack')
+}
+
+test('surveys back up to our server, queue while offline, and restore on a new phone', async ({ page, browser }) => {
+  const BASE = 'https://app.barak-e.com'
+  const KEY = 'field-key-123'
+  const server = fakeSurveyServer(KEY)
+  await page.route(`${BASE}/api/surveys**`, server.handler)
+
+  // Offline in the field: the survey is kept and queued.
+  server.state.down = true
+  await configureServer(page, BASE, KEY)
+  await createSurvey(page, 'גג בדיקה גיבוי')
+  const chip = page.locator('.project-item', { hasText: 'גג בדיקה גיבוי' }).locator('[data-sync-chip]')
+  await expect(chip).toHaveText('ממתין לגיבוי')
+  await page.click('#btnSync')
+  await expect(page.locator('#toast')).toContainText('ממתינים בתור')
+  expect(server.surveys.size).toBe(0)
+
+  // Network back → the queue drains on its own.
+  server.state.down = false
+  await page.evaluate(() => window.dispatchEvent(new Event('online')))
+  await expect(chip).toHaveText('מגובה ✓', { timeout: 10_000 })
+  expect(server.surveys.size).toBe(1)
+  const rec = [...server.surveys.values()][0] as { project: { projectName: string }; photos: { key: string; sha256: string }[]; hive: { jobs: { kind: string; outbound: { requiresHumanPick: boolean } }[] } }
+  expect(rec.project.projectName).toBe('גג בדיקה גיבוי')
+  expect(rec.photos).toHaveLength(1)
+  expect(rec.photos[0]!.key).toMatch(/^[0-9a-f-]{36}\.[0-9a-f]{12}$/)
+  expect(server.photos.size).toBe(1)
+  const photo = [...server.photos.values()][0]!
+  expect(photo.body.subarray(0, 3).toString('hex')).toMatch(/^ffd8ff|^89504e/) // real image bytes, not a data URL
+  expect(rec.hive.jobs.map((j) => j.kind)).toContain('collect')
+  expect(rec.hive.jobs.every((j) => j.outbound.requiresHumanPick)).toBe(true)
+  expect([...server.state.auth]).toEqual([`Bearer ${KEY}`])
+
+  // Nothing changed → a manual sync sends nothing new.
+  await page.click('#btnSync')
+  await expect(page.locator('#toast')).toContainText('הכול כבר מגובה')
+
+  // A new phone: empty storage, same server → the survey and its photo come back.
+  const fresh = await browser.newContext()
+  const phone = await fresh.newPage()
+  phone.on('dialog', (d) => void d.accept())
+  await phone.route(`${BASE}/api/surveys**`, server.handler)
+  await configureServer(phone, BASE, KEY)
+  await expect(phone.locator('.project-item')).toHaveCount(0)
+  await phone.click('#btnRestoreServer')
+  await expect(phone.locator('#toast')).toContainText('שוחזרו 1 סקרים')
+  const item = phone.locator('.project-item', { hasText: 'גג בדיקה גיבוי' })
+  await expect(item).toBeVisible()
+  await expect(item.locator('[data-sync-chip]')).toHaveText('מגובה ✓')
+  await item.locator('[data-edit]').click()
+  await expect(phone.locator('.photo-block[data-field="roof"] .thumb')).toHaveCount(1)
+  await expect(phone.locator('#f_address')).toHaveValue('רחוב הרצל 1, תל אביב')
+  await fresh.close()
 })

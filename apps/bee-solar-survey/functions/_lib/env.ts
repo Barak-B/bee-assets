@@ -9,8 +9,23 @@ export interface R2ObjectLike {
   customMetadata?: Record<string, string>
 }
 
+export interface R2ListedObject {
+  key: string
+  size: number
+  uploaded: Date
+  customMetadata?: Record<string, string>
+}
+
+export interface R2ListResult {
+  objects: R2ListedObject[]
+  truncated: boolean
+  cursor?: string
+}
+
 export interface R2BucketLike {
   get(key: string): Promise<R2ObjectLike | null>
+  head(key: string): Promise<{ key: string; size: number } | null>
+  list(options?: { prefix?: string; cursor?: string; limit?: number; include?: ('customMetadata' | 'httpMetadata')[] }): Promise<R2ListResult>
   put(
     key: string,
     value: string | ArrayBuffer | Uint8Array,
