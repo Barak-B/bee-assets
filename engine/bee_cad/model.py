@@ -221,6 +221,7 @@ class Design(BaseModel):
     title: TitleBlock = Field(default_factory=TitleBlock)
     boards: list[Board] = Field(default_factory=list)
     mv_boards: list["MVBoard"] = Field(default_factory=list)
+    drill_template: Optional[dict] = None        # bee_cad.template.DrillTemplate (kept as dict to avoid a cycle)
     nodes: list[Node] = Field(default_factory=list)
     legend: bool = True
     notes: list[str] = Field(default_factory=list)

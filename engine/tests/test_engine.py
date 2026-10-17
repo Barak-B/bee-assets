@@ -189,3 +189,24 @@ def test_mv_sheets_audit_clean():
         assert warnings == [], (no, warnings)
         rep = audit_sheet(doc, i, no)
         assert rep.clean, (no, rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])
+
+
+def test_drill_template():
+    from bee_cad.audit import audit_sheet
+    from bee_cad.template import DrillTemplate, TemplateChecks, Unit
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "bess_drill_template.json"
+    des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
+    t = DrillTemplate.model_validate(des.drill_template)
+    assert sum(len(t.anchor_points(u)) for u in t.units) == 16
+    assert t.anchor_points(t.units[0])[0] == (270.0, 468.0)
+    assert TemplateChecks().run(t).problems == []
+    bad = t.model_copy(update={"units": t.units + [Unit(tag="X", x_mm=5000, y_mm=50, width_mm=989, depth_mm=1465)]})
+    probs = TemplateChecks().run(bad).problems
+    assert any("חורג" in p for p in probs) and any("משפה" in p for p in probs)
+    result = build(des, ("drill",))
+    assert list(result) == ["E-20"]
+    doc = next(iter(result.values()))[0]
+    assert doc.modelspace().query("DIMENSION")
+    rep = audit_sheet(doc, 0, "E-20")
+    assert rep.clean, (rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3], rep.text_outside[:3])
