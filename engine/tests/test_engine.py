@@ -156,3 +156,17 @@ def test_eplan_bridge(tmp_path: Path):
     assert len(merged.board("MDB").all_circuits()) == 21     # 20 house circuits + Q-INV feeder
     result = build(merged, ("sld",))
     assert next(iter(result.values()))[1] == []
+
+
+def test_audit_clean_on_examples(design: Design):
+    from bee_cad.audit import audit_sheet
+    from bee_cad.eplan_bridge import load_from_files
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "eplan"
+    for des in (design, load_from_files(ex / "example.yaml", ex / "example_calc.json", EXAMPLE)):
+        result = build(des, ("sld", "panel"))
+        doc = next(iter(result.values()))[0]
+        for i, (no, (_, warnings)) in enumerate(result.items()):
+            assert warnings == [], (no, warnings)
+            rep = audit_sheet(doc, i, no)
+            assert rep.clean, (no, rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3], rep.text_outside[:3])

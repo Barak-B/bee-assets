@@ -108,18 +108,18 @@ class SldRenderer:
         # feeder cable label
         if b.supply.cable:
             c = b.supply.cable
-            ctx.text(c.designation, (x_in - 2.0, y - 4.0), 2.0, "sld_text", TA.MIDDLE_RIGHT, bold=True)
+            ctx.text(c.designation, (x_in + 2.0, y - 2.5), 2.0, "sld_text", TA.TOP_LEFT, bold=True)
             extra = []
             if c.length_m:
                 extra.append(f"{c.length_m:g}m")
             if c.du_pct is not None:
                 extra.append(f"ΔU={c.du_pct:g}%")
             if extra:
-                ctx.text("  ".join(extra), (x_in - 2.0, y - 7.0), 1.6, "sld_text", TA.MIDDLE_RIGHT)
+                ctx.text("  ".join(extra), (x_in + 2.0, y - 5.5), 1.6, "sld_text", TA.TOP_LEFT)
         y_board_top = y - 12.0
         ctx.line((x_in, y), (x_in, y_board_top))
         if b.supply.earthing and is_main:
-            ctx.text(f"PEN  איפוס {b.supply.earthing}", (x_in + 2.0, y_board_top + 2.0), 1.6, "sld_text", TA.BOTTOM_LEFT)
+            ctx.text(f"PEN  איפוס {b.supply.earthing}", (x_in + 2.0, y_board_top + 0.5), 1.6, "sld_text", TA.BOTTOM_LEFT)
 
         # board frame (dash-dot) — closed after we know the extent
         x_left = x_in - 14.0
@@ -142,7 +142,7 @@ class SldRenderer:
         x_bus1 = x_in + width - 10.0
         ctx.msp.add_lwpolyline([(x_bus0, y_bus), (x_bus1, y_bus)], dxfattribs={"layer": LAYERS["sld_bus"].name, "const_width": 1.2})
         bl = b.busbar.label + (f"  {b.busbar.rating_a:g}A" if b.busbar.rating_a else "") + (f"  Icw {b.busbar.icw_ka:g}kA" if b.busbar.icw_ka else "")
-        ctx.text(bl, (x_bus0, y_bus + 1.6), 1.8, "sld_text", TA.BOTTOM_LEFT)
+        ctx.text(bl, (x_in + 3.0, y_bus + 1.6), 1.8, "sld_text", TA.BOTTOM_LEFT)
         ctx.text(b.busbar.note, (x_bus1, y_bus + 1.6), 1.6, "sld_text", TA.BOTTOM_RIGHT)
         self.board_x[b.id] = x_in
         self.board_bus[b.id] = (x_bus0, x_bus1, y_bus)
@@ -156,7 +156,9 @@ class SldRenderer:
             x += 14.0
 
         # groups
-        y_bottom = y_bus
+        y_bottom = y_bus - 4.0 - SYM_H - 18.0
+        if any(f.rcd for f in b.feeders):
+            y_bottom -= SYM_H + 4.0
         y_pe = None
         for g in b.groups:
             gx0 = x
@@ -172,13 +174,15 @@ class SldRenderer:
                                    dxfattribs={"layer": LAYERS["sld_bus"].name, "const_width": 0.7})
             if g.title:
                 ctx.text(g.title, (gx0 + gw - PITCH + 2.0, y_sub + 1.2), 1.6, "sld_text", TA.BOTTOM_RIGHT)
+            depth = 0.0
             for i, c in enumerate(g.circuits):
                 cx = gx0 + i * PITCH
                 self.draw_final_circuit(c, cx, y_sub)
-            y_bottom = min(y_bottom, y_sub - CIRC_LEN - 36.0)
+                depth = max(depth, self.label_depth(c))
+            y_bottom = min(y_bottom, y_sub - CIRC_LEN - depth - 14.0)
             # N bar of the group (blue)
             if g.device and g.device.kind in ("rcd", "rcbo"):
-                yn = y_sub - CIRC_LEN - 31.0
+                yn = y_sub - CIRC_LEN - depth - 8.0
                 ctx.msp.add_lwpolyline([(gx0 - 2.0, yn), (gx0 + gw - PITCH + 2.0, yn)],
                                        dxfattribs={"layer": LAYERS["n"].name, "const_width": 0.6})
                 ctx.text(f"פס N — {g.device.tag}", (gx0 - 2.0, yn - 1.2), 1.5, "sld_text", TA.TOP_LEFT)
@@ -193,11 +197,11 @@ class SldRenderer:
                 yb = self.vdevice(f.rcd, x, yb - 4.0, side="right")
             self.feeder_pts[(b.id, f.tag)] = Placed(x, yb)
             if f.cable:
-                ctx.text(f.cable.designation, (x - 2.0, yb - 2.0), 1.6, "sld_text", TA.TOP_RIGHT)
+                ctx.text(f.cable.designation, (x + 2.2, yb - 1.5), 1.6, "sld_text", TA.TOP_LEFT)
             x += PITCH + 4.0
 
         # PE bar
-        y_pe = y_bottom + 4.0
+        y_pe = y_bottom + 2.0
         ctx.msp.add_lwpolyline([(x_left + 2.0, y_pe), (x_in + width - 10.0, y_pe)],
                                dxfattribs={"layer": LAYERS["pe"].name, "const_width": 0.8})
         ctx.text("פס PE", (x_left + 2.0, y_pe - 1.2), 1.6, "sld_text", TA.TOP_LEFT)
@@ -208,7 +212,7 @@ class SldRenderer:
         ctx.text(b.title, (x_in + width - 7.5, y_board_top + 2.5), 3.0, "sld_tag", TA.TOP_RIGHT, bold=True)
         if b.enclosure:
             e = b.enclosure
-            ctx.text(f"{e.rows}×{e.modules_per_row} מודולים", (x_left + 1.5, y_board_top + 2.5), 1.6, "sld_text", TA.TOP_LEFT)
+            ctx.text(f"{e.rows}×{e.modules_per_row} מודולים", (x_in + width - 7.5, y_board_top - 1.5), 1.6, "sld_text", TA.TOP_RIGHT)
         if is_main:
             # equipotential bar + earth electrode below the PE bar
             ex = x_left + 10.0
@@ -216,6 +220,12 @@ class SldRenderer:
             ctx.insert("BEE_EARTH", (ex, fy0 - 8.0))
             ctx.text("פס השוואת פוטנציאלים", (ex + 3.0, fy0 - 5.0), 1.8, "sld_text", TA.MIDDLE_LEFT)
         return x_in + width - 6.0, fy0
+
+    @staticmethod
+    def label_depth(c: Circuit) -> float:
+        """Length (mm) of the longest rotated label under a final circuit (cable / load)."""
+        n = max(len(c.cable.designation) if c.cable else 0, len(c.load))
+        return 6.0 + n * 1.8 * 0.6
 
     def draw_final_circuit(self, c: Circuit, x: float, y_sub: float) -> None:
         ctx = self.ctx
@@ -335,7 +345,7 @@ class SldRenderer:
         room = ctx.x1 - 4.0 - (x_main_right + 10.0)
         self.node_w = NODE_W
         node_cols = 1
-        if len(d.nodes) > 3:
+        if len(d.nodes) > 3 or (subs and len(d.nodes) >= 2):
             if room >= 2 * (NODE_W + 4.0):
                 node_cols = 2
             elif room >= 2 * (44.0 + 4.0):
@@ -354,7 +364,7 @@ class SldRenderer:
         yn = y_top
         for i, n in enumerate(d.nodes):
             col = i % node_cols
-            xr_node = x_band_right - col * (self.node_w + 4.0)
+            xr_node = x_band_left + (col + 1) * (self.node_w + 4.0) - 4.0
             self.draw_node(n, xr_node, yn)
             if col == node_cols - 1 or i == len(d.nodes) - 1:
                 yn -= NODE_H + 4.0

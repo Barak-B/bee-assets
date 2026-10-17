@@ -200,7 +200,8 @@ class PanelRenderer:
             y_rail = oy + Hh - top_margin - p.row * s(e.row_pitch_mm)
             x = x_dev0 + s(p.x_mm)
             w, h = s(p.w_mm), s(p.h_mm)
-            y0 = y_rail - h / 2
+            # modular devices sit centred on the rail; tall devices (MCCB/ACB) hang from the same top line
+            y0 = y_rail - h / 2 if p.h_mm <= DEVICE_H else y_rail + s(DEVICE_H) / 2 - h
             ctx.rect(x, y0, w, h, "panel_dev")
             # toggle / face mark
             if p.device.kind in ("mccb", "acb"):
@@ -216,9 +217,12 @@ class PanelRenderer:
                 if lines:
                     ctx.text(lines[0], (x + w / 2 + 0.6, y0 - 1.0), 1.2, "panel_text", TA.RIGHT, rotation=90)
             else:
-                ctx.text(p.tag, (x + w / 2, y0 + h + 1.2), 1.8, "panel_text", TA.BOTTOM_CENTER, bold=True)
+                ctx.text(p.tag, (x + 0.6, y0 + h + 1.2), 1.8, "panel_text", TA.BOTTOM_LEFT, bold=True)
                 if lines:
-                    ctx.text(lines[0], (x + w / 2, y0 - 1.2), 1.2, "panel_text", TA.TOP_CENTER)
+                    if p.h_mm > DEVICE_H:   # tall device: rating inside the face, under the handle
+                        ctx.text(lines[0], (x + w / 2, y0 + h * 0.2), 1.3, "panel_text", TA.MIDDLE_CENTER)
+                    else:
+                        ctx.text(lines[0], (x + w / 2, y0 - 1.2), 1.2, "panel_text", TA.TOP_CENTER)
         # N bars per RCD group + PE bar at the bottom
         y_bars = oy + inset + s(30.0)
         groups = [g for g in self.board.groups if g.device]

@@ -14,6 +14,7 @@ from pathlib import Path
 import yaml
 
 from .archive import archive
+from .audit import audit_sheet
 from .model import Design
 from .render import SHEET_KINDS, build, merge_pdfs, render_pdf, render_png, save_dxf
 
@@ -43,6 +44,10 @@ def cmd_render(args: argparse.Namespace) -> int:
     for i, (no, (_, warnings)) in enumerate(result.items()):
         for w in warnings:
             print(f"WARN  {no}: {w}")
+        rep = audit_sheet(doc, i, no)
+        print(rep.summary())
+        for c in rep.text_overlaps + rep.text_line_collisions + rep.text_outside:
+            print(f"      {c.kind}: {c.a!r} / {c.b!r} @ ({c.at[0]:.0f},{c.at[1]:.0f})")
         if args.png:
             png = out / f"{stem}_{no}.png"
             render_png(doc, png, dpi=args.dpi, sheet_index=i)
