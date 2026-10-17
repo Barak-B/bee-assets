@@ -12,76 +12,75 @@ from typing import Iterable
 
 from ezdxf.document import Drawing
 
+from .cover import SheetEntry, draw_cover
 from .model import Design
 from .mv import draw_mv, draw_mv_schedule
 from .panel import draw_panel
 from .sheet import A3_H, A3_W, SheetContext, draw_frame, new_document
 from .sld import draw_sld
-from .template import DrillTemplate, draw_template
+from .template import DrillTemplate, draw_template, scale_text
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("mv", "sld", "panel", "drill")
+SHEET_KINDS = ("cover", "mv", "sld", "panel", "drill")
+
+
+def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[SheetEntry]:
+    """The set, in order, before anything is drawn: the cover lists exactly these sheets."""
+    prefix = design.title.sheet_no.split("-")[0]
+    plan: list[SheetEntry] = []
+    kinds = [k for k in sheets if k in SHEET_KINDS]
+    if "cover" in kinds and len(kinds) > 1:
+        plan.append(SheetEntry("cover", f"{prefix}-00", "דף שער — רשימת גיליונות ונתוני הפרויקט"))
+    for kind in kinds:
+        if kind == "mv":
+            for i, mb in enumerate(design.mv_boards):
+                no = design.title.sheet_no if i == 0 else f"{prefix}-M{i + 1:02d}"
+                plan.append(SheetEntry("mv", no, design.title.sheet_title or f"חד-קווי מתח גבוה — {mb.title}"))
+                plan.append(SheetEntry("mv_schedule", no + "A", f"מפרט תאים וציוד — {mb.title}"))
+        elif kind == "sld" and design.boards:
+            plan.append(SheetEntry("sld", design.title.sheet_no, design.title.sheet_title or "חד-קווי — לוחות חשמל"))
+        elif kind == "panel":
+            for b in design.boards:
+                plan.append(SheetEntry("panel", f"{prefix}-P{len(plan) + 1:02d}", f"מבנה לוח {b.id} — חזית וחתך", "לפי ציון"))
+        elif kind == "drill" and design.drill_template:
+            t = DrillTemplate.model_validate(design.drill_template)
+            plan.append(SheetEntry("drill", design.title.sheet_no, design.title.sheet_title or t.title, scale_text(t)))
+    return plan
 
 
 def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = "unicode",
           one_file: bool = True) -> dict[str, tuple[Drawing, list[str]]]:
-    """Return {sheet_name: (doc, warnings)}. With ``one_file`` every sheet goes into one DXF,
+    """Return {sheet_no: (doc, warnings)}. With ``one_file`` every sheet goes into one DXF,
     laid out side by side in model space (one A3 per sheet, 30 mm apart)."""
     out: dict[str, tuple[Drawing, list[str]]] = {}
-    sheets = list(sheets)
+    plan = plan_sheets(design, sheets)
     doc = new_document(mode) if one_file else None
-    idx = 0
-    total = sum(2 * len(design.mv_boards) if s == "mv" else (1 if s == "sld" else (1 if s == "drill" and design.drill_template else (0 if s == "drill" else len(design.boards)))) for s in sheets)
-    if not design.boards and "sld" in sheets:
-        sheets.remove("sld")
-        total -= 1
-    for kind in sheets:
-        if kind == "mv":
-            for mb in design.mv_boards:
-                no = design.title.sheet_no if not out else f"{design.title.sheet_no.split('-')[0]}-M{len(out) + 1:02d}"
-                tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total, "sheet_no": no,
-                                                     "sheet_title": design.title.sheet_title or f"חד-קווי מתח גבוה — {mb.title}"})
-                d = doc or new_document(mode)
-                ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
-                draw_frame(ctx, tb)
-                warnings = draw_mv(ctx, design, mb)
-                out[no] = (d, warnings)
-                idx += 1
-                tb2 = tb.model_copy(update={"sheet_index": idx + 1, "sheet_no": no + "A", "sheet_title": f"מפרט תאים וציוד — {mb.title}"})
-                ctx2 = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
-                draw_frame(ctx2, tb2)
-                out[no + "A"] = (d, draw_mv_schedule(ctx2, design, mb))
-                idx += 1
-        elif kind == "drill" and design.drill_template:
-            t = DrillTemplate.model_validate(design.drill_template)
-            tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total})
-            tb.sheet_title = tb.sheet_title or t.title
-            d = doc or new_document(mode)
-            ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
-            draw_frame(ctx, tb)
-            out[tb.sheet_no] = (d, draw_template(ctx, t))
-            idx += 1
-        elif kind == "sld":
-            tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total})
-            tb.sheet_title = tb.sheet_title or "חד-קווי — לוחות חשמל"
-            d = doc or new_document(mode)
-            ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
-            draw_frame(ctx, tb)
+    mv_iter = iter(design.mv_boards)
+    board_iter = iter(design.boards)
+    cur_mv = None
+    for idx, e in enumerate(plan):
+        d = doc or new_document(mode)
+        ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
+        tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": len(plan), "sheet_no": e.no,
+                                             "sheet_title": e.title, "scale": e.scale if e.scale != "-" else design.title.scale})
+        if e.kind == "cover":
+            tb.scale = "-"
+        draw_frame(ctx, tb)
+        if e.kind == "cover":
+            warnings = draw_cover(ctx, design, plan)
+        elif e.kind == "mv":
+            cur_mv = next(mv_iter)
+            warnings = draw_mv(ctx, design, cur_mv)
+        elif e.kind == "mv_schedule":
+            warnings = draw_mv_schedule(ctx, design, cur_mv)
+        elif e.kind == "sld":
             warnings = draw_sld(ctx, design)
-            out[tb.sheet_no] = (d, warnings)
-            idx += 1
-        elif kind == "panel":
-            for b in design.boards:
-                no = f"{design.title.sheet_no.split('-')[0]}-P{len(out) + 1:02d}"
-                tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total, "sheet_no": no,
-                                                     "sheet_title": f"מבנה לוח {b.id} — חזית וחתך", "scale": "לפי ציון"})
-                d = doc or new_document(mode)
-                ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
-                draw_frame(ctx, tb)
-                warnings = draw_panel(ctx, design, b)
-                out[no] = (d, warnings)
-                idx += 1
+        elif e.kind == "panel":
+            warnings = draw_panel(ctx, design, next(board_iter))
+        else:
+            warnings = draw_template(ctx, DrillTemplate.model_validate(design.drill_template))
+        out[e.no] = (d, warnings)
     return out
 
 
