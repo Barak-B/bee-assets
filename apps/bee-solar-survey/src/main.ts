@@ -5,6 +5,7 @@ import {
   deleteProject,
   exportBackup,
   getProject,
+  getOfficeStatus,
   getPublication,
   getPublishSettings,
   getSurveyors,
@@ -13,12 +14,15 @@ import {
   listPhotos,
   listProjects,
   listQuotes,
+  listReports,
   rememberSurveyor,
   savePhoto,
   saveProject,
   type StoredPhoto,
 } from './db'
 import { BackupError, parseBackup } from './backup'
+import { customerWarnings, normalizePhone } from './customer'
+import { OFFICE_STATUS_LABEL_HE, STAGE_LABEL_HE, deriveStage, isInstallationTemplate, type Stage } from './stage'
 import { buildHiveExportBundle } from './hive'
 import { revokeQuote, settingsProblem } from './publish'
 import { fileToSurveyPhoto, getCurrentGps } from './photos'
@@ -127,12 +131,40 @@ async function runSync(manual: boolean) {
   } catch (err) {
     if (manual) toast(err instanceof SyncError ? err.message : 'הגיבוי נכשל')
   }
-  if (screen === 'list') await refreshSyncChips()
+  if (screen === 'list') {
+    await refreshSyncChips()
+    await refreshStageChips()
+  }
 }
 
 /** Keep an offline survey in the queue for the next run (the 'online' event or the periodic retry). */
 function requestSyncLater(id: string) {
   if (syncIds !== 'all') syncIds.add(id)
+}
+
+/** Where each job stands, from what this phone knows (quotes, links, approvals seen, reports, office status). */
+async function localStage(id: string): Promise<{ stage: Stage; office: string }> {
+  const quotes = await listQuotes(id)
+  const pubs = await Promise.all(quotes.map((q) => getPublication(q.id)))
+  const reports = await listReports(id)
+  const office = await getOfficeStatus(id)
+  const stage = deriveStage({
+    quoteVersions: quotes.length,
+    liveLinks: pubs.filter((p) => p && !p.revokedAt).length,
+    accepted: pubs.some((p) => !!p?.acceptedAt),
+    installationReports: reports.filter((r) => isInstallationTemplate(r.templateKey)).length,
+    handoverFinal: reports.some((r) => r.templateKey === 'handover' && r.status === 'final'),
+  })
+  return { stage, office: office && office.status !== 'active' ? OFFICE_STATUS_LABEL_HE[office.status] : '' }
+}
+
+async function refreshStageChips() {
+  for (const el of app.querySelectorAll<HTMLElement>('[data-stage-chip]')) {
+    const { stage, office } = await localStage(el.dataset.stageChip!)
+    el.textContent = office ? `${STAGE_LABEL_HE[stage]} · ${office}` : STAGE_LABEL_HE[stage]
+    el.className = `badge stage-chip stage-${stage}${office ? ' stage-office' : ''}`
+    el.dataset.stage = stage
+  }
 }
 
 async function refreshSyncChips() {
@@ -149,6 +181,11 @@ async function refreshSyncChips() {
   }
 }
 
+function refreshCustomerWarnings() {
+  const warn = document.getElementById('customerWarnings')
+  if (warn) warn.innerHTML = customerWarnings(editing).map((w) => `<li>${escapeHtml(w)}</li>`).join('')
+}
+
 function readFormIntoEditing() {
   const g = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value ?? ''
   editing.projectName = g('f_projectName')
@@ -156,6 +193,10 @@ function readFormIntoEditing() {
   editing.surveyor = g('f_surveyor')
   editing.gps = g('f_gps')
   editing.address = g('f_address')
+  editing.customerName = g('f_customerName').trim()
+  editing.customerPhone = g('f_customerPhone').trim()
+  editing.customerEmail = g('f_customerEmail').trim()
+  editing.customerIdNumber = g('f_customerId').trim()
   editing.mainBreaker = g('f_mainBreaker')
   editing.phases = (['1', '3'].includes(g('f_phases')) ? g('f_phases') : '') as SiteSurveyProject['phases']
   editing.panelSpace = g('f_panelSpace') as SiteSurveyProject['panelSpace']
@@ -232,7 +273,9 @@ async function render() {
     const filtered = projects.filter((p) => {
       const q = search.trim()
       if (!q) return true
-      return [p.projectName, p.address, p.surveyor].join(' ').includes(q)
+      const phoneQ = normalizePhone(q)
+      if (phoneQ && normalizePhone(p.customerPhone ?? '') === phoneQ) return true
+      return [p.projectName, p.address, p.surveyor, p.customerName ?? '', p.customerPhone ?? '', p.customerEmail ?? ''].join(' ').toLowerCase().includes(q.toLowerCase())
     })
 
     app.innerHTML = `
@@ -279,7 +322,10 @@ async function render() {
                 <span>${escapeHtml(p.surveyDate || '')}</span>
                 <span>${escapeHtml(p.surveyor || '')}</span>
                 <span>${escapeHtml(p.address || '')}</span>
+                ${p.customerName ? `<span>👤 ${escapeHtml(p.customerName)}</span>` : ''}
+                ${p.customerPhone && normalizePhone(p.customerPhone) ? `<a class="tel" dir="ltr" href="tel:${escapeAttr(normalizePhone(p.customerPhone))}" data-stop>${escapeHtml(p.customerPhone)}</a>` : ''}
                 <span class="badge ${p.hiveReady ? 'badge-ok' : 'badge-warn'}">${p.hiveReady ? 'מוכן ל־54' : 'טיוטה'}</span>
+                <span class="badge stage-chip hidden" data-stage-chip="${escapeAttr(p.id)}"></span>
                 <span class="badge sync-chip hidden" data-sync-chip="${escapeAttr(p.id)}"></span>
               </div>
               <div class="item-actions">
@@ -324,6 +370,7 @@ async function render() {
       }
     })
     void refreshSyncChips()
+    void refreshStageChips()
     document.getElementById('btnBackup')?.addEventListener('click', async () => {
       try {
         const data = await exportBackup()
@@ -424,6 +471,8 @@ async function render() {
         await openQuotesDialog((btn as HTMLElement).dataset.quote!, quotesCtx)
       }),
     )
+    // A tap on the customer's phone dials; it must not also open the survey.
+    app.querySelectorAll('[data-stop]').forEach((el) => el.addEventListener('click', (e) => e.stopPropagation()))
     app.querySelectorAll('[data-open]').forEach((el) =>
       el.addEventListener('click', async () => {
         await openEditor((el as HTMLElement).dataset.open!)
@@ -488,6 +537,21 @@ async function render() {
         </section>
 
         <section class="section">
+          <h2>לקוח</h2>
+          <p class="hint">למי ההצעה, ואיך שולחים לו את הקישור. אפשר להשלים גם אחרי הסקר.</p>
+          <div class="field"><label>שם הלקוח</label><input id="f_customerName" autocomplete="off" value="${escapeAttr(editing.customerName ?? '')}" /></div>
+          <div class="grid-2">
+            <div class="field"><label>טלפון</label><input id="f_customerPhone" type="tel" inputmode="tel" dir="ltr" autocomplete="off" value="${escapeAttr(editing.customerPhone ?? '')}" placeholder="050-0000000" /></div>
+            <div class="field"><label>מייל</label><input id="f_customerEmail" type="email" inputmode="email" dir="ltr" autocomplete="off" value="${escapeAttr(editing.customerEmail ?? '')}" /></div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>ת״ז / ח״פ</label><input id="f_customerId" inputmode="numeric" dir="ltr" autocomplete="off" value="${escapeAttr(editing.customerIdNumber ?? '')}" /><p class="hint">לא מופיע בדף הלקוח. 4 הספרות האחרונות נבדקות כשהלקוח מאשר אונליין.</p></div>
+            <div class="field"><label>סוג לקוח</label><select id="f_customerType"><option value="private" ${editing.customerType !== 'business' ? 'selected' : ''}>פרטי (מחירים כולל מע״מ)</option><option value="business" ${editing.customerType === 'business' ? 'selected' : ''}>עסקי (לפני מע״מ)</option></select></div>
+          </div>
+          <ul class="warn-list" id="customerWarnings">${customerWarnings(editing).map((w) => `<li>${escapeHtml(w)}</li>`).join('')}</ul>
+        </section>
+
+        <section class="section">
           <h2>חשמל ומונים</h2>
           <p class="hint">קלט הנדסי ל־protection / wire_sizing</p>
           <div class="grid-2">
@@ -523,7 +587,6 @@ async function render() {
             <div class="field"><label>יעד kWp</label><input id="f_targetKwp" inputmode="decimal" value="${escapeAttr(editing.targetKwp)}" /></div>
             <div class="field"><label>תקציב ₪</label><input id="f_budget" inputmode="decimal" value="${escapeAttr(editing.budgetIls)}" /></div>
           </div>
-          <div class="field"><label>סוג לקוח</label><select id="f_customerType"><option value="private" ${editing.customerType !== 'business' ? 'selected' : ''}>פרטי (מחירים כולל מע״מ)</option><option value="business" ${editing.customerType === 'business' ? 'selected' : ''}>עסקי (לפני מע״מ)</option></select></div>
           <div class="field"><label>העדפת ממיר (צי B.E.E)</label><select id="f_inverterBrand">${options(['SolarEdge', 'KStar', 'ABB', 'Deye'], editing.inverterBrandPref)}</select></div>
           <label class="checkbox-row"><input type="checkbox" id="f_battery" ${editing.includeBattery ? 'checked' : ''}/> לכלול סוללה בתכנון</label>
           ${photoBlock('roof', true)}
@@ -671,10 +734,12 @@ function bindFormEvents() {
       // refresh completeness without full remount of photos handlers complexity — soft update
       const box = app.querySelector('.completeness')
       if (box) box.outerHTML = completenessBox()
+      refreshCustomerWarnings()
     })
     el.addEventListener('input', () => {
       readFormIntoEditing()
       scheduleAutoSave()
+      if ((el as HTMLElement).id.startsWith('f_customer')) refreshCustomerWarnings()
     })
   })
 
@@ -896,6 +961,9 @@ const quotesCtx = {
   openPricing: () => {
     screen = 'pricing'
     void render()
+  },
+  onChanged: () => {
+    if (screen === 'list') void refreshStageChips()
   },
 }
 

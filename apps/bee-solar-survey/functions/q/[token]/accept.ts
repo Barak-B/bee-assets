@@ -9,7 +9,7 @@ import { QUOTE_TOKEN_RE } from '../../../../../packages/quote-core/src/public'
 import type { Handler } from '../../_lib/env'
 import { html, israelToday, param, redirect } from '../../_lib/http'
 import { renderMessagePage, renderQuotePage } from '../../_lib/render'
-import { getAcceptance, getPdf, getQuote, putAcceptance } from '../../_lib/store'
+import { MAX_ACCEPT_FAILS, addAcceptFail, getAcceptFails, getAcceptance, getPdf, getQuote, putAcceptance } from '../../_lib/store'
 
 async function sha256Hex(buf: ArrayBuffer): Promise<string> {
   const d = await crypto.subtle.digest('SHA-256', buf)
@@ -69,6 +69,22 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
     return html(renderQuotePage(rec.quote, { token, hasPdf: rec.has_pdf, now, acceptError: error, form: { name } }), 400)
   }
 
+  // When the surveyor recorded the customer's ID, the 4 digits must match it.
+  // A few tries only, so the form cannot be used to guess them.
+  if (rec.id_last4) {
+    const locked = () => html(renderMessagePage('האישור ננעל', 'היו יותר מדי ניסיונות עם ספרות שגויות. פנו אלינו ונשלח קישור חדש.'), 429)
+    if ((await getAcceptFails(env, token)) >= MAX_ACCEPT_FAILS) return locked()
+    if (id4 !== rec.id_last4) {
+      const fails = await addAcceptFail(env, token, now)
+      if (fails >= MAX_ACCEPT_FAILS) return locked()
+      const left = MAX_ACCEPT_FAILS - fails
+      return html(
+        renderQuotePage(rec.quote, { token, hasPdf: rec.has_pdf, now, acceptError: `4 הספרות אינן תואמות את פרטי הלקוח שנמסרו לנו. נותרו ${left} ניסיונות.`, form: { name } }),
+        400,
+      )
+    }
+  }
+
   const pdf = rec.has_pdf ? await getPdf(env, token) : null
   const first = await putAcceptance(env, token, {
     name,
@@ -82,6 +98,7 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
     total_incl_vat_ils: rec.quote.totals.total_incl_vat_ils,
     pdf_sha256: pdf ? await sha256Hex(pdf) : null,
     quote: rec.quote,
+    id_verified: !!rec.id_last4,
   })
   // Lost the race to an earlier approval: show that one, never overwrite it.
   if (!first) return redirect(`${page}#accept`)

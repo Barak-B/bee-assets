@@ -10,7 +10,8 @@
  * Read-only; nothing here sends anything anywhere (Law #1/#2).
  */
 import type { Handler } from '../../_lib/env'
-import { json, parseSince, preflight, requireKey } from '../../_lib/http'
+import { authenticate } from '../../_lib/auth'
+import { json, parseSince, preflight } from '../../_lib/http'
 import { listAcceptances } from '../../_lib/store'
 import { getSurvey, listFinalReports, listSurveys } from '../../_lib/surveys'
 
@@ -19,8 +20,8 @@ export const onRequestOptions: Handler = async ({ request, env }) => preflight(r
 const OVERLAP_MS = 60_000
 
 export const onRequestGet: Handler = async ({ request, env }) => {
-  const denied = requireKey(request, env)
-  if (denied) return denied
+  const auth = await authenticate(request, env, 'office')
+  if (!auth.ok) return auth.response
   const { since, error } = parseSince(request, env)
   if (error) return error
   const until = new Date(Date.now() - OVERLAP_MS).toISOString()

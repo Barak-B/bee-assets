@@ -4,7 +4,8 @@
  * Responds with the photos the server still lacks.
  */
 import type { Handler } from '../../../../_lib/env'
-import { json, param, preflight, requireKey } from '../../../../_lib/http'
+import { authenticate } from '../../../../_lib/auth'
+import { json, param, preflight } from '../../../../_lib/http'
 import { UUID_RE, getSurvey, isReportWire, putReport } from '../../../../_lib/surveys'
 
 const MAX = 2 * 1024 * 1024
@@ -12,8 +13,8 @@ const MAX = 2 * 1024 * 1024
 export const onRequestOptions: Handler = async ({ request, env }) => preflight(request, env)
 
 export const onRequestPut: Handler = async ({ request, env, params }) => {
-  const denied = requireKey(request, env)
-  if (denied) return denied
+  const auth = await authenticate(request, env)
+  if (!auth.ok) return auth.response
   const id = param(params.id)
   const rid = param(params.report)
   if (!UUID_RE.test(id) || !UUID_RE.test(rid)) return json(request, env, { error: 'bad_key' }, 400)

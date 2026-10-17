@@ -7,23 +7,13 @@
  */
 import { isPublicBaseUrl } from '../../../../packages/quote-core/src/public'
 import type { Handler } from '../_lib/env'
+import { ROLE_LABEL_HE, authenticate } from '../_lib/auth'
 import { json, preflight } from '../_lib/http'
 
 interface Check {
   key: string
   ok: boolean
   message_he: string
-}
-
-function keyMatches(request: Request, key: string | undefined): boolean | null {
-  const m = /^Bearer\s+(.+)$/i.exec(request.headers.get('authorization') ?? '')
-  if (!m) return null
-  if (!key) return false
-  const a = new TextEncoder().encode(m[1]!.trim())
-  const b = new TextEncoder().encode(key)
-  let diff = a.length ^ b.length
-  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0)
-  return diff === 0
 }
 
 export const onRequestOptions: Handler = async ({ request, env }) => preflight(request, env)
@@ -55,10 +45,16 @@ export const onRequestGet: Handler = async ({ request, env }) => {
 
   checks.push({ key: 'publish_key', ok: !!env.PUBLISH_KEY, message_he: env.PUBLISH_KEY ? 'מפתח שרת מוגדר' : 'חסר PUBLISH_KEY (Secret) בהגדרות הפרויקט' })
 
-  const auth = keyMatches(request, env.PUBLISH_KEY)
-  if (auth !== null) {
-    checks.push({ key: 'key_match', ok: auth, message_he: auth ? 'המפתח באפליקציה תואם לשרת' : 'המפתח באפליקציה לא תואם ל-PUBLISH_KEY בשרת' })
-    if (auth && hasBucket) {
+  let who: { name: string; role: string } | null = null
+  if (request.headers.get('authorization') && env.PUBLISH_KEY) {
+    const auth = await authenticate(request, env)
+    checks.push({
+      key: 'key_match',
+      ok: auth.ok,
+      message_he: auth.ok ? `המפתח תקין — ${auth.principal.name} (${ROLE_LABEL_HE[auth.principal.role]})` : 'המפתח באפליקציה לא מוכר בשרת (שגוי או בוטל)',
+    })
+    if (auth.ok) who = { name: auth.principal.name, role: auth.principal.role }
+    if (auth.ok && hasBucket) {
       const probe = `health/${crypto.randomUUID()}`
       let ok = false
       try {
@@ -72,5 +68,5 @@ export const onRequestGet: Handler = async ({ request, env }) => {
     }
   }
 
-  return json(request, env, { ok: checks.every((c) => c.ok), checks, server_time: new Date().toISOString() })
+  return json(request, env, { ok: checks.every((c) => c.ok), checks, who, server_time: new Date().toISOString() })
 }

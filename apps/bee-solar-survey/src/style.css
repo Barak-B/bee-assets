@@ -1122,3 +1122,40 @@ textarea {
 .update-bar .btn {
   padding: 6px 12px;
 }
+
+.warn-list {
+  margin: 4px 0 0;
+  padding-inline-start: 18px;
+  color: var(--warn, #b45309);
+  font-size: 0.85rem;
+}
+
+.warn-list:empty {
+  display: none;
+}
+
+.project-item .tel {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.stage-chip {
+  background: #e0ecff;
+  color: #1e3a8a;
+}
+
+.stage-chip.stage-accepted,
+.stage-chip.stage-installation {
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.stage-chip.stage-handover {
+  background: #ede9fe;
+  color: #4c1d95;
+}
+
+.stage-chip.stage-office {
+  background: #f3f4f6;
+  color: #374151;
+}

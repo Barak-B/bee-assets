@@ -56,6 +56,13 @@ export interface SiteSurveyProject {
   lon?: number | null
   address: string
 
+  // Customer — who the quote is for (all optional: a survey can start before the customer is known)
+  customerName?: string
+  customerPhone?: string
+  customerEmail?: string
+  /** ת״ז / ח״פ. Never put on the customer page; its last 4 digits check the online approval. */
+  customerIdNumber?: string
+
   // Electrical (Tamir)
   mainBreaker: string
   /** Supply phases as seen on site ('' = unknown). Not derivable from the amperage alone. */

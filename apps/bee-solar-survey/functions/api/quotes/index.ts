@@ -6,8 +6,10 @@
  */
 import { isPublicBaseUrl, isPublicQuote, newQuoteToken, quoteLink } from '../../../../../packages/quote-core/src/public'
 import type { Handler } from '../../_lib/env'
-import { json, preflight, requireKey } from '../../_lib/http'
+import { authenticate } from '../../_lib/auth'
+import { json, preflight } from '../../_lib/http'
 import { putQuote } from '../../_lib/store'
+import { UUID_RE } from '../../_lib/surveys'
 
 const MAX_BODY = 6 * 1024 * 1024
 const MAX_PDF = 4 * 1024 * 1024
@@ -27,8 +29,8 @@ function decodeBase64(b64: string): Uint8Array {
 export const onRequestOptions: Handler = async ({ request, env }) => preflight(request, env)
 
 export const onRequestPost: Handler = async ({ request, env }) => {
-  const denied = requireKey(request, env)
-  if (denied) return denied
+  const auth = await authenticate(request, env)
+  if (!auth.ok) return auth.response
 
   const { base, ok } = linkBase(request, env)
   if (!ok) {
@@ -37,7 +39,7 @@ export const onRequestPost: Handler = async ({ request, env }) => {
 
   const len = Number(request.headers.get('content-length') ?? 0)
   if (len > MAX_BODY) return json(request, env, { error: 'too_large' }, 413)
-  let body: { quote?: unknown; pdfBase64?: unknown }
+  let body: { quote?: unknown; pdfBase64?: unknown; survey_id?: unknown; customer_id_last4?: unknown }
   try {
     const text = await request.text()
     if (text.length > MAX_BODY) return json(request, env, { error: 'too_large' }, 413)
@@ -58,8 +60,11 @@ export const onRequestPost: Handler = async ({ request, env }) => {
     if (String.fromCharCode(...pdf.subarray(0, 5)) !== '%PDF-') return json(request, env, { error: 'bad_pdf' }, 400)
   }
 
+  const surveyId = typeof body.survey_id === 'string' && UUID_RE.test(body.survey_id) ? body.survey_id : undefined
+  const idLast4 = typeof body.customer_id_last4 === 'string' && /^\d{4}$/.test(body.customer_id_last4) ? body.customer_id_last4 : undefined
+
   const token = newQuoteToken()
   const published_at = new Date().toISOString()
-  await putQuote(env, token, { quote: body.quote, published_at, has_pdf: !!pdf }, pdf)
+  await putQuote(env, token, { quote: body.quote, published_at, has_pdf: !!pdf, survey_id: surveyId, id_last4: idLast4, published_by: auth.principal.name }, pdf)
   return json(request, env, { token, url: quoteLink(base, token), published_at }, 201)
 }

@@ -18,6 +18,7 @@ import {
   type StoredQuote,
 } from './db'
 import { PublishError, publishQuote, quoteViews, revokeQuote, settingsProblem } from './publish'
+import { quoteMessage, whatsappUrl } from './customer'
 import { escapeAttr, escapeHtml } from './html'
 import { loadPricing } from './pricing'
 import { buildQuoteDraft } from './quote'
@@ -29,6 +30,8 @@ import type { SiteSurveyProject } from './types'
 interface Ctx {
   toast: (msg: string) => void
   openPricing: () => void
+  /** Something shown in the survey list changed (e.g. a customer approval was seen). */
+  onChanged?: () => void
 }
 
 function host(): HTMLElement {
@@ -62,7 +65,7 @@ function bidiParts(s: string): string {
     .join(' · ')
 }
 
-function publishBlock(row: StoredQuote, pub: Publication | null, settingsIssue: string | null): string {
+function publishBlock(row: StoredQuote, pub: Publication | null, settingsIssue: string | null, project: SiteSurveyProject): string {
   // Stored rows can come from a backup file — never trust them into an attribute raw.
   const v = escapeAttr(String(row.version_no))
   if (pub && !pub.revokedAt) {
@@ -72,7 +75,8 @@ function publishBlock(row: StoredQuote, pub: Publication | null, settingsIssue: 
         <input class="pub-url" dir="ltr" readonly value="${escapeHtml(pub.url)}" aria-label="קישור ההצעה" />
         <div class="badge badge-ok hidden" data-accepted="${v}"></div>
         <div class="item-actions">
-          <button class="btn btn-primary" data-q-share="${v}">שתף קישור</button>
+          ${whatsappUrl(project.customerPhone ?? '', '') ? `<button class="btn btn-primary" data-q-wa="${v}">וואטסאפ ל${escapeHtml(project.customerName?.trim() || 'לקוח')}</button>` : ''}
+          <button class="btn ${whatsappUrl(project.customerPhone ?? '', '') ? 'btn-secondary' : 'btn-primary'}" data-q-share="${v}">שתף קישור</button>
           <button class="btn btn-secondary" data-q-copy="${v}">העתק</button>
           <button class="btn btn-secondary" data-q-open="${v}">פתח</button>
           <button class="btn btn-danger" data-q-revoke="${v}">בטל קישור</button>
@@ -89,7 +93,7 @@ function publishBlock(row: StoredQuote, pub: Publication | null, settingsIssue: 
     </div>`
 }
 
-function versionCard(row: StoredQuote, pub: Publication | null, settingsIssue: string | null): string {
+function versionCard(row: StoredQuote, pub: Publication | null, settingsIssue: string | null, project: SiteSurveyProject): string {
   const q = row.quote
   return `
     <article class="quote-card" data-ver="${escapeAttr(String(row.version_no))}">
@@ -105,7 +109,7 @@ function versionCard(row: StoredQuote, pub: Publication | null, settingsIssue: s
         <button class="btn btn-secondary" data-q-xlsx="internal" data-v="${escapeAttr(String(row.version_no))}">Excel פנימי</button>
         <button class="btn btn-ghost" data-q-json="${escapeAttr(String(row.version_no))}">JSON</button>
       </div>
-      ${publishBlock(row, pub, settingsIssue)}
+      ${publishBlock(row, pub, settingsIssue, project)}
     </article>`
 }
 
@@ -138,9 +142,9 @@ async function render(projectId: string, ctx: Ctx) {
           ${quotes.length ? `חשב גרסה ${quotes[0]!.version_no + 1} מהסקר והמחירון` : 'חשב הצעה ראשונית'}
         </button>
         <div class="quote-list">
-          ${quotes.length ? quotes.map((q) => versionCard(q, pubs.get(q.version_no) ?? null, settingsIssue)).join('') : '<div class="empty">עדיין אין הצעות לסקר הזה.</div>'}
+          ${quotes.length ? quotes.map((q) => versionCard(q, pubs.get(q.version_no) ?? null, settingsIssue, project)).join('') : '<div class="empty">עדיין אין הצעות לסקר הזה.</div>'}
         </div>
-        <p class="meta">כל גרסה נשמרת ואינה משתנה. האפליקציה לא שולחת דבר ללקוח — "שתף קישור" פותח את חלון השיתוף ואתם בוחרים למי (Law #2).</p>
+        <p class="meta">כל גרסה נשמרת ואינה משתנה. האפליקציה לא שולחת דבר ללקוח — "וואטסאפ" ו"שתף קישור" רק פותחים את ההודעה, ואתם לוחצים שלח (Law #2).</p>
       </div>
     </div>`
 
@@ -268,6 +272,16 @@ function bindPublishing(h: HTMLElement, projectId: string, project: SiteSurveyPr
     }),
   )
 
+  // Opens WhatsApp with the customer's number and the message typed in; the surveyor presses send (Law #2).
+  h.querySelectorAll<HTMLElement>('[data-q-wa]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const row = find(b.dataset.qWa)
+      const pub = pubOf(b.dataset.qWa)
+      const url = row && pub ? whatsappUrl(project.customerPhone ?? '', quoteMessage(project.customerName, pub.url, row.quote.quote_number)) : null
+      if (url) window.open(url, '_blank', 'noopener')
+    }),
+  )
+
   h.querySelectorAll<HTMLElement>('[data-q-copy]').forEach((b) =>
     b.addEventListener('click', async () => {
       const pub = pubOf(b.dataset.qCopy)
@@ -315,6 +329,12 @@ function bindPublishing(h: HTMLElement, projectId: string, project: SiteSurveyPr
         const el = h.querySelector(`[data-views="${v}"]`)
         if (el && st) el.textContent = st.views ? `· נפתח ${st.views} פעמים, לאחרונה ${(st.last_viewed_at ?? '').replace('T', ' ').slice(0, 16)}` : '· טרם נפתח'
         const acc = h.querySelector<HTMLElement>(`[data-accepted="${v}"]`)
+        if (st?.accepted && !pub.acceptedAt) {
+          // Remember it, so the survey list shows "הלקוח אישר" without the network.
+          pub.acceptedAt = st.accepted.accepted_at
+          pub.acceptedBy = st.accepted.name
+          void savePublication(`${projectId}:${v}`, pub).then(() => ctx.onChanged?.())
+        }
         if (acc && st?.accepted) {
           acc.textContent = `✓ הלקוח אישר את ההצעה: ${st.accepted.name} · ${new Date(st.accepted.accepted_at).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })}`
           acc.classList.remove('hidden')

@@ -99,6 +99,7 @@ export async function deleteProject(id: string): Promise<void> {
     })
   }
   tx.objectStore('meta').delete(`sync:${id}`)
+  tx.objectStore('meta').delete(`office:${id}`)
   await txDone(tx)
 }
 
@@ -314,6 +315,17 @@ export interface Publication {
   url: string
   publishedAt: string
   revokedAt?: string | null
+  /** Seen on the server: the customer approved this version (cached for the list's stage chip). */
+  acceptedAt?: string | null
+  acceptedBy?: string | null
+}
+
+/** The office's status on a job, as the server last sent it back on sync. */
+export interface LocalOfficeStatus {
+  status: 'active' | 'on_hold' | 'lost' | 'closed'
+  note: string
+  updated_at: string
+  updated_by: string
 }
 
 async function metaGet<T>(key: string): Promise<T | null> {
@@ -336,6 +348,8 @@ export const getPublishSettings = () => metaGet<PublishSettings>('publish')
 export const savePublishSettings = (s: PublishSettings) => metaPut('publish', s)
 export const getPublication = (quoteId: string) => metaGet<Publication>(`pub:${quoteId}`)
 export const savePublication = (quoteId: string, p: Publication) => metaPut(`pub:${quoteId}`, p)
+export const getOfficeStatus = (projectId: string) => metaGet<LocalOfficeStatus>(`office:${projectId}`)
+export const saveOfficeStatus = (projectId: string, s: LocalOfficeStatus | null) => metaPut(`office:${projectId}`, s)
 
 // ── Server backup state (per survey) ───────────────────────────────────
 

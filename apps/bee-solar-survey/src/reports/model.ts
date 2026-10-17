@@ -15,7 +15,7 @@ export function buildContext(project: SiteSurveyProject, quote: QuoteVersion | n
   return {
     projectName: project.projectName,
     address: project.address,
-    customerName: quote?.input.customerName ?? '',
+    customerName: project.customerName?.trim() || quote?.input.customerName || '',
     surveyor: project.surveyor,
     roofType: project.roofTypeHe ? mapRoofType(project.roofTypeHe) : 'other',
     hasBattery: !!line('battery') || project.includeBattery,

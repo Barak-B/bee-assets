@@ -1,6 +1,7 @@
 /** PUT/GET /api/surveys/<id>/photos/<photoId>.<sha12> — photo bytes (auth). */
 import type { Handler } from '../../../../_lib/env'
-import { corsHeaders, json, param, preflight, requireKey } from '../../../../_lib/http'
+import { authenticate } from '../../../../_lib/auth'
+import { corsHeaders, json, param, preflight } from '../../../../_lib/http'
 import { PHOTO_KEY_RE, UUID_RE, getPhoto, putPhoto } from '../../../../_lib/surveys'
 
 const MAX = 6 * 1024 * 1024
@@ -9,8 +10,8 @@ const TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 export const onRequestOptions: Handler = async ({ request, env }) => preflight(request, env)
 
 export const onRequestPut: Handler = async ({ request, env, params }) => {
-  const denied = requireKey(request, env)
-  if (denied) return denied
+  const auth = await authenticate(request, env)
+  if (!auth.ok) return auth.response
   const id = param(params.id)
   const key = param(params.photo)
   if (!UUID_RE.test(id) || !PHOTO_KEY_RE.test(key)) return json(request, env, { error: 'bad_key' }, 400)
@@ -28,8 +29,8 @@ export const onRequestPut: Handler = async ({ request, env, params }) => {
 }
 
 export const onRequestGet: Handler = async ({ request, env, params }) => {
-  const denied = requireKey(request, env)
-  if (denied) return denied
+  const auth = await authenticate(request, env)
+  if (!auth.ok) return auth.response
   const id = param(params.id)
   const key = param(params.photo)
   if (!UUID_RE.test(id) || !PHOTO_KEY_RE.test(key)) return json(request, env, { error: 'bad_key' }, 400)

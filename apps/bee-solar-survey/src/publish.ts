@@ -5,6 +5,7 @@
  * from a local server address can never reach a customer.
  */
 import { isPublicBaseUrl, publishBlockers, toPublicQuote, type QuoteVersion } from '@bee/quote-core'
+import { idLast4 } from './customer'
 import type { Publication, PublishSettings } from './db'
 import type { SiteSurveyProject } from './types'
 
@@ -65,7 +66,14 @@ export async function publishQuote(quote: QuoteVersion, project: SiteSurveyProje
   const res = await call(settings, '/api/quotes', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ quote: toPublicQuote(quote), pdfBase64: toBase64(pdf.bytes) }),
+    body: JSON.stringify({
+      quote: toPublicQuote(quote),
+      pdfBase64: toBase64(pdf.bytes),
+      // Private, never shown on the customer page: which survey the link belongs to (office
+      // screen) and the last 4 ID digits the customer's online approval is checked against.
+      survey_id: project.id,
+      ...(idLast4(project.customerIdNumber) ? { customer_id_last4: idLast4(project.customerIdNumber) } : {}),
+    }),
   })
   const data = (await res.json()) as { token: string; url: string; published_at: string }
   let origin = ''

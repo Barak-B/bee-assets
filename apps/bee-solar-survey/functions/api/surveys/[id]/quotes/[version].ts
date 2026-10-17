@@ -1,6 +1,7 @@
 /** PUT /api/surveys/<id>/quotes/<version> — store a quote version; versions never change (auth). */
 import type { Handler } from '../../../../_lib/env'
-import { json, param, preflight, requireKey } from '../../../../_lib/http'
+import { authenticate } from '../../../../_lib/auth'
+import { json, param, preflight } from '../../../../_lib/http'
 import { UUID_RE, getSurvey, putQuoteVersion } from '../../../../_lib/surveys'
 
 const MAX = 2 * 1024 * 1024
@@ -8,8 +9,8 @@ const MAX = 2 * 1024 * 1024
 export const onRequestOptions: Handler = async ({ request, env }) => preflight(request, env)
 
 export const onRequestPut: Handler = async ({ request, env, params }) => {
-  const denied = requireKey(request, env)
-  if (denied) return denied
+  const auth = await authenticate(request, env)
+  if (!auth.ok) return auth.response
   const id = param(params.id)
   const version = Number(param(params.version))
   if (!UUID_RE.test(id) || !Number.isInteger(version) || version < 1 || version > 9999) return json(request, env, { error: 'bad_key' }, 400)

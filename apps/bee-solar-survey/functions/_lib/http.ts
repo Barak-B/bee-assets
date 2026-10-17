@@ -55,25 +55,6 @@ export function redirect(location: string, status = 303): Response {
   return new Response(null, { status, headers: { location, 'cache-control': 'no-store', ...SECURITY_HEADERS } })
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
-  const ea = new TextEncoder().encode(a)
-  const eb = new TextEncoder().encode(b)
-  let diff = ea.length ^ eb.length
-  for (let i = 0; i < Math.max(ea.length, eb.length); i++) diff |= (ea[i] ?? 0) ^ (eb[i] ?? 0)
-  return diff === 0
-}
-
-/** null = authorised; otherwise the error response to return. */
-export function requireKey(request: Request, env: Env): Response | null {
-  if (!env.PUBLISH_KEY) return json(request, env, { error: 'publishing_not_configured', message_he: 'PUBLISH_KEY לא מוגדר בשרת' }, 503)
-  const auth = request.headers.get('authorization') ?? ''
-  const m = /^Bearer\s+(.+)$/i.exec(auth)
-  if (!m || !timingSafeEqual(m[1]!.trim(), env.PUBLISH_KEY)) {
-    return json(request, env, { error: 'unauthorized', message_he: 'מפתח פרסום שגוי' }, 401)
-  }
-  return null
-}
-
 export function param(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '')
 }

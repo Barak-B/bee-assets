@@ -215,7 +215,7 @@ test('app shell works offline after first load', async ({ page, context }) => {
 test('publish a priced quote → customer link on our domain, never 127.0.0.1', async ({ page }) => {
   const BASE = 'https://app.barak-e.com'
   const TOKEN = 'AbCdEfGhIjKlMnOpQrStUv'
-  let published: { quote: Record<string, unknown>; pdfBase64: string } | null = null
+  let published: { quote: Record<string, unknown>; pdfBase64: string; survey_id?: string; customer_id_last4?: string } | null = null
   let auth = ''
   await page.route(`${BASE}/api/quotes`, async (route) => {
     auth = route.request().headers()['authorization'] ?? ''
@@ -228,6 +228,22 @@ test('publish a priced quote → customer link on our domain, never 127.0.0.1', 
   })
 
   await createSurvey(page, 'גג בדיקה פרסום')
+  // The customer card: who the quote is for and where the link goes.
+  await page.locator('.project-item', { hasText: 'גג בדיקה פרסום' }).locator('[data-edit]').click()
+  await page.fill('#f_customerName', 'ישראל כהן')
+  await page.fill('#f_customerPhone', '050-123-4567')
+  await page.fill('#f_customerId', '123456789')
+  await expect(page.locator('#customerWarnings')).toContainText('ספרת הביקורת')
+  await page.fill('#f_customerId', '123456782')
+  await expect(page.locator('#customerWarnings li')).toHaveCount(0)
+  await page.click('#btnSave')
+  const item = page.locator('.project-item', { hasText: 'גג בדיקה פרסום' })
+  await expect(item).toContainText('ישראל כהן')
+  await expect(item.locator('a.tel')).toHaveAttribute('href', 'tel:0501234567')
+  await expect(item.locator('[data-stage-chip]')).toHaveText('סקר')
+  await page.fill('#search', '0501234567')
+  await expect(page.locator('.project-item')).toHaveCount(1)
+  await page.fill('#search', '')
   await fillPriceBook(page, { baseUrl: BASE, key: 'e2e-key' }, true)
   await page.click('#btnPricing')
   await expect(page.locator('#p_pubStatus')).toContainText(`${BASE}/q/`)
@@ -242,7 +258,22 @@ test('publish a priced quote → customer link on our domain, never 127.0.0.1', 
   await expect(card.locator('[data-views="1"]')).toContainText('3')
   await expect(card.locator('[data-accepted="1"]')).toContainText('הלקוח אישר את ההצעה: ישראל ישראלי')
 
+  // WhatsApp opens with the customer's number and the link typed in — the surveyor presses send.
+  await page.context().route('https://wa.me/**', (r) => r.fulfill({ contentType: 'text/html', body: '<p>wa</p>' }))
+  const [wa] = await Promise.all([page.waitForEvent('popup'), card.locator('[data-q-wa]').click()])
+  await wa.waitForLoadState()
+  const waUrl = new URL(wa.url())
+  expect(waUrl.origin + waUrl.pathname).toBe('https://wa.me/972501234567')
+  expect(waUrl.searchParams.get('text')).toContain(`${BASE}/q/${TOKEN}`)
+  expect(waUrl.searchParams.get('text')).toContain('שלום ישראל כהן')
+  await wa.close()
+
   expect(auth).toBe('Bearer e2e-key')
+  // Private routing data rides next to the public quote, never inside it.
+  expect(published!.survey_id).toMatch(/^[0-9a-f-]{36}$/)
+  expect(published!.customer_id_last4).toBe('6782')
+  expect((published!.quote as { project: { customer_name?: string } }).project.customer_name).toBe('ישראל כהן')
+  expect(JSON.stringify(published!.quote)).not.toContain('123456782')
   const body = JSON.stringify(published)
   expect(body).toContain('"schema":"bee.public-quote/1"')
   const roi = (published!.quote as { roi?: { savings_y1_ils: number; cumulative: unknown[]; monthly_kwh: number[] } }).roi
@@ -267,6 +298,113 @@ test('publish a priced quote → customer link on our domain, never 127.0.0.1', 
   await expect(page.locator('.quote-card[data-ver="1"] .pub-url')).toHaveValue(`${BASE}/q/${TOKEN}`)
   await page.locator('.quote-card[data-ver="1"] [data-q-revoke]').click()
   await expect(page.locator('.quote-card[data-ver="1"] [data-q-publish]')).toBeVisible()
+  // The approval was seen once: the list keeps showing it, even with the link taken down.
+  await page.click('#qdClose')
+  await expect(page.locator('.project-item', { hasText: 'גג בדיקה פרסום' }).locator('[data-stage-chip]')).toHaveText('הלקוח אישר')
+})
+
+test('office screen: log in, every job with its stage, filters, status and keys', async ({ page }) => {
+  const now = Date.now()
+  const iso = (daysAgo: number) => new Date(now - daysAgo * 86_400_000).toISOString()
+  const job = (over: Record<string, unknown>) => ({
+    id: crypto.randomUUID(),
+    projectName: '',
+    address: 'הרצל 1, רחובות',
+    surveyor: 'דני',
+    updatedAt: iso(1),
+    receivedAt: iso(1),
+    readyForWave54: true,
+    score: 90,
+    photoCount: 0,
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    receivedBy: 'דני',
+    stage: 'survey',
+    office: null,
+    latestQuote: null,
+    links: [],
+    reports: [],
+    lastActivityAt: iso(1),
+    ...over,
+  })
+  const link = (over: Record<string, unknown>) => ({ token: 'AbCdEfGhIjKlMnOpQrStUv', quote_number: 'Q-1', version_no: 1, published_at: iso(4), published_by: 'דני', revoked_at: null, views: 0, last_viewed_at: null, accepted: null, ...over })
+  const jobs = [
+    job({ projectName: 'גג כהן', customerName: 'יוסי כהן', customerPhone: '050-1234567', stage: 'sent', links: [link({})], latestQuote: { version_no: 1, quote_number: 'Q-1', created_at: iso(4), total_incl_vat_ils: 91303, dc_kwp: 15.3, needs_owner_input: false } }),
+    job({ projectName: 'מחסן לוי', customerName: 'דנה לוי', stage: 'accepted', links: [link({ views: 2, last_viewed_at: iso(1), accepted: { name: 'דנה לוי', accepted_at: iso(1), id_verified: true, total_incl_vat_ils: 270158 } })] }),
+    job({ projectName: 'רפת קיבוץ', stage: 'survey', office: { status: 'on_hold', note: 'ועד הקיבוץ', updated_at: iso(1), updated_by: 'רונית' } }),
+  ]
+  let statusBody: unknown = null
+  const keys: Record<string, unknown>[] = [{ id: crypto.randomUUID(), name: 'דני', role: 'surveyor', created_at: iso(10), created_by: 'מנהל', revoked_at: null, hint: 'ab12' }]
+  await page.route('**/api/me', (r) =>
+    r.request().headers()['authorization'] === 'Bearer master-key'
+      ? r.fulfill({ json: { id: 'admin', name: 'מנהל', role: 'admin', role_he: 'מנהל' } })
+      : r.fulfill({ status: 401, json: { error: 'unauthorized', message_he: 'מפתח שגוי' } }),
+  )
+  await page.route('**/api/office/overview', (r) => r.fulfill({ json: { jobs, generated_at: new Date(now).toISOString() } }))
+  await page.route('**/api/office/status/*', (r) => {
+    statusBody = r.request().postDataJSON()
+    return r.fulfill({ json: { ok: true, office: { ...(statusBody as object), updated_at: new Date(now).toISOString(), updated_by: 'מנהל' } } })
+  })
+  await page.route('**/api/surveys/*', (r) => r.fulfill({ json: { survey: { project: { roofTypeHe: 'בטון', targetKwp: '15' }, photos: [] } } }))
+  await page.route('**/api/office/keys', (r) => {
+    if (r.request().method() === 'POST') {
+      const row = { id: crypto.randomUUID(), ...(r.request().postDataJSON() as object), created_at: new Date(now).toISOString(), created_by: 'מנהל', revoked_at: null, hint: 'Zz99' }
+      keys.unshift(row)
+      return r.fulfill({ status: 201, json: { key: `bee_${'x'.repeat(39)}Zz99`, row } })
+    }
+    return r.fulfill({ json: { keys } })
+  })
+
+  await page.goto('/office.html')
+  await page.fill('#oKey', 'wrong')
+  await page.click('#oLogin button')
+  await expect(page.locator('.o-login .note-warn')).toContainText('מפתח שגוי')
+  await page.fill('#oKey', 'master-key')
+  await page.click('#oLogin button')
+
+  // Active jobs only by default; the on-hold one is behind the status filter.
+  await expect(page.locator('tbody tr[data-job]')).toHaveCount(2)
+  const cohen = page.locator('tr[data-job]', { hasText: 'גג כהן' })
+  await expect(cohen).toContainText('נשלח ללקוח')
+  await expect(cohen).toContainText('הלקוח לא פתח את הקישור 4 ימים')
+  await expect(page.locator('tr[data-job]', { hasText: 'מחסן לוי' })).toContainText('אושר')
+  await page.click('[data-stage="attention"]')
+  await expect(page.locator('tbody tr[data-job]')).toHaveCount(1)
+  await page.click('[data-stage="attention"]')
+  await page.selectOption('#oStatus', 'on_hold')
+  await expect(page.locator('tbody tr[data-job]')).toHaveCount(1)
+  await expect(page.locator('tbody tr[data-job]')).toContainText('מוקפא')
+  await page.selectOption('#oStatus', 'active')
+  await page.fill('#oSearch', '0501234567')
+  await expect(page.locator('tbody tr[data-job]')).toHaveCount(1)
+  await page.fill('#oSearch', '')
+
+  // Detail drawer → put the job on hold with a note.
+  await cohen.click()
+  await expect(page.locator('.o-drawer')).toContainText('יוסי כהן')
+  await expect(page.locator('#oSurvey')).toContainText('סוג גג')
+  await page.selectOption('#oSetStatus', 'on_hold')
+  await page.fill('#oNote', 'הלקוח ביקש לחזור אליו בנובמבר')
+  await page.click('#oSave')
+  await expect(page.locator('#toast')).toContainText('נשמר')
+  expect(statusBody).toEqual({ status: 'on_hold', note: 'הלקוח ביקש לחזור אליו בנובמבר' })
+  await page.click('#oClose')
+  await expect(page.locator('tbody tr[data-job]')).toHaveCount(1) // moved out of the active list
+
+  // Keys (admin): the new key is shown once.
+  await page.click('[data-tab="keys"]')
+  await expect(page.locator('.o-table')).toContainText('דני')
+  await page.fill('#oKeyName', 'אבי')
+  await page.click('#oNewKey button')
+  await expect(page.locator('#oNewKeyValue')).toHaveValue(/^bee_x+Zz99$/)
+  await expect(page.locator('.o-table')).toContainText('אבי')
+
+  // The key is remembered on this browser; "יציאה" forgets it.
+  await page.reload()
+  await expect(page.locator('tbody tr[data-job]').first()).toBeVisible()
+  await page.click('#oLogout')
+  await expect(page.locator('#oKey')).toBeVisible()
 })
 
 test('a server that answers with a local link is refused', async ({ page }) => {
@@ -298,7 +436,7 @@ function fakeSurveyServer(key: string) {
   const photos = new Map<string, { body: Buffer; type: string }>()
   const quotes = new Map<string, Record<string, unknown>>()
   const reports = new Map<string, Record<string, unknown>>()
-  const state = { down: false, refuseReports: false, reportPuts: 0, auth: new Set<string>() }
+  const state = { down: false, refuseReports: false, reportPuts: 0, auth: new Set<string>(), office: new Map<string, Record<string, string>>() }
   const handler = async (route: import('@playwright/test').Route) => {
     if (state.down) return route.abort('internetdisconnected')
     const req = route.request()
@@ -308,7 +446,12 @@ function fakeSurveyServer(key: string) {
     const json = (status: number, body: unknown) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
     let m: RegExpMatchArray | null
     if (path === '/api/surveys' && req.method() === 'GET') {
-      return json(200, { surveys: [...surveys.values()].map((r) => ({ id: (r.project as { id: string }).id, projectName: (r.project as { projectName: string }).projectName })) })
+      return json(200, {
+        surveys: [...surveys.values()].map((r) => {
+          const id = (r.project as { id: string }).id
+          return { id, projectName: (r.project as { projectName: string }).projectName, office: state.office.get(id) ?? null }
+        }),
+      })
     }
     if ((m = path.match(/^\/api\/surveys\/([^/]+)\/photos\/([^/]+)$/))) {
       if (req.method() === 'PUT') {
@@ -391,6 +534,16 @@ test('surveys back up to our server, queue while offline, and restore on a new p
   // Nothing changed → a manual sync sends nothing new.
   await page.click('#btnSync')
   await expect(page.locator('#toast')).toContainText('הכול כבר מגובה')
+
+  // The office puts the job on hold; the phone picks it up on the next sync, without re-sending the survey.
+  const sid = (rec.project as unknown as { id: string }).id
+  server.state.office.set(sid, { status: 'on_hold', note: 'ועד הקיבוץ', updated_at: new Date().toISOString(), updated_by: 'רונית' })
+  await page.click('#btnSync')
+  const stageChip = page.locator('.project-item', { hasText: 'גג בדיקה גיבוי' }).locator('[data-stage-chip]')
+  await expect(stageChip).toHaveText('סקר · מוקפא')
+  server.state.office.set(sid, { status: 'active', note: '', updated_at: new Date().toISOString(), updated_by: 'רונית' })
+  await page.click('#btnSync')
+  await expect(stageChip).toHaveText('סקר')
 
   // A field report (with a photo) joins the same queue.
   await page.locator('.project-item', { hasText: 'גג בדיקה גיבוי' }).locator('[data-reports]').click()

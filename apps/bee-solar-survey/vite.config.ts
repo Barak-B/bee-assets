@@ -40,7 +40,7 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         navigateFallback: '/index.html',
         // Customer quote pages and the API are served by Pages Functions — never the app shell.
-        navigateFallbackDenylist: [/^\/q\//, /^\/api\//],
+        navigateFallbackDenylist: [/^\/q\//, /^\/api\//, /^\/office/],
         cleanupOutdatedCaches: true,
       },
       devOptions: { enabled: false },
@@ -49,6 +49,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      // The field app, and the office screen (/office) for the people who are not on the roof.
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        office: fileURLToPath(new URL('./office.html', import.meta.url)),
+      },
+    },
   },
   test: {
     environment: 'node',

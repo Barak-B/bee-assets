@@ -27,7 +27,16 @@ export interface SurveyPhotoMeta {
 
 export interface SurveyRecord {
   schema: 'bee.survey-record/1'
-  project: Record<string, unknown> & { id: string; projectName?: string; address?: string; surveyor?: string; updatedAt?: string }
+  project: Record<string, unknown> & {
+    id: string
+    projectName?: string
+    address?: string
+    surveyor?: string
+    updatedAt?: string
+    customerName?: string
+    customerPhone?: string
+    customerEmail?: string
+  }
   photos: SurveyPhotoMeta[]
   /** Hive export bundle as built by the app (collect / edit / dispatch jobs). */
   hive?: { jobs?: unknown[] } & Record<string, unknown>
@@ -48,6 +57,11 @@ export interface SurveyIndexRow {
   photoCount: number
   contentHash: string
   quoteVersions: number
+  customerName: string
+  customerPhone: string
+  customerEmail: string
+  /** Key name of whoever sent the latest copy (office screen). */
+  receivedBy: string
 }
 
 const k = {
@@ -101,7 +115,7 @@ export async function countQuotes(env: Env, id: string): Promise<number> {
   return res.objects.length
 }
 
-export async function putSurvey(env: Env, id: string, rec: SurveyRecord, now?: Date): Promise<{ changed: boolean; missingPhotos: string[]; row: SurveyIndexRow }> {
+export async function putSurvey(env: Env, id: string, rec: SurveyRecord, now?: Date, by = ''): Promise<{ changed: boolean; missingPhotos: string[]; row: SurveyIndexRow }> {
   const prev = await getSurvey(env, id)
   const changed = !prev || prev.contentHash !== rec.contentHash
   // receivedAt moves only when the content does, so the hive feed (?since=) never repeats a survey.
@@ -130,6 +144,11 @@ export async function putSurvey(env: Env, id: string, rec: SurveyRecord, now?: D
     photoCount: rec.photos.length,
     contentHash: clip(rec.contentHash, 100),
     quoteVersions,
+    // R2 metadata is capped at 2 KB per object; Hebrew URL-encodes to 6 bytes a letter.
+    customerName: str(rec.project.customerName, 60),
+    customerPhone: str(rec.project.customerPhone, 30),
+    customerEmail: str(rec.project.customerEmail, 80),
+    receivedBy: str(by, 40),
   }
   await writeIndex(env, row)
   return { changed, missingPhotos, row }
@@ -180,6 +199,10 @@ function rowFromMeta(raw: Record<string, string>): SurveyIndexRow {
     photoCount: Number(m.photoCount ?? 0),
     contentHash: m.contentHash ?? '',
     quoteVersions: Number(m.quoteVersions ?? 0),
+    customerName: m.customerName ?? '',
+    customerPhone: m.customerPhone ?? '',
+    customerEmail: m.customerEmail ?? '',
+    receivedBy: m.receivedBy ?? '',
   }
 }
 

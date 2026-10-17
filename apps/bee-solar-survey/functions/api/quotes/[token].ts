@@ -4,14 +4,15 @@
  */
 import { QUOTE_TOKEN_RE } from '../../../../../packages/quote-core/src/public'
 import type { Handler } from '../../_lib/env'
-import { json, param, preflight, requireKey } from '../../_lib/http'
+import { authenticate } from '../../_lib/auth'
+import { json, param, preflight } from '../../_lib/http'
 import { deleteQuote, getAcceptance, getQuote, getViews } from '../../_lib/store'
 
 export const onRequestOptions: Handler = async ({ request, env }) => preflight(request, env)
 
 export const onRequestGet: Handler = async ({ request, env, params }) => {
-  const denied = requireKey(request, env)
-  if (denied) return denied
+  const auth = await authenticate(request, env)
+  if (!auth.ok) return auth.response
   const token = param(params.token)
   if (!QUOTE_TOKEN_RE.test(token)) return json(request, env, { error: 'bad_token' }, 400)
   const rec = await getQuote(env, token)
@@ -23,8 +24,8 @@ export const onRequestGet: Handler = async ({ request, env, params }) => {
 }
 
 export const onRequestDelete: Handler = async ({ request, env, params }) => {
-  const denied = requireKey(request, env)
-  if (denied) return denied
+  const auth = await authenticate(request, env)
+  if (!auth.ok) return auth.response
   const token = param(params.token)
   if (!QUOTE_TOKEN_RE.test(token)) return json(request, env, { error: 'bad_token' }, 400)
   await deleteQuote(env, token)

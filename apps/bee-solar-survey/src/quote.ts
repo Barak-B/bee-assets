@@ -33,6 +33,7 @@ export function surveyToQuoteInput(project: SiteSurveyProject, photos: SurveyPho
   return {
     projectId: project.id,
     projectName: project.projectName,
+    ...(project.customerName?.trim() ? { customerName: project.customerName.trim() } : {}),
     address: project.address,
     roofType: project.roofTypeHe ? mapRoofType(project.roofTypeHe) : 'other',
     usableAreaM2: payload.site.usableAreaM2,

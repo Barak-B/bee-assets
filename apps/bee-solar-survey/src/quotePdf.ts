@@ -74,11 +74,11 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
     customer
       ? {
           title: `הצעת מחיר · ${quote.quote_number} · גרסה ${quote.version_no}`,
-          sub: `${quote.input.projectName} · ${quote.input.address} · ${quote.created_at.slice(0, 10)}`,
+          sub: `${quote.input.customerName ? `לכבוד ${quote.input.customerName} · ` : ''}${quote.input.projectName} · ${quote.input.address} · ${quote.created_at.slice(0, 10)}`,
         }
       : {
           title: `הצעת מחיר ראשונית · ${quote.quote_number} · גרסה ${quote.version_no} · טיוטה`,
-          sub: `${quote.input.projectName} · ${quote.input.address} · ${quote.created_at.slice(0, 10)}${project.surveyor ? ` · סקר: ${project.surveyor} ${project.surveyDate}` : ` · סקר: ${project.surveyDate}`}`,
+          sub: `${quote.input.customerName ? `${quote.input.customerName} · ` : ''}${quote.input.projectName} · ${quote.input.address} · ${quote.created_at.slice(0, 10)}${project.surveyor ? ` · סקר: ${project.surveyor} ${project.surveyDate}` : ` · סקר: ${project.surveyDate}`}`,
         },
     customer
       ? { right: 'B.E.E · ברק אלקטריק אנג׳ינירינג · * = ייקבע סופית בתכנון המפורט', left: `${quote.quote_number} v${quote.version_no} · ${quote.snapshot_hash.slice(0, 12)}` }

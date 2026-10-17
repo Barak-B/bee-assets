@@ -20,7 +20,9 @@ import {
   listProjects,
   listQuotes,
   listReports,
+  saveOfficeStatus,
   saveSyncState,
+  type LocalOfficeStatus,
   type PublishSettings,
   type StoredPhoto,
   type StoredQuote,
@@ -249,7 +251,8 @@ async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: S
     if (uploaded || !state || state.hash !== record.contentHash) {
       surveyOk = await attempt(surveyTag, async () => {
         const res = await call(s, base, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(record) })
-        const body = (await res.json()) as { missing_photos?: string[] }
+        const body = (await res.json()) as { missing_photos?: string[]; office?: LocalOfficeStatus | null }
+        if (body.office !== undefined) await saveOfficeStatus(project.id, body.office)
         for (const key of body.missing_photos ?? []) await upload(key)
       })
     } else surveyOk = true
@@ -331,6 +334,19 @@ async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: S
   }
 }
 
+/** Office statuses (on hold / lost / closed) set since the phone last sent each survey: one list call, at most every 10 minutes. */
+let officePulledAt = 0
+const OFFICE_PULL_MS = 10 * 60_000
+
+async function pullOfficeStatuses(s: PublishSettings, force: boolean, now = Date.now()): Promise<void> {
+  if (!force && now - officePulledAt < OFFICE_PULL_MS) return
+  const res = await call(s, '/api/surveys')
+  const { surveys } = (await res.json()) as { surveys: { id: string; office?: LocalOfficeStatus | null }[] }
+  const local = new Set((await listProjects()).map((p) => p.id))
+  for (const row of surveys) if (local.has(row.id) && row.office !== undefined) await saveOfficeStatus(row.id, row.office)
+  officePulledAt = now
+}
+
 let running: Promise<SyncReport> | null = null
 /** Requests that arrived while a run was in flight: run again for them afterwards. */
 let queued: { ids: Set<string> | 'all'; deep: boolean } | null = null
@@ -366,6 +382,7 @@ export function syncAll(only?: string[], opts: { deep?: boolean } = {}): Promise
         throw err
       }
     }
+    if (!report.offline) await pullOfficeStatuses(s, !!opts.deep).catch(() => undefined)
     return report
   })().finally(() => {
     running = null

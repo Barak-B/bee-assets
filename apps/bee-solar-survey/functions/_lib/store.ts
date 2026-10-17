@@ -5,6 +5,22 @@ export interface PublishedRecord {
   quote: PublicQuote
   published_at: string
   has_pdf: boolean
+  /** Survey the link belongs to (office screen). Never shown to the customer. */
+  survey_id?: string
+  /** Last 4 digits of the customer's ID on file; the online approval must match them. Never shown. */
+  id_last4?: string
+  /** Who published it (key name). */
+  published_by?: string
+}
+
+/** One published link of a survey, as the office screen lists it (kept after revoke, with revoked_at). */
+export interface QuoteLinkRow {
+  token: string
+  quote_number: string
+  version_no: number
+  published_at: string
+  published_by: string
+  revoked_at: string | null
 }
 
 export interface ViewStats {
@@ -33,9 +49,12 @@ export interface Acceptance {
   pdf_sha256: string | null
   /** Copy of what the customer saw, for the record. */
   quote: PublicQuote
+  /** The 4 digits matched the customer's ID on file (false: no ID on file to check against). */
+  id_verified?: boolean
 }
 
-const key = (token: string, name: 'quote.json' | 'quote.pdf' | 'views.json' | 'acceptance.json') => `quotes/${token}/${name}`
+const key = (token: string, name: 'quote.json' | 'quote.pdf' | 'views.json' | 'acceptance.json' | 'accept-fails.json') => `quotes/${token}/${name}`
+const linkKey = (surveyId: string, token: string) => `quote-links/${surveyId}/${token}`
 
 export async function putQuote(env: Env, token: string, rec: PublishedRecord, pdf: Uint8Array | null): Promise<void> {
   if (pdf) await env.QUOTES.put(key(token, 'quote.pdf'), pdf, { httpMetadata: { contentType: 'application/pdf' } })
@@ -43,6 +62,50 @@ export async function putQuote(env: Env, token: string, rec: PublishedRecord, pd
     httpMetadata: { contentType: 'application/json' },
     customMetadata: { quote_number: rec.quote.quote_number, version_no: String(rec.quote.version_no) },
   })
+  if (rec.survey_id) await writeLink(env, rec.survey_id, { token, quote_number: rec.quote.quote_number, version_no: rec.quote.version_no, published_at: rec.published_at, published_by: rec.published_by ?? '', revoked_at: null })
+}
+
+async function writeLink(env: Env, surveyId: string, row: QuoteLinkRow): Promise<void> {
+  await env.QUOTES.put(linkKey(surveyId, row.token), '', {
+    customMetadata: {
+      token: row.token,
+      quote_number: encodeURIComponent(row.quote_number),
+      version_no: String(row.version_no),
+      published_at: row.published_at,
+      published_by: encodeURIComponent(row.published_by),
+      revoked_at: row.revoked_at ?? '',
+    },
+  })
+}
+
+const dec = (v: string | undefined) => {
+  try {
+    return decodeURIComponent(v ?? '')
+  } catch {
+    return v ?? ''
+  }
+}
+
+/** Every link ever published for a survey, newest first. */
+export async function listQuoteLinks(env: Env, surveyId: string): Promise<QuoteLinkRow[]> {
+  const out: QuoteLinkRow[] = []
+  let cursor: string | undefined
+  do {
+    const res = await env.QUOTES.list({ prefix: `quote-links/${surveyId}/`, cursor, limit: 1000, include: ['customMetadata'] })
+    for (const o of res.objects) {
+      const m = o.customMetadata ?? {}
+      out.push({
+        token: m.token ?? o.key.split('/').pop()!,
+        quote_number: dec(m.quote_number),
+        version_no: Number(m.version_no ?? 0),
+        published_at: m.published_at ?? '',
+        published_by: dec(m.published_by),
+        revoked_at: m.revoked_at || null,
+      })
+    }
+    cursor = res.truncated ? res.cursor : undefined
+  } while (cursor)
+  return out.sort((a, b) => b.published_at.localeCompare(a.published_at))
 }
 
 export async function getQuote(env: Env, token: string): Promise<PublishedRecord | null> {
@@ -61,8 +124,34 @@ export async function getPdf(env: Env, token: string): Promise<ArrayBuffer | nul
 }
 
 /** Revoke the link. An acceptance, if any, is kept as the record of what was approved. */
-export async function deleteQuote(env: Env, token: string): Promise<void> {
+export async function deleteQuote(env: Env, token: string, now = new Date()): Promise<void> {
+  const rec = await getQuote(env, token)
   await env.QUOTES.delete([key(token, 'quote.json'), key(token, 'quote.pdf'), key(token, 'views.json')])
+  // The office keeps seeing that the link existed and when it was taken down.
+  if (rec?.survey_id) {
+    const row = (await listQuoteLinks(env, rec.survey_id)).find((r) => r.token === token)
+    if (row && !row.revoked_at) await writeLink(env, rec.survey_id, { ...row, revoked_at: now.toISOString() })
+  }
+}
+
+/** Failed ID checks on the approval form; after MAX_ACCEPT_FAILS the form is locked for that link. */
+export const MAX_ACCEPT_FAILS = 5
+
+export async function getAcceptFails(env: Env, token: string): Promise<number> {
+  const obj = await env.QUOTES.get(key(token, 'accept-fails.json'))
+  if (!obj) return 0
+  try {
+    return Number((JSON.parse(await obj.text()) as { count?: number }).count ?? 0)
+  } catch {
+    return 0
+  }
+}
+
+/** Best-effort counter: a lost update under a burst only loosens the limit by a few tries. */
+export async function addAcceptFail(env: Env, token: string, now = new Date()): Promise<number> {
+  const count = (await getAcceptFails(env, token)) + 1
+  await env.QUOTES.put(key(token, 'accept-fails.json'), JSON.stringify({ count, last: now.toISOString() }), { httpMetadata: { contentType: 'application/json' } })
+  return count
 }
 
 export async function getAcceptance(env: Env, token: string): Promise<Acceptance | null> {
