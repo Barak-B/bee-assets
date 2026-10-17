@@ -3,14 +3,20 @@
     "designer": "ברק הנדסת חשמל",
     "project": "בית מגורים צמוד קרקע",
     "site": "מגרש לדוגמה — כתובת לאימות",
-    "client": "",
+    "client": "דוגמה — מנוע התכנון",
     "sheet_no": "E-05",
     "sheet_title": "חד-קווי — לוח ראשי ולוח חיוני",
     "revision": "A",
     "date": "2026-10-17",
     "scale": "-",
     "status": "לאישור",
-    "revisions": [["A", "2026-10-17", "הגשה ראשונה — דוגמה למנוע"]]
+    "revisions": [
+      [
+        "A",
+        "2026-10-17",
+        "הגשה ראשונה — דוגמה למנוע"
+      ]
+    ]
   },
   "notes": [
     "המפסק הראשי Q0 הוא בן ארבעה קטבים; ניתן לנעילה במצב מופסק (תקנות הלוחות).",
@@ -24,77 +30,571 @@
     {
       "id": "MDB",
       "title": "לוח ראשי MDB",
-      "supply": {"kind": "utility", "label": "חח\"י", "meter": "3X40A", "voltage": "400/230V", "frequency": "50Hz",
-                 "cable": {"designation": "N2XY 4X10", "length_m": 18.5, "du_pct": 0.72}, "earthing": "TN-C-S"},
-      "incomer": {"tag": "Q0", "kind": "mcb", "poles": 4, "rating_a": 40, "curve": "C", "lock": true},
+      "supply": {
+        "kind": "utility",
+        "label": "חח\"י",
+        "meter": "3X40A",
+        "voltage": "400/230V",
+        "frequency": "50Hz",
+        "cable": {
+          "designation": "N2XY 4X10",
+          "length_m": 18.5,
+          "du_pct": 0.72
+        },
+        "earthing": "TN-C-S"
+      },
+      "incomer": {
+        "tag": "Q0",
+        "kind": "mcb",
+        "poles": 4,
+        "rating_a": 40,
+        "curve": "C",
+        "lock": true
+      },
       "ct": "3×CT",
-      "busbar": {"label": "L1,L2,L3,N", "rating_a": 63},
-      "spd": {"tag": "SPD", "kind": "spd", "poles": 4, "note": "T2 Up<1.5kV"},
-      "enclosure": {"model": "ארון 4×18 מודולים", "manufacturer": "Hager / ABB", "width_mm": 500, "height_mm": 800, "depth_mm": 160,
-                    "rows": 4, "modules_per_row": 18, "row_pitch_mm": 150, "mounting": "flush", "ip": "IP40"},
+      "busbar": {
+        "label": "L1,L2,L3,N",
+        "rating_a": 63
+      },
+      "spd": {
+        "tag": "SPD",
+        "kind": "spd",
+        "poles": 4,
+        "note": "T2 Up<1.5kV"
+      },
+      "enclosure": {
+        "model": "ארון 4×18 מודולים",
+        "manufacturer": "Hager / ABB",
+        "width_mm": 500,
+        "height_mm": 800,
+        "depth_mm": 160,
+        "rows": 4,
+        "modules_per_row": 18,
+        "row_pitch_mm": 150,
+        "mounting": "flush",
+        "ip": "IP40"
+      },
       "groups": [
-        {"tag": "RCD-A", "device": {"tag": "RCD-A", "kind": "rcd", "poles": 4, "rating_a": 40, "idn_ma": 30, "rcd_type": "A"},
-         "circuits": [
-           {"tag": "M1", "device": {"tag": "M1", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L3", "cable": {"designation": "3X2.5"}, "load": "שקעים — סלון"},
-           {"tag": "M2", "device": {"tag": "M2", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L1", "cable": {"designation": "3X4"}, "load": "שקעים — פינת אוכל ומטבח"},
-           {"tag": "M3", "device": {"tag": "M3", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L2", "cable": {"designation": "3X2.5"}, "load": "שקעים — חדר ילדים"},
-           {"tag": "M4", "device": {"tag": "M4", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L3", "cable": {"designation": "3X4"}, "load": "שקעים — חדר הורים"},
-           {"tag": "M5", "device": {"tag": "M5", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L1", "cable": {"designation": "3X2.5"}, "load": "שקעים — חדר רחצה (חימום)"},
-           {"tag": "M6", "device": {"tag": "M6", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L2", "cable": {"designation": "3X4"}, "load": "מכונת כביסה"},
-           {"tag": "M7", "device": {"tag": "M7", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L3", "cable": {"designation": "3X2.5"}, "load": "תאורה — אגף יום"},
-           {"tag": "M8", "device": {"tag": "M8", "kind": "mcb", "poles": 1, "rating_a": 10, "curve": "C"}, "phase": "L1", "cable": {"designation": "3X1.5"}, "load": "תאורה — אגף לילה"},
-           {"tag": "M9", "device": {"tag": "M9", "kind": "mcb", "poles": 1, "rating_a": 10, "curve": "C"}, "phase": "L2", "cable": {"designation": "3X1.5"}, "load": "תאורה — חוץ"}
-         ]},
-        {"tag": "RCD-B", "device": {"tag": "RCD-B", "kind": "rcd", "poles": 4, "rating_a": 40, "idn_ma": 30, "rcd_type": "A"},
-         "circuits": [
-           {"tag": "M10", "device": {"tag": "M10", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L3", "cable": {"designation": "3X4"}, "load": "תנור אפייה"},
-           {"tag": "M11", "device": {"tag": "M11", "kind": "mcb", "poles": 3, "rating_a": 16, "curve": "C"}, "phase": "L1-3", "cable": {"designation": "5X2.5"}, "load": "כיריים — 3 מופעים"},
-           {"tag": "M12", "device": {"tag": "M12", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L1", "cable": {"designation": "3X2.5"}, "load": "מדיח כלים"},
-           {"tag": "M13", "device": {"tag": "M13", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L2", "cable": {"designation": "3X2.5"}, "load": "מקרר ומקפיא"},
-           {"tag": "M14", "device": {"tag": "M14", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L3", "cable": {"designation": "3X2.5"}, "load": "מייבש כביסה"},
-           {"tag": "M15", "device": {"tag": "M15", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L1", "cable": {"designation": "3X2.5"}, "load": "משאבת חום למים חמים"}
-         ]},
-        {"tag": "RCD-C", "device": {"tag": "RCD-C", "kind": "rcd", "poles": 4, "rating_a": 40, "idn_ma": 30, "rcd_type": "A"},
-         "circuits": [
-           {"tag": "M16", "device": {"tag": "M16", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L2", "cable": {"designation": "3X2.5"}, "load": "מזגן — סלון"},
-           {"tag": "M17", "device": {"tag": "M17", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L3", "cable": {"designation": "3X2.5"}, "load": "מזגן — חדר הורים"},
-           {"tag": "M18", "device": {"tag": "M18", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L1", "cable": {"designation": "3X2.5"}, "load": "מזגן — חדר ילדים"},
-           {"tag": "M19", "device": {"tag": "M19", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L2", "cable": {"designation": "3X2.5"}, "load": "ממ\"ד"},
-           {"tag": "M20", "device": {"tag": "M20", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L3", "cable": {"designation": "3X2.5"}, "load": "חדר טכני — תקשורת"}
-         ]}
+        {
+          "tag": "RCD-A",
+          "device": {
+            "tag": "RCD-A",
+            "kind": "rcd",
+            "poles": 4,
+            "rating_a": 40,
+            "idn_ma": 30,
+            "rcd_type": "A"
+          },
+          "circuits": [
+            {
+              "tag": "M1",
+              "device": {
+                "tag": "M1",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L3",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "שקעים — סלון"
+            },
+            {
+              "tag": "M2",
+              "device": {
+                "tag": "M2",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L1",
+              "cable": {
+                "designation": "3X4"
+              },
+              "load": "שקעים — פינת אוכל ומטבח"
+            },
+            {
+              "tag": "M3",
+              "device": {
+                "tag": "M3",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L2",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "שקעים — חדר ילדים"
+            },
+            {
+              "tag": "M4",
+              "device": {
+                "tag": "M4",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L3",
+              "cable": {
+                "designation": "3X4"
+              },
+              "load": "שקעים — חדר הורים"
+            },
+            {
+              "tag": "M5",
+              "device": {
+                "tag": "M5",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L1",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "שקעים — חדר רחצה (חימום)"
+            },
+            {
+              "tag": "M6",
+              "device": {
+                "tag": "M6",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L2",
+              "cable": {
+                "designation": "3X4"
+              },
+              "load": "מכונת כביסה"
+            },
+            {
+              "tag": "M7",
+              "device": {
+                "tag": "M7",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L3",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "תאורה — אגף יום"
+            },
+            {
+              "tag": "M8",
+              "device": {
+                "tag": "M8",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 10,
+                "curve": "C"
+              },
+              "phase": "L1",
+              "cable": {
+                "designation": "3X1.5"
+              },
+              "load": "תאורה — אגף לילה"
+            },
+            {
+              "tag": "M9",
+              "device": {
+                "tag": "M9",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 10,
+                "curve": "C"
+              },
+              "phase": "L2",
+              "cable": {
+                "designation": "3X1.5"
+              },
+              "load": "תאורה — חוץ"
+            }
+          ]
+        },
+        {
+          "tag": "RCD-B",
+          "device": {
+            "tag": "RCD-B",
+            "kind": "rcd",
+            "poles": 4,
+            "rating_a": 40,
+            "idn_ma": 30,
+            "rcd_type": "A"
+          },
+          "circuits": [
+            {
+              "tag": "M10",
+              "device": {
+                "tag": "M10",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L3",
+              "cable": {
+                "designation": "3X4"
+              },
+              "load": "תנור אפייה"
+            },
+            {
+              "tag": "M11",
+              "device": {
+                "tag": "M11",
+                "kind": "mcb",
+                "poles": 3,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L1-3",
+              "cable": {
+                "designation": "5X2.5"
+              },
+              "load": "כיריים — 3 מופעים"
+            },
+            {
+              "tag": "M12",
+              "device": {
+                "tag": "M12",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L1",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "מדיח כלים"
+            },
+            {
+              "tag": "M13",
+              "device": {
+                "tag": "M13",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L2",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "מקרר ומקפיא"
+            },
+            {
+              "tag": "M14",
+              "device": {
+                "tag": "M14",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L3",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "מייבש כביסה"
+            },
+            {
+              "tag": "M15",
+              "device": {
+                "tag": "M15",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L1",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "משאבת חום למים חמים"
+            }
+          ]
+        },
+        {
+          "tag": "RCD-C",
+          "device": {
+            "tag": "RCD-C",
+            "kind": "rcd",
+            "poles": 4,
+            "rating_a": 40,
+            "idn_ma": 30,
+            "rcd_type": "A"
+          },
+          "circuits": [
+            {
+              "tag": "M16",
+              "device": {
+                "tag": "M16",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L2",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "מזגן — סלון"
+            },
+            {
+              "tag": "M17",
+              "device": {
+                "tag": "M17",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L3",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "מזגן — חדר הורים"
+            },
+            {
+              "tag": "M18",
+              "device": {
+                "tag": "M18",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L1",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "מזגן — חדר ילדים"
+            },
+            {
+              "tag": "M19",
+              "device": {
+                "tag": "M19",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L2",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "ממ\"ד"
+            },
+            {
+              "tag": "M20",
+              "device": {
+                "tag": "M20",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L3",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "חדר טכני — תקשורת"
+            }
+          ]
+        }
       ],
       "feeders": [
-        {"tag": "Q-INV", "kind": "feeder", "to_node": "INV",
-         "device": {"tag": "Q-INV", "kind": "mcb", "poles": 4, "rating_a": 63, "curve": "C", "lock": true, "note": "מפסק ראשי PV"},
-         "cable": {"designation": "5X16 Cu N2XY", "length_m": 12}}
+        {
+          "tag": "Q-INV",
+          "kind": "feeder",
+          "to_node": "INV",
+          "device": {
+            "tag": "Q-INV",
+            "kind": "mcb",
+            "poles": 4,
+            "rating_a": 63,
+            "curve": "C",
+            "lock": true,
+            "note": "מפסק ראשי PV"
+          },
+          "cable": {
+            "designation": "5X16 Cu N2XY",
+            "length_m": 12
+          }
+        }
       ]
     },
     {
       "id": "BUB",
       "title": "לוח חיוני BUB",
-      "supply": {"kind": "inverter", "label": "מיציאת BACK-UP של הממיר", "voltage": "400/230V", "frequency": "50Hz",
-                 "cable": {"designation": "5X16 Cu", "length_m": 8}, "earthing": ""},
-      "incomer": {"tag": "Q-BU", "kind": "mcb", "poles": 4, "rating_a": 63, "curve": "C"},
-      "busbar": {"label": "L1,L2,L3,N", "rating_a": 63},
-      "enclosure": {"model": "ארון 2×18 מודולים", "manufacturer": "Hager / ABB", "width_mm": 400, "height_mm": 500, "depth_mm": 140,
-                    "rows": 2, "modules_per_row": 18, "row_pitch_mm": 150, "mounting": "surface", "ip": "IP40"},
+      "supply": {
+        "kind": "inverter",
+        "label": "מיציאת BACK-UP של הממיר",
+        "voltage": "400/230V",
+        "frequency": "50Hz",
+        "cable": {
+          "designation": "5X16 Cu",
+          "length_m": 8
+        },
+        "earthing": ""
+      },
+      "incomer": {
+        "tag": "Q-BU",
+        "kind": "mcb",
+        "poles": 4,
+        "rating_a": 63,
+        "curve": "C"
+      },
+      "busbar": {
+        "label": "L1,L2,L3,N",
+        "rating_a": 63
+      },
+      "enclosure": {
+        "model": "ארון 2×18 מודולים",
+        "manufacturer": "Hager / ABB",
+        "width_mm": 400,
+        "height_mm": 500,
+        "depth_mm": 140,
+        "rows": 2,
+        "modules_per_row": 18,
+        "row_pitch_mm": 150,
+        "mounting": "surface",
+        "ip": "IP40"
+      },
       "groups": [
-        {"tag": "RCD-BU", "device": {"tag": "RCD-BU", "kind": "rcd", "poles": 4, "rating_a": 63, "idn_ma": 30, "rcd_type": "A"},
-         "circuits": [
-           {"tag": "B1", "device": {"tag": "B1", "kind": "mcb", "poles": 1, "rating_a": 10, "curve": "C"}, "phase": "L1", "cable": {"designation": "3X1.5"}, "load": "תאורה — חירום"},
-           {"tag": "B2", "device": {"tag": "B2", "kind": "mcb", "poles": 1, "rating_a": 10, "curve": "C"}, "phase": "L2", "cable": {"designation": "3X1.5"}, "load": "תאורה — ממ\"ד ומסדרון"},
-           {"tag": "B3", "device": {"tag": "B3", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L3", "cable": {"designation": "3X2.5"}, "load": "שקעים — מקרר"},
-           {"tag": "B4", "device": {"tag": "B4", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L1", "cable": {"designation": "3X2.5"}, "load": "שקעים — ממ\"ד"},
-           {"tag": "B5", "device": {"tag": "B5", "kind": "mcb", "poles": 1, "rating_a": 16, "curve": "C"}, "phase": "L2", "cable": {"designation": "3X2.5"}, "load": "ארון תקשורת ובקרה"}
-         ]}
+        {
+          "tag": "RCD-BU",
+          "device": {
+            "tag": "RCD-BU",
+            "kind": "rcd",
+            "poles": 4,
+            "rating_a": 63,
+            "idn_ma": 30,
+            "rcd_type": "A"
+          },
+          "circuits": [
+            {
+              "tag": "B1",
+              "device": {
+                "tag": "B1",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 10,
+                "curve": "C"
+              },
+              "phase": "L1",
+              "cable": {
+                "designation": "3X1.5"
+              },
+              "load": "תאורה — חירום"
+            },
+            {
+              "tag": "B2",
+              "device": {
+                "tag": "B2",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 10,
+                "curve": "C"
+              },
+              "phase": "L2",
+              "cable": {
+                "designation": "3X1.5"
+              },
+              "load": "תאורה — ממ\"ד ומסדרון"
+            },
+            {
+              "tag": "B3",
+              "device": {
+                "tag": "B3",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L3",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "שקעים — מקרר"
+            },
+            {
+              "tag": "B4",
+              "device": {
+                "tag": "B4",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L1",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "שקעים — ממ\"ד"
+            },
+            {
+              "tag": "B5",
+              "device": {
+                "tag": "B5",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "phase": "L2",
+              "cable": {
+                "designation": "3X2.5"
+              },
+              "load": "ארון תקשורת ובקרה"
+            }
+          ]
+        }
       ],
       "feeders": []
     }
   ],
   "nodes": [
-    {"id": "INV", "kind": "inverter", "label": "ממיר היברידי", "sublabel": "GoodWe GW15K-ET — 3 MPPT", "rating": "15 kW · 400V",
-     "device": {"tag": "RCD-INV", "kind": "rcd", "poles": 4, "rating_a": 63, "idn_ma": 300, "rcd_type": "A"}},
-    {"id": "BAT", "kind": "battery", "label": "מערכת אגירה", "sublabel": "LFP 51.2V — 3 ענפים", "rating": "30.7 kWh"},
-    {"id": "PV", "kind": "pv", "label": "מערך PV", "sublabel": "26 × 600W — 3 מחרוזות", "rating": "15.6 kWp"}
+    {
+      "id": "INV",
+      "kind": "inverter",
+      "label": "ממיר היברידי",
+      "sublabel": "GoodWe GW15K-ET — 3 MPPT",
+      "rating": "15 kW · 400V",
+      "device": {
+        "tag": "RCD-INV",
+        "kind": "rcd",
+        "poles": 4,
+        "rating_a": 63,
+        "idn_ma": 300,
+        "rcd_type": "A"
+      }
+    },
+    {
+      "id": "BAT",
+      "kind": "battery",
+      "label": "מערכת אגירה",
+      "sublabel": "LFP 51.2V — 3 ענפים",
+      "rating": "30.7 kWh"
+    },
+    {
+      "id": "PV",
+      "kind": "pv",
+      "label": "מערך PV",
+      "sublabel": "26 × 600W — 3 מחרוזות",
+      "rating": "15.6 kWp"
+    }
   ]
 }

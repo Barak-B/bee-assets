@@ -102,3 +102,32 @@ def test_render_png(design: Design, tmp_path: Path):
     png = tmp_path / "e05.png"
     render_png(doc, png, dpi=40)
     assert png.exists() and png.stat().st_size > 10_000
+
+
+def test_pdf_and_archive(design: Design, tmp_path: Path):
+    from bee_cad.archive import STAGES, archive, safe_name
+    from bee_cad.render import merge_pdfs, render_pdf
+
+    result = build(design, ("sld", "panel"))
+    doc = next(iter(result.values()))[0]
+    pages = []
+    for i, no in enumerate(result):
+        p = tmp_path / f"{no}.pdf"
+        render_pdf(doc, p, sheet_index=i)
+        pages.append(p)
+    set_pdf = tmp_path / "SET.pdf"
+    merge_pdfs(pages, set_pdf)
+    from pypdf import PdfReader
+
+    r = PdfReader(str(set_pdf))
+    assert len(r.pages) == 3
+    w, h = float(r.pages[0].mediabox.width), float(r.pages[0].mediabox.height)
+    assert abs(w / 72 * 25.4 - 420) < 2 and abs(h / 72 * 25.4 - 297) < 2   # A3 landscape
+
+    folder, man = archive(design, {"pdf_set": set_pdf, "pdf_sheet:E-05": pages[0]}, tmp_path / "arch", stage="design")
+    assert folder.name == STAGES["design"]
+    assert folder.parent.name == safe_name(design.title.project)
+    assert folder.parent.parent.name == safe_name(design.title.client)
+    assert (folder / "manifest.json").exists()
+    assert {e.role for e in man.entries} == {"pdf_set", "pdf_sheet"}
+    assert safe_name('a/b:c?') == "a-b-c-"

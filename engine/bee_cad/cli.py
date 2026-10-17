@@ -13,8 +13,9 @@ from pathlib import Path
 
 import yaml
 
+from .archive import archive
 from .model import Design
-from .render import SHEET_KINDS, build, render_png, save_dxf
+from .render import SHEET_KINDS, build, merge_pdfs, render_pdf, render_png, save_dxf
 
 
 def load_design(path: Path) -> Design:
@@ -37,13 +38,30 @@ def cmd_render(args: argparse.Namespace) -> int:
     save_dxf(doc, dxf_path)
     auditor = doc.audit()
     print(f"DXF   {dxf_path}  (audit errors: {len(auditor.errors)})")
+    pdf_pages: list[Path] = []
+    outputs: dict[str, Path] = {"dxf": dxf_path, "design_json": Path(args.design)}
     for i, (no, (_, warnings)) in enumerate(result.items()):
         for w in warnings:
             print(f"WARN  {no}: {w}")
         if args.png:
             png = out / f"{stem}_{no}.png"
             render_png(doc, png, dpi=args.dpi, sheet_index=i)
+            outputs[f"png:{no}"] = png
             print(f"PNG   {png}")
+        if args.pdf or args.archive:
+            pdf = out / "sheets" / f"{stem}_{no}.pdf"
+            pdf.parent.mkdir(parents=True, exist_ok=True)
+            render_pdf(doc, pdf, sheet_index=i)
+            pdf_pages.append(pdf)
+            outputs[f"pdf_sheet:{no}"] = pdf
+    if pdf_pages:
+        set_pdf = out / f"{stem}_SET.pdf"
+        merge_pdfs(pdf_pages, set_pdf)
+        outputs["pdf_set"] = set_pdf
+        print(f"PDF   {set_pdf}  ({len(pdf_pages)} pages)")
+    if args.archive:
+        folder, man = archive(design, outputs, Path(args.archive), stage=args.stage)
+        print(f"ARCH  {folder}  ({len(man.entries)} files) → Drive: {man.drive_root}")
     return 0
 
 
@@ -64,7 +82,10 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--sheets", help="comma list of: sld,panel")
     r.add_argument("--mode", choices=["unicode", "shx"], default="unicode")
     r.add_argument("--png", action="store_true")
+    r.add_argument("--pdf", action="store_true", help="one PDF per sheet + merged <stem>_SET.pdf")
     r.add_argument("--dpi", type=int, default=110)
+    r.add_argument("--archive", help="archive root (mirror of 'עבודה/לקוחות חברות ומכרזים'); copies PDF/DXF/JSON into <client>/<project>/<stage>")
+    r.add_argument("--stage", default="design", help="intake|survey|quote|licensing|design|execution|asmade|handover|maintenance")
     r.set_defaults(func=cmd_render)
     v = sub.add_parser("validate", help="validate a design file")
     v.add_argument("design")

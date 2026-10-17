@@ -75,9 +75,50 @@ def _visual_copy(doc: Drawing) -> Drawing:
 
 def render_png(doc: Drawing, path: Path, dpi: int = 110, sheet_index: int = 0, already_visual: bool = False) -> None:
     """Render one A3 sheet (by index when several sheets share the model space) to PNG."""
+    _render_sheet(doc, path, dpi, sheet_index, already_visual)
+
+
+def render_pdf(doc: Drawing, path: Path, sheet_index: int = 0, already_visual: bool = False) -> None:
+    """Render one A3 sheet to a compact vector PDF page (exact A3 landscape) with the PyMuPDF backend."""
+    from ezdxf.addons.drawing import Frontend, RenderContext, layout
+    from ezdxf.addons.drawing.config import Configuration, LineweightPolicy
+    from ezdxf.addons.drawing.properties import LayoutProperties
+    from ezdxf.addons.drawing.pymupdf import PyMuPdfBackend
+    from ezdxf.math import BoundingBox
+
+    vdoc = doc if already_visual else _visual_copy(doc)
+    msp = vdoc.modelspace()
+    ctx = RenderContext(vdoc)
+    props = LayoutProperties.from_layout(msp)
+    props.set_colors("#FFFFFF")
+    backend = PyMuPdfBackend()
+    cfg = Configuration(lineweight_policy=LineweightPolicy.ABSOLUTE, min_lineweight=0.13)
+    Frontend(ctx, backend, config=cfg).draw_layout(msp, finalize=False, layout_properties=props)
+    x0 = (A3_W + 30.0) * sheet_index
+    page = layout.Page(A3_W, A3_H, layout.Units.mm, margins=layout.Margins.all(0))
+    data = backend.get_pdf_bytes(page, settings=layout.Settings(fit_page=False, scale=1.0),
+                                 render_box=BoundingBox([(x0, 0.0), (x0 + A3_W, A3_H)]))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+
+
+def merge_pdfs(pages: list[Path], out: Path) -> None:
+    from pypdf import PdfWriter
+
+    w = PdfWriter()
+    for p in pages:
+        w.append(str(p))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "wb") as fh:
+        w.write(fh)
+
+
+def _render_sheet(doc: Drawing, path: Path, dpi: int, sheet_index: int, already_visual: bool) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
+    matplotlib.rcParams["pdf.fonttype"] = 42
+    matplotlib.rcParams["pdf.compression"] = 9
     import matplotlib.pyplot as plt
     from ezdxf.addons.drawing import Frontend, RenderContext
     from ezdxf.addons.drawing.config import Configuration, LineweightPolicy
@@ -101,5 +142,8 @@ def render_png(doc: Drawing, path: Path, dpi: int = 110, sheet_index: int = 0, a
     ax.axis("off")
     fig.patch.set_facecolor("white")
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path, dpi=dpi, facecolor="white")
+    if path.suffix.lower() == ".pdf":
+        fig.savefig(path, format="pdf", facecolor="white")
+    else:
+        fig.savefig(path, dpi=dpi, facecolor="white")
     plt.close(fig)
