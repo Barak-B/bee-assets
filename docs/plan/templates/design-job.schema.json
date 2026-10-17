@@ -1,0 +1,766 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bee.local/docs/plan/templates/design-job.schema.json",
+  "title": "B.E.E CAD design job",
+  "description": "Request/response contract between the Core (Fastify + pg-boss handler) and services/cad (Python), and the pull-queue job for the Windows CAD worker. Companion to docs/plan/specs/14-cad-design-service-spec.md. Geometry is in a local roof frame in metres (origin bottom-left, x right, y up), matching eplan RoofArea/LayoutRow. Anything marked 'verify' in descriptions follows the eplan '# VERIFY' convention: an input the engineer must confirm, never a fact.",
+  "oneOf": [
+    { "$ref": "#/$defs/DesignJobRequest" },
+    { "$ref": "#/$defs/DesignJobResponse" },
+    { "$ref": "#/$defs/DwgBindJob" }
+  ],
+  "$defs": {
+    "JobKind": {
+      "type": "string",
+      "enum": ["design.quick", "design.full", "render", "bom", "yield", "geometry.extract", "dwg.bind"],
+      "description": "design.quick = S03 layout + strings + yield (provisional, candidates allowed); design.full = S06 eplan run (validated rules only); render/bom/yield = partial re-runs; geometry.extract = roof geometry from a file; dwg.bind = Windows worker job"
+    },
+    "JobStatus": {
+      "type": "string",
+      "enum": ["queued", "running", "done", "provisional", "blocked", "failed", "cancelled"]
+    },
+    "Sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "Point": {
+      "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2,
+      "description": "[x, y] in the local roof frame, metres"
+    },
+    "Polygon": {
+      "type": "array", "items": { "$ref": "#/$defs/Point" }, "minItems": 3,
+      "description": "Closed ring (first point not repeated), counter-clockwise, no self-intersection"
+    },
+    "Polyline": { "type": "array", "items": { "$ref": "#/$defs/Point" }, "minItems": 2 },
+
+    "FileRef": {
+      "type": "object",
+      "required": ["url"],
+      "properties": {
+        "url": { "type": "string", "format": "uri", "description": "Presigned R2 GET (inputs) or PUT (outputs) URL, or a path inside CAD_DATA_DIR for local runs" },
+        "sha256": { "$ref": "#/$defs/Sha256" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "mime": { "type": "string" },
+        "filename": { "type": "string" },
+        "document_id": { "type": "string", "description": "Document record id in the Core, when the file is already a Document" }
+      },
+      "additionalProperties": false
+    },
+
+    "Georef": {
+      "type": "object",
+      "required": ["north_from_up_deg", "source"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 },
+        "crs": { "type": ["string", "null"], "description": "EPSG code of the world coordinates, e.g. EPSG:2039 (ITM); null when unknown", "examples": ["EPSG:2039", "EPSG:4326"] },
+        "affine_local_to_crs": {
+          "type": ["array", "null"], "items": { "type": "number" }, "minItems": 6, "maxItems": 6,
+          "description": "[a, b, c, d, e, f]: X = a*x + b*y + c ; Y = d*x + e*y + f (local metres -> crs)"
+        },
+        "north_from_up_deg": { "type": "number", "minimum": -180, "maximum": 360, "description": "Clockwise rotation of north from the sheet's up direction (eplan roof.north_from_up_deg)" },
+        "north_verified": { "type": "boolean", "default": false },
+        "source": { "type": "string", "enum": ["manual", "dxf_geodata", "control_points", "control_points_verified", "survey_compass", "unknown"] },
+        "control_points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["local"],
+            "properties": {
+              "local": { "$ref": "#/$defs/Point" },
+              "world": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "[E, N] in crs" },
+              "px": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "[u, v] pixel in the source raster" },
+              "label": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "residual_m": { "type": "number", "minimum": 0, "description": "RMS residual of the control-point fit" }
+      },
+      "additionalProperties": false
+    },
+
+    "RoofFace": {
+      "type": "object",
+      "required": ["id", "polygon", "azimuth_deg", "tilt_deg"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^F[0-9]+$" },
+        "name": { "type": "string", "description": "Hebrew face name as it will appear on E-03, e.g. 'דרום', 'מזרח'" },
+        "polygon": { "$ref": "#/$defs/Polygon" },
+        "azimuth_deg": { "type": "number", "minimum": 0, "maximum": 360, "description": "Direction the modules face: 0=N 90=E 180=S 270=W" },
+        "tilt_deg": { "type": "number", "minimum": 0, "maximum": 90 },
+        "roof_type": { "type": "string", "enum": ["flat", "tile", "metal-standing-seam", "metal-trapezoidal", "insulated-panel", "ground", "other"], "description": "Survey RoofTypeCanonical plus insulated-panel (see spec §12 item 7)" },
+        "block": { "type": "string", "description": "Structure block letter / field name as on the constructor's drawings" },
+        "eave_h_m": { "type": "number", "exclusiveMinimum": 0 },
+        "verify": { "type": "boolean", "default": false, "description": "azimuth/tilt estimated (survey default), not measured" }
+      },
+      "additionalProperties": false
+    },
+
+    "Exclusion": {
+      "type": "object",
+      "required": ["id", "kind", "polygon"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string", "enum": ["obstacle", "setback", "path", "skylight", "hvac", "antenna", "solar_heater", "other"] },
+        "name": { "type": "string", "description": "Hebrew label on the plan" },
+        "polygon": { "$ref": "#/$defs/Polygon" },
+        "height_m": { "type": "number", "minimum": 0, "default": 0 },
+        "shades": { "type": "boolean", "default": false },
+        "clearance_m": { "type": "number", "minimum": 0, "default": 0, "description": "extra buffer applied around the exclusion before module placement" }
+      },
+      "additionalProperties": false
+    },
+
+    "RoofLine": {
+      "type": "object",
+      "required": ["kind", "pts"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["ridge", "hip", "valley", "eave"] },
+        "pts": { "$ref": "#/$defs/Polyline" }
+      },
+      "additionalProperties": false
+    },
+
+    "PlacedModule": {
+      "type": "object",
+      "required": ["id", "face", "x", "y", "w", "h", "rot_deg", "orientation"],
+      "properties": {
+        "id": { "type": "string", "description": "S<string>.<n> once strung, else M<n>", "examples": ["S1.1", "M17"] },
+        "face": { "type": "string" },
+        "x": { "type": "number", "description": "lower-left corner x (metres), before rotation" },
+        "y": { "type": "number" },
+        "w": { "type": "number", "exclusiveMinimum": 0, "description": "width as placed (module width for portrait, length for landscape)" },
+        "h": { "type": "number", "exclusiveMinimum": 0 },
+        "rot_deg": { "type": "number", "description": "rotation of the row about (x, y), counter-clockwise" },
+        "orientation": { "type": "string", "enum": ["portrait", "landscape"] },
+        "string": { "type": ["string", "null"], "description": "string tag (S1 …); null before stringing" },
+        "optimizer": { "type": "boolean", "default": false, "description": "module fitted with an optimizer (LayoutRow tag suffix '*')" },
+        "row": { "type": "integer", "minimum": 0, "description": "row index in the derived eplan layout[]" },
+        "shade_factor": { "type": "number", "minimum": 0, "maximum": 1, "description": "0 = fully shaded, 1 = none; from horizon/DSM when available" }
+      },
+      "additionalProperties": false
+    },
+
+    "RoofBox": {
+      "type": "object",
+      "required": ["tag", "name", "x_m", "y_m"],
+      "properties": {
+        "tag": { "type": "string", "examples": ["JB-DC", "JB-AC", "JB-PE"] },
+        "name": { "type": "string" },
+        "x_m": { "type": "number" }, "y_m": { "type": "number" },
+        "w_m": { "type": "number", "exclusiveMinimum": 0, "default": 0.4 },
+        "h_m": { "type": "number", "exclusiveMinimum": 0, "default": 0.3 },
+        "kind": { "type": "string", "enum": ["dc", "ac", "pe", "other"], "default": "other" }
+      },
+      "additionalProperties": false
+    },
+
+    "RoofEquipment": {
+      "type": "object",
+      "description": "S06 only: positions that the tray/cable lengths and E-02/E-03/E-05 read. Mirrors eplan RoofArea fields.",
+      "properties": {
+        "riser": { "$ref": "#/$defs/Point" },
+        "riser_note": { "type": "string", "default": "מקל סבא" },
+        "inverter": { "$ref": "#/$defs/Point", "description": "negative y = below the roof (facade)" },
+        "inverter_note": { "type": "string" },
+        "earth_bar": { "$ref": "#/$defs/Point" },
+        "earth_bar_tag": { "type": "string", "default": "EB-R" },
+        "trays_dc": { "type": "array", "items": { "$ref": "#/$defs/Polyline" } },
+        "trays_ac": { "type": "array", "items": { "$ref": "#/$defs/Polyline" } },
+        "boxes": { "type": "array", "items": { "$ref": "#/$defs/RoofBox" } },
+        "wall": { "type": "object", "description": "eplan WallMount, passed through unchanged (see models.py)", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+
+    "Background": {
+      "type": "object",
+      "required": ["file", "px_per_m", "origin_px"],
+      "properties": {
+        "file": { "$ref": "#/$defs/FileRef" },
+        "px_per_m": { "type": "number", "exclusiveMinimum": 0 },
+        "origin_px": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "pixel of roof (0,0); image y axis points down (eplan RoofBackground)" },
+        "alpha": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.55 },
+        "source": { "type": "string", "enum": ["govmap", "maptiler", "mapbox", "google_tiles", "constructor_pdf", "drone", "photo", "other"] },
+        "licence_ok": { "type": "boolean", "description": "the tile provider's terms allow embedding in the PDF (verify per provider)" }
+      },
+      "additionalProperties": false
+    },
+
+    "GeometrySource": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["dwg", "dxf", "pdf_vector", "raster_vision", "manual", "survey_estimate"] },
+        "document_sha256": { "$ref": "#/$defs/Sha256" },
+        "document_id": { "type": "string" },
+        "layer_map": {
+          "type": "object",
+          "description": "DXF layer name -> role",
+          "additionalProperties": { "type": "string", "enum": ["modules", "faces", "exclusions", "ridge", "hip", "valley", "eave", "trays", "dimensions", "text", "ignore"] }
+        },
+        "units_detected": { "type": "string", "enum": ["mm", "cm", "m", "unitless", "unknown"] },
+        "insunits": { "type": "integer", "description": "raw $INSUNITS header (0 unitless, 1 in, 4 mm, 5 cm, 6 m)" },
+        "scale_to_m": { "type": "number", "exclusiveMinimum": 0, "description": "factor applied to source coordinates" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "notes": { "type": "array", "items": { "type": "string" } },
+        "tool": { "type": "string", "description": "ezdxf 1.4.4 / pymupdf x.y / pdfplumber / claude-vision <model> / web-ui" }
+      },
+      "additionalProperties": false
+    },
+
+    "ValidationIssue": {
+      "type": "object",
+      "required": ["code", "severity", "message"],
+      "properties": {
+        "code": { "type": "string", "enum": ["polygon_invalid", "exclusion_outside_face", "area_mismatch", "module_outside_face", "module_in_exclusion", "module_overlap", "string_spans_faces", "module_size_mismatch", "units_mismatch", "count_mismatch", "north_unverified", "low_confidence", "missing_face"] },
+        "severity": { "type": "string", "enum": ["error", "warning"] },
+        "message": { "type": "string", "description": "Hebrew" },
+        "refs": { "type": "array", "items": { "type": "string" }, "description": "ids of faces/modules/exclusions involved" }
+      },
+      "additionalProperties": false
+    },
+
+    "RoofGeometry": {
+      "type": "object",
+      "title": "RoofGeometry",
+      "description": "The one geometry model shared by the web UI, services/cad and the eplan spec (roof + layout). Spec §3.1.",
+      "required": ["version", "units", "frame", "georef", "faces", "source"],
+      "properties": {
+        "version": { "type": "string", "const": "1" },
+        "units": { "type": "string", "const": "m" },
+        "frame": {
+          "type": "object",
+          "required": ["width_m", "depth_m"],
+          "properties": {
+            "width_m": { "type": "number", "exclusiveMinimum": 0 },
+            "depth_m": { "type": "number", "exclusiveMinimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "georef": { "$ref": "#/$defs/Georef" },
+        "faces": { "type": "array", "items": { "$ref": "#/$defs/RoofFace" }, "minItems": 1 },
+        "exclusions": { "type": "array", "items": { "$ref": "#/$defs/Exclusion" }, "default": [] },
+        "lines": { "type": "array", "items": { "$ref": "#/$defs/RoofLine" }, "default": [] },
+        "modules": { "type": "array", "items": { "$ref": "#/$defs/PlacedModule" }, "default": [] },
+        "equipment": { "$ref": "#/$defs/RoofEquipment" },
+        "background": { "$ref": "#/$defs/Background" },
+        "source": { "$ref": "#/$defs/GeometrySource" },
+        "validation": {
+          "type": "object",
+          "required": ["ok", "issues"],
+          "properties": {
+            "ok": { "type": "boolean" },
+            "issues": { "type": "array", "items": { "$ref": "#/$defs/ValidationIssue" } },
+            "validated_at": { "type": "string", "format": "date-time" },
+            "approved_by": { "type": ["string", "null"], "description": "user who approved a low-confidence geometry for S06" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "CatalogRef": {
+      "type": "object",
+      "required": ["product_id"],
+      "properties": {
+        "product_id": { "type": "string" },
+        "sku": { "type": "string" },
+        "model": { "type": "string" },
+        "tech": { "type": "object", "description": "Product.tech JSON: the eplan Module/Inverter/Optimizer/Battery fields plus optional cec/pan/ond parameters", "additionalProperties": true },
+        "datasheet": { "$ref": "#/$defs/FileRef" },
+        "verification": { "type": "string", "enum": ["unverified", "summary", "office", "validated"] }
+      },
+      "additionalProperties": false
+    },
+
+    "RuleRow": {
+      "type": "object",
+      "required": ["key", "value", "verification"],
+      "properties": {
+        "key": { "type": "string", "description": "eplan.<LIMIT_SPECS key> or layout.* / yield.* / r<N>", "examples": ["eplan.dc_drop_max_pct", "layout.setback_edge_m", "yield.losses.soiling_pct"] },
+        "value": { "type": ["number", "string", "boolean"] },
+        "unit": { "type": "string" },
+        "source": { "type": "string" },
+        "section": { "type": "string" },
+        "valid_from": { "type": "string", "format": "date" },
+        "verification": { "type": "string", "enum": ["unverified", "summary", "office", "validated"] },
+        "verified_by": { "type": ["string", "null"] },
+        "verified_at": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+
+    "OwnerDecision": {
+      "type": "object",
+      "required": ["check", "reason", "date"],
+      "properties": {
+        "check": { "type": "string", "description": "substring of the eplan Check name(s) the decision covers" },
+        "reason": { "type": "string", "description": "Hebrew only (drawing-standard §4)" },
+        "date": { "type": "string", "format": "date" },
+        "decided_by": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "Alternative": {
+      "type": "object",
+      "required": ["key", "title", "kind"],
+      "properties": {
+        "key": { "type": "string", "description": "option letter on E-04A, e.g. 'א'" },
+        "title": { "type": "string" },
+        "kind": { "type": "string", "enum": ["design", "variant", "inverter"] },
+        "status": { "type": "string", "enum": ["proposed", "calculated", "chosen", "rejected"], "default": "proposed" },
+        "changes": { "type": "object", "description": "eplan Alternative fields: needs[], module{}, remove_rows[], rows{}, string_start{}, strings[], keep_owner_decisions", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+
+    "Target": {
+      "type": "object",
+      "properties": {
+        "size_kwp": { "type": "number", "exclusiveMinimum": 0 },
+        "budget_cents": { "type": "integer", "minimum": 0 },
+        "max_modules": { "type": "integer", "minimum": 1 },
+        "fill_roof": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false
+    },
+
+    "SiteInputs": {
+      "type": "object",
+      "required": ["name", "lat", "lon"],
+      "properties": {
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "lat": { "type": "number" }, "lon": { "type": "number" },
+        "t_min_c": { "type": "number", "description": "verify unless from the approved climate table" },
+        "t_max_cell_c": { "type": "number", "default": 70 },
+        "t_ambient_cables_c": { "type": "number", "default": 35 },
+        "grid_v_v": { "type": "number", "default": 400 },
+        "grid_phases": { "type": "integer", "enum": [1, 3], "default": 3 },
+        "connection_a": { "type": ["number", "null"] },
+        "connection_verified": { "type": "boolean", "default": false },
+        "regulatory_track": { "type": "string", "enum": ["residential_le15", "commercial_15_100", "commercial_100_630", "mv_gt630", "bess_add", "historic_distributor"] },
+        "production_meter": { "type": "boolean" },
+        "production_meter_at_inverter": { "type": "boolean" },
+        "earthing_system": { "type": "string", "enum": ["TT", "TN-C-S", "TN-S"] },
+        "board_name": { "type": "string" }, "supply_name": { "type": "string" }, "met_name": { "type": "string" },
+        "house_rcd_a": { "type": "number" }, "house_rcd_ma": { "type": "number" },
+        "survey_electrical_intake": { "type": "object", "description": "verbatim electricalIntake from the survey PWA (schema.ts toDesignSuitePayload)", "additionalProperties": true },
+        "verify": { "type": "array", "items": { "type": "string" }, "description": "field names that are unconfirmed" }
+      },
+      "additionalProperties": false
+    },
+
+    "DesignInputs": {
+      "type": "object",
+      "required": ["module", "inverter"],
+      "properties": {
+        "module": { "$ref": "#/$defs/CatalogRef" },
+        "module_count": { "type": "integer", "minimum": 1, "description": "S06: fixed by the engineer; S03: derived from target/layout when absent" },
+        "inverter": { "$ref": "#/$defs/CatalogRef" },
+        "inverter_candidates": { "type": "array", "items": { "$ref": "#/$defs/CatalogRef" }, "description": "S03: alternatives to try when the primary fails string checks" },
+        "optimizer": { "$ref": "#/$defs/CatalogRef" },
+        "battery": { "$ref": "#/$defs/CatalogRef" },
+        "clamps": { "$ref": "#/$defs/CatalogRef" },
+        "strings": { "type": "array", "description": "S06: eplan StringRun rows (tag, mppt, modules, optimizers, method, insulation, grouping, via, mc4_lead_m); lengths are computed, not supplied", "items": { "type": "object", "additionalProperties": true } },
+        "ac_run": { "type": "object", "additionalProperties": true },
+        "backup_run": { "type": "object", "additionalProperties": true },
+        "battery_runs": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+        "owner_accepted": { "type": "array", "items": { "$ref": "#/$defs/OwnerDecision" } },
+        "alternatives": { "type": "array", "items": { "$ref": "#/$defs/Alternative" } },
+        "alternatives_sheet": { "type": "boolean" },
+        "fixing_details": { "type": "boolean", "default": false },
+        "module_bonding": { "type": "string", "enum": ["conductor", "clamps"] },
+        "tray_bonding": { "type": "boolean" },
+        "ac_protection_at_inverter": { "type": "boolean" },
+        "cabling": { "type": "object", "additionalProperties": true },
+        "notes": { "type": "array", "items": { "type": "string" }, "maxItems": 7 },
+        "status": { "type": "string", "enum": ["review", "approval", "tender", "construction", "as_made"], "description": "as_made is not in the current eplan enum (spec §12)" },
+        "revision": { "type": "string" },
+        "cover_photo": { "$ref": "#/$defs/FileRef" },
+        "construction_pdf": { "$ref": "#/$defs/FileRef" },
+        "construction_titles": { "type": "array", "items": { "type": "string" } },
+        "datasheet_figures": { "type": "array", "items": { "$ref": "#/$defs/FileRef" }, "description": "cropped manufacturer figures + SOURCES.yaml for E-06" }
+      },
+      "additionalProperties": false
+    },
+
+    "YieldOptions": {
+      "type": "object",
+      "properties": {
+        "weather": { "type": "string", "enum": ["pvgis_sarah3", "pvgis_era5", "meteonorm", "solcast", "cached"], "default": "pvgis_sarah3" },
+        "use_horizon": { "type": "boolean", "default": true },
+        "row_shading": { "type": "boolean", "default": true },
+        "google_solar": { "type": "boolean", "default": false, "description": "only when Israel coverage is verified (V15)" },
+        "hourly_output": { "type": "boolean", "default": false },
+        "losses": { "type": "object", "description": "overrides of yield.losses.* rules, percent", "additionalProperties": { "type": "number" } },
+        "degradation_pct_per_year": { "type": "number", "minimum": 0, "maximum": 2 }
+      },
+      "additionalProperties": false
+    },
+
+    "RenderOptions": {
+      "type": "object",
+      "properties": {
+        "pdf": { "type": "boolean", "default": true },
+        "png": { "type": "boolean", "default": true },
+        "png_dpi": { "type": "integer", "default": 150 },
+        "svg_layers": { "type": "boolean", "default": true },
+        "sheets": { "type": "array", "items": { "type": "string", "pattern": "^E-0[0-8]A?$" }, "description": "subset to render; default all" },
+        "stem": { "type": "string", "description": "file stem; default derived from project name" },
+        "baseline_design_rev": { "type": ["string", "null"], "description": "design rev whose PNGs serve as the visual-regression baseline" },
+        "bidi_vision_gate": { "type": "boolean", "default": true },
+        "request_dwg": { "type": "boolean", "default": true, "description": "design.full: enqueue dwg.bind for the Windows worker when done" }
+      },
+      "additionalProperties": false
+    },
+
+    "DesignJobRequest": {
+      "type": "object",
+      "title": "DesignJobRequest",
+      "required": ["job_id", "kind", "project_id", "design_id", "design_rev", "outputs"],
+      "properties": {
+        "job_id": { "type": "string" },
+        "kind": { "$ref": "#/$defs/JobKind" },
+        "hive_job_id": { "type": "string", "description": "id of the ledger row per platform/schema/job.schema.json" },
+        "project_id": { "type": "string" },
+        "design_id": { "type": "string" },
+        "design_rev": { "type": "string", "description": "A, B, … ; also the pg-boss singletonKey" },
+        "requested_by": { "type": "string" },
+        "mode": { "type": "string", "enum": ["STANDARD", "FAST"], "default": "STANDARD", "description": "eplan SystemMode; design.full always STANDARD" },
+        "allow_candidates": { "type": "boolean", "default": false, "description": "true only for design.quick (result becomes provisional)" },
+        "rules": { "type": "array", "items": { "$ref": "#/$defs/RuleRow" }, "description": "rules snapshot pushed by the Core; when absent the service fetches GET /api/rules" },
+        "site": { "$ref": "#/$defs/SiteInputs" },
+        "geometry": { "$ref": "#/$defs/RoofGeometry" },
+        "geometry_source_file": { "$ref": "#/$defs/FileRef", "description": "geometry.extract: the DXF/PDF/image to read; optional for design.quick when geometry is absent" },
+        "target": { "$ref": "#/$defs/Target" },
+        "design": { "$ref": "#/$defs/DesignInputs" },
+        "spec_yaml": { "$ref": "#/$defs/FileRef", "description": "render/bom: reuse a previously generated spec instead of regenerating" },
+        "yield": { "$ref": "#/$defs/YieldOptions" },
+        "render": { "$ref": "#/$defs/RenderOptions" },
+        "outputs": {
+          "type": "object",
+          "required": ["upload_base"],
+          "properties": {
+            "upload_base": { "type": "string", "description": "R2 key prefix or local dir for artifacts, e.g. projects/<id>/designs/<rev>/" },
+            "presigned_put": { "type": "object", "description": "role or filename -> presigned PUT URL", "additionalProperties": { "type": "string", "format": "uri" } },
+            "callback_url": { "type": "string", "format": "uri", "description": "optional webhook for status changes; otherwise the Core polls GET /jobs/{id}" }
+          },
+          "additionalProperties": false
+        },
+        "library": {
+          "type": "object",
+          "properties": {
+            "version": { "type": "string" },
+            "index_url": { "type": "string", "format": "uri" },
+            "sha256": { "$ref": "#/$defs/Sha256" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "design.full" } } },
+          "then": {
+            "required": ["site", "geometry", "design"],
+            "properties": { "allow_candidates": { "const": false }, "mode": { "const": "STANDARD" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "design.quick" } } },
+          "then": { "required": ["site", "design"], "anyOf": [ { "required": ["geometry"] }, { "required": ["target"] } ] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "geometry.extract" } } },
+          "then": { "required": ["geometry_source_file"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "yield" } } },
+          "then": { "required": ["site", "geometry", "design"] }
+        },
+        {
+          "if": { "properties": { "kind": { "enum": ["render", "bom"] } } },
+          "then": { "anyOf": [ { "required": ["spec_yaml"] }, { "required": ["site", "geometry", "design"] } ] }
+        }
+      ],
+      "additionalProperties": false
+    },
+
+    "ArtifactRole": {
+      "type": "string",
+      "enum": ["dxf", "pdf_sheet", "pdf_set", "png", "svg_layer", "bom_csv", "bom_json", "calc_txt", "calc_json", "spec_yaml", "geometry_json", "yield_json", "yield_8760", "preview_png", "eplan_db", "rules_snapshot", "dwg", "pdf_official_sheet", "pdf_official_set", "audit_json", "log"]
+    },
+
+    "Artifact": {
+      "type": "object",
+      "required": ["role", "path", "sha256", "bytes", "mime"],
+      "properties": {
+        "role": { "$ref": "#/$defs/ArtifactRole" },
+        "sheet": { "type": "string", "pattern": "^(E-0[0-8]A?|K-[0-9]{2})$" },
+        "layer": { "type": "string", "description": "svg_layer only" },
+        "path": { "type": "string", "description": "path relative to outputs.upload_base" },
+        "r2_key": { "type": "string" },
+        "sha256": { "$ref": "#/$defs/Sha256" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "mime": { "type": "string" },
+        "pages": { "type": "integer", "minimum": 1 },
+        "document_kind": { "type": "string", "description": "Document.kind the Core should file it under (spec §6.5)" },
+        "supersedes_document_id": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "Check": {
+      "type": "object",
+      "description": "eplan models.Check, flattened from strings[], mppts[], cables[], earthing[], system_checks[]",
+      "required": ["name", "ok", "value", "limit", "unit"],
+      "properties": {
+        "scope": { "type": "string", "enum": ["string", "mppt", "cable", "earthing", "system", "layout", "yield", "geometry"] },
+        "ref": { "type": "string", "description": "tag of the string/MPPT/cable the check belongs to" },
+        "name": { "type": "string" },
+        "ok": { "type": "boolean" },
+        "value": { "type": "number" },
+        "limit": { "type": "number" },
+        "unit": { "type": "string" },
+        "margin_pct": { "type": ["number", "null"] },
+        "rule": { "type": "string", "description": "source of the limit" },
+        "accepted": { "type": "string", "default": "", "description": "owner decision reason when the exceedance is accepted (shown as 'בעלים')" }
+      },
+      "additionalProperties": false
+    },
+
+    "Blocker": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string", "enum": ["NEED_INFO", "CONFLICTING_RULES", "VALIDATION_FAILED", "BUDGET_EXHAUSTED", "GEOMETRY_INVALID", "SPEC_INVALID", "CATALOG_INCOMPLETE", "BLOCK_MISSING", "WORKER_UNAVAILABLE", "EXTERNAL_API", "INTERNAL"] },
+        "key": { "type": "string", "description": "rule key / catalog field / sheet involved" },
+        "message": { "type": "string", "description": "Hebrew, for the engineer's task" },
+        "values": { "type": "array", "items": {}, "description": "CONFLICTING_RULES: the conflicting values with their sources" },
+        "checks_failed": { "type": "array", "items": { "$ref": "#/$defs/Check" } },
+        "suggested_task": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "SheetAudit": {
+      "type": "object",
+      "required": ["text_overlaps", "text_line_collisions", "text_extra_collisions", "ezdxf_audit_errors"],
+      "properties": {
+        "text_overlaps": { "type": "integer", "minimum": 0 },
+        "text_line_collisions": { "type": "integer", "minimum": 0 },
+        "text_extra_collisions": { "type": "integer", "minimum": 0 },
+        "ezdxf_audit_errors": { "type": "integer", "minimum": 0 },
+        "ezdxf_audit_fixes": { "type": "integer", "minimum": 0 },
+        "office_lint": { "type": "array", "items": { "type": "string" } },
+        "png_diff_ratio": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "bidi_mismatches": { "type": ["integer", "null"], "minimum": 0 },
+        "pdf_pages": { "type": "integer" },
+        "pdf_a3_ok": { "type": "boolean" },
+        "reviewed_by": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "YieldResult": {
+      "type": "object",
+      "required": ["annual_kwh", "monthly_kwh", "specific_yield_kwh_per_kwp", "pr", "assumptions"],
+      "properties": {
+        "annual_kwh": { "type": "number", "minimum": 0 },
+        "monthly_kwh": { "type": "array", "items": { "type": "number", "minimum": 0 }, "minItems": 12, "maxItems": 12 },
+        "specific_yield_kwh_per_kwp": { "type": "number", "minimum": 0 },
+        "pr": { "type": "number", "minimum": 0, "maximum": 1 },
+        "poa_kwh_per_m2": { "type": "number" },
+        "per_face": { "type": "array", "items": { "type": "object", "required": ["face", "kwp", "annual_kwh"], "properties": { "face": { "type": "string" }, "kwp": { "type": "number" }, "annual_kwh": { "type": "number" }, "specific_yield_kwh_per_kwp": { "type": "number" } }, "additionalProperties": false } },
+        "assumptions": {
+          "type": "object",
+          "required": ["weather_db", "params_source"],
+          "properties": {
+            "weather_db": { "type": "string" },
+            "tmy_years": { "type": "string" },
+            "horizon": { "type": "boolean" },
+            "shading_model": { "type": "string" },
+            "temperature_model": { "type": "string" },
+            "losses": { "type": "object", "additionalProperties": { "type": "number" } },
+            "params_source": { "type": "string", "enum": ["cec", "pan_ond", "fit_cec_sam", "pvwatts"] },
+            "degradation_pct_per_year": { "type": "number" },
+            "pr_note": { "type": "string" },
+            "cache_hit": { "type": "boolean" },
+            "attribution": { "type": "string", "description": "e.g. PVGIS (c) European Union — wording to verify" }
+          },
+          "additionalProperties": true
+        },
+        "sanity": { "type": "object", "properties": { "expected_range_kwh_per_kwp": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }, "ok": { "type": "boolean" } }, "additionalProperties": false },
+        "google_solar": { "type": ["object", "null"], "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+
+    "LayoutSummary": {
+      "type": "object",
+      "required": ["modules", "p_dc_kwp", "p_ac_kw", "dc_ac_ratio"],
+      "properties": {
+        "modules": { "type": "integer" },
+        "p_dc_kwp": { "type": "number" },
+        "p_ac_kw": { "type": "number" },
+        "dc_ac_ratio": { "type": "number" },
+        "per_face": { "type": "array", "items": { "type": "object", "properties": { "face": { "type": "string" }, "modules": { "type": "integer" }, "orientation": { "type": "string" }, "row_azimuth_rel_deg": { "type": "number" }, "rows": { "type": "integer" }, "pitch_m": { "type": "number" } }, "additionalProperties": false } },
+        "variants_tried": { "type": "integer" },
+        "allocations": {
+          "type": "array",
+          "description": "eplan strings.allocate() options, best first",
+          "items": { "type": "object", "required": ["label", "per_mppt", "voc_margin_pct"], "properties": { "label": { "type": "string", "examples": ["9+8+9"] }, "per_mppt": { "type": "array", "items": { "type": "integer" } }, "voc_margin_pct": { "type": "number" }, "faces": { "type": "array", "items": { "type": "string" } } }, "additionalProperties": false }
+        },
+        "connection_warning": { "type": ["string", "null"], "description": "R7: P/0.9 > connection -> 'הגדלת חיבור'" }
+      },
+      "additionalProperties": false
+    },
+
+    "DesignJobResponse": {
+      "type": "object",
+      "title": "DesignJobResponse",
+      "required": ["job_id", "kind", "status", "design_rev", "artifacts", "checks", "verify", "blockers", "timings"],
+      "properties": {
+        "job_id": { "type": "string" },
+        "kind": { "$ref": "#/$defs/JobKind" },
+        "status": { "$ref": "#/$defs/JobStatus" },
+        "progress": { "type": "object", "properties": { "phase": { "type": "string" }, "pct": { "type": "number", "minimum": 0, "maximum": 100 } }, "additionalProperties": false },
+        "project_id": { "type": "string" },
+        "design_id": { "type": "string" },
+        "design_rev": { "type": "string" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "finished_at": { "type": ["string", "null"], "format": "date-time" },
+        "artifacts": { "type": "array", "items": { "$ref": "#/$defs/Artifact" } },
+        "geometry": { "$ref": "#/$defs/RoofGeometry", "description": "geometry.extract / design.quick: the resulting geometry with modules[] and validation" },
+        "layout": { "$ref": "#/$defs/LayoutSummary" },
+        "strings": { "type": "array", "description": "StringRun rows written into the spec (lengths estimated in S03, computed in S06)", "items": { "type": "object", "additionalProperties": true } },
+        "calc_report": { "type": ["object", "null"], "description": "eplan models.CalcReport as JSON: project, p_dc_kwp, p_ac_kw, strings[], mppts[], cables[], devices[], earthing[], system_checks[], verify[]", "additionalProperties": true },
+        "checks": { "type": "array", "items": { "$ref": "#/$defs/Check" } },
+        "checks_summary": { "type": "object", "properties": { "total": { "type": "integer" }, "failed": { "type": "integer" }, "accepted": { "type": "integer" }, "all_pass": { "type": "boolean" } }, "additionalProperties": false },
+        "verify": { "type": "array", "items": { "type": "string" }, "description": "merged לאימות list (spec + CalcReport + geometry)" },
+        "blockers": { "type": "array", "items": { "$ref": "#/$defs/Blocker" } },
+        "yield": { "$ref": "#/$defs/YieldResult" },
+        "bom": {
+          "type": "object",
+          "properties": {
+            "rows": { "type": "array", "items": { "type": "object", "required": ["group", "item", "spec", "unit", "qty"], "properties": { "group": { "type": "string" }, "item": { "type": "string" }, "spec": { "type": "string" }, "unit": { "type": "string" }, "qty": { "type": "number" }, "basis": { "type": "string" }, "catalog_match": { "type": "object", "properties": { "product_id": { "type": ["string", "null"] }, "confidence": { "type": "number" }, "how": { "type": "string", "enum": ["exact_spec", "regex", "assembly", "manual", "none"] } }, "additionalProperties": false } }, "additionalProperties": false } },
+            "unmatched": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "eplan": {
+          "type": "object",
+          "properties": {
+            "task_id": { "type": ["string", "null"] },
+            "status": { "type": "string", "description": "eplan TaskState.status" },
+            "stop_reason": { "type": ["string", "null"] },
+            "mode": { "type": "string" },
+            "candidates_used": { "type": "boolean" },
+            "precedents": { "type": "integer" },
+            "version": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "rules_snapshot": { "type": "object", "properties": { "sha256": { "$ref": "#/$defs/Sha256" }, "count": { "type": "integer" }, "rows": { "type": "array", "items": { "$ref": "#/$defs/RuleRow" } } }, "additionalProperties": false },
+        "audit": {
+          "type": "object",
+          "properties": {
+            "sheets": { "type": "object", "additionalProperties": { "$ref": "#/$defs/SheetAudit" } },
+            "all_zero": { "type": "boolean" },
+            "failed_sheets": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "dwg_bind_job_id": { "type": ["string", "null"], "description": "set when a dwg.bind job was enqueued for the Windows worker" },
+        "status_message": { "type": "object", "description": "STATUS / RESULT / NEXT in Hebrew for the engineer (self-chat only)", "properties": { "status": { "type": "string" }, "result": { "type": "array", "items": { "type": "string" } }, "next": { "type": "array", "items": { "type": "string" } } }, "additionalProperties": false },
+        "timings": { "type": "object", "additionalProperties": { "type": "number" }, "description": "phase -> seconds" },
+        "error": { "type": ["string", "null"] },
+        "log": { "$ref": "#/$defs/FileRef" }
+      },
+      "additionalProperties": false
+    },
+
+    "DwgBindJob": {
+      "type": "object",
+      "title": "DwgBindJob",
+      "description": "Pull-queue job for workers/cad-windows (GstarCAD). Claimed via GET /api/cad-jobs/next; result via POST /api/cad-jobs/{id}/result (modules/cad-jobs, specs 16/17).",
+      "required": ["job_id", "kind", "design_rev", "sheets", "library", "plot", "save_as"],
+      "properties": {
+        "job_id": { "type": "string" },
+        "kind": { "type": "string", "enum": ["dwg.bind", "dxf.export"] },
+        "project_id": { "type": "string" },
+        "design_rev": { "type": "string" },
+        "lease_until": { "type": "string", "format": "date-time" },
+        "sheets": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["sheet", "stem", "input"],
+            "properties": {
+              "sheet": { "type": "string" },
+              "stem": { "type": "string" },
+              "input": { "$ref": "#/$defs/FileRef", "description": "DXF with BEE_DYN placeholders (dwg.bind) or the constructor's DWG (dxf.export)" },
+              "output_put": { "type": "object", "additionalProperties": { "type": "string", "format": "uri" }, "description": "role -> presigned PUT: dwg, pdf_official_sheet, dxf, log" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "library": {
+          "type": "object",
+          "required": ["version", "index_url"],
+          "properties": {
+            "version": { "type": "string" },
+            "index_url": { "type": "string", "format": "uri" },
+            "sha256": { "$ref": "#/$defs/Sha256" },
+            "dwg_base_url": { "type": "string", "format": "uri" }
+          },
+          "additionalProperties": false
+        },
+        "placeholder": {
+          "type": "object",
+          "description": "DXF convention the worker must honour (spec §7.1)",
+          "properties": {
+            "layer": { "type": "string", "default": "BEE_DYN" },
+            "xdata_appid": { "type": "string", "default": "BEE_DYN" },
+            "xdata_keys": { "type": "array", "items": { "type": "string" }, "default": ["name", "state", "props", "attrs", "lib", "sha"] },
+            "block_prefix": { "type": "string", "default": "BEE_PH_" }
+          },
+          "additionalProperties": false
+        },
+        "plot": {
+          "type": "object",
+          "required": ["ctb", "pc3", "paper"],
+          "properties": {
+            "ctb": { "type": "string", "examples": ["SARA.ctb"] },
+            "pc3": { "type": "string", "examples": ["DWG To PDF.pc3"] },
+            "paper": { "type": "string", "const": "A3" },
+            "scale": { "type": "string", "default": "1:1" },
+            "merge_set": { "type": "boolean", "default": true }
+          },
+          "additionalProperties": false
+        },
+        "save_as": { "type": "string", "enum": ["AC1032"], "description": "DWG 2018" },
+        "audit": { "type": "boolean", "default": true },
+        "purge": { "type": "boolean", "default": true },
+        "shx_fonts": { "type": "array", "items": { "type": "string" }, "description": "fonts expected to exist in the CAD's Fonts dir", "examples": [["heb.shx", "simplex.shx", "HEBTXT.shx"]] },
+        "result": {
+          "type": "object",
+          "description": "filled by the worker",
+          "properties": {
+            "status": { "type": "string", "enum": ["done", "failed"] },
+            "artifacts": { "type": "array", "items": { "$ref": "#/$defs/Artifact" } },
+            "replaced": { "type": "integer" },
+            "missing_block": { "type": "array", "items": { "type": "string" } },
+            "bad_state": { "type": "array", "items": { "type": "string" } },
+            "entity_count": { "type": "object", "properties": { "dxf": { "type": "integer" }, "dwg": { "type": "integer" } }, "additionalProperties": false },
+            "cad": { "type": "object", "properties": { "product": { "type": "string" }, "version": { "type": "string" }, "api": { "type": "string", "enum": ["python", "dotnet", "pyrx", "scr", "lisp"] } }, "additionalProperties": false },
+            "error": { "type": ["string", "null"] },
+            "log": { "$ref": "#/$defs/FileRef" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
