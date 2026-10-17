@@ -7,6 +7,10 @@ Public assets for email signatures and external use.
 - [`apps/bee-solar-survey`](apps/bee-solar-survey) — סקר אתר סולארי (Hive Collect → Wave 54). See [`docs/BEE_SOLAR_SURVEY_HIVE.md`](docs/BEE_SOLAR_SURVEY_HIVE.md).
 - [`engine/`](engine) — **bee-cad**: מנוע CAD (מודל לוח אחד → DXF: חד-קווי + מבנה לוח, בלוקי IEC 60617, גופנים עבריים). מחקר ותוכנית: [`docs/DESIGN_ENGINE_RESEARCH_2026-10-17.md`](docs/DESIGN_ENGINE_RESEARCH_2026-10-17.md), תצוגה מקדימה: [`docs/engine-preview/`](docs/engine-preview).
 
+## Packages
+
+- [`packages/quote-engine`](packages/quote-engine) — ליבת מנוע הצעות המחיר (M1: קטלוג, ערכות, כללים ותמחור) לפי `docs/plan/specs/12`.
+
 ## Logos
 
 - [`logos/bee-logo.png`](logos/bee-logo.png) — **הלוגו הרשמי של B.E.E לשימוש בכל חומר** (סמל + B.E.E + סלוגן, רקע שקוף). המקור: [`logos/bee-logo-source.jpg`](logos/bee-logo-source.jpg) ופריים החתימה ב-`bee-signature-card-light.gif`.
