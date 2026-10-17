@@ -8,7 +8,12 @@ Public assets for email signatures and external use.
 
 ## Logos
 
-- [`logos/bee-logo-full.jpg`](logos/bee-logo-full.jpg) — הלוגו המלא של B.E.E (סמל + B.E.E + סלוגן), קובץ מקור.
-- [`logos/bee-logo-full-transparent.png`](logos/bee-logo-full-transparent.png) — אותו לוגו עם רקע שקוף.
+- [`logos/bee-logo.png`](logos/bee-logo.png) — **הלוגו הרשמי של B.E.E לשימוש בכל חומר** (סמל + B.E.E + סלוגן, רקע שקוף). המקור: [`logos/bee-logo-source.jpg`](logos/bee-logo-source.jpg) ופריים החתימה ב-`bee-signature-card-light.gif`.
+- [`logos/bee-logo-full.jpg`](logos/bee-logo-full.jpg) / [`logos/bee-logo-full-transparent.png`](logos/bee-logo-full-transparent.png) — גרסה ישנה יותר של הלוגו (ללא הטבעת), נשמרת לארכיון.
 - [`logos/bee-symbol.png`](logos/bee-symbol.png) — הסמל בלבד.
-- [`partnership/bee-snl-joint-logo-1024.png`](partnership/bee-snl-joint-logo-1024.png) — לוגו משותף B.E.E + SNL Energy לקבוצת וואטסאפ (1024×1024). המקור ב-`partnership/bee-snl-joint-logo.html`.
+
+## Partnership (B.E.E + SNL Energy)
+
+- [`partnership/bee-snl-joint-logo-1024.png`](partnership/bee-snl-joint-logo-1024.png) — לוגו משותף ריבועי לקבוצת וואטסאפ. מקור: `partnership/bee-snl-joint-logo.html`.
+- [`partnership/bee-snl-joint-banner-1600x600.png`](partnership/bee-snl-joint-banner-1600x600.png) — באנר רוחבי למסמכים ולכותרות. מקור: `partnership/bee-snl-joint-banner.html`.
+- [`partnership/snl-energy-logo.png`](partnership/snl-energy-logo.png) — לוגו SNL (נחתך מצילום מסך; להחליף בקובץ מקור כשיתקבל).
