@@ -1,3 +1,69 @@
+/* Self-hosted fonts (SIL OFL 1.1 — public/fonts/OFL-*.txt). Weights 500/600 of Heebo fall back to 400/700 via font synthesis. */
+@font-face {
+  font-family: 'Heebo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/heebo-400-hebrew.woff2') format('woff2');
+  unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'Heebo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/heebo-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Heebo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/heebo-700-hebrew.woff2') format('woff2');
+  unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'Heebo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/heebo-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/rubik-500-hebrew.woff2') format('woff2');
+  unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/rubik-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/rubik-700-hebrew.woff2') format('woff2');
+  unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/rubik-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
   --ink: #0f1c24;
   --ink-soft: #1a3340;
@@ -270,6 +336,21 @@ textarea {
 .badge-warn {
   background: #fff3d6;
   color: #8a6200;
+}
+
+.sync-synced {
+  background: #e4f5eb;
+  color: var(--ok);
+}
+
+.sync-pending {
+  background: #eef2f7;
+  color: #3d5170;
+}
+
+.sync-error {
+  background: #fde7e7;
+  color: #a12626;
 }
 
 .item-actions {
@@ -567,4 +648,514 @@ textarea {
   max-width: 100%;
   background: #111;
   touch-action: none;
+}
+
+/* ── Pricing screen ─────────────────────────────────────────── */
+.price-group {
+  font-family: var(--display);
+  font-size: 15px;
+  margin: 18px 0 6px;
+  color: var(--ink-soft);
+}
+
+.price-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.price-row.price-missing .price-name strong {
+  color: var(--danger);
+}
+
+.price-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.price-name strong {
+  font-size: 14px;
+}
+
+.price-inputs {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.price-inputs select,
+.price-inputs input {
+  font: inherit;
+  font-size: 15px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.price-inputs select {
+  width: 82px;
+  direction: ltr;
+}
+
+.price-inputs input {
+  width: 110px;
+  direction: ltr;
+  text-align: left;
+}
+
+/* ── Price list review ─────────────────────────────────────── */
+.pi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.pi-table th,
+.pi-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  vertical-align: top;
+}
+.pi-table .n {
+  text-align: left;
+  white-space: nowrap;
+}
+.pi-table tr.pi-alert td {
+  background: #fff4e5;
+  color: #7a4b00;
+  font-weight: 700;
+}
+
+/* ── Quotes dialog ──────────────────────────────────────────── */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 28, 36, 0.6);
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.dialog {
+  background: var(--paper);
+  width: min(640px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 700px) {
+  .dialog-backdrop {
+    align-items: center;
+  }
+  .dialog {
+    border-radius: var(--radius);
+  }
+}
+
+.dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dialog-head h2 {
+  font-family: var(--display);
+  font-size: 18px;
+  margin: 0;
+}
+
+.dialog-head .icon-btn {
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.note {
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--sand);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.note-warn {
+  background: #fff4e5;
+  color: #7a4b00;
+}
+
+.note-ok {
+  background: #e8f5ee;
+  color: var(--ok);
+}
+
+.quote-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quote-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.quote-card h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── Online publishing ─────────────────────────────────────── */
+.pub {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pub-head {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pub-url {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--sand);
+  width: 100%;
+}
+
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+}
+
+/* ── Field reports ─────────────────────────────────────────── */
+.unit {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.9em;
+}
+
+.badge-fail {
+  background: #fde7e7;
+  color: #a12626;
+}
+
+.report-new {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 13px;
+  min-height: 0;
+}
+
+.icon-btn-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.ck-item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin: 8px 0;
+  background: #fff;
+  display: grid;
+  gap: 8px;
+}
+
+.ck-item.ck-ok {
+  border-color: #9fd3b6;
+}
+
+.ck-item.ck-fail {
+  border-color: #e7a5a5;
+  background: #fff7f7;
+}
+
+.ck-item.ck-na {
+  opacity: 0.75;
+}
+
+.ck-head {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.ck-code {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.ck-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.segs {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.seg {
+  border: 0;
+  background: #fff;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  min-height: 42px;
+}
+
+.seg + .seg {
+  border-inline-start: 1px solid var(--line);
+}
+
+.seg.on.seg-ok {
+  background: #e4f5eb;
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.seg.on.seg-fail {
+  background: #fde7e7;
+  color: #a12626;
+  font-weight: 700;
+}
+
+.seg.on.seg-na {
+  background: var(--sand-deep);
+  font-weight: 700;
+}
+
+.ck-value,
+.ck-note,
+.tb-cell input,
+.tb-cell select {
+  font: inherit;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  width: 100%;
+}
+
+.tb-row {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin: 8px 0;
+  background: #fff;
+}
+
+.tb-row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.tb-cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.tb-cell {
+  display: grid;
+  gap: 3px;
+  font-size: 13px;
+}
+
+.tb-label {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.tb-comp output {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: var(--sand);
+  font-weight: 700;
+  direction: ltr;
+  text-align: right;
+}
+
+.sig-box {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin: 8px 0;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.sig-img {
+  max-width: 260px;
+  width: 100%;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.sig-canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 600 / 220;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  touch-action: none;
+}
+
+.report-editor .note ul {
+  margin: 6px 0 0;
+  padding-inline-start: 18px;
+}
+
+/* The editor re-renders on every tap — no entrance animation there. */
+.report-editor .section {
+  animation: none;
+}
+
+.report-editor input:disabled,
+.report-editor select:disabled,
+.report-editor textarea:disabled,
+.report-editor .seg:disabled {
+  color: var(--ink);
+  -webkit-text-fill-color: var(--ink);
+  opacity: 1;
+  background: var(--sand);
+}
+
+.report-editor .seg.on.seg-ok:disabled {
+  background: #e4f5eb;
+}
+
+.report-editor .seg.on.seg-fail:disabled {
+  background: #fde7e7;
+}
+
+.report-editor .seg.on.seg-na:disabled {
+  background: var(--sand-deep);
+}
+
+.health {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.health .ok {
+  color: var(--ok);
+}
+
+.health .bad {
+  color: #a12626;
+  font-weight: 700;
+}
+
+.sig-canvas.sig-empty {
+  border-color: #a12626;
+  box-shadow: 0 0 0 2px #fde7e7;
+}
+
+.update-bar {
+  position: fixed;
+  top: 0;
+  inset-inline: 0;
+  z-index: 60;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.update-bar .btn {
+  padding: 6px 12px;
+}
+
+.warn-list {
+  margin: 4px 0 0;
+  padding-inline-start: 18px;
+  color: var(--warn, #b45309);
+  font-size: 0.85rem;
+}
+
+.warn-list:empty {
+  display: none;
+}
+
+.project-item .tel {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.stage-chip {
+  background: #e0ecff;
+  color: #1e3a8a;
+}
+
+.stage-chip.stage-accepted,
+.stage-chip.stage-installation {
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.stage-chip.stage-handover {
+  background: #ede9fe;
+  color: #4c1d95;
+}
+
+.stage-chip.stage-office {
+  background: #f3f4f6;
+  color: #374151;
 }

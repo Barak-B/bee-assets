@@ -27,3 +27,11 @@ dist-ssr
 node_modules/
 dist/
 *.local
+
+# playwright
+test-results/
+playwright-report/
+
+# wrangler local state
+.wrangler/
+.dev.vars

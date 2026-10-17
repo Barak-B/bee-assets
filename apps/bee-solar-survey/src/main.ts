@@ -1,22 +1,39 @@
 import './style.css'
+import { registerSW } from 'virtual:pwa-register'
 import {
   deletePhoto,
   deleteProject,
   exportBackup,
   getProject,
+  countPhotos,
+  getOfficeStatus,
+  getPublication,
+  getPublishSettings,
   getSurveyors,
+  getSyncState,
   importBackup,
   listPhotos,
   listProjects,
+  listQuotes,
+  listReports,
   rememberSurveyor,
   savePhoto,
   saveProject,
   type StoredPhoto,
 } from './db'
-import { buildHiveExportBundle, downloadJson } from './hive'
-import { buildSurveyPdf, downloadBlob } from './pdf'
+import { BackupError, parseBackup } from './backup'
+import { customerWarnings, normalizePhone } from './customer'
+import { OFFICE_STATUS_LABEL_HE, STAGE_LABEL_HE, deriveStage, isInstallationTemplate, type Stage } from './stage'
+import { buildHiveExportBundle } from './hive'
+import { revokeQuote, settingsProblem } from './publish'
 import { fileToSurveyPhoto, getCurrentGps } from './photos'
-import { assessCompleteness, emptyProject, parseGps } from './schema'
+import { escapeAttr, escapeHtml, safeImageSrc } from './html'
+import { renderPricingScreen } from './pricingScreen'
+import { openQuotesDialog } from './quotesDialog'
+import { openReportsDialog, renderReportEditor } from './reports/ui'
+import { outcomeToast, shareOrDownload, shareOrDownloadJson } from './share'
+import { assessCompleteness, emptyProject, parseGps, sha256OfDataUrl } from './schema'
+import { STATUS_LABEL, SyncError, isSyncConfigured, markDirty, restoreFromServer, statusOf, syncAll, type SyncStatus } from './sync'
 import {
   BREAKER_OPTIONS,
   PHOTO_FIELD_LABELS,
@@ -25,7 +42,7 @@ import {
   type SiteSurveyProject,
 } from './types'
 
-type Screen = 'list' | 'form'
+type Screen = 'list' | 'form' | 'pricing' | 'report'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -36,6 +53,11 @@ let search = ''
 let toastTimer = 0
 let autoSaveTimer = 0
 let drawTarget: StoredPhoto | null = null
+let syncTimer = 0
+/** Surveys waiting for the debounced background sync ('all' = every survey). */
+let syncIds: Set<string> | 'all' = new Set()
+let lastBgSyncError = ''
+let reportId = ''
 
 function toast(msg: string) {
   const el = document.getElementById('toast')
@@ -67,6 +89,111 @@ async function persistCurrent() {
   editing.hiveReady = assessCompleteness(editing, photos).readyForWave54
   await saveProject(editing)
   if (editing.surveyor) await rememberSurveyor(editing.surveyor)
+  requestSync(4000, [editing.id])
+}
+
+/** Debounced background backup; quiet unless something actually failed. `ids` limits it to those surveys. */
+function requestSync(delayMs = 4000, ids?: string[]) {
+  if (!ids) syncIds = 'all'
+  else if (syncIds !== 'all') for (const id of ids) syncIds.add(id)
+  window.clearTimeout(syncTimer)
+  syncTimer = window.setTimeout(() => void runSync(false), delayMs)
+}
+
+async function runSync(manual: boolean) {
+  const ids = syncIds
+  syncIds = new Set()
+  if (!navigator.onLine && !manual) {
+    if (ids !== 'all') for (const id of ids) requestSyncLater(id)
+    return
+  }
+  if (!(await isSyncConfigured())) {
+    if (manual) toast('לא הוגדר שרת גיבוי — מחירון → שרת החברה')
+    return
+  }
+  try {
+    // Manual: every survey, re-read in full. Background: the surveys asked for, trusting the change markers.
+    const r = manual ? await syncAll(undefined, { deep: true }) : await syncAll(ids === 'all' ? undefined : [...ids])
+    if (manual) {
+      toast(
+        r.offline
+          ? 'אין חיבור — השינויים ממתינים בתור וישלחו כשהחיבור יחזור'
+          : r.failed
+            ? `גיבוי נכשל: ${r.errors[0]}`
+            : r.synced
+              ? `גובו ${r.synced} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות · ${r.reports} דוחות`
+              : 'הכול כבר מגובה ✓',
+      )
+    } else if (r.failed && r.errors[0] !== lastBgSyncError) {
+      // Background runs repeat; say each distinct failure once.
+      toast(`גיבוי נכשל: ${r.errors[0]}`)
+    }
+    lastBgSyncError = r.failed ? (r.errors[0] ?? '') : ''
+    if (r.assigned.length) {
+      // New jobs from the office: show them now, then say so (re-render replaces the toast).
+      if (screen === 'list') await render()
+      toast(r.assigned.length === 1 ? `עבודה חדשה מהמשרד: ${r.assigned[0]}` : `${r.assigned.length} עבודות חדשות מהמשרד`)
+    }
+  } catch (err) {
+    if (manual) toast(err instanceof SyncError ? err.message : 'הגיבוי נכשל')
+  }
+  if (screen === 'list') {
+    await refreshSyncChips()
+    await refreshStageChips()
+  }
+}
+
+/** Keep an offline survey in the queue for the next run (the 'online' event or the periodic retry). */
+function requestSyncLater(id: string) {
+  if (syncIds !== 'all') syncIds.add(id)
+}
+
+/** Where each job stands, from what this phone knows (quotes, links, approvals seen, reports, office status). */
+async function localStage(id: string): Promise<{ stage: Stage; office: string; planned: string }> {
+  const project = await getProject(id)
+  const quotes = await listQuotes(id)
+  const pubs = await Promise.all(quotes.map((q) => getPublication(q.id)))
+  const reports = await listReports(id)
+  const office = await getOfficeStatus(id)
+  const stage = deriveStage({
+    surveyed: !!project?.hiveReady || (await countPhotos(id)) > 0,
+    quoteVersions: quotes.length,
+    liveLinks: pubs.filter((p) => p && !p.revokedAt).length,
+    accepted: pubs.some((p) => !!p?.acceptedAt),
+    installationReports: reports.filter((r) => isInstallationTemplate(r.templateKey)).length,
+    handoverFinal: reports.some((r) => r.templateKey === 'handover' && r.status === 'final'),
+  })
+  // A planned date matters only until the site is surveyed.
+  const planned = stage === 'lead' && office?.planned_date ? office.planned_date.split('-').reverse().slice(0, 2).join('.') : ''
+  return { stage, office: office && office.status !== 'active' ? OFFICE_STATUS_LABEL_HE[office.status] : '', planned }
+}
+
+async function refreshStageChips() {
+  for (const el of app.querySelectorAll<HTMLElement>('[data-stage-chip]')) {
+    const { stage, office, planned } = await localStage(el.dataset.stageChip!)
+    el.textContent = [STAGE_LABEL_HE[stage], planned && `📅 ${planned}`, office].filter(Boolean).join(' · ')
+    el.className = `badge stage-chip stage-${stage}${office ? ' stage-office' : ''}`
+    el.dataset.stage = stage
+  }
+}
+
+async function refreshSyncChips() {
+  const configured = await isSyncConfigured()
+  const items = app.querySelectorAll<HTMLElement>('[data-sync-chip]')
+  for (const el of items) {
+    const id = el.dataset.syncChip!
+    const p = await getProject(id)
+    if (!p) continue
+    const st: SyncStatus = statusOf(p, await getSyncState(id), configured)
+    el.textContent = STATUS_LABEL[st]
+    el.className = `badge sync-chip sync-${st}${st === 'off' ? ' hidden' : ''}`
+    el.dataset.status = st
+  }
+}
+
+function refreshCustomerWarnings() {
+  const warn = document.getElementById('customerWarnings')
+  if (warn) warn.innerHTML = customerWarnings(editing).map((w) => `<li>${escapeHtml(w)}</li>`).join('')
 }
 
 function readFormIntoEditing() {
@@ -76,7 +203,12 @@ function readFormIntoEditing() {
   editing.surveyor = g('f_surveyor')
   editing.gps = g('f_gps')
   editing.address = g('f_address')
+  editing.customerName = g('f_customerName').trim()
+  editing.customerPhone = g('f_customerPhone').trim()
+  editing.customerEmail = g('f_customerEmail').trim()
+  editing.customerIdNumber = g('f_customerId').trim()
   editing.mainBreaker = g('f_mainBreaker')
+  editing.phases = (['1', '3'].includes(g('f_phases')) ? g('f_phases') : '') as SiteSurveyProject['phases']
   editing.panelSpace = g('f_panelSpace') as SiteSurveyProject['panelSpace']
   editing.solarBreaker = g('f_solarBreaker')
   editing.meterNumber = g('f_meterNumber')
@@ -94,6 +226,7 @@ function readFormIntoEditing() {
   editing.budgetIls = g('f_budget')
   editing.inverterBrandPref = g('f_inverterBrand') as SiteSurveyProject['inverterBrandPref']
   editing.includeBattery = (document.getElementById('f_battery') as HTMLInputElement | null)?.checked ?? false
+  editing.customerType = g('f_customerType') === 'business' ? 'business' : 'private'
   editing.generalNotes = g('f_generalNotes')
 }
 
@@ -114,9 +247,9 @@ function photoBlock(field: PhotoFieldKey, required = false): string {
         ${list
           .map(
             (p) => `
-          <div class="thumb" data-photo="${p.id}">
-            <img src="${p.dataUrl}" alt="" />
-            <button type="button" title="מחק" data-action="del-photo" data-id="${p.id}">×</button>
+          <div class="thumb" data-photo="${escapeAttr(p.id)}">
+            <img src="${safeImageSrc(p.dataUrl)}" alt="" />
+            <button type="button" title="מחק" data-action="del-photo" data-id="${escapeAttr(p.id)}">×</button>
           </div>`,
           )
           .join('')}
@@ -150,7 +283,9 @@ async function render() {
     const filtered = projects.filter((p) => {
       const q = search.trim()
       if (!q) return true
-      return [p.projectName, p.address, p.surveyor].join(' ').includes(q)
+      const phoneQ = normalizePhone(q)
+      if (phoneQ && normalizePhone(p.customerPhone ?? '') === phoneQ) return true
+      return [p.projectName, p.address, p.surveyor, p.customerName ?? '', p.customerPhone ?? '', p.customerEmail ?? ''].join(' ').toLowerCase().includes(q.toLowerCase())
     })
 
     app.innerHTML = `
@@ -175,8 +310,13 @@ async function render() {
         </section>
         <button class="btn btn-primary btn-block" id="btnNew">+ סקר חדש</button>
         <div class="row">
+          <button class="btn btn-secondary" id="btnPricing">מחירון</button>
           <button class="btn btn-secondary" id="btnBackup">גיבוי</button>
-          <button class="btn btn-secondary" id="btnRestore">שחזור</button>
+          <button class="btn btn-secondary" id="btnRestore">שחזור מקובץ</button>
+        </div>
+        <div class="row">
+          <button class="btn btn-secondary" id="btnSync">סנכרן לשרת</button>
+          <button class="btn btn-secondary" id="btnRestoreServer">שחזור מהשרת</button>
         </div>
         <input class="search" id="search" placeholder="חיפוש פרויקט..." value="${escapeAttr(search)}" />
         <div class="project-list">
@@ -186,19 +326,25 @@ async function render() {
               : filtered
                   .map(
                     (p, i) => `
-            <article class="project-item" style="animation-delay:${i * 40}ms" data-open="${p.id}">
+            <article class="project-item" style="animation-delay:${i * 40}ms" data-open="${escapeAttr(p.id)}">
               <h3>${escapeHtml(p.projectName || 'ללא שם')}</h3>
               <div class="meta">
                 <span>${escapeHtml(p.surveyDate || '')}</span>
                 <span>${escapeHtml(p.surveyor || '')}</span>
                 <span>${escapeHtml(p.address || '')}</span>
+                ${p.customerName ? `<span>👤 ${escapeHtml(p.customerName)}</span>` : ''}
+                ${p.customerPhone && normalizePhone(p.customerPhone) ? `<a class="tel" dir="ltr" href="tel:${escapeAttr(normalizePhone(p.customerPhone))}" data-stop>${escapeHtml(p.customerPhone)}</a>` : ''}
                 <span class="badge ${p.hiveReady ? 'badge-ok' : 'badge-warn'}">${p.hiveReady ? 'מוכן ל־54' : 'טיוטה'}</span>
+                <span class="badge stage-chip hidden" data-stage-chip="${escapeAttr(p.id)}"></span>
+                <span class="badge sync-chip hidden" data-sync-chip="${escapeAttr(p.id)}"></span>
               </div>
               <div class="item-actions">
-                <button class="btn btn-secondary" data-edit="${p.id}">עריכה</button>
-                <button class="btn btn-secondary" data-hive="${p.id}">ייצוא כוורת</button>
-                <button class="btn btn-secondary" data-pdf="${p.id}">PDF</button>
-                <button class="btn btn-danger" data-del="${p.id}">מחק</button>
+                <button class="btn btn-secondary" data-edit="${escapeAttr(p.id)}">עריכה</button>
+                <button class="btn btn-secondary" data-hive="${escapeAttr(p.id)}">ייצוא כוורת</button>
+                <button class="btn btn-secondary" data-pdf="${escapeAttr(p.id)}">PDF</button>
+                <button class="btn btn-secondary" data-quote="${escapeAttr(p.id)}">הצעות מחיר</button>
+                <button class="btn btn-secondary" data-reports="${escapeAttr(p.id)}">דוחות שטח</button>
+                <button class="btn btn-danger" data-del="${escapeAttr(p.id)}">מחק</button>
               </div>
             </article>`,
                   )
@@ -218,10 +364,32 @@ async function render() {
       search = (e.target as HTMLInputElement).value
       void render()
     })
+    document.getElementById('btnPricing')?.addEventListener('click', () => {
+      screen = 'pricing'
+      void render()
+    })
+    document.getElementById('btnSync')?.addEventListener('click', () => void runSync(true))
+    document.getElementById('btnRestoreServer')?.addEventListener('click', async () => {
+      try {
+        toast('מושך סקרים מהשרת...')
+        const r = await restoreFromServer()
+        await render() // re-render first: it replaces the toast element
+        toast(r.restored ? `שוחזרו ${r.restored} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות · ${r.reports} דוחות` : `אין סקרים חדשים בשרת${r.skipped ? ` (${r.skipped} כבר במכשיר)` : ''}`)
+      } catch (err) {
+        toast(err instanceof SyncError ? err.message : 'השחזור נכשל')
+      }
+    })
+    void refreshSyncChips()
+    void refreshStageChips()
     document.getElementById('btnBackup')?.addEventListener('click', async () => {
-      const data = await exportBackup()
-      downloadJson(`bee-survey-backup-${new Date().toISOString().slice(0, 10)}.json`, data)
-      toast('הגיבוי הורד')
+      try {
+        const data = await exportBackup()
+        // Compact: photos are inline base64, and indentation only adds size.
+        const outcome = await shareOrDownloadJson(`bee-survey-backup-${new Date().toISOString().slice(0, 10)}.json`, data, 'גיבוי סקרים B.E.E', false)
+        toast(outcomeToast(outcome, 'הגיבוי'))
+      } catch {
+        toast('הגיבוי לקובץ נכשל — ייתכן שהוא גדול מדי למכשיר; השתמש ב"סנכרן לשרת"')
+      }
     })
     document.getElementById('btnRestore')?.addEventListener('click', () => {
       const input = document.createElement('input')
@@ -230,10 +398,24 @@ async function render() {
       input.onchange = async () => {
         const file = input.files?.[0]
         if (!file) return
-        const data = JSON.parse(await file.text())
-        const n = await importBackup(data)
-        toast(`שוחזרו ${n} פרויקטים`)
-        void render()
+        try {
+          let raw: unknown
+          try {
+            raw = JSON.parse(await file.text())
+          } catch {
+            throw new BackupError('הקובץ אינו קובץ JSON תקין')
+          }
+          const r = await importBackup(parseBackup(raw))
+          await render() // re-render first: it replaces the toast element
+          toast(
+            `נוספו ${r.added} סקרים · עודכנו ${r.updated}` +
+              (r.skipped ? ` · ${r.skipped} נשארו כמו במכשיר (חדשים יותר)` : '') +
+              (r.pricing ? ' · המחירון עודכן' : ''),
+          )
+          requestSync(1000)
+        } catch (err) {
+          toast(err instanceof BackupError ? err.message : 'השחזור מהקובץ נכשל')
+        }
       }
       input.click()
     })
@@ -249,7 +431,27 @@ async function render() {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation()
         const id = (btn as HTMLElement).dataset.del!
-        if (!confirm('למחוק את הסקר?')) return
+        // Customer links of this survey's quotes: once the survey is gone the app
+        // no longer knows their tokens, so they are taken down first.
+        const live: string[] = []
+        for (const q of await listQuotes(id)) {
+          const pub = await getPublication(q.id)
+          if (pub && !pub.revokedAt) live.push(pub.token)
+        }
+        const msg = live.length
+          ? `לסקר יש ${live.length} קישורים פעילים ללקוח. המחיקה תבטל אותם — הלקוח לא יוכל לפתוח את ההצעה. הגיבוי בשרת נשמר. למחוק?`
+          : 'למחוק את הסקר מהמכשיר? (הגיבוי בשרת, אם יש, נשמר)'
+        if (!confirm(msg)) return
+        if (live.length) {
+          const settings = await getPublishSettings()
+          try {
+            if (settingsProblem(settings) || !settings) throw new Error('no settings')
+            for (const token of live) await revokeQuote(token, settings)
+          } catch {
+            toast('לא ניתן לבטל את הקישורים ללקוח כרגע — הסקר לא נמחק. נסה שוב כשיש חיבור')
+            return
+          }
+        }
         await deleteProject(id)
         toast('נמחק')
         void render()
@@ -267,11 +469,50 @@ async function render() {
         await exportPdfFor((btn as HTMLElement).dataset.pdf!)
       }),
     )
+    app.querySelectorAll('[data-reports]').forEach((btn) =>
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation()
+        await openReportsDialog((btn as HTMLElement).dataset.reports!, reportsCtx)
+      }),
+    )
+    app.querySelectorAll('[data-quote]').forEach((btn) =>
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation()
+        await openQuotesDialog((btn as HTMLElement).dataset.quote!, quotesCtx)
+      }),
+    )
+    // A tap on the customer's phone dials; it must not also open the survey.
+    app.querySelectorAll('[data-stop]').forEach((el) => el.addEventListener('click', (e) => e.stopPropagation()))
     app.querySelectorAll('[data-open]').forEach((el) =>
       el.addEventListener('click', async () => {
         await openEditor((el as HTMLElement).dataset.open!)
       }),
     )
+    return
+  }
+
+  if (screen === 'report') {
+    await renderReportEditor(reportId, {
+      app,
+      toast,
+      openReport: reportsCtx.openReport,
+      onBack: () => {
+        screen = 'list'
+        void render()
+      },
+    })
+    return
+  }
+
+  if (screen === 'pricing') {
+    await renderPricingScreen({
+      app,
+      toast,
+      onBack: () => {
+        screen = 'list'
+        void render()
+      },
+    })
     return
   }
 
@@ -306,10 +547,26 @@ async function render() {
         </section>
 
         <section class="section">
+          <h2>לקוח</h2>
+          <p class="hint">למי ההצעה, ואיך שולחים לו את הקישור. אפשר להשלים גם אחרי הסקר.</p>
+          <div class="field"><label>שם הלקוח</label><input id="f_customerName" autocomplete="off" value="${escapeAttr(editing.customerName ?? '')}" /></div>
+          <div class="grid-2">
+            <div class="field"><label>טלפון</label><input id="f_customerPhone" type="tel" inputmode="tel" dir="ltr" autocomplete="off" value="${escapeAttr(editing.customerPhone ?? '')}" placeholder="050-0000000" /></div>
+            <div class="field"><label>מייל</label><input id="f_customerEmail" type="email" inputmode="email" dir="ltr" autocomplete="off" value="${escapeAttr(editing.customerEmail ?? '')}" /></div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>ת״ז / ח״פ</label><input id="f_customerId" inputmode="numeric" dir="ltr" autocomplete="off" value="${escapeAttr(editing.customerIdNumber ?? '')}" /><p class="hint">לא מופיע בדף הלקוח. 4 הספרות האחרונות נבדקות כשהלקוח מאשר אונליין.</p></div>
+            <div class="field"><label>סוג לקוח</label><select id="f_customerType"><option value="private" ${editing.customerType !== 'business' ? 'selected' : ''}>פרטי (מחירים כולל מע״מ)</option><option value="business" ${editing.customerType === 'business' ? 'selected' : ''}>עסקי (לפני מע״מ)</option></select></div>
+          </div>
+          <ul class="warn-list" id="customerWarnings">${customerWarnings(editing).map((w) => `<li>${escapeHtml(w)}</li>`).join('')}</ul>
+        </section>
+
+        <section class="section">
           <h2>חשמל ומונים</h2>
           <p class="hint">קלט הנדסי ל־protection / wire_sizing</p>
           <div class="grid-2">
             <div class="field"><label>מפסק ראשי במתקן</label><select id="f_mainBreaker">${options(BREAKER_OPTIONS, editing.mainBreaker)}</select></div>
+            <div class="field"><label>פאזות</label><select id="f_phases"><option value="" ${!editing.phases ? 'selected' : ''}>לא ידוע</option><option value="1" ${editing.phases === '1' ? 'selected' : ''}>חד-פאזי</option><option value="3" ${editing.phases === '3' ? 'selected' : ''}>תלת-פאזי</option></select></div>
             <div class="field"><label>מקום בלוח למפסק סולארי</label><select id="f_panelSpace">${options(['כן', 'לא', 'דורש בדיקה'], editing.panelSpace)}</select></div>
             <div class="field"><label>מפסק ראשי סולארי</label><select id="f_solarBreaker">${options(BREAKER_OPTIONS, editing.solarBreaker)}</select></div>
             <div class="field"><label>סוג מונה סולארי</label><select id="f_meterType">${options(['ישיר', 'ארון מניה'], editing.meterType)}</select></div>
@@ -358,6 +615,8 @@ async function render() {
       <div class="sticky-actions">
         <button class="btn btn-secondary" id="btnCancel">ביטול</button>
         <button class="btn btn-secondary" id="btnHive">ייצוא כוורת</button>
+        <button class="btn btn-secondary" id="btnQuote">הצעות מחיר</button>
+        <button class="btn btn-secondary" id="btnReports">דוחות שטח</button>
         <button class="btn btn-primary" id="btnSave">שמור סקר</button>
       </div>
       <div class="toast" id="toast"></div>
@@ -375,7 +634,7 @@ function renderCustomFields() {
   host.innerHTML = editing.customFields
     .map(
       (f, idx) => `
-    <div class="grid-2" data-cf="${f.id}">
+    <div class="grid-2" data-cf="${escapeAttr(f.id)}">
       <div class="field"><label>תווית</label><input data-cf-label="${idx}" value="${escapeAttr(f.label)}" /></div>
       <div class="field"><label>ערך</label><div class="gps-row"><input data-cf-value="${idx}" value="${escapeAttr(f.value)}" /><button type="button" class="btn btn-danger" data-cf-del="${idx}">×</button></div></div>
     </div>`,
@@ -432,8 +691,26 @@ function bindFormEvents() {
     readFormIntoEditing()
     await persistCurrent()
     const bundle = buildHiveExportBundle(editing, photos)
-    downloadJson(`hive-site-survey-${editing.id.slice(0, 8)}.json`, bundle)
-    toast(bundle.jobs.length === 3 ? 'ייצוא כוורת מלא' : 'ייצוא חלקי — חסרים שדות')
+    const outcome = await shareOrDownloadJson(`hive-site-survey-${editing.id.slice(0, 8)}.json`, bundle, 'ייצוא כוורת')
+    toast(`${outcomeToast(outcome, 'ייצוא הכוורת')} · ${bundle.jobs.length === 3 ? 'מלא' : 'חלקי — חסרים שדות'}`)
+  })
+  document.getElementById('btnReports')?.addEventListener('click', async () => {
+    readFormIntoEditing()
+    if (!editing.projectName.trim()) {
+      toast('יש למלא שם פרויקט לפני דוחות')
+      return
+    }
+    await persistCurrent()
+    await openReportsDialog(editing.id, reportsCtx)
+  })
+  document.getElementById('btnQuote')?.addEventListener('click', async () => {
+    readFormIntoEditing()
+    if (!editing.projectName.trim()) {
+      toast('חובה שם פרויקט')
+      return
+    }
+    await persistCurrent()
+    await openQuotesDialog(editing.id, quotesCtx)
   })
   document.getElementById('btnGps')?.addEventListener('click', async () => {
     try {
@@ -467,10 +744,12 @@ function bindFormEvents() {
       // refresh completeness without full remount of photos handlers complexity — soft update
       const box = app.querySelector('.completeness')
       if (box) box.outerHTML = completenessBox()
+      refreshCustomerWarnings()
     })
     el.addEventListener('input', () => {
       readFormIntoEditing()
       scheduleAutoSave()
+      if ((el as HTMLElement).id.startsWith('f_customer')) refreshCustomerWarnings()
     })
   })
 
@@ -489,6 +768,7 @@ function bindFormEvents() {
       await deletePhoto(id)
       photos = photos.filter((p) => p.id !== id)
       readFormIntoEditing()
+      await persistCurrent()
       await render()
     })
   })
@@ -628,9 +908,13 @@ function openDrawEditor(photo: StoredPhoto) {
     drawTarget.dataUrl = dataUrl
     drawTarget.annotated = true
     drawTarget.mimeType = 'image/jpeg'
+    // The pixels changed — the fingerprint used by the hive export and server sync must too.
+    drawTarget.sha256 = await sha256OfDataUrl(dataUrl)
     await savePhoto(drawTarget)
     host.innerHTML = ''
     drawTarget = null
+    await markDirty(editing.id)
+    requestSync()
     toast('סימון נשמר')
     await render()
   })
@@ -650,8 +934,8 @@ async function exportHiveFor(id: string) {
   if (!p) return
   const ph = await listPhotos(id)
   const bundle = buildHiveExportBundle(p, ph)
-  downloadJson(`hive-site-survey-${id.slice(0, 8)}.json`, bundle)
-  toast(bundle.jobs.some((j) => j.loop === 'dispatch.draft') ? 'ייצוא כוורת מלא' : 'ייצוא חלקי')
+  const outcome = await shareOrDownloadJson(`hive-site-survey-${id.slice(0, 8)}.json`, bundle, 'ייצוא כוורת')
+  toast(`${outcomeToast(outcome, 'ייצוא הכוורת')} · ${bundle.jobs.some((j) => j.loop === 'dispatch.draft') ? 'מלא' : 'חלקי'}`)
 }
 
 async function exportPdfFor(id: string) {
@@ -660,20 +944,69 @@ async function exportPdfFor(id: string) {
   const ph = await listPhotos(id)
   const c = assessCompleteness(p, ph)
   toast('מכין PDF...')
-  const blob = await buildSurveyPdf(p, ph, c)
-  downloadBlob(blob, `bee-survey-${(p.projectName || id).replace(/\s+/g, '_')}.pdf`)
+  try {
+    // Lazy: jsPDF + embedded Hebrew font are only loaded when a report is requested.
+    const { buildSurveyPdfDetailed, surveyPdfFilename } = await import('./pdf')
+    const res = await buildSurveyPdfDetailed(p, ph, c)
+    const outcome = await shareOrDownload(res.blob, surveyPdfFilename(p), `סקר אתר — ${p.projectName}`)
+    toast(`${outcomeToast(outcome, 'הדוח')} · ${res.meta.pages} עמ׳ · ${Math.round(res.meta.bytes / 1024)} KB`)
+  } catch (err) {
+    console.error(err)
+    toast('יצירת ה-PDF נכשלה')
+  }
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
+const reportsCtx = {
+  toast,
+  openReport: async (id: string) => {
+    reportId = id
+    screen = 'report'
+    window.scrollTo(0, 0)
+    await render()
+  },
 }
 
-function escapeAttr(s: string): string {
-  return escapeHtml(s).replaceAll("'", '&#39;')
+const quotesCtx = {
+  toast,
+  openPricing: () => {
+    screen = 'pricing'
+    void render()
+  },
+  onChanged: () => {
+    if (screen === 'list') void refreshStageChips()
+  },
 }
 
-void render()
+// Offline-first: precached app shell. A new version waits until the user taps
+// "עדכן" — never a reload in the middle of a survey or a signature.
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    if (document.getElementById('updateBar')) return
+    const bar = document.createElement('div')
+    bar.id = 'updateBar'
+    bar.className = 'update-bar'
+    bar.innerHTML = '<span>גרסה חדשה של האפליקציה זמינה</span><button class="btn btn-primary" type="button">עדכן עכשיו</button>'
+    bar.querySelector('button')!.addEventListener('click', async () => {
+      if (screen === 'form' && editing.projectName.trim()) {
+        readFormIntoEditing()
+        await persistCurrent()
+      }
+      await updateSW(true)
+    })
+    document.body.appendChild(bar)
+  },
+})
+
+// Backup queue: drain on start, when the network returns, on explicit requests
+// (new quote version, report change), and every few minutes while something waits.
+window.addEventListener('online', () => requestSync(500))
+window.addEventListener('bee-sync-request', () => requestSync(1000))
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestSync(1500)
+})
+window.setInterval(() => {
+  if (navigator.onLine && document.visibilityState === 'visible') requestSync(0)
+}, 5 * 60_000)
+
+void render().then(() => requestSync(1500))

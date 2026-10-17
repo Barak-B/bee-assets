@@ -9,17 +9,25 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "pages:dev": "wrangler pages dev --port 8788",
+    "pages:deploy": "npm run build && wrangler pages deploy",
+    "functions:check": "wrangler pages functions build --outdir .wrangler/functions-check",
+    "setup:cloudflare": "node scripts/setup-cloudflare.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^29.1.1",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
-    "vitest": "^4.1.10"
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.151.0"
   },
   "dependencies": {
-    "html2canvas": "^1.4.1",
+    "exceljs": "^4.4.0",
     "jspdf": "^4.2.1"
   }
 }
