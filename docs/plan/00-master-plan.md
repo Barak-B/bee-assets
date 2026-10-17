@@ -464,6 +464,7 @@ spec YAML ─▶ eplan (ezdxf) ─▶ DXF (R2018, placeholders INSERT לבלוק
 ## נספחים
 
 - `README.md` — אינדקס חבילת התכנון וסדר קריאה
+- `HANDOFF.md` — handoff לפרויקט (מצב, קבצים, ניסיונות שנכשלו, צעדים הבאים)
 - `01-lifecycle-stages.json` — מכונת המצבים כנתונים (v0.3)
 - `specs/10-data-model.md` + `schema/engine.sql` — מודל נתונים ו-DDL
 - `specs/11-projects-workflow-spec.md` — מכונת מצבים, משימות, לו"זים, תקשורת, פורטל, AI, הרשאות
