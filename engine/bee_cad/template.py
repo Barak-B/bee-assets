@@ -122,10 +122,26 @@ class TemplateChecks:
         return self
 
 
+def plan_scale(t: DrillTemplate) -> float:
+    return 25.0 if t.slab.length_mm <= 5500 else (50.0 if t.slab.length_mm <= 11000 else 100.0)
+
+
+def detail_scale(t: DrillTemplate) -> float:
+    """Detail scale chosen to fit under the plan on an A3 (same arithmetic as TemplateRenderer.draw)."""
+    if not t.units:
+        return 10.0
+    avail_h = (297.0 - 32.0) - 36.0 - t.slab.width_mm / plan_scale(t) - 26.0 - 18.0
+    return next((k for k in (10.0, 15.0, 20.0, 25.0) if t.units[0].depth_mm / k + 24.0 <= avail_h), 25.0)
+
+
+def scale_text(t: DrillTemplate) -> str:
+    return f"1:{int(plan_scale(t))} / 1:{int(detail_scale(t))}"
+
+
 class TemplateRenderer:
     def __init__(self, ctx: SheetContext, t: DrillTemplate):
         self.ctx, self.t = ctx, t
-        self.scale = 25.0 if t.slab.length_mm <= 5500 else (50.0 if t.slab.length_mm <= 11000 else 100.0)
+        self.scale = plan_scale(t)
         self.warnings: list[str] = []
 
     def s(self, v: float) -> float:
@@ -163,7 +179,7 @@ class TemplateRenderer:
         hatch.set_pattern_fill("ANSI31", scale=4.0)
         hatch.paths.add_polyline_path([(ox, oy), (ox + L, oy), (ox + L, oy + W), (ox, oy + W)], is_closed=True)
         ctx.text(f"משטח בטון {t.slab.length_mm / 1000:g} × {t.slab.width_mm / 1000:g} × {t.slab.thickness_mm / 1000:g} m",
-                 (ox + L - 1.5, oy + W - 1.5), 2.0, "panel_text", TA.TOP_RIGHT, bold=True)
+                 (ox + L - 3.0, oy + W + 1.5), 2.0, "panel_text", TA.BOTTOM_RIGHT, bold=True)
         # datum
         ctx.msp.add_circle((ox, oy), 2.2, dxfattribs={"layer": LAYERS["dim"].name})
         ctx.text("0,0", (ox - 3.0, oy - 3.0), 1.6, "dim", TA.TOP_RIGHT)
@@ -177,8 +193,11 @@ class TemplateRenderer:
         for u in t.units:
             ux, uy, uw, ud = ox + s(u.x_mm), oy + s(u.y_mm), s(u.width_mm), s(u.depth_mm)
             ctx.rect(ux, uy, uw, ud, "panel_dev")
-            ctx.text(u.tag, (ux + uw / 2, uy + ud / 2 + 2.0), 2.4, "panel_text", TA.MIDDLE_CENTER, bold=True)
-            ctx.text(u.model, (ux + uw / 2, uy + ud / 2 - 1.5), 1.4, "panel_text", TA.MIDDLE_CENTER)
+            if self.scale <= 25:
+                ctx.text(u.tag, (ux + uw / 2, uy + ud / 2 + 2.0), 2.4, "panel_text", TA.MIDDLE_CENTER, bold=True)
+                ctx.text(u.model, (ux + uw / 2, uy + ud / 2 - 1.5), 1.4, "panel_text", TA.MIDDLE_CENTER)
+            else:   # narrow footprint on paper: rotated tag only
+                ctx.text(u.tag, (ux + uw / 2, uy + ud / 2), 2.0, "panel_text", TA.MIDDLE_CENTER, rotation=90.0, bold=True)
             # pedestal beams (plan): along Y at inset from each side
             pl = s(t.pedestal.length_mm or u.depth_mm)
             pw = s(t.pedestal.width_mm)
@@ -187,18 +206,34 @@ class TemplateRenderer:
                 ctx.msp.add_lwpolyline([(bx - pw / 2, y0b), (bx + pw / 2, y0b), (bx + pw / 2, y0b + pl), (bx - pw / 2, y0b + pl)],
                                        close=True, dxfattribs={"layer": LAYERS["panel_rail"].name})
             for i, (x, y) in enumerate(t.anchor_points(u), 1):
-                self.anchor_mark(ox + s(x), oy + s(y))
-                ctx.text(str(i), (ox + s(x) + 2.0, oy + s(y) + 2.0), 1.3, "dim", TA.BOTTOM_LEFT)
-        # dimension chains: X positions of the first anchor column of every unit, overall; Y of anchor rows of unit 1
+                if self.scale <= 25:
+                    self.anchor_mark(ox + s(x), oy + s(y))
+                    ctx.text(str(i), (ox + s(x) + 2.0, oy + s(y) + 2.0), 1.3, "dim", TA.BOTTOM_LEFT)
+                else:                      # small scale: a dot per anchor, numbers only on the detail
+                    ctx.msp.add_circle((ox + s(x), oy + s(y)), 0.5, dxfattribs={"layer": LAYERS["sld_main"].name})
+        # dimension chains: beam centrelines (1:25) or cabinet pitch (smaller scales); Y of anchor rows of unit 1
         self.dim_h(ox, ox + L, oy + W, 10.0, self.scale)
         self.dim_v(ox + L, oy, oy + W, 18.0, self.scale)
-        xs = sorted({ox} | {ox + s(bx) for u in t.units for bx in t.beam_centres(u)} | {ox + L})
-        for a, b in zip(xs, xs[1:]):
-            if b - a > 0.5:
-                self.dim_h(a, b, oy, -8.0, self.scale)
-        # Y chains: bolt rows of the first unit on the left, of the second unit (staggered) on the right
+        if self.scale <= 25 or len(t.units) < 3:
+            xs = sorted({ox} | {ox + s(bx) for u in t.units for bx in t.beam_centres(u)} | {ox + L})
+            for a, b in zip(xs, xs[1:]):
+                if b - a > 0.5:
+                    self.dim_h(a, b, oy, -8.0, self.scale)
+        else:
+            us = sorted(t.units, key=lambda u: u.x_mm)
+            first, last = us[0], us[-1]
+            pitch = us[1].x_mm - us[0].x_mm
+            self.dim_h(ox, ox + s(first.x_mm), oy, -8.0, self.scale)
+            self.dim_h(ox + s(first.x_mm), ox + s(first.x_mm + first.width_mm), oy, -8.0, self.scale)
+            self.dim_h(ox + s(first.x_mm + first.width_mm), ox + s(us[1].x_mm), oy, -8.0, self.scale)
+            n = len(us) - 1
+            text = f"{n} × {pitch:g} = {n * pitch:g}"
+            ctx.msp.add_linear_dim(base=(ox + s(first.x_mm), oy - 16.0), p1=(ox + s(first.x_mm), oy), p2=(ox + s(last.x_mm), oy),
+                                   text=text, dimstyle=self.dimstyle(self.scale), dxfattribs={"layer": LAYERS["dim"].name}).render()
+            self.dim_h(ox + s(last.x_mm + last.width_mm), ox + L, oy, -8.0, self.scale)
+        # Y chains: bolt rows of the first unit on the left, of the second unit (staggered) on the right (1:25 only)
         for u, x, off in ((t.units[0:1], ox, -8.0), (t.units[1:2], ox + L, 8.0)):
-            if not u:
+            if not u or self.scale > 25:
                 continue
             ys = sorted({oy} | {oy + s(p[1]) for p in t.anchor_points(u[0])} | {oy + W})
             for a, b in zip(ys, ys[1:]):
@@ -214,6 +249,7 @@ class TemplateRenderer:
             return
         u = t.units[0]
         sc = next((k for k in (10.0, 15.0, 20.0, 25.0) if u.depth_mm / k + 24.0 <= avail_h), 25.0)
+        assert sc == detail_scale(t), (sc, detail_scale(t))
         uw, ud = u.width_mm / sc, u.depth_mm / sc
         ctx.rect(ox, oy, uw, ud, "panel_dev")
         pl = (t.pedestal.length_mm or u.depth_mm) / sc
@@ -249,13 +285,27 @@ class TemplateRenderer:
     def draw_tables(self, x_right: float, y_top: float) -> None:
         ctx, t = self.ctx, self.t
         # coordinates
-        cols = [("עוגן", 16.0), ("X [mm]", 18.0), ("Y [mm]", 18.0)]
-        tw = sum(c[1] for c in cols)
-        rows = [(f"{u.tag}-{i}", x, y) for u in t.units for i, (x, y) in enumerate(t.anchor_points(u), 1)]
         rh = 4.0
         max_rows = 22
+        all_pts = [(f"{u.tag}-{i}", x, y) for u in t.units for i, (x, y) in enumerate(t.anchor_points(u), 1)]
+        if len(all_pts) <= 2 * max_rows:
+            # full list: every anchor from the datum
+            cols = [("עוגן", 16.0), ("X [mm]", 18.0), ("Y [mm]", 18.0)]
+            rows = [(tag, f"{x:.0f}", f"{y:.0f}") for tag, x, y in all_pts]
+            title = "קואורדינטות עוגנים מנקודת האפס"
+        else:
+            # per-unit table: beam centrelines + bolt rows (the pattern is on the detail)
+            cols = [("ארון", 16.0), ("X קורה שמ'", 20.0), ("X קורה ימ'", 20.0), ("Y שורה קד'", 20.0), ("Y שורה אח'", 20.0)]
+            rows = []
+            for u in t.units:
+                bl, br = t.beam_centres(u)
+                ys = sorted({y for _, y in t.anchor_points(u)})
+                rows.append((u.tag, f"{bl:.0f}", f"{br:.0f}", f"{ys[0]:.0f}/{ys[1]:.0f}" if len(ys) > 1 else f"{ys[0]:.0f}",
+                             f"{ys[-2]:.0f}/{ys[-1]:.0f}" if len(ys) > 3 else f"{ys[-1]:.0f}"))
+            title = "קורות ושורות ברגים לכל ארון (X,Y מנקודת האפס; ±30 מציר הקורה)"
+        tw = sum(c[1] for c in cols)
         chunks = [rows[i:i + max_rows] for i in range(0, len(rows), max_rows)]
-        ctx.text("קואורדינטות עוגנים מנקודת האפס", (x_right - 1.0, y_top + 1.0), 2.2, "legend", TA.BOTTOM_RIGHT, bold=True)
+        ctx.text(title, (x_right - 1.0, y_top + 1.0), 2.2, "legend", TA.BOTTOM_RIGHT, bold=True)
         xr = x_right
         for chunk in chunks:
             h = rh * (len(chunk) + 1)
@@ -264,12 +314,13 @@ class TemplateRenderer:
             for name, cw in cols:
                 ctx.text(name, (xx - cw / 2, y_top - rh / 2), 1.5, "legend", TA.MIDDLE_CENTER, bold=True)
                 xx -= cw
-                ctx.line((xx, y_top - h), (xx, y_top), "legend")
-            for i, (tag, x, y) in enumerate(chunk):
+                if xx > xr - tw + 0.5:
+                    ctx.line((xx, y_top - h), (xx, y_top), "legend")
+            for i, row in enumerate(chunk):
                 yy = y_top - rh * (i + 1.5)
                 ctx.line((xr - tw, yy + rh / 2), (xr, yy + rh / 2), "legend")
                 cx = xr
-                for (name, cw), v in zip(cols, (tag, f"{x:.0f}", f"{y:.0f}")):
+                for (name, cw), v in zip(cols, row):
                     ctx.text(v, (cx - cw / 2, yy), 1.4, "legend", TA.MIDDLE_CENTER)
                     cx -= cw
             xr -= tw + 4.0

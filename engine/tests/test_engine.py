@@ -212,3 +212,47 @@ def test_drill_template():
     assert doc.modelspace().query("DIMENSION")
     rep = audit_sheet(doc, 0, "E-20")
     assert rep.clean, (rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3], rep.text_outside[:3])
+
+
+def test_cover_and_plan():
+    from bee_cad.render import plan_sheets
+
+    des = Design.model_validate(json.loads(EXAMPLE.read_text(encoding="utf-8")))
+    plan = plan_sheets(des, ("cover", "sld", "panel"))
+    assert [e.no for e in plan] == ["E-00", "E-05", "E-P03", "E-P04"]
+    assert plan[0].kind == "cover"
+    result = build(des, ("cover", "sld"))
+    assert list(result) == ["E-00", "E-05"]
+    doc, warnings = result["E-00"]
+    assert warnings == []
+    texts = [e.dxf.text for e in doc.modelspace().query("TEXT")]
+    assert "רשימת גיליונות" in texts and "E-05" in texts
+    # a cover alone is not a set: no cover sheet when nothing else is drawn
+    assert plan_sheets(des, ("cover",)) == []
+
+
+def test_bess1_18_units_and_job(tmp_path: Path):
+    from bee_cad.audit import audit_sheet
+    from bee_cad.hive import job_record, write_job
+    from bee_cad.template import DrillTemplate, TemplateChecks, scale_text
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "bess1_drill_template_18.json"
+    des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
+    t = DrillTemplate.model_validate(des.drill_template)
+    assert len(t.units) == 18 and sum(len(t.anchor_points(u)) for u in t.units) == 144
+    assert TemplateChecks().run(t).problems == []
+    assert scale_text(t) == "1:100 / 1:15"
+    result = build(des, ("drill",))
+    doc, warnings = result["E-20"]
+    assert warnings == []
+    rep = audit_sheet(doc, 0, "E-20")
+    assert rep.clean, (rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])
+    rec = job_record(ex, ["drill"], {"dxf": tmp_path / "x.dxf"}, {"E-20": {"text_text": 0, "text_line": 0, "outside": 0}},
+                     {"E-20": []}, None, None, "2026-10-17T00:00:00+00:00")
+    assert rec["status"] == "succeeded" and rec["result"]["clean"] and rec["loop"] == "edit.cad_render"
+    p = write_job(rec, tmp_path / "job.json")
+    schema = json.loads((Path(__file__).resolve().parents[2] / "platform" / "schema" / "job.schema.json").read_text(encoding="utf-8"))
+    for k in schema["required"]:
+        assert k in rec
+    assert rec["kind"] in schema["properties"]["kind"]["enum"] and rec["status"] in schema["properties"]["status"]["enum"]
+    assert p.exists()

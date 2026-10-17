@@ -26,6 +26,9 @@ def load_design(path: Path) -> Design:
 
 
 def cmd_render(args: argparse.Namespace) -> int:
+    from datetime import datetime, timezone
+
+    started = datetime.now(timezone.utc).isoformat(timespec="seconds")
     design = load_design(Path(args.design))
     out = Path(args.out)
     stem = args.stem or Path(args.design).stem
@@ -41,10 +44,14 @@ def cmd_render(args: argparse.Namespace) -> int:
     print(f"DXF   {dxf_path}  (audit errors: {len(auditor.errors)})")
     pdf_pages: list[Path] = []
     outputs: dict[str, Path] = {"dxf": dxf_path, "design_json": Path(args.design)}
+    audits: dict[str, dict[str, int]] = {}
+    all_warnings: dict[str, list[str]] = {}
     for i, (no, (_, warnings)) in enumerate(result.items()):
         for w in warnings:
             print(f"WARN  {no}: {w}")
+        all_warnings[no] = list(warnings)
         rep = audit_sheet(doc, i, no)
+        audits[no] = {"text_text": len(rep.text_overlaps), "text_line": len(rep.text_line_collisions), "outside": len(rep.text_outside)}
         print(rep.summary())
         for c in rep.text_overlaps + rep.text_line_collisions + rep.text_outside:
             print(f"      {c.kind}: {c.a!r} / {c.b!r} @ ({c.at[0]:.0f},{c.at[1]:.0f})")
@@ -64,9 +71,16 @@ def cmd_render(args: argparse.Namespace) -> int:
         merge_pdfs(pdf_pages, set_pdf)
         outputs["pdf_set"] = set_pdf
         print(f"PDF   {set_pdf}  ({len(pdf_pages)} pages)")
+    folder = man = None
     if args.archive:
         folder, man = archive(design, outputs, Path(args.archive), stage=args.stage)
         print(f"ARCH  {folder}  ({len(man.entries)} files) → Drive: {man.drive_root}")
+    if args.job:
+        from .hive import job_record, write_job
+
+        rec = job_record(Path(args.design), sheets, outputs, audits, all_warnings, folder, man.drive_root if man else None, started)
+        job_path = write_job(rec, Path(args.job) if args.job != "auto" else out / f"{stem}_job.json")
+        print(f"JOB   {job_path}  status={rec['status']} clean={rec['result']['clean']}")
     return 0
 
 
@@ -95,13 +109,14 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("design")
     r.add_argument("--out", default="out")
     r.add_argument("--stem")
-    r.add_argument("--sheets", help="comma list of: mv,sld,panel,drill")
+    r.add_argument("--sheets", help="comma list of: cover,mv,sld,panel,drill (default: all)")
     r.add_argument("--mode", choices=["unicode", "shx"], default="unicode")
     r.add_argument("--png", action="store_true")
     r.add_argument("--pdf", action="store_true", help="one PDF per sheet + merged <stem>_SET.pdf")
     r.add_argument("--dpi", type=int, default=110)
     r.add_argument("--archive", help="archive root (mirror of 'עבודה/לקוחות חברות ומכרזים'); copies PDF/DXF/JSON into <client>/<project>/<stage>")
     r.add_argument("--stage", default="design", help="intake|survey|quote|licensing|design|execution|asmade|handover|maintenance")
+    r.add_argument("--job", help="write a Hive job record (platform/schema/job.schema.json); 'auto' = <out>/<stem>_job.json")
     r.set_defaults(func=cmd_render)
     e = sub.add_parser("from-eplan", help="eplan spec YAML + calc JSON (eplan pv design --json) → design JSON")
     e.add_argument("spec")
