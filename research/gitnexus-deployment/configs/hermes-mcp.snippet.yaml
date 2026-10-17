@@ -1,0 +1,72 @@
+# Hermes MCP registration for GitNexus.
+#
+# Paste into: ~/.config/hermes/mcp.yaml  (or wherever Hermes stores MCP servers)
+# Backup first: cp ~/.config/hermes/mcp.yaml ~/.config/hermes/mcp.yaml.bak-pre-gitnexus
+# After editing: restart Hermes to load new MCP server.
+#
+# Verify post-restart:
+#   hermes mcp list   # should show 'gitnexus' as configured server
+#   hermes mcp test gitnexus list_repos   # should return BEE app
+#
+# This config implements audit §3.1 + §5.3:
+#   - allowed_tools whitelist (10 read-only tools)
+#   - rename / cypher / group_sync OMITTED (footgun protection)
+
+mcp_servers:
+  - name: gitnexus
+    transport: stdio
+    description: "Code knowledge graph for BEE app + Alfred + Hermes source"
+    enabled: true
+
+    # === Option A: direct (if Hermes runs on bee-prod-1) ===
+    command: ["node", "/opt/gitnexus-source/gitnexus/dist/cli.js", "mcp"]
+
+    # === Option B: via SSH (if Hermes runs on Barak's PC, gitnexus on bee-prod-1) ===
+    # Uncomment if needed:
+    # command:
+    #   - ssh
+    #   - "-T"
+    #   - "-o"
+    #   - "ServerAliveInterval=30"
+    #   - "-o"
+    #   - "ServerAliveCountMax=3"
+    #   - barak@bee-prod-1
+    #   - "node /opt/gitnexus-source/gitnexus/dist/cli.js mcp"
+
+    # Whitelist of safe tools. Anything not listed here is silently filtered.
+    # Disabled (rename, cypher, group_sync) explained in disabled_tools_reasons below.
+    allowed_tools:
+      - list_repos
+      - query
+      - context
+      - impact
+      - route_map
+      - tool_map
+      - shape_check
+      - api_impact
+      - detect_changes
+      - group_list
+
+    disabled_tools_reasons:
+      rename: "Can mass-rewrite files when dry_run=false (audit §3.1). Disabled until confirm gate added."
+      cypher: "Allows arbitrary Cypher queries — for trusted operators only, not autonomous LLM."
+      group_sync: "Writes contracts.json. Not needed for BEE single-repo use."
+
+    # Environment variables passed to gitnexus subprocess
+    env:
+      GITNEXUS_REGISTRY: "/home/barak/.gitnexus/registry.json"
+      # UNDERSTAND_QUICKLY_TOKEN INTENTIONALLY OMITTED (audit §3.4)
+
+    # Per-tool-call timeout (15s — impact + cypher can be slow on cold cache)
+    timeout_ms: 15000
+
+    # Restart on crash (Hermes default behavior)
+    restart_policy: on-failure
+    restart_max: 3
+
+    # Optional: bind this server to specific intents (Hermes routes selectively)
+    intent_hints:
+      - "code-question"
+      - "design-request"
+      - "fault-analysis"
+      - "impact-check"

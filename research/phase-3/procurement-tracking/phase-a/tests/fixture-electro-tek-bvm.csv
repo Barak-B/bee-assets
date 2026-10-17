@@ -1,0 +1,3 @@
+po_number,supplier,description,sku,qty,unit,unit_price,ordered_at,expected_at,currency
+PO-2026-002,"אלקטרו-טק בע""מ",כבל NYY 5x6,ET-NYY56,80,m,18.50,18/06/2026,,ILS
+PO-2026-002,"אלקטרו-טק בע""מ",ארון חשמל TPN 24,ET-AR24,2,pcs,2150.00,18/06/2026,,ILS

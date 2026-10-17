@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hermes ↔ Alfred — מפת כפילות ושיתוף פעולה</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --bg-2: #1a2027;
+    --bg-3: #232b35;
+    --line: #2d3742;
+    --text: #e8edf2;
+    --text-dim: #9aa5b1;
+    --accent: #ffb547;
+    --accent-2: #4dabf7;
+    --green: #34c77b;
+    --yellow: #ffd166;
+    --red: #ef5350;
+    --blue: #4dabf7;
+    --purple: #b388ff;
+    --pink: #f06292;
+    --hermes: #ffb547;
+    --alfred: #b388ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Segoe UI", "Heebo", "Assistant", -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.6;
+  }
+  header {
+    background: linear-gradient(135deg, #1a2027 0%, #0f1419 100%);
+    padding: 36px 32px;
+    border-bottom: 2px solid var(--red);
+  }
+  header h1 { font-size: 2.2em; margin-bottom: 6px; }
+  header .subtitle { color: var(--text-dim); font-size: 1.02em; }
+  header .updated { color: var(--accent); font-size: 0.85em; margin-top: 10px; }
+
+  main { max-width: 1280px; margin: 0 auto; padding: 32px; }
+  section { margin-bottom: 52px; }
+  h2 {
+    font-size: 1.6em; margin-bottom: 18px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--line); color: var(--accent);
+  }
+  h3 { font-size: 1.15em; margin-bottom: 10px; color: var(--text); }
+  p { color: var(--text-dim); margin-bottom: 12px; }
+  .lead { font-size: 1.05em; line-height: 1.8; color: var(--text); margin-bottom: 18px; }
+
+  .alert {
+    background: rgba(239, 83, 80, 0.1);
+    border: 1px solid var(--red);
+    border-right: 4px solid var(--red);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+  .alert h3 { color: var(--red); margin-bottom: 6px; }
+  .alert.warn { background: rgba(255, 209, 102, 0.08); border-color: var(--yellow); border-right-color: var(--yellow); }
+  .alert.warn h3 { color: var(--yellow); }
+  .alert.ok { background: rgba(52, 199, 123, 0.08); border-color: var(--green); border-right-color: var(--green); }
+  .alert.ok h3 { color: var(--green); }
+
+  .pill {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 0.78em; font-weight: 600; margin-left: 4px;
+  }
+  .pill-green { background: rgba(52,199,123,0.15); color: var(--green); }
+  .pill-yellow { background: rgba(255,209,102,0.15); color: var(--yellow); }
+  .pill-red { background: rgba(239,83,80,0.15); color: var(--red); }
+  .pill-blue { background: rgba(77,171,247,0.15); color: var(--blue); }
+  .pill-purple { background: rgba(179,136,255,0.15); color: var(--purple); }
+
+  .dup-table, .arch-table, .cap-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--bg-2); border-radius: 10px; overflow: hidden;
+  }
+  .dup-table th, .dup-table td,
+  .arch-table th, .arch-table td,
+  .cap-table th, .cap-table td {
+    padding: 10px 14px; text-align: right;
+    border-bottom: 1px solid var(--line); font-size: 0.9em;
+    vertical-align: top;
+  }
+  .dup-table th, .arch-table th, .cap-table th {
+    background: var(--bg-3); color: var(--accent); font-weight: 600;
+  }
+  .dup-table tr:last-child td, .arch-table tr:last-child td, .cap-table tr:last-child td { border-bottom: none; }
+  .dup-table code, .arch-table code, .cap-table code {
+    background: var(--bg-3); padding: 1px 5px; border-radius: 3px;
+    font-family: "Cascadia Code", monospace; font-size: 0.83em;
+    color: var(--accent-2);
+  }
+  .hermes-col { color: var(--hermes); font-weight: 600; }
+  .alfred-col { color: var(--alfred); font-weight: 600; }
+
+  .arch-card {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-bottom: 16px;
+    border-right: 5px solid var(--accent);
+  }
+  .arch-card.recommended { border-right-color: var(--green); background: linear-gradient(90deg, rgba(52,199,123,0.06) 0%, var(--bg-2) 30%); }
+  .arch-card.bad { border-right-color: var(--red); }
+  .arch-card h3 { font-size: 1.15em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .arch-card .pros, .arch-card .cons {
+    margin-top: 8px;
+    font-size: 0.9em;
+    color: var(--text-dim);
+  }
+  .arch-card .pros::before { content: "✅ "; color: var(--green); }
+  .arch-card .cons::before { content: "⚠️ "; }
+  .arch-card .effort {
+    color: var(--accent-2);
+    font-size: 0.85em;
+    margin-top: 6px;
+    font-weight: 600;
+  }
+
+  .ascii-diagram {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 0.85em;
+    line-height: 1.5;
+    overflow-x: auto;
+    direction: ltr;
+    text-align: left;
+    color: var(--accent-2);
+    white-space: pre;
+    margin: 14px 0;
+  }
+
+  .cap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .cap-card {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .cap-card .title {
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .cap-card .desc {
+    color: var(--text-dim);
+    font-size: 0.88em;
+    line-height: 1.5;
+  }
+  .cap-card .src {
+    color: var(--text-dim);
+    font-size: 0.75em;
+    margin-top: 6px;
+  }
+
+  .task {
+    display: flex; align-items: flex-start;
+    background: var(--bg-2); padding: 12px 16px;
+    border-radius: 8px; margin-bottom: 8px;
+    border-right: 4px solid var(--line); gap: 12px;
+  }
+  .task.crit { border-right-color: var(--red); }
+  .task.imp  { border-right-color: var(--yellow); }
+  .task.nice { border-right-color: var(--green); }
+  .task-num {
+    width: 28px; height: 28px;
+    background: var(--bg-3); color: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; flex-shrink: 0;
+  }
+  .task-body { flex: 1; }
+  .task-title { font-weight: 600; margin-bottom: 3px; }
+  .task-detail { color: var(--text-dim); font-size: 0.88em; }
+  .task-meta { color: var(--accent-2); font-size: 0.78em; margin-top: 4px; }
+
+  footer {
+    margin-top: 60px; padding: 24px 32px;
+    border-top: 1px solid var(--line); color: var(--text-dim);
+    font-size: 0.85em; text-align: center; background: var(--bg-2);
+  }
+  footer code {
+    background: var(--bg-3); padding: 1px 6px; border-radius: 3px;
+    font-family: "Cascadia Code", monospace; color: var(--accent-2);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🐝 Hermes ↔ 🤖 Alfred — מפת כפילות ושיתוף פעולה</h1>
+  <div class="subtitle">ניתוח מבוסס בדיקה חיה + 2 סוכני מחקר web + מסמך migration שכבר קיים</div>
+  <div class="updated">📅 נכתב 2026-05-25 · מסמך נלווה ל-<code>topology.md</code> ו-<code>capability-tree.md</code></div>
+</header>
+
+<main>
+
+<!-- HEADLINE -->
+<section>
+  <div class="alert">
+    <h3>⚠️ המצב כיום: כפילות פעילה + סיכון טכני</h3>
+    <p style="color: var(--text);">
+      שתי המערכות (Hermes &amp; OpenClaw) מריצות <strong>Baileys מאותו מספר טלפון</strong> — תופסות 2 מתוך 4 device slots של WhatsApp.
+      ה-Baileys community מתעד שגיאות <code>Stream Errored (conflict)</code>, מחיקות messages.upsert בשל race conditions, וכפיית logout מצד הטלפון
+      (GitHub issues #1052, #965, #2110). <strong>זו ארכיטקטורה לא יציבה.</strong>
+    </p>
+    <p style="color: var(--text); margin-top: 8px;">
+      📌 הפתרון שכבר התחלת בו: <code>openclaw-to-hermes-migration</code> skill טעון 11 פעמים ב-14 ימים אחרונים. ההכרעה אדריכלית כבר נעשתה — צריך לסיים.
+    </p>
+  </div>
+</section>
+
+<!-- DUPLICATION MAP -->
+<section>
+  <h2>🔁 מפת כפילויות — מה עושים שניהם</h2>
+  <p class="lead">בדיקה צד-לצד של 10 קטגוריות. ב-7 מתוך 10 יש כפילות פעילה.</p>
+
+  <table class="dup-table">
+    <thead>
+      <tr>
+        <th>קטגוריה</th>
+        <th class="hermes-col">🐝 Hermes</th>
+        <th class="alfred-col">🤖 Alfred (OpenClaw)</th>
+        <th>סטטוס</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>WhatsApp Baileys session</strong></td>
+        <td>פעיל — <code>~/.hermes/platforms/whatsapp/session/</code> · 20,832 keys</td>
+        <td>פעיל מ-2026-05-24 — <code>~/.openclaw/credentials/whatsapp/default/</code></td>
+        <td><span class="pill pill-red">כפילות מסוכנת</span></td>
+      </tr>
+      <tr>
+        <td><strong>LLM Agent Runtime</strong></td>
+        <td>Python Gateway · 280.6M tokens/14d · DeepSeek-v4-pro · 1,402 cron sessions</td>
+        <td>OpenClaw Gateway · ~30K tokens מאז ההחייאה · DeepSeek-chat (v3.2)</td>
+        <td><span class="pill pill-red">כפילות</span></td>
+      </tr>
+      <tr>
+        <td><strong>Cron Scheduler</strong></td>
+        <td><code>~/.hermes/sessions.db</code> SQLite · 1402 sessions/14d</td>
+        <td><code>~/.openclaw/cron/jobs.json</code> · 16 jobs · 11 פעילים</td>
+        <td><span class="pill pill-red">כפילות</span></td>
+      </tr>
+      <tr>
+        <td><strong>Firecrawl skill</strong></td>
+        <td>14 variants ב-<code>~/.hermes/skills/</code></td>
+        <td>13 variants ב-<code>~/.openclaw/skills/</code></td>
+        <td><span class="pill pill-red">כפילות מלאה</span></td>
+      </tr>
+      <tr>
+        <td><strong>gov.il RSS / regulatory</strong></td>
+        <td><code>skills/research/regulatory-rss-monitoring</code></td>
+        <td><code>alfred-gov-rss.js</code> + cron 09:30</td>
+        <td><span class="pill pill-yellow">חופפים-חלקית</span></td>
+      </tr>
+      <tr>
+        <td><strong>Business integrations</strong></td>
+        <td><code>skills/software-development/barak-business-integrations</code></td>
+        <td>27 alfred-*.js (Monday, Gmail, SolarEdge, Tracer, וכו')</td>
+        <td><span class="pill pill-yellow">חלקית</span></td>
+      </tr>
+      <tr>
+        <td><strong>Calendar</strong></td>
+        <td>דרך <code>google-workspace</code> skill</td>
+        <td><code>alfred-calendar.js</code> <span class="pill pill-red">נמחק במיגרציה</span></td>
+        <td><span class="pill pill-green">לא כפילות יותר</span></td>
+      </tr>
+      <tr>
+        <td><strong>Memory / state</strong></td>
+        <td>state.db 167MB · אבל <code>~/.hermes/memories/</code> ריק ⚠️</td>
+        <td><code>workspace/memory/YYYY-MM-DD.md</code> · אחרון 2026-05-17</td>
+        <td><span class="pill pill-yellow">פצול</span></td>
+      </tr>
+      <tr>
+        <td><strong>Activity reporting</strong></td>
+        <td><code>skills/software-development/barak-activity-reporting</code></td>
+        <td><code>activity-neri</code> cron (כיום disabled)</td>
+        <td><span class="pill pill-yellow">חופפים</span></td>
+      </tr>
+      <tr>
+        <td><strong>bee-hive integration</strong></td>
+        <td>פעיל — bee-hive שולח via <code>POST :3000/send</code></td>
+        <td>אין</td>
+        <td><span class="pill pill-green">Hermes wins</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="alert warn" style="margin-top: 20px;">
+    <h3>🎯 מסקנה</h3>
+    <p style="color: var(--text);">
+      <strong>3 כפילויות אדומות</strong> (Baileys, LLM Agent, Cron) — דורשות הכרעה ארכיטקטורית.
+      <strong>4 כפילויות צהובות</strong> — חופפים שאפשר לאחד בעבודה.
+      <strong>3 דברים שכבר התיישבו</strong> (Calendar, bee-hive integration).
+    </p>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section>
+  <h2>🏗️ שלוש ארכיטקטורות אפשריות</h2>
+  <p class="lead">לפי המחקר (mautrix-whatsapp + Matrix bridge patterns + Baileys community), הדפוס הסטנדרטי הוא: <strong>bridge אחד + סוכן(ים) צרכנים</strong>.</p>
+
+  <div class="arch-card bad">
+    <h3>❌ אופציה A: השאר את שניהם כפי שהם</h3>
+    <p>שני Baileys, שני agents, שני cron schedulers — מקבילים.</p>
+    <div class="pros">פשוט לא לעשות כלום.</div>
+    <div class="cons">סיכון conflict-401 מתמשך · 2/4 device slots בזבוז · כפילויות אמתיות · מבלבל איפה state אמתי · double-processing של אותה הודעה (race condition ב-messages.upsert).</div>
+    <div class="effort">⏱️ אפס מאמץ · 🟥 חוב טכני גדל ישא לאורך זמן</div>
+  </div>
+
+  <div class="arch-card recommended">
+    <h3>🟢 אופציה B: Hermes = Bridge + General Agent · Alfred = Specialist Consumer (Recommended)</h3>
+    <p>Hermes הוא ה-WhatsApp owner היחיד. Alfred מפסיק את ה-Baileys שלו ושומע inbound רק דרך webhook מ-Hermes. Alfred שולח outbound רק דרך <code>POST :3000/send</code>. שניהם ממשיכים להריץ LLM-agent — לכל אחד תפקיד.</p>
+    <div class="ascii-diagram">┌──────────────────────────────────────────────────┐
+│  WhatsApp — 1 device slot                        │
+└──────────────┬───────────────────────────────────┘
+               │
+┌──────────────▼────────────────────┐
+│  🐝 Hermes Bridge (Baileys)        │  ← single WA owner
+│  port 3000  /send  /messages       │
+└────┬──────────────┬────────────────┘
+     │              │
+   webhook       webhook
+     │              │
+┌────▼─────┐  ┌─────▼──────┐  ┌──────────┐
+│ Hermes   │  │ Alfred     │  │ bee-hive │
+│ Agent    │  │ (special-  │  │ (already)│
+│ (general)│  │  ized)     │  │          │
+└──────────┘  └────────────┘  └──────────┘
+- general     - Hebrew       - daily
+  conversa-     digests        digest
+  tion        - Israeli
+- 25 skills     regulatory
+- bee-business- BEE-deep    </div>
+    <div class="pros">פותר את ה-Baileys conflict · משחרר 1 device slot · single inbound stream → אין double-processing · LLM gateway point מוגדר במרכז · bee-hive/Alfred/bee-ai-watcher שותפים לאותה history</div>
+    <div class="cons">דורש הסבת Alfred outbound מ-Baileys → HTTP · ביטול Alfred Baileys (~2 שעות) · 2 LLM runtimes פעילים (יקר יותר)</div>
+    <div class="effort">⏱️ מאמץ: 4-8 שעות · 🟢 רמת סיכון נמוכה (reversible)</div>
+  </div>
+
+  <div class="arch-card">
+    <h3>🔵 אופציה C: Full Migration — סיום ה-openclaw-to-hermes-migration</h3>
+    <p>30 ה-alfred-*.js הופכים לסקריפטים שנקראים מתוך Hermes skills. OpenClaw הופך לסקריפט-host בלבד (לא runtime). Decommission של OpenClaw gateway. הכל מתבצע ב-Hermes.</p>
+    <div class="ascii-diagram">┌──────────────────────────────────────────────────┐
+│  WhatsApp — 1 device slot                        │
+└──────────────┬───────────────────────────────────┘
+               │
+┌──────────────▼────────────────────┐
+│  🐝 Hermes (Bridge + Agent)        │  ← הכול בידי אחת
+│  - Python gateway                  │
+│  - All 30 alfred-*.js as skills    │
+│  - All 16 cron jobs migrated       │
+└────┬───────────────────────────────┘
+     │
+┌────▼─────┐  ┌──────────┐
+│ bee-hive │  │ bee-ai-  │
+│          │  │ watcher  │
+└──────────┘  └──────────┘
+
+✗ OpenClaw decommissioned</div>
+    <div class="pros">מקור-אמת יחיד · אין כפילות · observability אחיד · עלות LLM נמוכה (one runtime) · קל לתחזק</div>
+    <div class="cons">מאמץ ניכר (1-2 שבועות) · risk של regression בזמן ההגירה · 30 scripts צריכים להפוך ל-Hermes skills · 16 cron payloads לשכתב</div>
+    <div class="effort">⏱️ מאמץ: 40-80 שעות · 🟡 סיכון בינוני · המטרה האולטימטיבית</div>
+  </div>
+
+  <div class="alert ok" style="margin-top: 20px;">
+    <h3>💡 המלצה: B עכשיו, C במהלך 4 שבועות</h3>
+    <p style="color: var(--text);">
+      <strong>השבוע:</strong> בצע אופציה B — Alfred מפסיק לדבר עם WhatsApp ישירות. בלי שינוי קוד גדול, רק העברת outbound ל-Hermes ההפסקה של Alfred Baileys.<br>
+      <strong>השבועיים-3:</strong> migrate cron jobs ל-Hermes (16 jobs). השאר את alfred-*.js כסקריפטים standalone.<br>
+      <strong>חודש:</strong> wrap כל alfred-*.js כ-Hermes skill. decommission OpenClaw runtime.
+    </p>
+  </div>
+</section>
+
+<!-- NEW CAPABILITIES -->
+<section>
+  <h2>✨ יכולות חדשות שנפתחות מהשילוב</h2>
+  <p class="lead">דברים שניתן לבנות <strong>רק</strong> כשיש bridge מרכזי + agents מתמחים. מהמחקר על architecture patterns + WhatsApp 2026 capabilities:</p>
+
+  <div class="cap-grid">
+
+    <div class="cap-card">
+      <div class="title">🎙️ Voice notes end-to-end</div>
+      <div class="desc">Hermes מקבל voice → Groq Whisper → טקסט עובר לAlfred → סיכום עברי → תגובה (טקסט או TTS חזרה). Hermes כבר תמיד מקליט; Alfred רק מסכם.</div>
+      <div class="src">📚 Meta voice chats 2026 · respond.io</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">📄 חשבוניות + מסמכים (OCR)</div>
+      <div class="desc">תמונה נכנסת ב-WA → Hermes שומר את ה-blob → Alfred קורא דרך Vision API → מחלץ סכום/לקוח/תאריך → BEE.Document. עובד עם PDF גם.</div>
+      <div class="src">📚 HN: full WA assistant stack</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">📍 לוג ביקור באתר (Location)</div>
+      <div class="desc">live-location ב-WA + תמונות → Hermes מאגד → Alfred מקשר ל-sites/&lt;X&gt;.md אוטומטית. EXIF מהתמונות = הוכחה.</div>
+      <div class="src">📚 Baileys location support</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">🚨 Inverter alarm triage</div>
+      <div class="desc">SolarEdge/Sungrow alarm → Alfred מסווג רמת חומרה → שאלות תיקוף ב-WA דרך Hermes → המלצת reboot/escalate. (35% הפחתת truck rolls לפי Digiqt)</div>
+      <div class="src">📚 Digiqt · Fieldproxy · pv-magazine</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">📊 RAG על 879K הודעות</div>
+      <div class="desc">Hermes כבר מחזיק את כל ה-WhatsApp history (11.5 שנים). לעטוף ב-pgvector/Qdrant + Hebrew embedding → Alfred מסוגל לענות "מתי דיברנו לאחרונה עם X על Y?".</div>
+      <div class="src">📚 mayankjh05 medium · n8n WA RAG template</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">🎯 Reactions כ-control surface</div>
+      <div class="desc">👍 emoji על draft → Alfred שולח. ❌ → ביטול. ⭐ → escalate. כיום לא מנוצל בעולם — ייחודי לבריאדפת BEE. Hermes צופה ב-reaction events.</div>
+      <div class="src">📚 Baileys event emitters · "reactions as control" = unbuilt territory</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">📣 קמפיינים outbound עם rate limit</div>
+      <div class="desc">Hermes /send queue + priority lanes (transactional &gt; marketing). Alfred מנסח message-per-customer; Hermes שולח 20 msg/sec עם backoff. שימושי לעדכונים ללקוחות פעילים (קריאה לבדיקת מערכת אחרי גל ברקים).</div>
+      <div class="src">📚 WASenderApi · rate-limit patterns</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">🌐 Multi-channel (Telegram next)</div>
+      <div class="desc">Hermes כבר תיכנן Telegram adapter. אותו agent (Alfred OR Hermes) עונה ב-WA וב-Telegram. שדרוג ROI גבוה: 2 דקות configuration.</div>
+      <div class="src">📚 Hermes topology Wave 3 · matrix bridges</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">🔍 LLM Gateway observability</div>
+      <div class="desc">בין bridge ל-agent — Helicone/Langfuse/AgentGateway. לוג של כל decision-per-message, A/B prompts על traffic אמיתי, cost per skill. Hermes כבר יש לו /insights — להרחיב.</div>
+      <div class="src">📚 AgentGateway+Langfuse · Helicone</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">🇮🇱 Israeli skills marketplace</div>
+      <div class="desc"><code>danielrosehill/Israeli-AI-Agents-And-MCPs</code> + <code>agentskills.co.il</code> מכילים skills קיימים: Mas Hachnasa scraping (Playwright), Bituach Leumi automation, Hebrew NLP. אפשר לאמץ במקום לכתוב מאפס.</div>
+      <div class="src">📚 GitHub:danielrosehill · lobehub</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">🤖 Multi-agent task-bus</div>
+      <div class="desc">L3 ב-Hermes 4-Levels Reference (shannholmberg). bee-hive = orchestrator. Alfred = solar/electrical specialist. Hermes = transport + general. inbox→working→outbox→done עם handoff.</div>
+      <div class="src">📚 @shannholmberg · Hermes meta-prompt.md</div>
+    </div>
+
+    <div class="cap-card">
+      <div class="title">🔁 Replay + A/B prompts</div>
+      <div class="desc">Hermes שומר את כל ה-inbound. גרסת prompt חדשה? להריץ על 100 הודעות אחרונות offline, להשוות outputs לפני deploy. שינוי prompt = אפס risk לproduction.</div>
+      <div class="src">📚 LangSmith · Helicone · Langfuse</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ACTIONABLE TASKS -->
+<section>
+  <h2>✅ Roadmap מבוצע — 4 שבועות לעבודה משולבת מושלמת</h2>
+  <p class="lead">מסודר לפי שבועות. אופציה B → C בצורה הדרגתית.</p>
+
+  <h3 style="color: var(--red); margin-top: 24px;">🔴 שבוע 1: עצירת ה-Baileys כפיל</h3>
+
+  <div class="task crit">
+    <div class="task-num">1</div>
+    <div class="task-body">
+      <div class="task-title">לוודא ש-Hermes פעיל ויציב כ-bridge יחיד</div>
+      <div class="task-detail">בדיקה: <code>hermes gateway status</code> · ודא <code>✓ whatsapp connected</code> ב-<code>gateway.log</code> · self-ping 24 שעות.</div>
+      <div class="task-meta">⏱️ 10 דקות · 🟢 כבר אומת היום</div>
+    </div>
+  </div>
+
+  <div class="task crit">
+    <div class="task-num">2</div>
+    <div class="task-body">
+      <div class="task-title">להפסיק Baileys ב-Alfred (השבת WhatsApp plugin ב-openclaw.json)</div>
+      <div class="task-detail">לערוך <code>openclaw.json</code>: <code>plugins.entries.whatsapp.enabled: false</code>. גם <code>channels.whatsapp.enabled: false</code>. Restart gateway. תהיה לך session slot פנוי + אפס conflict risk.</div>
+      <div class="task-meta">⏱️ 15 דקות · 🟡 דורש Alfred restart</div>
+    </div>
+  </div>
+
+  <div class="task crit">
+    <div class="task-num">3</div>
+    <div class="task-body">
+      <div class="task-title">להמיר Alfred outbound לקריאות HTTP ל-Hermes</div>
+      <div class="task-detail">כל cron payload שיש בו <code>delivery.channel: whatsapp</code> צריך לקרוא <code>curl POST http://127.0.0.1:3000/send</code> במקום OpenClaw's send. 11 cron payloads כיום.</div>
+      <div class="task-meta">⏱️ 2-3 שעות · 🟡 רגיש — לבדוק אחד-אחד</div>
+    </div>
+  </div>
+
+  <div class="task crit">
+    <div class="task-num">4</div>
+    <div class="task-body">
+      <div class="task-title">לחבר Alfred inbound ל-Hermes webhook</div>
+      <div class="task-detail">Hermes פולט POST לכל inbound. אופציות: (א) Alfred מאזין על port חדש לwebhook · (ב) שיתוף DB sessions · (ג) Alfred קורא <code>/messages</code> long-poll. אופציה (ג) הכי קלה.</div>
+      <div class="task-meta">⏱️ 3-4 שעות · 🟡 דורש Alfred patch</div>
+    </div>
+  </div>
+
+  <h3 style="color: var(--yellow); margin-top: 24px;">🟡 שבוע 2: איחוד החפיפות הצהובות</h3>
+
+  <div class="task imp">
+    <div class="task-num">5</div>
+    <div class="task-body">
+      <div class="task-title">לאחד gov.il RSS — לבטל את הכפילות</div>
+      <div class="task-detail">לבחור: Hermes <code>regulatory-rss-monitoring</code> או Alfred <code>alfred-gov-rss.js</code>. Hermes כבר יותר מאורגן — לבטל את Alfred cron + מחיקת alfred-gov-rss.js.</div>
+      <div class="task-meta">⏱️ 30 דקות · 🟢 ROI גבוה (פחות בלגן)</div>
+    </div>
+  </div>
+
+  <div class="task imp">
+    <div class="task-num">6</div>
+    <div class="task-body">
+      <div class="task-title">לאחד firecrawl — להסיר מאחד מהמקומות</div>
+      <div class="task-detail">13 firecrawl ב-Alfred · 14 ב-Hermes. <code>npm uninstall</code> מ-Alfred — הם זמינים דרך Hermes ע"י call ל-Python skill.</div>
+      <div class="task-meta">⏱️ 15 דקות · 🟢 חוסך 100MB דיסק</div>
+    </div>
+  </div>
+
+  <div class="task imp">
+    <div class="task-num">7</div>
+    <div class="task-body">
+      <div class="task-title">להחיות memory writing</div>
+      <div class="task-detail">memory/YYYY-MM-DD.md הפסיק 2026-05-17. Hermes <code>memories/</code> ריק. לבחור איפה memory חי (Hermes preferred), לאמת ש-cron כותב.</div>
+      <div class="task-meta">⏱️ 1 שעה · 🟡 חיוני ל-urgent-digest cron</div>
+    </div>
+  </div>
+
+  <div class="task imp">
+    <div class="task-num">8</div>
+    <div class="task-body">
+      <div class="task-title">לפתור את כפילות LLM credentials</div>
+      <div class="task-detail">Hermes יש לו 5 keys (Anthropic·Gemini·GitHub·Groq·Perplexity). Alfred יש DeepSeek+Anthropic+Gemini. לאחד ל-secret-store אחד (וודא שאין env var traps כמו שמצאנו).</div>
+      <div class="task-meta">⏱️ 45 דקות · 🟢 מונע incidents עתידיים</div>
+    </div>
+  </div>
+
+  <h3 style="color: var(--green); margin-top: 24px;">🟢 שבועות 3-4: מיגרציה ויכולות חדשות</h3>
+
+  <div class="task nice">
+    <div class="task-num">9</div>
+    <div class="task-body">
+      <div class="task-title">להמיר 16 cron jobs ל-<code>hermes cron</code></div>
+      <div class="task-detail">השלב הבא ב-migration skill (Step 6). Hermes cron יש לו SQLite-backed state. אחרי המעבר, לסגור את OpenClaw cron לגמרי.</div>
+      <div class="task-meta">⏱️ 1 יום · 🟢 ROI גבוה — שליטה אחת</div>
+    </div>
+  </div>
+
+  <div class="task nice">
+    <div class="task-num">10</div>
+    <div class="task-body">
+      <div class="task-title">לבנות voice-end-to-end</div>
+      <div class="task-detail">Hermes מקבל voice → Groq Whisper → Alfred מסכם → תגובה. כל הכלים זמינים, ייחבור inbound ל-Whisper.</div>
+      <div class="task-meta">⏱️ 4 שעות · 🟢 כל הכלים זמינים</div>
+    </div>
+  </div>
+
+  <div class="task nice">
+    <div class="task-num">11</div>
+    <div class="task-body">
+      <div class="task-title">להוסיף Telegram channel ל-Hermes</div>
+      <div class="task-detail">Hermes כבר תכנן את זה. dual-channel מאותו agent. שינוי קוד מינימלי.</div>
+      <div class="task-meta">⏱️ 2 שעות · 🟢 הרחבת ערוצים</div>
+    </div>
+  </div>
+
+  <div class="task nice">
+    <div class="task-num">12</div>
+    <div class="task-body">
+      <div class="task-title">RAG על 879K הודעות (WhatsApp history)</div>
+      <div class="task-detail">embedding (Hebrew-aware) + Chroma/pgvector + מטא-data filter (sender, date, group). שאילתות סמנטיות שלא היו אפשריות עד היום.</div>
+      <div class="task-meta">⏱️ 1-2 ימים · 🟢 superpower חדש</div>
+    </div>
+  </div>
+
+  <div class="task nice">
+    <div class="task-num">13</div>
+    <div class="task-body">
+      <div class="task-title">להוסיף LLM Gateway (Langfuse/Helicone)</div>
+      <div class="task-detail">לוג + cost-per-call + A/B prompts בין bridge ל-agent. בסיס לכל אופטימיזציה עתידית.</div>
+      <div class="task-meta">⏱️ 4 שעות · 🟢 observability foundation</div>
+    </div>
+  </div>
+
+  <div class="task nice">
+    <div class="task-num">14</div>
+    <div class="task-body">
+      <div class="task-title">לאמץ Israeli MCP skills marketplace</div>
+      <div class="task-detail"><code>danielrosehill/Israeli-AI-Agents-And-MCPs</code> + <code>agentskills.co.il</code>. במקום לכתוב license-tracker + bituach-leumi מאפס.</div>
+      <div class="task-meta">⏱️ 1 יום · 🟢 חיסכון של שבועות</div>
+    </div>
+  </div>
+
+</section>
+
+<!-- DATA -->
+<section>
+  <h2>📚 מקורות וקישורים</h2>
+  <p class="lead">המסמך מבוסס על קריאה ישירה של:</p>
+  <ul style="color: var(--text-dim); margin-right: 24px; margin-bottom: 12px;">
+    <li><code>E:\bee-hermes\docs\topology.md</code> (v1.3, 2026-05-24)</li>
+    <li><code>~/AppData/Local/hermes/skills/migration/openclaw-to-hermes-migration/SKILL.md</code></li>
+    <li><code>E:\Desktop\OpenClawAgent\docs\capability-tree.md</code> (v2.1)</li>
+    <li><code>~/.openclaw/cron/jobs.json</code> (16 cron jobs)</li>
+    <li><code>~/.openclaw/openclaw.json</code> (config)</li>
+  </ul>
+  <p class="lead">מחקר web — קישורים מרכזיים:</p>
+  <ul style="color: var(--text-dim); margin-right: 24px; font-size: 0.9em;">
+    <li>Matrix bridge pattern: <code>github.com/matrix-org/matrix-appservice-bridge</code></li>
+    <li>mautrix-whatsapp architecture: <code>deepwiki.com/mautrix/whatsapp/2-architecture</code></li>
+    <li>Baileys conflict-401: <code>github.com/WhiskeySockets/Baileys/issues/1052</code></li>
+    <li>WA RAG template: <code>n8n.io/workflows/6771</code></li>
+    <li>Israeli AI agents: <code>github.com/danielrosehill/Israeli-AI-Agents-And-MCPs</code></li>
+    <li>LangGraph WA template: <code>github.com/lgesuellip/langgraph-whatsapp-agent</code></li>
+    <li>4-Levels reference: post @shannholmberg (מהTopology v1.0)</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>🐝 Hermes vs 🤖 Alfred · ניתוח אדריכלי + roadmap לעבודה משולבת</p>
+  <p>📂 מסמך: <code>E:\bee-hermes\docs\hermes-alfred-cooperation.html</code></p>
+  <p>📅 נוצר 2026-05-25 לאחר 12 שעות עבודה בהחייאת Alfred · בעקבות שאלת ברק על כפילות ושיתוף פעולה</p>
+</footer>
+
+</body>
+</html>

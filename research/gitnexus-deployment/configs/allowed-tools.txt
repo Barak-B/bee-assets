@@ -1,0 +1,43 @@
+# GitNexus MCP — Allowed Tools Whitelist
+#
+# Per gitnexus-audit.md §3.1 + §5.3.
+# Source of truth — Alfred + Hermes configs reference this list.
+#
+# 10 read-only tools allowed. 3 excluded.
+
+# === ALLOWED (read-only or low-risk) ===
+list_repos          # Discovery — which repos are indexed
+query               # BM25 + semantic search across the graph
+context             # Symbol context: definition + references + neighbors
+impact              # Upstream impact analysis ("if I change X, what breaks")
+route_map           # HTTP routes + handlers in the repo
+tool_map            # MCP tool definitions found in the repo (meta)
+shape_check         # Type/shape consistency checks
+api_impact          # API surface diff for a proposed change
+detect_changes      # Git diff vs index — what's stale
+group_list          # List repo groups (BEE has 1, but harmless)
+
+
+# === EXCLUDED (high-risk or unnecessary) ===
+# rename            # Mass file-rewrite when dry_run=false. Audit §3.1.
+# cypher            # Raw Cypher queries — trusted operator only.
+# group_sync        # Writes contracts.json. Not needed for BEE single-repo.
+
+
+# === RATIONALE ===
+#
+# Why a whitelist (not blacklist):
+# - Future GitNexus versions may add new write-capable tools
+# - Blacklist would silently allow them; whitelist requires explicit re-review
+# - When upgrading gitnexus version: review new tools list, add to whitelist only after audit
+#
+# Why 10 read-only is sufficient for BEE:
+# - Engineering-agent (Phase 3b) needs: context, impact, query — to understand BEE code
+# - Tender-agent (Phase 3a) needs: query, tool_map — to find existing tender code
+# - Customer-success-agent (Phase 3c) needs: route_map — to know portal endpoints
+# - Alfred/Hermes general: list_repos, query, context, detect_changes — daily use
+#
+# rename use case (when we eventually want it):
+# - For now we draft renames manually + Barak applies via IDE
+# - Future: add confirm-gate (Alfred posts diff to Drafts group → Barak approves → execute)
+# - Then re-evaluate adding rename to this whitelist with dry_run hard-enforced

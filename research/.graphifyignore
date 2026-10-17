@@ -1,0 +1,25 @@
+# Ignore non-content directories during graphify extraction
+local-state/openclaw/
+local-state/hermes/
+*/cache/
+graphify-out/cache/
+
+# Archive — already-pushed reports we don't need re-extracted
+gitnexus-deployment/configs/
+graphify-deployment/configs/
+
+# Demo file is already a graphify output
+graphify-deployment/demo/
+
+# Markdown IS now in scope — the architecture brain (BRAIN.md, the 6 LLDs, the spine,
+# protocol_hive, decisions) lives in .md and must be graphed. This requires an LLM backend
+# for doc chunking; that works LOCALLY with --backend=deepseek (the earlier *.md exclusion
+# was a cloud-only workaround because claude-cli hung in the container — no longer relevant
+# since the local hook uses DeepSeek). Re-run `graphify extract . --update --backend=deepseek`
+# locally to pull the docs in.
+#
+# Still ignored (heavy/noise, not architecture knowledge):
+*.html
+*.txt
+*.yaml
+*.yml

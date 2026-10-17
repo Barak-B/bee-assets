@@ -1,0 +1,10 @@
+Chat channels:
+- WhatsApp default: configured, enabled
+
+Auth providers (OAuth + API keys):
+- none
+
+Usage:
+  Claude: HTTP 401: Invalid bearer token
+
+Docs: https://docs.openclaw.ai/gateway/configuration

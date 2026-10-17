@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alfred ⚡ Hermes — מבנה מלא + מפת השלמה</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --bg-2: #1a2027;
+    --bg-3: #232b35;
+    --line: #2d3742;
+    --text: #e8edf2;
+    --text-dim: #9aa5b1;
+    --accent: #ffb547;
+    --accent-2: #4dabf7;
+    --green: #34c77b;
+    --yellow: #ffd166;
+    --red: #ef5350;
+    --blue: #4dabf7;
+    --purple: #b388ff;
+    --pink: #f06292;
+    --hermes: #ffb547;
+    --alfred: #b388ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Segoe UI", "Heebo", "Assistant", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.6;
+  }
+  header {
+    background: linear-gradient(135deg, #1a2027 0%, #0f1419 100%);
+    padding: 40px 32px;
+    border-bottom: 2px solid var(--accent);
+  }
+  header h1 { font-size: 2.4em; margin-bottom: 8px; }
+  header .subtitle { color: var(--text-dim); font-size: 1.05em; }
+  header .updated { color: var(--accent); font-size: 0.85em; margin-top: 12px; }
+  header .lead { color: var(--text); font-size: 1.0em; line-height: 1.8; max-width: 920px; margin-top: 18px; }
+
+  main { max-width: 1280px; margin: 0 auto; padding: 32px; }
+  section { margin-bottom: 56px; }
+  h2 {
+    font-size: 1.7em; margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--line); color: var(--accent);
+  }
+  h3 { font-size: 1.2em; margin-bottom: 12px; color: var(--text); }
+  p { color: var(--text-dim); margin-bottom: 12px; }
+  .lead { font-size: 1.05em; line-height: 1.8; color: var(--text); margin-bottom: 18px; }
+
+  /* TOC */
+  .toc { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; margin-bottom: 32px; }
+  .toc h3 { color: var(--accent); margin-bottom: 10px; }
+  .toc ol { list-style: none; counter-reset: t; }
+  .toc ol li { counter-increment: t; padding: 4px 0; }
+  .toc ol li::before { content: counter(t) ". "; color: var(--accent); font-weight: 600; }
+  .toc a { color: var(--text); text-decoration: none; transition: color 0.2s; }
+  .toc a:hover { color: var(--accent); }
+
+  /* Status grid */
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .status-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .status-card.alfred { border-right: 4px solid var(--alfred); }
+  .status-card.hermes { border-right: 4px solid var(--hermes); }
+  .status-card.alert { border-right: 4px solid var(--red); }
+  .status-card.warn { border-right: 4px solid var(--yellow); }
+  .status-card.ok { border-right: 4px solid var(--green); }
+  .status-card .label { color: var(--text-dim); font-size: 0.78em; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .status-card .value { font-size: 1.3em; font-weight: 700; }
+  .status-card .meta { color: var(--text-dim); font-size: 0.78em; margin-top: 4px; }
+
+  /* Architecture layers */
+  .layer-stack { display: flex; flex-direction: column; gap: 10px; margin: 24px 0; }
+  .layer { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; border-right: 5px solid var(--accent); position: relative; }
+  .layer h3 { font-size: 1.15em; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  .layer h3 .icon { font-size: 1.4em; }
+  .layer .components { color: var(--text-dim); font-size: 0.92em; line-height: 1.85; }
+  .layer .components code { background: var(--bg-3); padding: 1px 6px; border-radius: 4px; color: var(--accent-2); font-family: "Cascadia Code", "Consolas", monospace; font-size: 0.85em; }
+  .layer.transport { border-right-color: var(--blue); }
+  .layer.persona { border-right-color: var(--alfred); }
+  .layer.brain { border-right-color: var(--hermes); }
+  .layer.tools { border-right-color: var(--green); }
+  .layer.state { border-right-color: var(--yellow); }
+  .layer.observability { border-right-color: var(--pink); }
+
+  /* Pipeline arrows */
+  .pipeline { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0; background: var(--bg-2); padding: 20px; border-radius: 10px; border: 1px solid var(--line); }
+  .pipeline-step { flex: 1 1 140px; background: var(--bg-3); padding: 14px; border-radius: 8px; text-align: center; position: relative; }
+  .pipeline-step .label { font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+  .pipeline-step .desc { font-size: 0.83em; color: var(--text-dim); }
+  .pipeline-step:not(:last-child)::after { content: "←"; position: absolute; left: -10px; top: 50%; transform: translateY(-50%); color: var(--accent); font-size: 1.4em; font-weight: bold; }
+  @media (max-width: 720px) { .pipeline-step:not(:last-child)::after { display: none; } }
+
+  /* Integrations grid */
+  .int-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .int-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .int-card .name { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .int-card .desc { color: var(--text-dim); font-size: 0.85em; line-height: 1.5; margin-bottom: 8px; }
+  .int-card .pct-bar { height: 6px; background: var(--bg-3); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .int-card .pct-fill { height: 100%; border-radius: 3px; }
+  .int-card .pct-fill.high { background: linear-gradient(90deg, #34c77b 0%, #4dabf7 100%); }
+  .int-card .pct-fill.med  { background: linear-gradient(90deg, #ffb547 0%, #ffd166 100%); }
+  .int-card .pct-fill.low  { background: linear-gradient(90deg, #ef5350 0%, #f06292 100%); }
+  .int-card .pct-text { color: var(--accent); font-size: 0.78em; font-weight: 600; margin-top: 4px; }
+
+  /* Goal progress bars */
+  .goal { margin-bottom: 18px; padding: 14px 18px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; }
+  .goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 10px; flex-wrap: wrap; }
+  .goal-name { font-weight: 600; font-size: 1.05em; display: flex; align-items: center; gap: 8px; }
+  .goal-pct { font-weight: 700; font-size: 1.05em; color: var(--accent); }
+  .goal-bar { height: 10px; background: var(--bg-3); border-radius: 5px; overflow: hidden; margin: 8px 0; }
+  .goal-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+  .goal-fill.high { background: linear-gradient(90deg, #34c77b 0%, #4dabf7 100%); }
+  .goal-fill.med  { background: linear-gradient(90deg, #ffb547 0%, #ffd166 100%); }
+  .goal-fill.low  { background: linear-gradient(90deg, #ef5350 0%, #f06292 100%); }
+  .goal-details { color: var(--text-dim); font-size: 0.88em; line-height: 1.7; margin-top: 6px; }
+  .goal-details strong { color: var(--text); }
+  .goal-todo { color: var(--yellow); font-size: 0.85em; margin-top: 4px; }
+
+  /* Tasks */
+  .task-section { margin-bottom: 28px; }
+  .task-section h3 { margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .task { display: flex; align-items: flex-start; background: var(--bg-2); padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; border-right: 4px solid var(--line); gap: 12px; }
+  .task.crit { border-right-color: var(--red); }
+  .task.imp  { border-right-color: var(--yellow); }
+  .task.nice { border-right-color: var(--green); }
+  .task-checkbox { flex-shrink: 0; width: 18px; height: 18px; border: 2px solid var(--text-dim); border-radius: 4px; margin-top: 3px; }
+  .task-body { flex: 1; }
+  .task-title { font-weight: 600; margin-bottom: 2px; }
+  .task-detail { color: var(--text-dim); font-size: 0.88em; }
+  .task-meta { color: var(--accent-2); font-size: 0.78em; margin-top: 4px; }
+
+  /* Tables */
+  table.std { width: 100%; border-collapse: collapse; background: var(--bg-2); border-radius: 10px; overflow: hidden; margin: 12px 0; }
+  table.std th, table.std td { padding: 10px 14px; text-align: right; border-bottom: 1px solid var(--line); font-size: 0.9em; vertical-align: top; }
+  table.std th { background: var(--bg-3); color: var(--accent); font-weight: 600; }
+  table.std tr:last-child td { border-bottom: none; }
+  table.std tr:hover td { background: var(--bg-3); }
+  table.std code { background: var(--bg-3); padding: 1px 6px; border-radius: 3px; font-family: "Cascadia Code", monospace; font-size: 0.85em; color: var(--accent-2); }
+
+  /* Pills */
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.78em; font-weight: 600; margin-left: 4px; }
+  .pill-green { background: rgba(52,199,123,0.15); color: var(--green); }
+  .pill-yellow { background: rgba(255,209,102,0.15); color: var(--yellow); }
+  .pill-red { background: rgba(239,83,80,0.15); color: var(--red); }
+  .pill-blue { background: rgba(77,171,247,0.15); color: var(--blue); }
+  .pill-purple { background: rgba(179,136,255,0.15); color: var(--purple); }
+  .pill-hermes { background: rgba(255,181,71,0.15); color: var(--hermes); }
+  .pill-alfred { background: rgba(179,136,255,0.15); color: var(--alfred); }
+
+  /* Alerts */
+  .alert { background: rgba(239,83,80,0.1); border: 1px solid var(--red); border-right: 4px solid var(--red); border-radius: 8px; padding: 16px 20px; margin: 20px 0; }
+  .alert h3 { color: var(--red); margin-bottom: 6px; }
+  .alert.warn { background: rgba(255,209,102,0.08); border-color: var(--yellow); border-right-color: var(--yellow); }
+  .alert.warn h3 { color: var(--yellow); }
+  .alert.ok { background: rgba(52,199,123,0.08); border-color: var(--green); border-right-color: var(--green); }
+  .alert.ok h3 { color: var(--green); }
+
+  /* Section subtitle */
+  .section-lead { color: var(--text-dim); font-size: 0.95em; line-height: 1.8; margin-bottom: 18px; max-width: 900px; }
+
+  /* Mini-card grid for capabilities */
+  .cap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .cap-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .cap-card .title { font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .cap-card .desc { color: var(--text-dim); font-size: 0.86em; line-height: 1.6; }
+
+  /* Owner badges */
+  .badge { font-size: 0.75em; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+  .badge.alfred { background: rgba(179,136,255,0.18); color: var(--alfred); }
+  .badge.hermes { background: rgba(255,181,71,0.18); color: var(--hermes); }
+  .badge.shared { background: rgba(77,171,247,0.18); color: var(--blue); }
+  .badge.new    { background: rgba(52,199,123,0.18); color: var(--green); }
+
+  /* Footer */
+  footer { margin-top: 60px; padding: 24px 32px; border-top: 1px solid var(--line); color: var(--text-dim); font-size: 0.85em; text-align: center; background: var(--bg-2); }
+  footer code { background: var(--bg-3); padding: 1px 6px; border-radius: 3px; font-family: "Cascadia Code", monospace; color: var(--accent-2); }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { color: var(--accent-2); text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Alfred + 🐝 Hermes — מבנה מלא ומפת השלמה</h1>
+  <div class="subtitle">תמונת-מצב ויזואלית של הסוכן: ארכיטקטורה · תשתיות · אינטגרציות · יעדים</div>
+  <div class="updated">📅 נכתב 2026-05-26 03:00 · מבוסס על 3 חוקרי-משנה מקבילים + state.db חי 172MB + 96 extensions של OpenClaw + 84 skills של Hermes</div>
+  <div class="lead">
+    הסוכן שלך הוא <strong>פדרציה של שתי מערכות</strong>: <span class="badge alfred">Alfred</span> רץ על OpenClaw — הזהות, החוקה (AGENTS.md), 32 סקריפטים, 16 cron jobs, dashboard עם 17 routes. <span class="badge hermes">Hermes</span> רץ על Python + Node — 85 כלים גולמיים, 84 skills, 8 backends לזיכרון, gateway ל-19 פלטפורמות. הם <strong>אמורים</strong> לעבוד יחד אבל היום יש כפילויות, ערוצים שבורים, ו-bugs קונקרטיים שמעמיסים טוקנים.
+    המסמך הזה מציג <strong>מה כל אחד עושה, איך זה רץ בפועל, ומה חסר כדי שיהיו 100%</strong>.
+  </div>
+</header>
+
+<main>
+
+<div class="toc">
+  <h3>📑 תוכן עניינים</h3>
+  <ol>
+    <li><a href="#status">סטטוס חי — מה רץ עכשיו</a></li>
+    <li><a href="#architecture">ארכיטקטורה — 6 השכבות של הסוכן</a></li>
+    <li><a href="#pipeline">איך הסוכן עובד — הצינור מהודעה ועד פעולה</a></li>
+    <li><a href="#integrations">תשתיות + אינטגרציות + אחוז השלמה</a></li>
+    <li><a href="#capabilities-hermes">85 כלי Hermes — מה כל אחד עושה</a></li>
+    <li><a href="#capabilities-openclaw">96 OpenClaw extensions + 84 Hermes skills — מה מותקן ומה דרוש</a></li>
+    <li><a href="#goals">יעדים — איפה אנחנו ומה חסר ל-100%</a></li>
+    <li><a href="#future-stack">המלצת stack ל-Q3-Q4 2026</a></li>
+    <li><a href="#tasks">רשימת המשימות — Wave -1 עד Wave 5</a></li>
+  </ol>
+</div>
+
+<!-- ====== SECTION 1: STATUS ====== -->
+<section id="status">
+  <h2>🩺 1. סטטוס חי — מה רץ עכשיו על המכונה שלך</h2>
+  <p class="section-lead">
+    קריאה ישירה של תהליכים, ports, ו-logs ב-2026-05-26 02:30. צבע = מצב: ירוק חי ובריא · צהוב פועל עם בעיות · אדום שבור.
+  </p>
+
+  <div class="status-grid">
+    <div class="status-card ok">
+      <div class="label">OpenClaw Gateway</div>
+      <div class="value">🟢 חי</div>
+      <div class="meta">PID 22916 · 714MB · port 18789 · 1.5h CPU since 24/5</div>
+    </div>
+    <div class="status-card alert">
+      <div class="label">Hermes WA Bridge</div>
+      <div class="value">🔴 לא מגיב</div>
+      <div class="meta">port 3000 לא מאזין. הקובץ קיים אבל לא רץ.</div>
+    </div>
+    <div class="status-card warn">
+      <div class="label">Hermes Gateway</div>
+      <div class="value">🟡 חלקית</div>
+      <div class="meta">Python alive (PID 54692) אבל cron list מודיע "not running"</div>
+    </div>
+    <div class="status-card alert">
+      <div class="label">DeepSeek Balance</div>
+      <div class="value">🔴 HTTP 402</div>
+      <div class="meta">5 cron נכשלו מ-22/5. ההסבר: alfred-router fallback הפוך</div>
+    </div>
+    <div class="status-card ok">
+      <div class="label">Alfred Cron</div>
+      <div class="value">🟢 11 פעילים</div>
+      <div class="meta">8 ירוקים. clarification-reprompt + general-heartbeat רצים</div>
+    </div>
+    <div class="status-card warn">
+      <div class="label">Hermes Memory</div>
+      <div class="value">🟡 97.6% err</div>
+      <div class="meta">80 מ-82 קריאות "Memory is not available". plugin disabled.</div>
+    </div>
+    <div class="status-card warn">
+      <div class="label">Hermes web_search</div>
+      <div class="value">🟡 80% err</div>
+      <div class="meta">token פג תוקף. web_extract עובד 11/11.</div>
+    </div>
+    <div class="status-card alert">
+      <div class="label">memory/&lt;date&gt;.md</div>
+      <div class="value">🔴 stale</div>
+      <div class="meta">הפסיק 2026-05-17 — 9 ימים בלי כתיבה</div>
+    </div>
+    <div class="status-card ok">
+      <div class="label">state.db (Hermes)</div>
+      <div class="value">🟢 172 MB</div>
+      <div class="meta">1,504 sessions · 17,158 messages · WAL nominal</div>
+    </div>
+    <div class="status-card alert">
+      <div class="label">Hermes version</div>
+      <div class="value">🔴 ישן</div>
+      <div class="meta">v0.13.0 — אבל v0.14.0 כבר 10 ימים בחוץ עם OAuth proxy</div>
+    </div>
+    <div class="status-card warn">
+      <div class="label">3-day outage</div>
+      <div class="value">🟡 19-21/5</div>
+      <div class="meta">461 cron sessions, 0 tokens, no alert. נדרש heartbeat.</div>
+    </div>
+    <div class="status-card ok">
+      <div class="label">bee-hive</div>
+      <div class="value">🟢 מחובר</div>
+      <div class="meta">whatsapp-out.js → :3000/send. כעת תלוי ב-bridge.</div>
+    </div>
+  </div>
+
+  <div class="alert">
+    <h3>⚠️ 5 משברים שחייבים להיפתר ראשון</h3>
+    <p style="color: var(--text);">
+      (1) <code>alfred-router.js:37-39</code> fallback הפוך — תיקון 3 דקות.
+      (2) Hermes WA bridge port 3000 לא מאזין — restart.
+      (3) Hermes memory tool 97.6% err — להפעיל hindsight או להסיר.
+      (4) web_search token מת — להחליף ל-Tavily (לפי הכרעה Q9).
+      (5) memory/&lt;date&gt;.md הפסיק לכתוב — לאתר איזה cron אחראי.
+    </p>
+  </div>
+</section>
+
+<!-- ====== SECTION 2: ARCHITECTURE ====== -->
+<section id="architecture">
+  <h2>🏗️ 2. ארכיטקטורה — 6 השכבות של הסוכן</h2>
+  <p class="section-lead">
+    הסוכן בנוי כ-<strong>פדרציה של 3 שכבות עיקריות</strong> (Transport, Persona, Brain) עם שתי תשתיות תומכות (State, Tools) ושכבת תצפית.
+    כל שכבה אחראית על תפקיד אחד — אין כפילות מבנית, אבל יש <strong>כפילויות יישום</strong> שצריך לסגור.
+  </p>
+
+  <div class="layer-stack">
+    <div class="layer transport">
+      <h3><span class="icon">🔌</span> שכבה 1 — TRANSPORT (Hermes Bridge) <span class="badge hermes">Hermes</span></h3>
+      <div class="components">
+        <strong>הצד שמקבל ושולח את ההודעות.</strong> כיום Hermes Baileys bridge על <code>port 3000</code>. ה-bridge פותח חיבור WebSocket יחיד ל-WhatsApp ומחזיק את ה-session keys (20,832 קבצים, 8.5MB). חושף HTTP API: <code>POST /send</code>, <code>POST /edit</code>, <code>POST /send-media</code>, <code>POST /typing</code>, <code>GET /messages</code>, <code>GET /health</code>.<br>
+        <strong>היום:</strong> שני Baileys (OpenClaw + Hermes) מתחברים לאותו מספר → race condition + ניצול 2 device slots מתוך 4. <span class="pill pill-red">לדדאפ</span><br>
+        <strong>בעתיד:</strong> תוסיף Telegram (Q4 דחה), Email, Slack/Discord, Webhook generic.
+      </div>
+    </div>
+    <div class="layer persona">
+      <h3><span class="icon">🛡️</span> שכבה 2 — PERSONA (Alfred על OpenClaw) <span class="badge alfred">Alfred</span></h3>
+      <div class="components">
+        <strong>הזהות העברית הקבועה.</strong> כל הודעה ל-<code>+972509554483</code> עוברת כאן.
+        <code>AGENTS.md</code> (52KB) = החוקה. 8 חוקי יסוד שלא-ניתנים-לשינוי-בלי-אישור-מפורש.
+        <code>SOUL.md</code> + <code>USER.md</code> = פרסונה.
+        Output rule: <code>⚡ *...*</code> בלבד. 4 יעדים מאושרים. battery-react תמיד.
+        <br>
+        <strong>הצינור:</strong> <code>alfred-router.js</code> (10 intents, prompt-cached 1h) → <code>alfred-clarify.js</code> (confidence-gated, learning loop) → <code>alfred-enrich.js</code> (BEE/Monday/Calendar) → <code>alfred-compose.js</code> (templates) → <code>alfred-handle.js</code> (dispatch).<br>
+        <strong>12 workspace skills:</strong> calendar-agent, solar-agent, regulatory-agent, mcp, self-improving, n8n-workflow-automation, openclaw-security-toolkit, summary, api-dev, auto, github, google-calendar-api.
+      </div>
+    </div>
+    <div class="layer brain">
+      <h3><span class="icon">🧠</span> שכבה 3 — BRAIN (Hermes Workhorse) <span class="badge hermes">Hermes</span></h3>
+      <div class="components">
+        <strong>מנוע ההיגיון הכבד.</strong> Python gateway על Windows venv. אין persona, אין constitution — fresh sessions.
+        <strong>85 כלים גולמיים:</strong> browser_*, code_execution, terminal (5 backends), vision, memory, mcp_*, delegate, mixture_of_agents, kanban, todo, transcription, tts, voice_mode, file_*, microsoft_graph, homeassistant, image_generation.
+        <strong>84 skills פעילים:</strong> claude-code, google-workspace, obsidian, github-*, kanban-orchestrator, mlops/, creative/, ועוד.
+        <strong>4 unique capabilities:</strong> Mixture-of-Agents (4× עלות, $75/1M), Code Execution Sandbox (UDS/file RPC), Kanban dispatcher, Sub-agent delegation (max 3 children, depth 2).
+        <br>
+        <strong>state.db (172MB):</strong> 1,504 sessions · 17,158 messages · 280M tokens / 14 ימים.
+      </div>
+    </div>
+    <div class="layer state">
+      <h3><span class="icon">💾</span> שכבה 4 — STATE (Memory + Data) <span class="badge shared">Shared</span></h3>
+      <div class="components">
+        <strong>איפה הזיכרון חי.</strong>
+        <ul style="margin-right: 18px; margin-top: 6px;">
+          <li><code>memory/&lt;YYYY-MM-DD&gt;.md</code> — יומן יומי של כל WhatsApp inbound (Alfred owns) <span class="pill pill-red">stale 9d</span></li>
+          <li><code>~/.openclaw/workspace/contacts.md</code> — סטטוס + פעולה מוצעת לכל איש קשר</li>
+          <li><code>sites/&lt;X&gt;.md</code> — דוסיה לכל אתר עבודה (kfar-yuval פעיל)</li>
+          <li><code>TASKS.md</code> — רשימת משימות</li>
+          <li><code>task-examples.md</code> — few-shot למסווג</li>
+          <li><code>pending-clarifications.json</code> — תור בירורים פתוחים</li>
+          <li><code>self-improving/*.md</code> — לוג תיקונים + הצעות שיפור</li>
+          <li><code>~/.openclaw/memory/main.sqlite</code> — OpenClaw session DB</li>
+          <li><code>~/AppData/Local/hermes/state.db</code> — 172MB, 1,504 sessions</li>
+          <li><code>~/AppData/Local/hermes/memories/MEMORY.md</code> — 2.2KB · USER.md 1.2KB <span class="pill pill-yellow">חסר plugin</span></li>
+          <li><code>monday-inventory.json</code> 425KB · <code>knowledge-graph.json</code> 138KB · <code>gov-rss-seen.json</code></li>
+        </ul>
+        <strong>החסר ל-100%:</strong> Hermes memory plugin פעיל (hindsight) · sync דו-כיווני Alfred ↔ Hermes · semantic search על 879K הודעות WhatsApp (כבר decrypted, 890MB בקובץ נפרד).
+      </div>
+    </div>
+    <div class="layer tools">
+      <h3><span class="icon">🔧</span> שכבה 5 — TOOLS + INTEGRATIONS <span class="badge shared">Shared</span></h3>
+      <div class="components">
+        <strong>32 alfred-*.js scripts</strong> (E:\Desktop\OpenClawAgent) הם הידיים של Alfred: <code>alfred-monday*</code>, <code>alfred-calendar</code>, <code>alfred-gmail</code>, <code>alfred-bee</code>, <code>alfred-solaredge</code>, <code>alfred-tracer</code>, <code>alfred-weather</code>, <code>alfred-deadlines</code>, <code>alfred-invoice-maven</code>, <code>alfred-gov-rss</code>, <code>alfred-govmap</code>, <code>alfred-heartbeat</code>, <code>alfred-budget-alert</code>, <code>alfred-mcp-gateway</code> (skeleton), <code>alfred-knowledge</code>, <code>alfred-customer360</code>, <code>alfred-customer-intelligence</code>, <code>alfred-identity</code>, <code>alfred-router</code>, <code>alfred-clarify</code>, <code>alfred-enrich</code>, <code>alfred-handle</code>, <code>alfred-compose</code>, <code>alfred-cost-monitor</code>, <code>alfred-session-parser</code>, <code>alfred-contacts-auto</code>, <code>alfred-tomorrow-digest</code>, <code>alfred-monday-digest</code>, <code>alfred-monday-deep</code>.
+        <br>
+        <strong>96 OpenClaw extensions + 84 Hermes skills</strong> — רוב הם providers (anthropic, deepseek, google, groq, openrouter, fal, fireworks, perplexity, ...). חלקם hidden gems שלא מנוצלים: active-memory, browser, document-extract, file-transfer, voice-call, comfy, runway, vydra, talk-voice.
+        <br>
+        <strong>0 MCP servers מוגדרים</strong> בשני הצדדים. כל ה-integrations היום הם REST/GraphQL ישיר. <span class="pill pill-red">חסר</span>
+      </div>
+    </div>
+    <div class="layer observability">
+      <h3><span class="icon">📊</span> שכבה 6 — OBSERVABILITY (Dashboard) <span class="badge alfred">Alfred</span></h3>
+      <div class="components">
+        <strong>Dashboard על port 8765</strong> — <code>dashboard-server.js</code>. 17 endpoints + 7 SSE channels. פאנלים חיים: 📥 Inbox · 📡 WhatsApp feed · 🧠 Examples corpus · 👥 Contacts · 📍 Sites · 🔌 Integration health · 🌳 Capability tree · #mission · #flow · #tree · brief · topo · live · people · crm · identity · customer · reports · map · corpus · health · heartbeat · cron.
+        <strong>Hermes /insights</strong> מספק token analytics + skill usage. אבל אין observability משותף.
+        <br>
+        <strong>החסר ל-100%:</strong> Langfuse/Helicone proxy לפני שני ה-engines · alert על "0 tokens 24h" · A/B prompt testing offline · cost dashboard מאוחד.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 3: PIPELINE ====== -->
+<section id="pipeline">
+  <h2>🔄 3. איך הסוכן עובד — הצינור מהודעה ועד פעולה</h2>
+  <p class="section-lead">
+    כל הודעת WhatsApp עוברת את הצינור הזה. הלוואי שזה היה כל מה שצריך לדעת — אבל פיצולים בכל שלב הם המקור לחסכון או לבזבוז של 80% טוקנים.
+  </p>
+
+  <div class="pipeline">
+    <div class="pipeline-step">
+      <div class="label">10. תגובה</div>
+      <div class="desc">⚡ *...* ל-self-chat + battery-react 🔋</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">9. handle</div>
+      <div class="desc">dispatch — task/calendar/draft/log</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">8. compose</div>
+      <div class="desc">template Mustache-lite</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">7. enrich</div>
+      <div class="desc">BEE + Monday + Calendar + sites</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">6. clarify?</div>
+      <div class="desc">if confidence&lt;0.85 → שאלה</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">5. router</div>
+      <div class="desc">10 intents · few-shot · prompt-cache 1h</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">4. memory/&lt;date&gt;.md</div>
+      <div class="desc">log line נכתבת</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">3. archive check</div>
+      <div class="desc">private DM? → drop silently</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">2. allowlist</div>
+      <div class="desc">deny-by-default sendPolicy</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">1. bridge in</div>
+      <div class="desc">Hermes :3000 webhook</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 24px;">🎤 כשהודעה היא voice — צינור משלים</h3>
+  <div class="pipeline">
+    <div class="pipeline-step">
+      <div class="label">5. post</div>
+      <div class="desc">לקבוצת תמלולים + side-effects</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">4. classify</div>
+      <div class="desc">task/event/site-note/idea/general</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">3. transcribe</div>
+      <div class="desc">Groq whisper-large-v3</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">2. detect audio</div>
+      <div class="desc">mediaType=audio</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="label">1. bridge in</div>
+      <div class="desc">Hermes :3000 webhook</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 24px;">🕐 16 cron jobs רצים אוטונומית בכל יום</h3>
+  <table class="std">
+    <thead><tr><th>שעה</th><th>Cron</th><th>מה עושה</th><th>סטטוס</th></tr></thead>
+    <tbody>
+      <tr><td>כל 15 דק'</td><td><code>bee-snapshot-live-refresh</code></td><td>רענון snapshot של BEE Operations DB</td><td><span class="pill pill-green">✓</span></td></tr>
+      <tr><td>כל שעה עגולה</td><td><code>clarification-reprompt</code></td><td>בירורים שעברו 5ש' ולא נענו</td><td><span class="pill pill-green">✓</span></td></tr>
+      <tr><td>כל 30 דק' (07-21)</td><td><code>general-heartbeat</code></td><td>סקירת idle: TASKS באיחור · contacts pending</td><td><span class="pill pill-green">✓</span></td></tr>
+      <tr><td>06:05</td><td><code>bee-db-snapshot-refresh</code></td><td>גיבוי יומי של BEE DB</td><td><span class="pill pill-green">✓</span></td></tr>
+      <tr><td>06:30</td><td><code>morning-weather-scan</code></td><td>התראת גשם לאירועי שטח (Open-Meteo)</td><td><span class="pill pill-green">✓</span></td></tr>
+      <tr><td>07:00</td><td><code>morning-deadlines</code></td><td>מע"מ / מ"ה / בט"ל</td><td><span class="pill pill-green">✓</span></td></tr>
+      <tr><td>07:00</td><td><code>monday-morning-digest</code></td><td>דייג'סט משימות Monday</td><td><span class="pill pill-green">✓</span></td></tr>
+      <tr><td>09:30</td><td><code>morning-gov-regulations</code></td><td>חוזרי משרד אנרגיה + רשות החשמל (Cloudflare-blocked כרגע)</td><td><span class="pill pill-yellow">⚠️</span></td></tr>
+      <tr><td>21:30</td><td><code>evening-tomorrow-schedule</code></td><td>לוז למחר</td><td><span class="pill pill-green">✓</span></td></tr>
+      <tr><td>23:30</td><td><code>daily-cost-alert</code></td><td>התראת תקציב LLM</td><td><span class="pill pill-green">✓</span></td></tr>
+      <tr><td>10:00</td><td><code>morning-urgent-digest</code></td><td>משימות דחופות לברק</td><td><span class="pill pill-red">disabled</span></td></tr>
+      <tr><td>10:00</td><td><code>morning-activity-neri</code></td><td>סיכום בוקר לקבוצת נרי</td><td><span class="pill pill-red">disabled</span></td></tr>
+      <tr><td>22:00</td><td><code>evening-urgent-digest</code></td><td>סיכום ערב</td><td><span class="pill pill-red">disabled</span></td></tr>
+      <tr><td>22:00</td><td><code>evening-activity-neri</code></td><td>סיכום ערב לנרי</td><td><span class="pill pill-red">disabled</span></td></tr>
+      <tr><td>08:00</td><td><code>gmail-morning-digest</code></td><td>סיכום מיילים</td><td><span class="pill pill-red">disabled</span></td></tr>
+      <tr><td>ראשון 09:00</td><td><code>weekly-self-review</code></td><td>סקירה שבועית self-improving</td><td><span class="pill pill-red">disabled</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ====== SECTION 4: INTEGRATIONS ====== -->
+<section id="integrations">
+  <h2>🔌 4. תשתיות + אינטגרציות + אחוז השלמה</h2>
+  <p class="section-lead">
+    כל אינטגרציה — מאיפה היא מקבלת נתונים, מה היא עושה איתם, וכמה רחוק היא ממימוש מלא ומושלם.
+  </p>
+
+  <div class="int-grid">
+    <div class="int-card" style="border-right: 3px solid var(--green);">
+      <div class="name">📅 Google Calendar <span class="badge alfred">Alfred</span></div>
+      <div class="desc">3-calendar lock: personal, tasks-neri, tasks-shlomi-solar. R/W דרך alfred-calendar.js. all-day reminders אוטומטיים אחרי clarify.</div>
+      <div class="pct-bar"><div class="pct-fill high" style="width: 90%;"></div></div>
+      <div class="pct-text">90% — חסר: MCP wrapper</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--green);">
+      <div class="name">📊 Monday.com <span class="badge alfred">Alfred</span></div>
+      <div class="desc">100 boards, GraphQL read. monday-inventory.json 425KB cached overnight. 3 sub-scripts: monday.js, monday-deep.js, monday-digest.js.</div>
+      <div class="pct-bar"><div class="pct-fill high" style="width: 85%;"></div></div>
+      <div class="pct-text">85% — חסר: official MCP, webhooks (push במקום poll)</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--yellow);">
+      <div class="name">📧 Gmail <span class="badge alfred">Alfred</span></div>
+      <div class="desc">alfred-gmail.js: OAuth + read unread. cron 08:00. שליחה — לא הוטמע. דורש סקריפט להחלפה.</div>
+      <div class="pct-bar"><div class="pct-fill med" style="width: 60%;"></div></div>
+      <div class="pct-text">60% — חסר: send capability, MCP unified</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--red);">
+      <div class="name">☀️ SolarEdge <span class="badge alfred">Alfred</span></div>
+      <div class="desc">87 sites verified. Production reports + alerts. <strong>HTTP 403 כיום</strong> — מפתח דורש רוטציה.</div>
+      <div class="pct-bar"><div class="pct-fill low" style="width: 40%;"></div></div>
+      <div class="pct-text">40% — חסר: key rotation, custom MCP, MQTT path</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--yellow);">
+      <div class="name">🔆 Sungrow <span class="badge alfred">Alfred</span></div>
+      <div class="desc">55 sites. API keys מוטמעים. גישה דרך BEE backend כיום. אין script ייעודי.</div>
+      <div class="pct-bar"><div class="pct-fill med" style="width: 50%;"></div></div>
+      <div class="pct-text">50% — חסר: direct integration + alerts</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--yellow);">
+      <div class="name">🚗 Tracer GPS <span class="badge alfred">Alfred</span></div>
+      <div class="desc">18 רכבים. tracer.js בסיסי. אין API ציבורי — צריך contact עם ספק.</div>
+      <div class="pct-bar"><div class="pct-fill med" style="width: 45%;"></div></div>
+      <div class="pct-text">45% — חסר: real-time location, geofences, route history</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--yellow);">
+      <div class="name">🏛️ BEE Operations DB <span class="badge alfred">Alfred</span></div>
+      <div class="desc">snapshot SQLite ב-secrets/. cron 06:05 + לייב כל 15 דק'. read-only. HTTP API ⏳ מתוכנן.</div>
+      <div class="pct-bar"><div class="pct-fill high" style="width: 80%;"></div></div>
+      <div class="pct-text">80% — חסר: HTTP API ישיר במקום snapshot</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--green);">
+      <div class="name">📜 Invoice Maven <span class="badge alfred">Alfred</span></div>
+      <div class="desc">REST API wrapper. כל write דורש --yes. אין MCP רשמי. תקציר 5 פקודות.</div>
+      <div class="pct-bar"><div class="pct-fill high" style="width: 75%;"></div></div>
+      <div class="pct-text">75% — חסר: MCP, batch operations, status sync</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--green);">
+      <div class="name">🌤️ Open-Meteo <span class="badge alfred">Alfred</span></div>
+      <div class="desc">חינמי. GHI/DNI/rain. scan-events לאירועי שטח עם ≥30% גשם.</div>
+      <div class="pct-bar"><div class="pct-fill high" style="width: 95%;"></div></div>
+      <div class="pct-text">95% — שלם</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--yellow);">
+      <div class="name">🏛️ gov.il RSS <span class="badge alfred">Alfred</span></div>
+      <div class="desc">משרד אנרגיה + רשות החשמל + 30 keywords. cron 09:30. <strong>Cloudflare blocking כרגע</strong> — workaround נדרש.</div>
+      <div class="pct-bar"><div class="pct-fill med" style="width: 55%;"></div></div>
+      <div class="pct-text">55% — חסר: archive fallback, Cloudflare bypass</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--green);">
+      <div class="name">📞 WhatsApp Baileys <span class="badge hermes">Hermes</span></div>
+      <div class="desc">bridge.js על port 3000. 20,832 session keys. mode=bot. 4 outbound destinations.</div>
+      <div class="pct-bar"><div class="pct-fill high" style="width: 75%;"></div></div>
+      <div class="pct-text">75% — חסר: כפילות Alfred Baileys → לכבות, reactions surface, live-location</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--yellow);">
+      <div class="name">🎤 Groq Whisper <span class="badge alfred">Alfred</span></div>
+      <div class="desc">whisper-large-v3 דרך GROQ_API_KEY. voice notes → transcription group.</div>
+      <div class="pct-bar"><div class="pct-fill med" style="width: 70%;"></div></div>
+      <div class="pct-text">70% — חסר: שדרוג ל-v3-turbo ($0.04/hr), classify→action loop</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--red);">
+      <div class="name">🔍 web_search <span class="badge hermes">Hermes</span></div>
+      <div class="desc">Brave/Tavily/Exa providers. <strong>Token מת — 80% err rate</strong>. web_extract עובד.</div>
+      <div class="pct-bar"><div class="pct-fill low" style="width: 30%;"></div></div>
+      <div class="pct-text">30% — חסר: token rotation, switch ל-Tavily לפי Q9</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--red);">
+      <div class="name">🌐 Firecrawl <span class="badge shared">Shared</span></div>
+      <div class="desc">13 variants ב-Alfred + 14 ב-Hermes = כפילות. Hermes יותר מאורגן.</div>
+      <div class="pct-bar"><div class="pct-fill med" style="width: 65%;"></div></div>
+      <div class="pct-text">65% — חסר: לבטל ב-Alfred, להישאר רק על Hermes</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--red);">
+      <div class="name">🧠 Memory Plugin <span class="badge hermes">Hermes</span></div>
+      <div class="desc">8 plugins על דיסק (hindsight/mem0/honcho/...). אף אחד לא פעיל. ה-tool מחזיר 97.6% err.</div>
+      <div class="pct-bar"><div class="pct-fill low" style="width: 15%;"></div></div>
+      <div class="pct-text">15% — חסר: הפעלת hindsight + sync עם Alfred memory/</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--red);">
+      <div class="name">🔗 MCP Servers <span class="badge shared">Shared</span></div>
+      <div class="desc">0 mounted בשני הצדדים. alfred-mcp-gateway.js skeleton. Composio/Zapier לא מחוברים.</div>
+      <div class="pct-bar"><div class="pct-fill low" style="width: 5%;"></div></div>
+      <div class="pct-text">5% — חסר: הכל. צריך להתחיל מ-Monday MCP רשמי + Composio.</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--green);">
+      <div class="name">📊 Dashboard <span class="badge alfred">Alfred</span></div>
+      <div class="desc">port 8765 · 17 routes · 7 SSE channels · live updates.</div>
+      <div class="pct-bar"><div class="pct-fill high" style="width: 88%;"></div></div>
+      <div class="pct-text">88% — חסר: Hermes state, cost view, alert center</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--yellow);">
+      <div class="name">📂 self-improving <span class="badge alfred">Alfred</span></div>
+      <div class="desc">~/self-improving/. memory.md, boundaries.md, corrections.md. weekly cron disabled.</div>
+      <div class="pct-bar"><div class="pct-fill med" style="width: 60%;"></div></div>
+      <div class="pct-text">60% — חסר: cron הפעלה, proposal queue</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--green);">
+      <div class="name">🍯 bee-hive <span class="badge new">New</span></div>
+      <div class="desc">consumer של Hermes :3000/send. morning digest 06:00.</div>
+      <div class="pct-bar"><div class="pct-fill high" style="width: 80%;"></div></div>
+      <div class="pct-text">80% — מחובר ועובד</div>
+    </div>
+    <div class="int-card" style="border-right: 3px solid var(--red);">
+      <div class="name">🐝 bee-ai-watcher <span class="badge new">New</span></div>
+      <div class="desc">קורא inbound.jsonl מקבוצת AI. MVP חי, live ingestion חסר.</div>
+      <div class="pct-bar"><div class="pct-fill low" style="width: 35%;"></div></div>
+      <div class="pct-text">35% — חסר: live ingestion, NPS scoring</div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 5: HERMES CAPABILITIES ====== -->
+<section id="capabilities-hermes">
+  <h2>🧠 5. 85 כלי Hermes — מה כל אחד עושה</h2>
+  <p class="section-lead">
+    הכלים שכבר זמינים. 4 הראשונים = 91% מהקריאות בפועל. השאר — חלקם זהובים שלא נחקרו.
+  </p>
+
+  <h3>🏆 Workhorses (4 כלים = 91% מהשימוש)</h3>
+  <div class="cap-grid">
+    <div class="cap-card"><div class="title">search_files <span class="badge hermes">2,949 calls</span></div><div class="desc">חיפוש קוד/מסמכים בפרויקטים. 99.7% success. בסיס לכל ניווט.</div></div>
+    <div class="cap-card"><div class="title">terminal <span class="badge hermes">1,419 calls</span></div><div class="desc">5 backends: local/docker/modal/vercel/ssh/singularity. 99.6% success. גיבוי תמיד עם head/tail.</div></div>
+    <div class="cap-card"><div class="title">read_file <span class="badge hermes">610 calls</span></div><div class="desc">offset+limit native. 98.2% success. הכשלים = נתיבי Desktop ישנים.</div></div>
+    <div class="cap-card"><div class="title">session_search <span class="badge hermes">454 calls</span></div><div class="desc">חיפוש ב-state.db. 100% success. בסיס לזיכרון "מתי דיברנו על X?"</div></div>
+  </div>
+
+  <h3 style="margin-top: 28px;">💎 Unique Capabilities של Hermes (Alfred אין)</h3>
+  <table class="std">
+    <thead><tr><th>יכולת</th><th>API + Default</th><th>עלות</th><th>מתי כן/לא</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Mixture-of-Agents</strong></td>
+        <td>4 models parallel: claude-opus-4.6 + gemini-2.5-pro + gpt-5.4-pro + deepseek-v3.2 → aggregator=opus</td>
+        <td>~4× ($75/1M)</td>
+        <td>✅ קשיים מורכבים · ❌ שגרה</td>
+      </tr>
+      <tr>
+        <td><strong>Code Execution Sandbox</strong></td>
+        <td>UDS RPC local · file-based remote · TCP Windows. LLM כותב Python, רץ עם whitelist.</td>
+        <td>זול ($)</td>
+        <td>✅ multi-step workflows · ❌ blocks recursive delegate/clarify/memory/send</td>
+      </tr>
+      <tr>
+        <td><strong>Kanban Dispatcher</strong></td>
+        <td>7 verbs. ~/.hermes/kanban.db. workers via HERMES_KANBAN_TASK env.</td>
+        <td>אפס</td>
+        <td>✅ async tasks · ❌ realtime UI</td>
+      </tr>
+      <tr>
+        <td><strong>Sub-agent Delegation</strong></td>
+        <td>max 3 children concurrent, depth 1-3. blocks recursive.</td>
+        <td>linear לפי children</td>
+        <td>✅ parallel research · ❌ depth&gt;3</td>
+      </tr>
+      <tr>
+        <td><strong>Memory § Pattern</strong></td>
+        <td>MEMORY.md (2200ch) + USER.md (1375ch). frozen at session start → prefix cache stable.</td>
+        <td>אפס</td>
+        <td>✅ ידע יציב · ❌ דורש refresh בין sessions</td>
+      </tr>
+      <tr>
+        <td><strong>Context Compressor</strong></td>
+        <td>20% ratio. summary 2-12K tokens. Resolved/Pending/Active sections. 600s cooldown.</td>
+        <td>cheap aux model</td>
+        <td>✅ sessions ארוכות · always-on</td>
+      </tr>
+      <tr>
+        <td><strong>Prompt Caching</strong></td>
+        <td>4 breakpoints native Anthropic. system_and_3 strategy. 1h TTL אם מוגדר.</td>
+        <td>-90% on cached</td>
+        <td>✅ תמיד · רק על Anthropic provider</td>
+      </tr>
+      <tr>
+        <td><strong>Skills Hub</strong></td>
+        <td>3 tiers: builtin/trusted/community. GitHub auth chain. quarantine + scan.</td>
+        <td>אפס</td>
+        <td>✅ הרחבה · ⚠️ security risks</td>
+      </tr>
+      <tr>
+        <td><strong>Vision Tools</strong></td>
+        <td>gemini-3-flash-preview default. 50MB max. SSRF guard. multi-provider router.</td>
+        <td>$0.075/1M</td>
+        <td>✅ OCR/images · 30s timeout</td>
+      </tr>
+      <tr>
+        <td><strong>Voice Mode</strong></td>
+        <td>sounddevice 16kHz mono. silence threshold 3s. Termux fallback.</td>
+        <td>cheap STT</td>
+        <td>❌ headless/Docker · ⚠️ requires PortAudio</td>
+      </tr>
+      <tr>
+        <td><strong>Webhook Subscriptions</strong></td>
+        <td>~/.hermes/webhook_subscriptions.json. hot-reload. HMAC secrets.</td>
+        <td>אפס</td>
+        <td>✅ inbound events · gateway required</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top: 28px;">📦 כלים שמוגדרים אבל לא בשימוש (~56 dormant tools)</h3>
+  <p class="section-lead">
+    מתוך 85 כלים, רק 29 ננגעו ב-14 ימים. הנותרים יושבים על דיסק וצורכים מקום ב-system prompt manifests. כדאי להבין מה כל אחד מאפשר.
+  </p>
+  <div class="cap-grid">
+    <div class="cap-card"><div class="title">browser_camofox <span class="badge new">untouched</span></div><div class="desc">stealth browser עם Camofox פינטרפיינט. עוקף Cloudflare. ערך: לפתור את gov-rss block.</div></div>
+    <div class="cap-card"><div class="title">browser_use <span class="badge new">untouched</span></div><div class="desc">Vision-based browser automation. כל ה-DOM ל-LLM. יקר אבל חזק.</div></div>
+    <div class="cap-card"><div class="title">browserbase <span class="badge new">untouched</span></div><div class="desc">Cloud browser. מאפשר scraping מ-IP אחר. ערך: collection of customer reviews.</div></div>
+    <div class="cap-card"><div class="title">computer_use <span class="badge new">untouched</span></div><div class="desc">macOS desktop control. לא רלוונטי ל-Windows.</div></div>
+    <div class="cap-card"><div class="title">homeassistant <span class="badge new">untouched</span></div><div class="desc">HA API: lights/switches/scenes. שווה אם יש HA Hub בבית.</div></div>
+    <div class="cap-card"><div class="title">image_generation <span class="badge new">untouched</span></div><div class="desc">FAL.ai multi-model: FLUX/Midjourney. ערך: generated diagrams.</div></div>
+    <div class="cap-card"><div class="title">microsoft_graph <span class="badge new">untouched</span></div><div class="desc">Outlook/OneDrive/Teams. ערך: אם הלקוחות עוברים ל-MS365.</div></div>
+    <div class="cap-card"><div class="title">rl_training <span class="badge new">untouched</span></div><div class="desc">Tinker-Atropos RL. נישה גבוהה.</div></div>
+    <div class="cap-card"><div class="title">feishu_doc/drive <span class="badge new">untouched</span></div><div class="desc">ByteDance Feishu. לא רלוונטי כרגע.</div></div>
+    <div class="cap-card"><div class="title">discord_tool <span class="badge new">untouched</span></div><div class="desc">stub — מימוש בפלטפורמת gateway.</div></div>
+    <div class="cap-card"><div class="title">neutts_synth <span class="badge new">untouched</span></div><div class="desc">TTS fallback. עברית מוגבלת.</div></div>
+    <div class="cap-card"><div class="title">openrouter_client <span class="badge new">untouched</span></div><div class="desc">routing ל-OpenRouter. ערך אם נעבור ל-OpenRouter קרדיטים.</div></div>
+  </div>
+</section>
+
+<!-- ====== SECTION 6: OPENCLAW EXTENSIONS ====== -->
+<section id="capabilities-openclaw">
+  <h2>📦 6. 96 OpenClaw extensions + 84 Hermes skills</h2>
+  <p class="section-lead">
+    שתי המערכות מגיעות עם "סוללה" של תוספים. הרוב לא מנוצלים בכלל. הנה מה שיש ומה שווה להפעיל.
+  </p>
+
+  <h3>📊 OpenClaw extensions — 96 בסך הכל</h3>
+  <table class="std">
+    <thead><tr><th>קטגוריה</th><th>כמות</th><th>פעילים אצלך</th><th>הדגשים</th></tr></thead>
+    <tbody>
+      <tr><td>🤖 LLM Providers</td><td>~50</td><td>4 (anthropic, deepseek, google, groq)</td><td>perplexity מוכן עם key. openrouter/xai/cerebras/groq זמינים.</td></tr>
+      <tr><td>💬 Messaging Channels</td><td>7</td><td>1 (whatsapp)</td><td>slack/telegram/signal/matrix מוכנים — אבל ל-Telegram דחית.</td></tr>
+      <tr><td>🎤 Voice/Audio</td><td>7</td><td>1 (azure-speech דרך groq)</td><td>elevenlabs, deepgram, talk-voice — לא מנוצלים.</td></tr>
+      <tr><td>🎨 Image/Video</td><td>6</td><td>1 (fal)</td><td>comfy (SD nodes), runway (video gen) — לא מנוצלים.</td></tr>
+      <tr><td>🔍 Web/Search</td><td>7</td><td>1 (firecrawl)</td><td>exa, perplexity, searxng, tavily — לא מנוצלים.</td></tr>
+      <tr><td>🧠 Memory</td><td>3</td><td>0</td><td>active-memory disabled! memory-core, memory-wiki מותקנים.</td></tr>
+      <tr><td>🔧 Infrastructure</td><td>7</td><td>1 (browser)</td><td>document-extract, file-transfer, device-pair, bonjour זמינים.</td></tr>
+      <tr><td>📄 Document/OCR</td><td>1</td><td>0</td><td>document-extract — שווה להפעיל לחשבוניות.</td></tr>
+      <tr><td>⚙️ Code/Tools</td><td>4</td><td>0</td><td>openshell, phone-control, skill-workshop, webhooks.</td></tr>
+      <tr><td>🎲 Specialty</td><td>4</td><td>0</td><td>inworld, tokenjuice, vydra, synthetic.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top: 24px;">⭐ 10 extensions שכדאי להפעיל מיד</h3>
+  <div class="cap-grid">
+    <div class="cap-card"><div class="title">active-memory <span class="badge new">disabled</span></div><div class="desc">Sub-agent חוסם זיכרון רלוונטי לפני reply. תיקון Q3 שלך = להפעיל כעת.</div></div>
+    <div class="cap-card"><div class="title">document-extract <span class="badge new">disabled</span></div><div class="desc">חילוץ טקסט מ-PDF/DOCX/images. ערך: חשבוניות נכנסות → BEE.Document.</div></div>
+    <div class="cap-card"><div class="title">openshell <span class="badge new">disabled</span></div><div class="desc">terminal-as-tool מאובטח. backup ל-terminal_tool של Hermes.</div></div>
+    <div class="cap-card"><div class="title">webhooks <span class="badge new">disabled</span></div><div class="desc">generic webhook receiver. ערך: לקבל Monday push notifications.</div></div>
+    <div class="cap-card"><div class="title">cloudflare-ai-gateway <span class="badge new">disabled</span></div><div class="desc">unified gateway with caching + logs ל-LLM providers. ערך מערכתי.</div></div>
+    <div class="cap-card"><div class="title">comfy <span class="badge new">disabled</span></div><div class="desc">ComfyUI nodes ל-image gen. שווה אם רוצים custom flux flows.</div></div>
+    <div class="cap-card"><div class="title">exa <span class="badge new">disabled</span></div><div class="desc">neural search engine. עדיף מ-DuckDuckGo לחיפוש technical.</div></div>
+    <div class="cap-card"><div class="title">file-transfer <span class="badge new">disabled</span></div><div class="desc">P2P file transfer. ערך: מסמכים בין מכשירים.</div></div>
+    <div class="cap-card"><div class="title">phone-control <span class="badge new">disabled</span></div><div class="desc">control phone via ADB. ערך: לעמוד הגגות עם טאבלט.</div></div>
+    <div class="cap-card"><div class="title">migrate-claude <span class="badge new">disabled</span></div><div class="desc">העברת config מ-Claude Desktop. ערך עתידי לתאימות.</div></div>
+  </div>
+
+  <h3 style="margin-top: 28px;">📊 Hermes skills — 84 בסך הכל, 14 בשימוש</h3>
+  <p class="section-lead">
+    מ-state.db: רק 14 skills נטענו ב-14 ימים. ה-70 הנותרים תופסים ~6-10K טוקנים בכל system prompt לחינם.
+  </p>
+  <table class="std">
+    <thead><tr><th>בשימוש (14)</th><th>קטגוריה</th><th>טעינות</th></tr></thead>
+    <tbody>
+      <tr><td>obsidian</td><td>note-taking</td><td>35</td></tr>
+      <tr><td>google-workspace</td><td>productivity</td><td>21</td></tr>
+      <tr><td>whatsapp-crypt15-extraction</td><td>data-science (local)</td><td>10</td></tr>
+      <tr><td>openclaw-to-hermes-migration</td><td>migration (local)</td><td>8</td></tr>
+      <tr><td>hermes-agent</td><td>autonomous-ai-agents</td><td>8</td></tr>
+      <tr><td>barak-business-integrations</td><td>software-development (local)</td><td>7</td></tr>
+      <tr><td>regulatory-rss-monitoring</td><td>research (local)</td><td>6</td></tr>
+      <tr><td>himalaya</td><td>email</td><td>4</td></tr>
+      <tr><td>barak-activity-reporting</td><td>software-development (local)</td><td>4</td></tr>
+      <tr><td>kanban-orchestrator</td><td>devops</td><td>1</td></tr>
+      <tr><td>research-before-proposing</td><td>software-development (local)</td><td>1</td></tr>
+      <tr><td>hermes-agent-skill-authoring</td><td>software-development</td><td>1</td></tr>
+      <tr><td>autonomous-ai-agents</td><td>autonomous-ai-agents</td><td>1</td></tr>
+      <tr><td>subagent-driven-development</td><td>software-development</td><td>1</td></tr>
+    </tbody>
+  </table>
+  <p style="color: var(--text-dim); margin-top: 8px; font-size: 0.88em;">
+    70 dormant skills (לפי Q10 = disable-only, hard-remove fallback):
+    airtable, arxiv, ascii-*, baoyu-*, blogwatcher, claude-design, codex, comfyui, design-md, dogfood, dspy, excalidraw, fine-tuning-with-trl, gif-search, github-*, godmode, heartmula, huggingface-hub, humanizer, ideation, jupyter-live-kernel, linear, llama-cpp, llm-wiki, manim-video, maps, nano-pdf, native-mcp, node-inspect-debugger, notion, ocr-and-documents, opencode, openhue, outlines, p5js, pixel-art, plan, pokemon-player, polymarket, popular-web-designs, powerpoint, pretext, requesting-code-review, rtl-terminal-output, segment-anything-model, sketch, songsee, songwriting-and-ai-music, spike, spotify, systematic-debugging, teams-meeting-pipeline, test-driven-development, touchdesigner-mcp, webhook-subscriptions, weights-and-biases, writing-plans, youtube-content, yuanbao, architecture-diagram, ועוד.
+  </p>
+</section>
+
+<!-- ====== SECTION 7: GOALS ====== -->
+<section id="goals">
+  <h2>🎯 7. יעדים — איפה אנחנו ומה חסר ל-100%</h2>
+  <p class="section-lead">
+    כל יעד = יכולת שלמה של הסוכן. אחוז ההשלמה הוא ייצוג של "כמה רחוק מ-end-to-end עובד בלי נגיעה".
+  </p>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">📨 WhatsApp inbound-to-action</div>
+      <div class="goal-pct">75%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill high" style="width: 75%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> bridge מקבל, allowlist enforced, archive boundary, memory logging, intent classification (10 intents), few-shot learning, clarification loop, 4 outbound destinations.<br>
+      <strong>חסר:</strong> 2 Baileys נפגשים על אותו מספר (race condition), inbound webhook מ-Hermes ל-Alfred לא wired, memory write נשבר.
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 1 — לבטל Alfred Baileys, להוסיף long-poll watcher</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🎤 Voice notes end-to-end</div>
+      <div class="goal-pct">60%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill med" style="width: 60%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> bridge מקבל audio, Groq whisper-large-v3 מתמלל, classification ל-5 buckets, post ל-Voice transcripts group.<br>
+      <strong>חסר:</strong> upgrade ל-whisper-v3-turbo ($0.04/hr), action-loop על task/event (כעת רק לוג).
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 3 — propose calendar entry/task on classify=event/task</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">📅 Calendar full automation</div>
+      <div class="goal-pct">85%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill high" style="width: 85%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> 3-calendar lock, R/W via alfred-calendar.js, weather-aware scheduling, all-day reminders from clarify.<br>
+      <strong>חסר:</strong> conflict detection (freebusy.query), 2-3 option proposals before write, official Google Calendar MCP.
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 2 — MCP wrap דרך taylorwilsdon/google_workspace_mcp</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">📊 Monday.com integration</div>
+      <div class="goal-pct">85%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill high" style="width: 85%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> 100 boards mapped, daily digest, deep inventory cached, GraphQL read.<br>
+      <strong>חסר:</strong> webhooks (push במקום poll), Monday → calendar sync, official MCP `@mondaydotcomorg/monday-api-mcp`.
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 2 — להחליף 3 alfred-monday-*.js במconnector אחד</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">☀️ Solar monitoring + alerts</div>
+      <div class="goal-pct">45%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill low" style="width: 45%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> SolarEdge API client (חלקית, 403), Sungrow דרך BEE backend, alert triage skeleton.<br>
+      <strong>חסר:</strong> SolarEdge key rotation, Sungrow direct, Deye direct (Modbus), inverter alarm triage end-to-end, customer notification flow.
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 4 — bee-solaredge-mcp + bee-sungrow-mcp custom build</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">📜 Invoicing + payments (Cardcom + Invoice Maven)</div>
+      <div class="goal-pct">55%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill med" style="width: 55%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> Invoice Maven REST wrapper, --yes gated writes, intent classification client-payment.<br>
+      <strong>חסר:</strong> Cardcom payment links, batch operations, MCP wrapper (Q11 → לבנות עם mcp-builder), receipt OCR.
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 4 — bee-invoice-maven-mcp + Cardcom integration</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🧠 Long-term memory + RAG</div>
+      <div class="goal-pct">25%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill low" style="width: 25%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> daily memory/&lt;date&gt;.md (stale 9d), contacts.md, sites/*.md, Hermes state.db 172MB, 879K WA history decrypted.<br>
+      <strong>חסר:</strong> hindsight plugin פעיל, sync Alfred↔Hermes, vector DB (Qdrant), embeddings (BGE-M3), Hebrew-aware entity resolution, RAG tool exposed.
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 3 — Qdrant + BGE-M3 + hindsight</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🏛️ Israeli regulatory + government</div>
+      <div class="goal-pct">50%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill med" style="width: 50%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> gov-rss daily, deadlines deterministic logic, alfred-govmap.js לכתובות.<br>
+      <strong>חסר:</strong> Cloudflare bypass ל-gov.il, israel-law-mcp integration, רשות החשמל direct (אין API), Bituach Leumi + Mas Hachnasa (אין MCP).
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 3 — Ansvar-Systems/israel-law-mcp + skills-il/government-services</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🔗 MCP federation (Alfred ↔ Hermes ↔ external)</div>
+      <div class="goal-pct">5%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill low" style="width: 5%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> אין כלום. שני הצדדים תומכים MCP אבל 0 servers מוגדרים.<br>
+      <strong>חסר:</strong> `openclaw mcp serve` + `hermes mcp serve` + cross-mount + Tier 1 MCPs (Monday/Google/Filesystem/Playwright/SQLite) + Israeli (il-bank-mcp, israel-law-mcp, hebcal, IMS weather, Pikud Haoref).
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 2 — היחידה הגדולה ביותר. הכל-בכל ROI.</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">📊 Observability + cost tracking</div>
+      <div class="goal-pct">40%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill low" style="width: 40%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> Hermes /insights (token aggregation), Alfred dashboard 17 routes, alfred-cost-monitor.js, daily-cost-alert cron 23:30.<br>
+      <strong>חסר:</strong> 3-day-no-tokens alert (Q14 לא הוכרע), Langfuse proxy, cost-per-skill, A/B prompts replay, unified Hermes+Alfred dashboard.
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 4 — Langfuse Cloud + AgentGateway</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🛡️ Security + governance</div>
+      <div class="goal-pct">70%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill high" style="width: 70%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> AGENTS.md 8 foundational rules (immutable), deny-by-default sendPolicy, 4 outbound destinations constitutional, skill-verify.cjs, archive privacy boundary.<br>
+      <strong>חסר:</strong> Tirith pre-launch scan פעיל, MCP server sandboxing (Docker + gVisor), signing standards (Anthropic סירב לסדר), per-skill audit log.
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 4 — Tirith activation + Docker isolation per MCP</div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-header">
+      <div class="goal-name">🌐 Multi-platform (Telegram/Email/Slack)</div>
+      <div class="goal-pct">10%</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill low" style="width: 10%;"></div></div>
+    <div class="goal-details">
+      <strong>עובד:</strong> Hermes 19 platform adapters בקוד, WhatsApp בלבד מוגדר.<br>
+      <strong>חסר:</strong> Telegram (Q4 דחה), Email IMAP/SMTP, Slack בקבוצות צוות, Webhook generic. כל אחד 2-4 שעות חיבור.
+    </div>
+    <div class="goal-todo">📋 TODO: Wave 5 — Telegram אחרי שהפדרציה יציבה</div>
+  </div>
+</section>
+
+<!-- ====== SECTION 8: FUTURE STACK ====== -->
+<section id="future-stack">
+  <h2>🚀 8. המלצת stack ל-Q3-Q4 2026</h2>
+  <p class="section-lead">
+    בהנחה שהפדרציה תהיה יציבה ב-יוני, אלה הכלים שמומלצים להתקין בחודשים הבאים כדי לפתוח יכולות שעדיין לא קיימות. נחקרו ב-mai 2026, מבוססים על מקורות עדכניים.
+  </p>
+
+  <table class="std">
+    <thead><tr><th>שכבה</th><th>בחירה</th><th>למה</th><th>מתי להתחיל</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Vector DB</strong></td>
+        <td>Qdrant 1.13+ או LanceDB</td>
+        <td>Native hybrid (BM25+dense+ColBERT). Qdrant 41 QPS @ 50M vs pgvectorscale 471 QPS אם יש PG.</td>
+        <td>Wave 3 — RAG</td>
+      </tr>
+      <tr>
+        <td><strong>Embeddings</strong></td>
+        <td>BGE-M3 (BAAI, MIT)</td>
+        <td>Hebrew + English + Dense+Sparse+ColBERT ממודל אחד. self-host = $0.</td>
+        <td>Wave 3</td>
+      </tr>
+      <tr>
+        <td><strong>Wake word "אלפרד"</strong></td>
+        <td>openWakeWord (custom training)</td>
+        <td>Picovoice Porcupine אין עברית עדיין. openWakeWord = 1h colab notebook, MIT.</td>
+        <td>Wave 5</td>
+      </tr>
+      <tr>
+        <td><strong>STT</strong></td>
+        <td>Groq Whisper-large-v3-turbo</td>
+        <td>$0.04/hr — הזול ביותר ב-market 2026. עברית מצוין. 216× real-time.</td>
+        <td>Wave 1 (כבר בשימוש v3, להחליף ל-turbo)</td>
+      </tr>
+      <tr>
+        <td><strong>TTS עברית</strong></td>
+        <td>ElevenLabs (איכות) + Piper (latency)</td>
+        <td>EL = 4.14 MOS, 300ms latency. Piper = 30ms first-audio, חינם, local.</td>
+        <td>Wave 5 — voice-first</td>
+      </tr>
+      <tr>
+        <td><strong>Local LLM</strong></td>
+        <td>DictaLM 3.0 (1.7B/12B/24B) על Ollama</td>
+        <td>שוחרר Dec 2025. עברית native. tool calling built-in. 65K context. הקטן ל-router, הגדול ל-reasoning.</td>
+        <td>Wave 4 — hybrid local/cloud</td>
+      </tr>
+      <tr>
+        <td><strong>Routing</strong></td>
+        <td>vLLM Semantic Router v0.1 "Iris"</td>
+        <td>Production-ready Jan 2026. semantic caching + hallucination detection + 600 PRs merged.</td>
+        <td>Wave 4</td>
+      </tr>
+      <tr>
+        <td><strong>Observability</strong></td>
+        <td>Langfuse Cloud + AgentGateway</td>
+        <td>Langfuse MIT, cloud $199/mo @ 500K events. AgentGateway v1.0 Linux Foundation Mar 2026.</td>
+        <td>Wave 4</td>
+      </tr>
+      <tr>
+        <td><strong>Doc OCR עברית</strong></td>
+        <td>Gemini 2.5 Pro + AI21 RTL</td>
+        <td>Gemini 94% על Hebrew docs (Koncile bench). AI21 RTL parser SOTA על layout.</td>
+        <td>Wave 4 — חשבוניות נכנסות</td>
+      </tr>
+      <tr>
+        <td><strong>Memory</strong></td>
+        <td>Hindsight (cloud, 91.4%) או mem0 (DIY, 67.6%)</td>
+        <td>Hindsight על LongMemEval. 4 parallel retrieval. Honcho = 89.9% if dialectic modeling.</td>
+        <td>Wave 3</td>
+      </tr>
+      <tr>
+        <td><strong>Knowledge Graph</strong></td>
+        <td>Neo4j Community</td>
+        <td>⚠️ Kuzu DEPRECATED ב-2026. Memgraph BSL = יקר. Neo4j Community Cypher mature.</td>
+        <td>Wave 4 — entity graph</td>
+      </tr>
+      <tr>
+        <td><strong>Workflow</strong></td>
+        <td>n8n self-hosted + MCP Trigger node</td>
+        <td>היחיד שמתאפשר self-host. AI Agent node native. MCP Server Trigger מ-2026.</td>
+        <td>Wave 4 — אם Make/Zapier לא מספיק</td>
+      </tr>
+      <tr>
+        <td><strong>Security</strong></td>
+        <td>Tirith + Docker + gVisor per MCP</td>
+        <td>Anthropic סירב לפתור MCP RCE (April 2026). DIY isolation בלבד.</td>
+        <td>Wave 2 — לפני שמתקינים MCPs רבים</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="alert warn" style="margin-top: 20px;">
+    <h3>⚠️ Kuzu deprecated, Anthropic refused MCP RCE patch, prompt-cache TTL ירד</h3>
+    <p style="color: var(--text);">
+      <strong>Kuzu</strong> (KG הפופולרי 2024-2025) אורכב 2026 — מומלץ Neo4j Community.
+      <strong>Anthropic</strong> סירב לפתור באג MCP STDIO RCE שמשפיע על 150M+ downloads (April 2026 OX Security disclosure). הסנדבוקס חובה.
+      <strong>Anthropic prompt-cache TTL</strong> ירד מ-1h ל-5min ב-March 2026 — חייב להגדיר ידנית 1h.
+    </p>
+  </div>
+</section>
+
+<!-- ====== SECTION 9: TASKS ====== -->
+<section id="tasks">
+  <h2>✅ 9. רשימת המשימות — Wave -1 עד Wave 5</h2>
+  <p class="section-lead">
+    סדור לפי ROI. Wave -1 (Bug Squash) = ~6 שעות עם השפעה מיידית. Wave 5 = ongoing optimization.
+  </p>
+
+  <div class="task-section">
+    <h3 style="color: var(--red);">🔴 Wave -1: Bug Squash Friday (~6 שעות, עכשיו)</h3>
+    <div class="task crit"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">תקן alfred-router.js:37-39 fallback הפוך</div><div class="task-detail">הקוד מעדיף DeepSeek על Anthropic — ההפך מה-comment. תיקון 1 שורה. גורר את כל קריסת 22/5.</div><div class="task-meta">⏱️ 3 דק' · 🎯 ROI מוחלט</div></div></div>
+    <div class="task crit"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Restart Hermes WA bridge (port 3000)</div><div class="task-detail">PID חי, אבל port לא מאזין. kill + Start-Process via NSSM service.</div><div class="task-meta">⏱️ 15 דק' · 🎯 חוסם פדרציה</div></div></div>
+    <div class="task crit"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">הפעל active-memory plugin (Q3)</div><div class="task-detail">openclaw plugins enable active-memory. timeout=3s, max=500 tokens (Q12).</div><div class="task-meta">⏱️ 5 דק' · 🎯 חוסך טוקנים</div></div></div>
+    <div class="task crit"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">סלק/הפעל memory tool ב-Hermes</div><div class="task-detail">97.6% err. אם hindsight = הפעל. אחרת = הסר מ-tool catalog.</div><div class="task-meta">⏱️ 10 דק' · 🎯 80 round-trips/14d מבוזבזים</div></div></div>
+    <div class="task crit"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">החלף web_search לTavily (Q9)</div><div class="task-detail">80% err token פג. הוסף TAVILY_API_KEY ל-config.yaml, החלף provider.</div><div class="task-meta">⏱️ 10 דק' · 🎯 16/20 calls נכשלים</div></div></div>
+    <div class="task crit"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">prompt_caching cache_ttl: 5m → 1h</div><div class="task-detail">Anthropic הוריד default מ-1h ל-5m במרץ. עלייה 30-60%. שורה אחת ב-config.yaml.</div><div class="task-meta">⏱️ 2 דק' · 🎯 חיסכון 50%+ ב-bursty</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Disable 70 dormant skills (Q10)</div><div class="task-detail">hermes skills disable batch. חוסך 6-10K tokens/call. הפיך — disable-only.</div><div class="task-meta">⏱️ 30 דק' · 🎯 ~50M tokens/חודש</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">תקן DST hardcode ב-alfred-clarify.js:392</div><div class="task-detail">+03:00 hardcoded. נשבר במעבר שעון. החלף ל-Intl.DateTimeFormat עם Asia/Jerusalem.</div><div class="task-meta">⏱️ 15 דק' · 🎯 quietEndIso() תקין</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">הסר warranty placeholder ב-customer360.js:99</div><div class="task-detail">WHERE id IN (SELECT id LIMIT 0) — תמיד 0 שורות. placeholder שנשאר.</div><div class="task-meta">⏱️ 5 דק' · 🎯 dead code</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">תקן 3 SQL injections (enrich/intelligence/knowledge)</div><div class="task-detail">String interpolation במקום parameterized queries. better-sqlite3 תומך ב-?.</div><div class="task-meta">⏱️ 20 דק' · 🎯 security</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Parallelize calendar fetches ב-customer360.js:240-262</div><div class="task-detail">3 קריאות רציפות (45s) → Promise.all() (15s).</div><div class="task-meta">⏱️ 10 דק' · 🎯 3× faster</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">תקן memory/&lt;date&gt;.md write loop (stale 9d)</div><div class="task-detail">מי כותב? cron אחראי? לאתר ולהפעיל. urgent-digest cron תלוי בקובץ.</div><div class="task-meta">⏱️ 1h · 🎯 daily digest חוזר לעבוד</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">SOLAREDGE_APIKEY rotation</div><div class="task-detail">403 כרגע. solaredge.com → settings → API → renew. עדכן secrets/bee-integrations.env.</div><div class="task-meta">⏱️ 15 דק' · 🎯 solar monitoring</div></div></div>
+  </div>
+
+  <div class="task-section">
+    <h3 style="color: var(--accent);">🟠 Wave 0: Crisis Resolution (~3 שעות, היום-מחר)</h3>
+    <div class="task crit"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Top up DeepSeek balance (Q1)</div><div class="task-detail">platform.deepseek.com → top up $20-50. השאר ברירת מחדל אחרי תיקון fallback.</div><div class="task-meta">⏱️ 5 דק' · 🎯 חוסם 5 cron</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">בדוק/שדרג OpenClaw ל-2026.5.22 (Q7)</div><div class="task-detail">בדוק עם npm info openclaw version. אם @openclaw/whatsapp עם dist/, שדרג. אחרת השאר על 2026.5.2.</div><div class="task-meta">⏱️ 30 דק' · 🎯 startup 5ms במקום 20s</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Hermes 0.13 → 0.14 שדרוג</div><div class="task-detail">hermes update. 1685 commits מאחור. הוסיף OAuth proxy + xAI Grok + Teams + x_search.</div><div class="task-meta">⏱️ 1-2h · 🎯 capabilities + stability</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Heartbeat alert ל-0-tokens-24h</div><div class="task-detail">חוסר התראה כש-LLM endpoint down. Cron יומי writes heartbeat row; alert אם חסר.</div><div class="task-meta">⏱️ 1h · 🎯 מונע 3-day silent outage</div></div></div>
+  </div>
+
+  <div class="task-section">
+    <h3 style="color: var(--yellow);">🟡 Wave 1: Single Source of Truth (~4-8 שעות, ימים 2-3)</h3>
+    <div class="task crit"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">השבת Alfred Baileys</div><div class="task-detail">backup openclaw.json. plugins.whatsapp.enabled=false + channels.whatsapp.enabled=false. restart.</div><div class="task-meta">⏱️ 1h · 🎯 פותר conflict 401</div></div></div>
+    <div class="task crit"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">11 cron payloads → POST :3000/send</div><div class="task-detail">delivery.mode: announce → none. curl POST inside script. אחד-אחד.</div><div class="task-meta">⏱️ 2-3h · 🎯 outbound unified</div></div></div>
+    <div class="task crit"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Alfred inbound watcher (long-poll :3000/messages)</div><div class="task-detail">סקריפט חדש alfred-inbound-watcher.js. polling since=last_id. feed ל-router.</div><div class="task-meta">⏱️ 1h · 🎯 inbound restored</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Firecrawl dedup — להסיר מ-Alfred</div><div class="task-detail">13 symlinks ל-~/.agents/. uninstall.</div><div class="task-meta">⏱️ 15 דק' · 🎯 100MB</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">gov-rss dedup — להשאיר רק Alfred</div><div class="task-detail">Hermes regulatory-rss-monitoring → disable. Alfred עם Cloudflare fix.</div><div class="task-meta">⏱️ 30 דק' · 🎯 dedup</div></div></div>
+  </div>
+
+  <div class="task-section">
+    <h3 style="color: var(--blue);">🔵 Wave 2: MCP Foundation (~8 שעות, שבוע 1)</h3>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">openclaw mcp serve + hermes mcp serve (:3999)</div><div class="task-detail">שני הצדדים חושפים tools כ-MCP. cross-mount דרך mcp add.</div><div class="task-meta">⏱️ 1h · 🎯 פדרציה</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Composio (Q5) — להשלים alfred-mcp-gateway.js</div><div class="task-detail">Composio API key. 850-1000 integrations + Hebrew tier. 20K free calls/month.</div><div class="task-meta">⏱️ 2h · 🎯 8000 apps reachable</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Tier 1 MCPs — Monday + Google Workspace + Filesystem + Playwright + SQLite</div><div class="task-detail">npx @mondaydotcomorg/monday-api-mcp. pip install google_workspace_mcp. @modelcontextprotocol/server-{filesystem,sqlite}. @playwright/mcp.</div><div class="task-meta">⏱️ 3h · 🎯 5 sources × 2 agents = 10 capabilities new</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Tier 2 MCPs — skills-il bundles (Q2)</div><div class="task-detail">localization + tax-and-finance + government-services + communication. 80+ skills מ-YooTech.</div><div class="task-meta">⏱️ 2h · 🎯 Israeli-native</div></div></div>
+  </div>
+
+  <div class="task-section">
+    <h3 style="color: var(--purple);">🟣 Wave 3: Capability Splits (~12 שעות, שבועות 2-3)</h3>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">hindsight memory plugin (Q8 inference)</div><div class="task-detail">hermes plugins enable hindsight. config memory.provider=hindsight. סינכרון עם Alfred memory/&lt;date&gt;.md (Q6 = both sync).</div><div class="task-meta">⏱️ 2h · 🎯 semantic memory</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">RAG על 879K הודעות WhatsApp</div><div class="task-detail">DB decrypted ב-msgstore.db.decrypted.db. Qdrant + BGE-M3 + Hermes tool search_whatsapp_history(query, filters).</div><div class="task-meta">⏱️ 4h · 🎯 superpower חדש</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Voice end-to-end action loop</div><div class="task-detail">classify=task → propose TASKS row. classify=event → propose calendar entry. כיום רק לוג.</div><div class="task-meta">⏱️ 3h · 🎯 voice-to-action</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Reactions as control surface (👍/❌/⭐)</div><div class="task-detail">Hermes שומע reactions events. 👍 על draft → send. ❌ → cancel. ⭐ → escalate dashboard.</div><div class="task-meta">⏱️ 2h · 🎯 unique pattern</div></div></div>
+    <div class="task imp"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">israel-law-mcp + il-bank-mcp + IMS weather + Pikud Haoref</div><div class="task-detail">4 Tier-1 Israeli MCPs מ-Wave 2 — wiring + testing.</div><div class="task-meta">⏱️ 1h · 🎯 Israeli ecosystem</div></div></div>
+  </div>
+
+  <div class="task-section">
+    <h3 style="color: var(--green);">🟢 Wave 4: Platform Expansion + Observability (~16 שעות, חודש 2)</h3>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">bee-solaredge-mcp custom build</div><div class="task-detail">עוטף EVWorth/solaredge Python. 5 tools. anthropic-skills:mcp-builder.</div><div class="task-meta">⏱️ 1d · 🎯 solar federation</div></div></div>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">bee-sungrow-mcp custom build</div><div class="task-detail">developer-api.isolarcloud.com REST. similar pattern.</div><div class="task-meta">⏱️ 1d · 🎯 second inverter brand</div></div></div>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">bee-invoice-maven-mcp (Q11)</div><div class="task-detail">לבנות עם mcp-builder. 5 פקודות. --yes gate על writes.</div><div class="task-meta">⏱️ 1-2d · 🎯 invoicing federation</div></div></div>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Langfuse Cloud + AgentGateway</div><div class="task-detail">Helicone-style proxy. cost-per-skill, latency-per-tool, A/B prompts replay.</div><div class="task-meta">⏱️ 4h · 🎯 observability</div></div></div>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Inverter alarm triage end-to-end</div><div class="task-detail">SolarEdge alarm → Alfred → classify → propose action → ברק מאשר → execute. 35% הפחתת truck rolls.</div><div class="task-meta">⏱️ 4h · 🎯 ROI עסקי ישיר</div></div></div>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">WhatsApp MCP ftaricano (Q13)</div><div class="task-detail">production-ready version עם circuit breaker. אופציה לקריאה ישירה מ-Claude Desktop.</div><div class="task-meta">⏱️ 2h · 🎯 Claude-direct access</div></div></div>
+  </div>
+
+  <div class="task-section">
+    <h3 style="color: var(--accent-2);">🔷 Wave 5: Voice-First + Continuous Optimization (ongoing)</h3>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">openWakeWord custom "אלפרד"</div><div class="task-detail">1h colab notebook. רץ local. STT דרך Groq turbo. TTS דרך Piper Hebrew.</div><div class="task-meta">⏱️ 1d · 🎯 voice-first</div></div></div>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">DictaLM 3.0 local routing</div><div class="task-detail">Ollama. 1.7B for router intent. 24B for hard reasoning. vLLM Semantic Router בתווך.</div><div class="task-meta">⏱️ 1d · 🎯 hybrid local/cloud</div></div></div>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Telegram channel (Q4 דחה)</div><div class="task-detail">כשהפדרציה יציבה. Hermes platform.telegram.enabled=true.</div><div class="task-meta">⏱️ 2h · 🎯 multi-channel</div></div></div>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">Weekly /insights → GPT → tune cycle</div><div class="task-detail">playbook.md בעקבות @shannholmberg.</div><div class="task-meta">⏱️ 1h/week · 🎯 continuous</div></div></div>
+    <div class="task nice"><div class="task-checkbox"></div><div class="task-body"><div class="task-title">self-improving weekly review (Sunday 09:00)</div><div class="task-detail">cron disabled כיום. הפעל אחרי Wave 0.</div><div class="task-meta">⏱️ 5 דק' · 🎯 self-evolution</div></div></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>⚡ Alfred + 🐝 Hermes · ניתוח מבנה + מפת השלמה</p>
+  <p>📂 מסמכים נלווים: <a href="https://github.com/Barak-B/bee-assets/blob/claude/capability-extensions-collection-JjV2s/research/federation-plan.md">federation-plan.md</a> · <a href="https://github.com/Barak-B/bee-assets/blob/claude/capability-extensions-collection-JjV2s/research/tools-deep-audit.md">tools-deep-audit.md</a> · <a href="https://github.com/Barak-B/bee-assets/tree/claude/capability-extensions-collection-JjV2s/research/local-state">local-state snapshot</a></p>
+  <p>📅 נוצר 2026-05-26 03:00 · מבוסס על 3 חוקרי-משנה מקבילים + state.db חי + alfred-overview.html + hermes-overview.html + hermes-alfred-cooperation.html</p>
+  <p style="margin-top: 8px;">מקור: <code>E:\bee-assets\research\agent-architecture.html</code></p>
+</footer>
+
+</body>
+</html>

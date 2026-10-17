@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>Hermes Agent — מפת מבנה מלאה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0f1419;
+    --bg-2:      #1a2129;
+    --bg-3:      #232c36;
+    --bg-4:      #2d3744;
+    --text:      #e6edf3;
+    --text-dim:  #9da7b1;
+    --text-mute: #6b7684;
+    --accent:    #f6c244;
+    --accent-2:  #ffd76b;
+    --good:      #3fb950;
+    --warn:      #d29922;
+    --bad:       #f85149;
+    --info:      #58a6ff;
+    --bee:       #f6c244;
+    --bee-soft:  #f6c24420;
+    --border:    #30363d;
+    --shadow:    0 4px 16px rgba(0,0,0,0.4);
+    --radius:    10px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Heebo', 'Rubik', 'Assistant', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+    min-height: 100vh;
+  }
+  code, .mono { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 0.92em; }
+
+  /* === LAYOUT === */
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 32px 24px; }
+
+  /* === HEADER === */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+    padding: 28px 32px;
+    background: linear-gradient(135deg, #1a2129 0%, #232c36 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 32px;
+    box-shadow: var(--shadow);
+  }
+  .hero h1 {
+    margin: 0 0 8px;
+    font-size: 2.4rem;
+    font-weight: 800;
+    background: linear-gradient(120deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero .tagline {
+    color: var(--text-dim);
+    font-size: 1.05rem;
+    margin: 0;
+  }
+  .health-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 16px 20px;
+    background: var(--good);
+    color: #0a0e12;
+    border-radius: var(--radius);
+    font-weight: 700;
+    min-width: 140px;
+  }
+  .health-badge .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #0a0e12;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .health-badge .label { font-size: 0.85rem; font-weight: 600; opacity: 0.7; }
+  .health-badge .value { font-size: 1.4rem; }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%     { opacity: 0.4; }
+  }
+
+  /* === KPI ROW === */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+  .kpi {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    transition: transform 0.2s;
+  }
+  .kpi:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .kpi .label { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 6px; }
+  .kpi .value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+  .kpi .sub { font-size: 0.8rem; color: var(--text-mute); margin-top: 4px; }
+
+  /* === SECTIONS === */
+  section { margin-bottom: 48px; }
+  h2 {
+    font-size: 1.6rem;
+    margin: 0 0 8px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--bee);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .num {
+    display: inline-flex;
+    width: 32px; height: 32px;
+    align-items: center;
+    justify-content: center;
+    background: var(--bee);
+    color: #0a0e12;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 1rem;
+  }
+  h2 + .lead { color: var(--text-dim); margin-top: 0; margin-bottom: 24px; font-size: 1rem; }
+  h3 { margin: 24px 0 12px; font-size: 1.15rem; color: var(--accent-2); }
+
+  /* === EXPLAIN BLOCKS === */
+  .explain {
+    background: var(--bg-2);
+    border-right: 3px solid var(--bee);
+    padding: 16px 20px;
+    border-radius: 6px;
+    margin: 16px 0;
+  }
+  .explain strong { color: var(--accent); }
+
+  /* === ARCHITECTURE DIAGRAM === */
+  .arch {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin: 20px 0;
+  }
+  .arch-flow {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .arch-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr 60px 1fr;
+    align-items: center;
+    gap: 8px;
+  }
+  .arch-node {
+    background: var(--bg-3);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .arch-node:hover { border-color: var(--bee); transform: translateY(-2px); }
+  .arch-node.in    { border-color: var(--info); }
+  .arch-node.proc  { border-color: var(--bee); background: var(--bee-soft); }
+  .arch-node.out   { border-color: var(--good); }
+  .arch-node.store { border-color: var(--accent-2); border-style: dashed; }
+  .arch-node h4 { margin: 0 0 6px; font-size: 1rem; }
+  .arch-node p  { margin: 0; color: var(--text-dim); font-size: 0.82rem; }
+  .arch-arrow {
+    color: var(--text-mute);
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+  .arch-spacer { height: 8px; }
+  .arch-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .arch-step {
+    background: var(--bg-3);
+    padding: 12px 16px;
+    border-radius: 8px;
+    border-right: 4px solid var(--bee);
+  }
+  .arch-step .step-num {
+    display: inline-block;
+    width: 24px; height: 24px;
+    background: var(--bee);
+    color: #0a0e12;
+    border-radius: 50%;
+    text-align: center;
+    font-weight: 800;
+    line-height: 24px;
+    margin-left: 8px;
+    font-size: 0.85rem;
+  }
+  .arch-step strong { color: var(--text); }
+  .arch-step p { margin: 4px 0 0; color: var(--text-dim); font-size: 0.88rem; }
+
+  /* === FLOW STEPS (numbered process) === */
+  .steps {
+    counter-reset: step-counter;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .step {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px 16px 16px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: start;
+    counter-increment: step-counter;
+  }
+  .step::before {
+    content: counter(step-counter);
+    background: var(--bee);
+    color: #0a0e12;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.1rem;
+  }
+  .step h4 { margin: 0 0 4px; }
+  .step p  { margin: 0; color: var(--text-dim); }
+  .step .meta { display: inline-block; background: var(--bg-3); padding: 2px 8px; border-radius: 4px; margin-top: 8px; font-size: 0.78rem; color: var(--text-mute); }
+
+  /* === INTEGRATIONS GRID === */
+  .integ-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .integ {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .integ:hover { border-color: var(--bee); }
+  .integ .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .integ .name { font-weight: 600; }
+  .integ .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .integ .status.ok    { background: var(--good); color: #0a0e12; }
+  .integ .status.warn  { background: var(--warn); color: #0a0e12; }
+  .integ .status.miss  { background: var(--bg-4); color: var(--text-mute); }
+  .integ .desc { font-size: 0.85rem; color: var(--text-dim); }
+  .integ-group-title { font-size: 1rem; color: var(--accent-2); margin: 24px 0 6px; }
+
+  /* === GOALS / ROADMAP === */
+  .goal {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+  }
+  .goal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .goal-head h4 { margin: 0; font-size: 1.05rem; }
+  .goal-pct { font-weight: 700; font-size: 1.1rem; }
+  .goal-pct.ok { color: var(--good); }
+  .goal-pct.warn { color: var(--warn); }
+  .goal-pct.zero { color: var(--text-mute); }
+  .progress {
+    height: 10px;
+    background: var(--bg-3);
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress > div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--bee) 0%, var(--accent-2) 100%);
+    transition: width 0.6s;
+  }
+  .progress.ok > div    { background: linear-gradient(90deg, var(--good) 0%, #56d364 100%); }
+  .progress.warn > div  { background: linear-gradient(90deg, var(--warn) 0%, #f0c674 100%); }
+  .progress.zero > div  { background: var(--bg-4); }
+  .goal-detail { color: var(--text-dim); font-size: 0.9rem; margin: 6px 0 0; }
+  .goal-meta { display: flex; gap: 16px; margin-top: 6px; font-size: 0.8rem; color: var(--text-mute); }
+
+  /* === TABLES === */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 12px 0;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+  }
+  th { background: var(--bg-3); font-weight: 600; color: var(--accent-2); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover { background: var(--bg-3); }
+
+  /* === TASK LIST === */
+  .tasks {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin: 20px 0;
+  }
+  .task {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 14px;
+    align-items: center;
+    transition: all 0.2s;
+  }
+  .task:hover { border-color: var(--bee); transform: translateX(-2px); }
+  .task .chk {
+    width: 22px; height: 22px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bg);
+    font-weight: 800;
+  }
+  .task.done .chk { background: var(--good); border-color: var(--good); color: white; }
+  .task.partial .chk { background: var(--warn); border-color: var(--warn); color: white; }
+  .task.done .title { text-decoration: line-through; opacity: 0.6; }
+  .task .title { font-weight: 500; }
+  .task .sub   { color: var(--text-mute); font-size: 0.82rem; margin-top: 2px; }
+  .task .effort, .task .roi {
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: var(--bg-3);
+  }
+  .task .roi.high  { background: var(--good); color: #0a0e12; }
+  .task .roi.mid   { background: var(--warn); color: #0a0e12; }
+  .task .roi.low   { background: var(--bg-4); color: var(--text-dim); }
+  .task .effort { color: var(--text-dim); }
+
+  /* === LEGEND === */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 12px 0;
+    font-size: 0.85rem;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--bg-2);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .legend .sw {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+  }
+
+  /* === CALLOUTS === */
+  .callout {
+    border-right: 4px solid var(--info);
+    background: var(--bg-2);
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin: 14px 0;
+  }
+  .callout.warn { border-color: var(--warn); }
+  .callout.bad  { border-color: var(--bad); }
+  .callout strong { color: var(--accent); }
+
+  /* === FOOTER === */
+  footer {
+    margin-top: 60px;
+    padding: 24px;
+    background: var(--bg-2);
+    border-top: 2px solid var(--bee);
+    text-align: center;
+    color: var(--text-mute);
+    font-size: 0.88rem;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 768px) {
+    .hero { grid-template-columns: 1fr; }
+    .arch-row { grid-template-columns: 1fr; }
+    .arch-section { grid-template-columns: 1fr; }
+    .arch-arrow { transform: rotate(90deg); }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- === HEADER === -->
+<header class="hero">
+  <div>
+    <h1>🐝 Hermes Agent</h1>
+    <p class="tagline">סוכן AI אישי שעובד בטרמינל וב-WhatsApp · גרסה 1.3 · עדכון 25.05.2026</p>
+  </div>
+  <div class="health-badge">
+    <span class="dot"></span>
+    <span class="label">סטטוס</span>
+    <span class="value">פעיל 24/7</span>
+  </div>
+</header>
+
+<!-- === KPIs === -->
+<div class="kpi-grid">
+  <div class="kpi"><div class="label">הודעות שטופלו</div><div class="value">16,532</div><div class="sub">14 ימים אחרונים</div></div>
+  <div class="kpi"><div class="label">סשנים</div><div class="value">1,454</div><div class="sub">cron + cli + WhatsApp</div></div>
+  <div class="kpi"><div class="label">טוקנים</div><div class="value">280.6M</div><div class="sub">סך הכל ב-14 ימים</div></div>
+  <div class="kpi"><div class="label">צ׳אטים פעילים</div><div class="value">704</div><div class="sub">בהיסטוריית WhatsApp</div></div>
+  <div class="kpi"><div class="label">API Keys</div><div class="value">8 / 22</div><div class="sub">ספקי AI + שירותים</div></div>
+  <div class="kpi"><div class="label">השלמה כוללת</div><div class="value">42%</div><div class="sub">עד פעולה מושלמת</div></div>
+</div>
+
+<!-- === SECTION 1: WHAT DOES HERMES DO === -->
+<section>
+  <h2><span class="num">1</span>מה Hermes עושה — בשפה פשוטה</h2>
+  <p class="lead">Hermes הוא סוכן AI חכם שיושב על המחשב שלך ועושה שלושה דברים מרכזיים:</p>
+
+  <div class="arch-section">
+    <div class="arch-step">
+      <span class="step-num">א</span><strong>מקבל הודעות</strong>
+      <p>דרך WhatsApp (פעיל) · מהטרמינל ישירות · מ-cron jobs מתוזמנים. בעתיד גם Email, Telegram, Discord.</p>
+    </div>
+    <div class="arch-step">
+      <span class="step-num">ב</span><strong>חושב ופועל</strong>
+      <p>שולח את ההודעה למודל AI (DeepSeek V4 Pro ברירת מחדל), ה-AI מחליט מה לעשות, משתמש בכלים (טרמינל, browser, חיפוש קוד).</p>
+    </div>
+    <div class="arch-step">
+      <span class="step-num">ג</span><strong>מחזיר תשובה</strong>
+      <p>מבצע את המשימה (כותב קובץ, מריץ סקריפט, מחפש מידע) ושולח לך חזרה את התוצאה ב-WhatsApp.</p>
+    </div>
+  </div>
+
+  <div class="explain">
+    <strong>דוגמה מעשית:</strong> אתה שולח ל-WhatsApp "בדוק כמה אתרים סולאריים פעילים היום". Hermes מקבל את ההודעה, ניגש למסד הנתונים של BEE Operations, מריץ שאילתא, מסכם — ומחזיר תוך 5 שניות "486 אתרים פעילים, 99% מנוטרים".
+  </div>
+</section>
+
+<!-- === SECTION 2: ARCHITECTURE === -->
+<section>
+  <h2><span class="num">2</span>ארכיטקטורה — איך זה בנוי</h2>
+  <p class="lead">Hermes רץ כשני תהליכים שמדברים אחד עם השני, עם מאגר מידע מתמשך, ומתחבר ל-AI חיצוני:</p>
+
+  <div class="arch">
+    <div class="arch-row">
+      <div class="arch-node in">
+        <h4>📥 קלט (Inbound)</h4>
+        <p>WhatsApp · Terminal · Cron</p>
+      </div>
+      <div class="arch-arrow">←</div>
+      <div class="arch-node proc">
+        <h4>🧠 מוח (Core)</h4>
+        <p>Python Gateway<br>+ LLM (DeepSeek V4 Pro)</p>
+      </div>
+      <div class="arch-arrow">←</div>
+      <div class="arch-node out">
+        <h4>📤 פלט (Outbound)</h4>
+        <p>WhatsApp · קבצים · API calls</p>
+      </div>
+    </div>
+
+    <div class="arch-spacer"></div>
+
+    <div class="arch-row">
+      <div class="arch-node store">
+        <h4>💾 state.db</h4>
+        <p>SQLite · 167 MB<br>היסטוריית סשנים</p>
+      </div>
+      <div class="arch-arrow">↔</div>
+      <div class="arch-node store">
+        <h4>🔧 Tools + Skills</h4>
+        <p>טרמינל · browser · 25 skills<br>(2 פעילים: firecrawl, research)</p>
+      </div>
+      <div class="arch-arrow">↔</div>
+      <div class="arch-node store">
+        <h4>🔑 8 API Keys</h4>
+        <p>DeepSeek · Anthropic · Gemini<br>Groq · Perplexity · GitHub · ...</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>הרכיבים בפועל (תהליכים חיים על המחשב)</h3>
+
+  <table>
+    <thead>
+      <tr><th>רכיב</th><th>תהליך</th><th>תפקיד</th><th>סטטוס</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>WhatsApp Bridge</strong></td>
+        <td><code>bridge.js</code> · Node.js · port 3000</td>
+        <td>מתחבר ל-WhatsApp Web, מקבל/שולח הודעות דרך HTTP</td>
+        <td><span class="integ"><span class="status ok">פעיל</span></span></td>
+      </tr>
+      <tr>
+        <td><strong>Python Gateway</strong></td>
+        <td><code>hermes_cli.main gateway run</code></td>
+        <td>המוח — מקבל הודעות, קורא ל-AI, מפעיל כלים, שולח חזרה</td>
+        <td><span class="integ"><span class="status ok">פעיל</span></span></td>
+      </tr>
+      <tr>
+        <td><strong>state.db</strong></td>
+        <td>SQLite · 167.6 MB · 1,454 sessions</td>
+        <td>זוכר את כל השיחות, התוצאות, הקונטקסט</td>
+        <td><span class="integ"><span class="status ok">פעיל</span></span></td>
+      </tr>
+      <tr>
+        <td><strong>Log Rotation</strong></td>
+        <td>Scheduled Task יומי 03:00</td>
+        <td>מנקה bridge.log אם גדול מ-20 MB, שומר gzipped 30 ימים</td>
+        <td><span class="integ"><span class="status ok">פעיל</span></span></td>
+      </tr>
+      <tr>
+        <td><strong>NSSM Service</strong></td>
+        <td>Windows Service (Manual)</td>
+        <td>יבטיח auto-restart אם הסוכן נופל</td>
+        <td><span class="integ"><span class="status warn">מותקן · לא רשום</span></span></td>
+      </tr>
+      <tr>
+        <td><strong>Session Keys</strong></td>
+        <td>20,832 קבצי Baileys</td>
+        <td>שומר את החיבור ל-WhatsApp בלי צורך לסרוק QR</td>
+        <td><span class="integ"><span class="status ok">פעיל</span></span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- === SECTION 3: FLOW === -->
+<section>
+  <h2><span class="num">3</span>תזרים — הודעה אחת מקצה לקצה</h2>
+  <p class="lead">מה קורה ברקע כשאתה שולח הודעת WhatsApp ל-Hermes:</p>
+
+  <div class="steps">
+    <div class="step">
+      <div>
+        <h4>אתה שולח הודעה ב-WhatsApp</h4>
+        <p>הודעה מגיעה ל-WhatsApp Cloud → ל-bridge.js שמאזין על port 3000.</p>
+        <span class="meta">זמן: מיידי</span>
+      </div>
+    </div>
+    <div class="step">
+      <div>
+        <h4>סינון allowlist</h4>
+        <p>הברידג׳ בודק אם המספר ברשימה המורשית (`WHATSAPP_ALLOWED_USERS`). אם לא — נדחה. אם כן — ממשיך.</p>
+        <span class="meta">קובץ: allowlist.js</span>
+      </div>
+    </div>
+    <div class="step">
+      <div>
+        <h4>Python Gateway קורא את ההודעה</h4>
+        <p>הגייטוויי שואל את הברידג׳ "יש הודעות חדשות?" (long-poll על /messages) ומקבל אותה.</p>
+        <span class="meta">קובץ: gateway/platforms/whatsapp.py</span>
+      </div>
+    </div>
+    <div class="step">
+      <div>
+        <h4>בונה context</h4>
+        <p>שולף מ-state.db את ההיסטוריה של השיחה הזו, טוען את ה-skills הרלוונטיים, מצמיד את הזהות שלך.</p>
+        <span class="meta">קובץ: agent/prompt_builder.py</span>
+      </div>
+    </div>
+    <div class="step">
+      <div>
+        <h4>שולח ל-LLM (DeepSeek V4 Pro)</h4>
+        <p>שולח את כל הקונטקסט ל-API של DeepSeek. ה-AI חוזר עם תשובה או "תקרא לי לכלי X" (tool call).</p>
+        <span class="meta">קובץ: agent/transports/openai.py</span>
+      </div>
+    </div>
+    <div class="step">
+      <div>
+        <h4>לולאת כלים (tool loop)</h4>
+        <p>אם ה-AI ביקש כלי — Hermes מריץ אותו (טרמינל, browser, read_file), מחזיר את התוצאה ל-AI, וחוזרים עד שה-AI מסיים. מקסימום 40 סבבים.</p>
+        <span class="meta">קובץ: run_agent.py</span>
+      </div>
+    </div>
+    <div class="step">
+      <div>
+        <h4>שומר את הסשן</h4>
+        <p>כל ההודעות, ה-tool calls, התוצאות — נשמרים ב-state.db לשיחה הבאה.</p>
+        <span class="meta">DB: state.db (SQLite)</span>
+      </div>
+    </div>
+    <div class="step">
+      <div>
+        <h4>שולח תשובה חזרה</h4>
+        <p>הגייטוויי שולח POST /send לברידג׳ עם התשובה. הברידג׳ מעביר ל-WhatsApp. אתה רואה את ההודעה בטלפון.</p>
+        <span class="meta">זמן כולל: 3-15 שניות</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- === SECTION 4: INTEGRATIONS === -->
+<section>
+  <h2><span class="num">4</span>אינטגרציות — מי מדבר עם מי</h2>
+  <p class="lead">8 אינטגרציות פעילות מתוך 22 אפשריות. ספקי AI, ערוצי תקשורת, וכלי עזר:</p>
+
+  <div class="legend">
+    <span><span class="sw" style="background:var(--good)"></span>פעיל</span>
+    <span><span class="sw" style="background:var(--warn)"></span>חלקי</span>
+    <span><span class="sw" style="background:var(--bg-4)"></span>חסר API key</span>
+  </div>
+
+  <h3 class="integ-group-title">ספקי AI — מודלי שפה</h3>
+  <div class="integ-grid">
+    <div class="integ"><div class="head"><span class="name">DeepSeek</span><span class="status ok">פעיל</span></div><div class="desc">V4 Pro · default model · workhorse</div></div>
+    <div class="integ"><div class="head"><span class="name">Anthropic</span><span class="status ok">פעיל</span></div><div class="desc">Claude Opus/Sonnet · משימות מורכבות</div></div>
+    <div class="integ"><div class="head"><span class="name">Google Gemini</span><span class="status ok">פעיל</span></div><div class="desc">משימות זולות + vision</div></div>
+    <div class="integ"><div class="head"><span class="name">Groq</span><span class="status ok">פעיל</span></div><div class="desc">inference מהיר · free tier</div></div>
+    <div class="integ"><div class="head"><span class="name">Perplexity</span><span class="status ok">פעיל</span></div><div class="desc">web-grounded LLM · חיפוש עם ציטוטים</div></div>
+    <div class="integ"><div class="head"><span class="name">OpenRouter</span><span class="status miss">חסר key</span></div><div class="desc">100+ models · multi-provider routing</div></div>
+    <div class="integ"><div class="head"><span class="name">xAI / Grok</span><span class="status miss">חסר key</span></div><div class="desc">דורש הרשמה</div></div>
+    <div class="integ"><div class="head"><span class="name">OpenAI</span><span class="status miss">חסר key</span></div><div class="desc">לא דחוף — יש Anthropic</div></div>
+  </div>
+
+  <h3 class="integ-group-title">ערוצי תקשורת</h3>
+  <div class="integ-grid">
+    <div class="integ"><div class="head"><span class="name">WhatsApp</span><span class="status ok">פעיל</span></div><div class="desc">Baileys bridge · port 3000 · 4 chats מורשים</div></div>
+    <div class="integ"><div class="head"><span class="name">Email</span><span class="status miss">לא מוגדר</span></div><div class="desc">IMAP/SMTP · קוד קיים, צריך הגדרה</div></div>
+    <div class="integ"><div class="head"><span class="name">Telegram</span><span class="status miss">לא מוגדר</span></div><div class="desc">2 דקות להגדיר · דורש bot token</div></div>
+    <div class="integ"><div class="head"><span class="name">Discord</span><span class="status miss">לא מוגדר</span></div><div class="desc">קוד קיים · לא בעדיפות</div></div>
+    <div class="integ"><div class="head"><span class="name">Slack</span><span class="status miss">לא מוגדר</span></div><div class="desc">קוד קיים · לא בעדיפות</div></div>
+    <div class="integ"><div class="head"><span class="name">Terminal CLI</span><span class="status ok">פעיל</span></div><div class="desc">`hermes` · הרוב 59% מהטוקנים</div></div>
+  </div>
+
+  <h3 class="integ-group-title">כלי עזר ושירותים</h3>
+  <div class="integ-grid">
+    <div class="integ"><div class="head"><span class="name">Firecrawl</span><span class="status ok">פעיל</span></div><div class="desc">חיפוש + scraping של דפי web</div></div>
+    <div class="integ"><div class="head"><span class="name">FAL</span><span class="status ok">פעיל</span></div><div class="desc">image generation · flux/klein</div></div>
+    <div class="integ"><div class="head"><span class="name">GitHub</span><span class="status ok">פעיל</span></div><div class="desc">PRs · issues · code search</div></div>
+    <div class="integ"><div class="head"><span class="name">Browserbase</span><span class="status miss">חסר key</span></div><div class="desc">cloud browser · alternative ל-local</div></div>
+    <div class="integ"><div class="head"><span class="name">Tavily</span><span class="status miss">חסר key</span></div><div class="desc">חיפוש AI alternative</div></div>
+    <div class="integ"><div class="head"><span class="name">ElevenLabs</span><span class="status miss">חסר key</span></div><div class="desc">TTS איכותי (יש Edge TTS חינמי)</div></div>
+  </div>
+
+  <h3 class="integ-group-title">צרכנים פנימיים (B.E.E)</h3>
+  <div class="integ-grid">
+    <div class="integ"><div class="head"><span class="name">bee-hive</span><span class="status ok">פעיל</span></div><div class="desc">morning digest דרך whatsapp-out.js</div></div>
+    <div class="integ"><div class="head"><span class="name">Alfred Platform</span><span class="status warn">מקביל</span></div><div class="desc">סוכן נפרד · לא מדבר עם Hermes</div></div>
+    <div class="integ"><div class="head"><span class="name">BEE Operations</span><span class="status warn">לא מחובר</span></div><div class="desc">DB של BEE לא נגיש ל-Hermes ישירות</div></div>
+    <div class="integ"><div class="head"><span class="name">Obsidian</span><span class="status ok">פעיל</span></div><div class="desc">skill `obsidian` (36 שימושים אחרונים)</div></div>
+  </div>
+</section>
+
+<!-- === SECTION 5: GOALS === -->
+<section>
+  <h2><span class="num">5</span>יעדים — כמה רחוק להשלמה מלאה</h2>
+  <p class="lead">8 יעדים אסטרטגיים שיהפכו את Hermes ל-Worker Bee מלא של B.E.E:</p>
+
+  <div class="goal">
+    <div class="goal-head"><h4>1. יציבות תמידית (Always-on)</h4><span class="goal-pct warn">50%</span></div>
+    <div class="progress warn"><div style="width:50%"></div></div>
+    <p class="goal-detail">log rotation עובד ✓ · NSSM הותקן ✓ · אבל service טרם רשום ולא מופעל. דורש admin להפעלת auto-restart.</p>
+    <div class="goal-meta"><span>חסר: רישום שירות</span><span>מאמץ: 5 דקות (admin)</span></div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-head"><h4>2. ערוצי תקשורת מרובים</h4><span class="goal-pct warn">25%</span></div>
+    <div class="progress warn"><div style="width:25%"></div></div>
+    <p class="goal-detail">WhatsApp פעיל ✓ · Terminal פעיל ✓ · אבל Email · Telegram · Discord · Slack — כולם לא מוגדרים. כל אחד = פשוט dot env + setup wizard.</p>
+    <div class="goal-meta"><span>חסר: 4 ערוצים</span><span>מאמץ: 5-15 דקות לכל אחד</span></div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-head"><h4>3. זיכרון מתמשך (Persistent Memory)</h4><span class="goal-pct warn">60%</span></div>
+    <div class="progress warn"><div style="width:60%"></div></div>
+    <p class="goal-detail">state.db שומר היסטוריית סשנים ✓ · אבל memory plugin (vector store, knowledge graph) עדיין לא פעיל. Hermes לא זוכר עובדות בין סשנים שונים, רק בתוך אותה שיחה.</p>
+    <div class="goal-meta"><span>חסר: vector memory</span><span>מאמץ: 2-4 שעות</span></div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-head"><h4>4. יעילות טוקנים</h4><span class="goal-pct warn">60%</span></div>
+    <div class="progress warn"><div style="width:60%"></div></div>
+    <p class="goal-detail">תוקנו: max_turns 90→40, vision aux. נשאר: CLI sessions = 59% מהטוקנים מ-2.5% מהsessions (heavy!). חקירת deepseek-chat anomaly (169M tokens unexplained).</p>
+    <div class="goal-meta"><span>חסר: CLI patterns + anomaly</span><span>מאמץ: 1-2 שעות</span></div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-head"><h4>5. Auto-supervision (השגחה אוטומטית)</h4><span class="goal-pct warn">40%</span></div>
+    <div class="progress warn"><div style="width:40%"></div></div>
+    <p class="goal-detail">log rotation מתוזמן ✓ · אבל אין metrics endpoint, אין alerts אם משהו נופל, אין health-ping cron. אם הברידג׳ ייפול ב-2 בלילה — אף אחד לא ידע עד הבוקר.</p>
+    <div class="goal-meta"><span>חסר: metrics + alerts + ping</span><span>מאמץ: 3-4 שעות</span></div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-head"><h4>6. סוכנים מתמחים (Level 2)</h4><span class="goal-pct warn">15%</span></div>
+    <div class="progress warn"><div style="width:15%"></div></div>
+    <p class="goal-detail">יש 2 skills ייחודיים ל-B.E.E (barak-business-integrations, barak-activity-reporting). חסרים: hermes-solar, hermes-clients, hermes-finance, hermes-field. כל אחד = סוכן ייעודי עם credentials/scope משלו.</p>
+    <div class="goal-meta"><span>חסר: 4-5 specialized agents</span><span>מאמץ: חצי יום עבודה</span></div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-head"><h4>7. Orchestrator (Level 3)</h4><span class="goal-pct zero">0%</span></div>
+    <div class="progress zero"><div style="width:0%"></div></div>
+    <p class="goal-detail">בעתיד: bee-hive יקבל כל פנייה, יחליט איזה specialized agent מתאים, ינתב, יסכם תוצאות. אחת הדלת הקדמית, מאחור צוות סוכנים. עדיין לא קיים.</p>
+    <div class="goal-meta"><span>תלוי ב: יעד 6</span><span>מאמץ: יום עבודה</span></div>
+  </div>
+
+  <div class="goal">
+    <div class="goal-head"><h4>8. צוות אוטומטי (Level 4)</h4><span class="goal-pct zero">0%</span></div>
+    <div class="progress zero"><div style="width:0%"></div></div>
+    <p class="goal-detail">היעד הסופי: cron + webhooks → orchestrator → task-bus (inbox → working → outbox → done) → צוות. אתה לא בלולאה כל היום, רק review בסוף יום. עדיין שלב הרבה רחוק.</p>
+    <div class="goal-meta"><span>תלוי ב: יעדים 6+7</span><span>מאמץ: יומיים</span></div>
+  </div>
+
+  <div class="callout">
+    <strong>השלמה כוללת:</strong> 42% — חצי הדרך. הנתיב ברור: גלי עבודה (Waves) שכבר תוכננו, חלק כבר בוצעו.
+  </div>
+</section>
+
+<!-- === SECTION 6: TASKS === -->
+<section>
+  <h2><span class="num">6</span>רשימת משימות — מה נשאר לעשות</h2>
+  <p class="lead">10 משימות לפי ROI (החזר על השקעה). הצבעים: 🟢 ROI גבוה · 🟡 בינוני · ⚪ נמוך</p>
+
+  <div class="tasks">
+    <div class="task done">
+      <div class="chk">✓</div>
+      <div><div class="title">תיקון max_turns 90 → 40 + vision aux fix</div><div class="sub">בוצע 24/5 — Wave 0</div></div>
+      <div class="effort">בוצע</div>
+      <div class="roi high">בוצע</div>
+    </div>
+
+    <div class="task done">
+      <div class="chk">✓</div>
+      <div><div class="title">log rotation אוטומטי (Scheduled Task)</div><div class="sub">יומי 03:00 · 20MB threshold · 30 ימים retention</div></div>
+      <div class="effort">בוצע</div>
+      <div class="roi high">בוצע</div>
+    </div>
+
+    <div class="task done">
+      <div class="chk">✓</div>
+      <div><div class="title">5 API keys הוזרמו (Anthropic, Gemini, GitHub, Groq, Perplexity)</div><div class="sub">משולבים מ-bee-build + openclaw + gh CLI</div></div>
+      <div class="effort">בוצע</div>
+      <div class="roi high">בוצע</div>
+    </div>
+
+    <div class="task partial">
+      <div class="chk">~</div>
+      <div><div class="title">רישום Hermes_Gateway כ-Windows Service</div><div class="sub">NSSM מותקן · install script מוכן · דורש admin</div></div>
+      <div class="effort">5 דקות</div>
+      <div class="roi high">🟢 גבוה</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">הגדרת Telegram bot</div><div class="sub">2 דקות ב-BotFather + hermes telegram setup</div></div>
+      <div class="effort">5 דקות</div>
+      <div class="roi high">🟢 גבוה</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">חקירת deepseek-chat anomaly (169M טוקנים)</div><div class="sub">לאתר מי משתמש במודל הזה במקום v4-pro · תיקון יחסוך 30%+</div></div>
+      <div class="effort">20 דקות</div>
+      <div class="roi high">🟢 גבוה</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">הפעלת Memory Plugin (vector store)</div><div class="sub">Hermes יזכור עובדות בין סשנים · שיפור איכות משמעותי</div></div>
+      <div class="effort">2-4 שעות</div>
+      <div class="roi high">🟢 גבוה</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">cron health-ping (אם הברידג׳ נופל - תקבל הודעה)</div><div class="sub">כל שעה: בדוק /health, אם down — שלח התראה לוואטסאפ</div></div>
+      <div class="effort">1 שעה</div>
+      <div class="roi high">🟢 גבוה</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">הגדרת Email channel (IMAP+SMTP)</div><div class="sub">Gmail OAuth · 15-second polling</div></div>
+      <div class="effort">30 דקות</div>
+      <div class="roi mid">🟡 בינוני</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">פיצול ל-Specialized Agents (Level 2)</div><div class="sub">hermes-solar · hermes-clients · hermes-finance · hermes-field</div></div>
+      <div class="effort">חצי יום</div>
+      <div class="roi mid">🟡 בינוני</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">/metrics endpoint (Prometheus format)</div><div class="sub">מדדים: token count · latency · errors · queue depth</div></div>
+      <div class="effort">2 שעות</div>
+      <div class="roi mid">🟡 בינוני</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">חקירת CLI heavy patterns (59% מהטוקנים)</div><div class="sub">דפוסי search_files/terminal/read_file - לאמן את ה-AI לחיסכון</div></div>
+      <div class="effort">2-3 שעות</div>
+      <div class="roi mid">🟡 בינוני</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">bee-hive ↔ Hermes 2-way integration</div><div class="sub">bee-hive יוכל להזין נתונים ל-Hermes (לא רק לקבל)</div></div>
+      <div class="effort">3-4 שעות</div>
+      <div class="roi mid">🟡 בינוני</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">Audit log (כל הודעה in/out → SQLite נפרד)</div><div class="sub">לדיבאג + ניתוח דפוסים בעתיד</div></div>
+      <div class="effort">1-2 שעות</div>
+      <div class="roi low">⚪ נמוך</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">L3 Orchestrator (bee-hive כ-routing engine)</div><div class="sub">אחת הדלת הקדמית לכל הסוכנים · תלוי ב-L2</div></div>
+      <div class="effort">יום</div>
+      <div class="roi low">⚪ אסטרטגי</div>
+    </div>
+
+    <div class="task">
+      <div class="chk"></div>
+      <div><div class="title">L4 Task Bus (inbox → working → outbox → done)</div><div class="sub">צוות יעבוד אסינכרונית · אתה לא בלולאה · review בסוף יום</div></div>
+      <div class="effort">יומיים</div>
+      <div class="roi low">⚪ אסטרטגי</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <strong>סדר עדיפויות מומלץ:</strong> 4 המשימות הירוקות (NSSM · Telegram · deepseek-chat · health-ping) — סך הכל ~3 שעות עבודה, יקפיצו את ההשלמה הכוללת מ-42% ל-65%.
+  </div>
+</section>
+
+<!-- === SECTION 7: FILES === -->
+<section>
+  <h2><span class="num">7</span>איפה הכל שמור — Quick Reference</h2>
+
+  <table>
+    <thead>
+      <tr><th>קטגוריה</th><th>מיקום</th><th>תוכן</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>קוד פעיל</td><td><code>C:\Users\Barak\AppData\Local\hermes\hermes-agent\</code></td><td>Python + Node.js source</td></tr>
+      <tr><td>קונפיגורציה</td><td><code>C:\Users\Barak\AppData\Local\hermes\config.yaml</code></td><td>מודל, max_turns, providers</td></tr>
+      <tr><td>API keys</td><td><code>C:\Users\Barak\AppData\Local\hermes\.env</code></td><td>8 keys פעילים</td></tr>
+      <tr><td>State DB</td><td><code>C:\Users\Barak\AppData\Local\hermes\state.db</code></td><td>167 MB · 1,454 sessions</td></tr>
+      <tr><td>WhatsApp sessions</td><td><code>C:\Users\Barak\.hermes\platforms\whatsapp\session\</code></td><td>20,832 Baileys keys</td></tr>
+      <tr><td>תיעוד</td><td><code>E:\bee-hermes\docs\</code></td><td>topology.md · playbook · meta-prompt</td></tr>
+      <tr><td>סקריפטים</td><td><code>E:\bee-hermes\scripts\</code></td><td>install-services + rotate-bridge-log</td></tr>
+      <tr><td>אנליטיקה</td><td><code>E:\bee-hermes\analysis\</code></td><td>9 קבצי JSON + Python</td></tr>
+      <tr><td>Obsidian</td><td><code>3-Projects/Hermes/</code></td><td>topology · playbook · meta-prompt · WhatsApp insights</td></tr>
+      <tr><td>WhatsApp data</td><td><code>E:\whatsapp_data\</code></td><td>245 MB · 704 chats · 11 שנים</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<footer>
+  <p><strong>Hermes Agent</strong> · Worker Bee של [[B.E.E]] · <a href="topology.md">topology.md</a> · <a href="optimization-playbook.md">optimization-playbook.md</a></p>
+  <p style="margin-top:8px;opacity:0.6">נוצר אוטומטית מ-/insights + /config show חיים · גרסה 1.3 · 25.05.2026</p>
+</footer>
+
+</div>
+</body>
+</html>

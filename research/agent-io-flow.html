@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alfred — מפת זרימה: קלט → טיפול → פלט</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --bg-2: #1a2027;
+    --bg-3: #232b35;
+    --line: #2d3742;
+    --text: #e8edf2;
+    --text-dim: #9aa5b1;
+    --accent: #ffb547;
+    --accent-2: #4dabf7;
+    --green: #34c77b;
+    --yellow: #ffd166;
+    --red: #ef5350;
+    --blue: #4dabf7;
+    --purple: #b388ff;
+    --pink: #f06292;
+    --cyan: #4dd0e1;
+    --orange: #ff7043;
+    --input: #4dabf7;
+    --process: #ffb547;
+    --output: #34c77b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Segoe UI", "Heebo", "Assistant", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.65;
+  }
+  header {
+    background: linear-gradient(135deg, #1a2027 0%, #0f1419 100%);
+    padding: 36px 32px;
+    border-bottom: 2px solid var(--accent);
+  }
+  header h1 { font-size: 2.2em; margin-bottom: 8px; }
+  header .subtitle { color: var(--text-dim); font-size: 1.0em; }
+  header .updated { color: var(--accent); font-size: 0.85em; margin-top: 10px; }
+  header .lead { color: var(--text); font-size: 0.98em; line-height: 1.8; max-width: 920px; margin-top: 16px; }
+
+  main { max-width: 1320px; margin: 0 auto; padding: 32px; }
+  section { margin-bottom: 56px; }
+  h2 { font-size: 1.6em; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 1px solid var(--line); color: var(--accent); }
+  h3 { font-size: 1.18em; margin-bottom: 12px; color: var(--text); }
+  .section-lead { color: var(--text-dim); font-size: 0.95em; line-height: 1.8; margin-bottom: 18px; max-width: 950px; }
+
+  /* TOC */
+  .toc { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; margin-bottom: 32px; }
+  .toc h3 { color: var(--accent); margin-bottom: 10px; }
+  .toc ol { list-style: none; counter-reset: t; }
+  .toc ol li { counter-increment: t; padding: 4px 0; }
+  .toc ol li::before { content: counter(t) ". "; color: var(--accent); font-weight: 600; }
+  .toc a { color: var(--text); text-decoration: none; transition: color 0.2s; }
+  .toc a:hover { color: var(--accent); }
+
+  /* OVERVIEW FUNNEL */
+  .funnel { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 16px; align-items: stretch; margin: 24px 0; }
+  .funnel-col { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-height: 280px; }
+  .funnel-col.in { border-right: 4px solid var(--input); }
+  .funnel-col.process { border-right: 4px solid var(--process); }
+  .funnel-col.out { border-right: 4px solid var(--output); }
+  .funnel-col h4 { color: var(--accent); font-size: 1.05em; margin-bottom: 12px; }
+  .funnel-col ul { list-style: none; }
+  .funnel-col li { padding: 5px 0; font-size: 0.92em; color: var(--text-dim); border-bottom: 1px dotted var(--line); }
+  .funnel-col li:last-child { border-bottom: none; }
+  .funnel-col li strong { color: var(--text); }
+  .funnel-arrow { display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 2.2em; font-weight: bold; }
+  @media (max-width: 900px) { .funnel { grid-template-columns: 1fr; } .funnel-arrow { transform: rotate(90deg); height: 30px; } }
+
+  /* INPUT CARDS */
+  .in-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .in-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; border-right: 4px solid var(--input); }
+  .in-card.passive { opacity: 0.85; border-right-color: var(--text-dim); }
+  .in-card.future { border-right-color: var(--purple); }
+  .in-card .title { font-weight: 600; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .in-card .src { color: var(--text-dim); font-size: 0.82em; margin-bottom: 6px; }
+  .in-card .desc { color: var(--text-dim); font-size: 0.86em; line-height: 1.6; }
+  .in-card .freq { color: var(--accent-2); font-size: 0.78em; margin-top: 6px; font-family: monospace; }
+
+  /* TASK ROW */
+  .task-row { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 14px; border-right: 4px solid var(--process); }
+  .task-row .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .task-row .name { font-weight: 700; font-size: 1.1em; color: var(--accent); }
+  .task-row .intent { color: var(--text-dim); font-family: monospace; font-size: 0.85em; }
+  .task-row .when { color: var(--text-dim); font-size: 0.88em; margin-bottom: 6px; }
+  .task-row .flow { display: flex; align-items: center; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+  .task-row .step { background: var(--bg-3); padding: 6px 12px; border-radius: 14px; font-size: 0.82em; color: var(--text); }
+  .task-row .step.in { background: rgba(77,171,247,0.18); color: var(--input); }
+  .task-row .step.proc { background: rgba(255,181,71,0.18); color: var(--process); }
+  .task-row .step.out { background: rgba(52,199,123,0.18); color: var(--output); }
+  .task-row .arrow { color: var(--accent); font-weight: bold; font-size: 1.1em; }
+  .task-row .detail { color: var(--text-dim); font-size: 0.88em; line-height: 1.6; }
+  .task-row .out-list { color: var(--green); font-size: 0.85em; margin-top: 6px; }
+  .task-row .out-list strong { color: var(--text); }
+
+  /* OUTPUT CARDS */
+  .out-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .out-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; border-right: 4px solid var(--output); }
+  .out-card.constrained { border-right-color: var(--red); }
+  .out-card.planned { border-right-color: var(--purple); }
+  .out-card .title { font-weight: 600; margin-bottom: 4px; }
+  .out-card .target { color: var(--accent-2); font-size: 0.82em; margin-bottom: 6px; font-family: monospace; }
+  .out-card .desc { color: var(--text-dim); font-size: 0.86em; line-height: 1.6; }
+  .out-card .rule { color: var(--yellow); font-size: 0.8em; margin-top: 8px; }
+
+  /* Tables */
+  table.std { width: 100%; border-collapse: collapse; background: var(--bg-2); border-radius: 10px; overflow: hidden; margin: 12px 0; }
+  table.std th, table.std td { padding: 10px 14px; text-align: right; border-bottom: 1px solid var(--line); font-size: 0.9em; vertical-align: top; }
+  table.std th { background: var(--bg-3); color: var(--accent); font-weight: 600; }
+  table.std tr:last-child td { border-bottom: none; }
+  table.std code { background: var(--bg-3); padding: 1px 6px; border-radius: 3px; font-family: "Cascadia Code", monospace; font-size: 0.85em; color: var(--accent-2); }
+
+  /* Pills */
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 0.74em; font-weight: 600; }
+  .pill-green { background: rgba(52,199,123,0.18); color: var(--green); }
+  .pill-yellow { background: rgba(255,209,102,0.18); color: var(--yellow); }
+  .pill-red { background: rgba(239,83,80,0.18); color: var(--red); }
+  .pill-blue { background: rgba(77,171,247,0.18); color: var(--input); }
+  .pill-purple { background: rgba(179,136,255,0.18); color: var(--purple); }
+
+  /* Worked examples */
+  .example { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; margin-bottom: 16px; }
+  .example h4 { color: var(--accent); margin-bottom: 8px; font-size: 1.05em; }
+  .example .scenario { color: var(--text); margin-bottom: 10px; padding: 8px 12px; background: var(--bg-3); border-radius: 6px; font-style: italic; }
+  .example .pipeline-steps { list-style: none; padding-right: 0; counter-reset: ex; }
+  .example .pipeline-steps li { counter-increment: ex; padding: 6px 0 6px 28px; position: relative; color: var(--text-dim); font-size: 0.92em; }
+  .example .pipeline-steps li::before { content: counter(ex); position: absolute; right: 0; top: 6px; width: 22px; height: 22px; background: var(--accent); color: var(--bg); border-radius: 50%; text-align: center; font-weight: 700; font-size: 0.8em; line-height: 22px; }
+  .example .pipeline-steps li strong { color: var(--text); }
+  .example .pipeline-steps li code { background: var(--bg-3); padding: 1px 6px; border-radius: 3px; font-family: monospace; font-size: 0.85em; color: var(--accent-2); }
+  .example .result { color: var(--green); font-size: 0.9em; margin-top: 8px; padding: 6px 10px; background: rgba(52,199,123,0.08); border-right: 3px solid var(--green); border-radius: 4px; }
+
+  /* Categories */
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .cat-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+  .cat-card .name { font-weight: 600; margin-bottom: 4px; color: var(--accent); }
+  .cat-card .count { font-size: 1.6em; font-weight: 700; color: var(--text); margin: 4px 0; }
+  .cat-card .meta { color: var(--text-dim); font-size: 0.83em; line-height: 1.5; }
+
+  /* File types */
+  .ft-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+  .ft-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+  .ft-card .ext { font-family: monospace; font-weight: 700; color: var(--accent-2); font-size: 1.0em; }
+  .ft-card .use { color: var(--text-dim); font-size: 0.83em; margin-top: 4px; }
+  .ft-card.rw { border-right: 3px solid var(--cyan); }
+  .ft-card.r { border-right: 3px solid var(--input); }
+  .ft-card.w { border-right: 3px solid var(--output); }
+
+  /* Alerts */
+  .alert { background: rgba(255,209,102,0.08); border: 1px solid var(--yellow); border-right: 4px solid var(--yellow); border-radius: 8px; padding: 14px 18px; margin: 18px 0; }
+  .alert h4 { color: var(--yellow); margin-bottom: 6px; }
+  .alert.ok { background: rgba(52,199,123,0.08); border-color: var(--green); border-right-color: var(--green); }
+  .alert.ok h4 { color: var(--green); }
+  .alert.danger { background: rgba(239,83,80,0.08); border-color: var(--red); border-right-color: var(--red); }
+  .alert.danger h4 { color: var(--red); }
+
+  /* Footer */
+  footer { margin-top: 60px; padding: 24px 32px; border-top: 1px solid var(--line); color: var(--text-dim); font-size: 0.85em; text-align: center; background: var(--bg-2); }
+  footer code { background: var(--bg-3); padding: 1px 6px; border-radius: 3px; font-family: monospace; color: var(--accent-2); }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔀 Alfred — מפת זרימה: קלט → טיפול → פלט</h1>
+  <div class="subtitle">כל סוג של משימה שנכנסת, איך היא מסווגת, ולאן הפלט הולך</div>
+  <div class="updated">📅 נכתב 2026-05-26 03:30 · מבוסס על AGENTS.md (52KB) + alfred-router.js + 16 cron jobs + capability-tree.md</div>
+  <div class="lead">
+    הסוכן מקבל קלט מ-<strong>11 מקורות שונים</strong> (WhatsApp, Email, Calendar, BEE DB, SolarEdge, Monday, gov.il, weather, voice, reactions, cron timers).
+    מסווג ל-<strong>13 סוגי משימה</strong>.
+    ומוציא ל-<strong>10 יעדים</strong> (WhatsApp 4 destinations + Calendar 3 + BEE Electron + Monday + Gmail + Invoice Maven + file system + dashboard SSE + self-improving log + external MCPs).
+    כל זרימה מתועדת — מה נכנס, איך מטופל, לאן יוצא.
+  </div>
+</header>
+
+<main>
+
+<div class="toc">
+  <h3>📑 תוכן עניינים</h3>
+  <ol>
+    <li><a href="#overview">תמונה כוללת — Funnel של קלט → ליבה → פלט</a></li>
+    <li><a href="#inputs">11 מקורות קלט — מאיפה מגיע מידע</a></li>
+    <li><a href="#task-types">13 סוגי משימה — איך מסווגים</a></li>
+    <li><a href="#processing">צינור טיפול — מה קורה לכל סוג</a></li>
+    <li><a href="#outputs">10 יעדי פלט — לאן יוצא</a></li>
+    <li><a href="#file-types">סוגי קבצים — מה Alfred קורא/כותב</a></li>
+    <li><a href="#bee-categories">קטגוריות B.E.E — לקוחות / אתרים / ציוד / משימות</a></li>
+    <li><a href="#examples">10 דוגמאות end-to-end — סנריו אמיתי לכל סוג משימה</a></li>
+  </ol>
+</div>
+
+<!-- ====== 1. OVERVIEW FUNNEL ====== -->
+<section id="overview">
+  <h2>🎯 1. תמונה כוללת — Funnel</h2>
+  <p class="section-lead">שלוש העמודות. שמאל = מה נכנס. אמצע = איך מטופל. ימין = לאן יוצא. כל המקרים זורמים דרך הצינור הזה.</p>
+
+  <div class="funnel">
+    <div class="funnel-col in">
+      <h4>⬇️ קלט (Inputs)</h4>
+      <ul>
+        <li><strong>WhatsApp</strong> — DM/groups/voice/images/PDF</li>
+        <li><strong>Gmail</strong> — read inbox cron 08:00</li>
+        <li><strong>Calendar events</strong> — upcoming reminders</li>
+        <li><strong>BEE Operations DB</strong> — clients/sites/jobs/alerts</li>
+        <li><strong>SolarEdge / Sungrow / Deye</strong> — production alerts</li>
+        <li><strong>Monday.com</strong> — 100 boards (read poll)</li>
+        <li><strong>gov.il RSS</strong> — משרד אנרגיה + רשות החשמל</li>
+        <li><strong>Weather (Open-Meteo)</strong> — outdoor events</li>
+        <li><strong>Tracer GPS</strong> — 18 רכבים (קריאה)</li>
+        <li><strong>Voice (Whisper)</strong> — תמלולים</li>
+        <li><strong>Reactions WA</strong> — 👍/❌/⭐ on drafts</li>
+        <li><strong>Cron timers</strong> — 16 jobs מתוזמנים</li>
+        <li><strong>Pikud Haoref</strong> — color-red alerts (אם תותקן)</li>
+        <li><strong>Hebcal</strong> — חגים + שבת</li>
+      </ul>
+    </div>
+
+    <div class="funnel-arrow">→</div>
+
+    <div class="funnel-col process">
+      <h4>🧠 ליבה (Core)</h4>
+      <ul>
+        <li><strong>1. Allowlist</strong> — sendPolicy deny-by-default</li>
+        <li><strong>2. Archive check</strong> — private DM? drop</li>
+        <li><strong>3. Memory log</strong> — line ל-<code>memory/&lt;date&gt;.md</code></li>
+        <li><strong>4. Router</strong> — 13 intents · prompt-cache 1h · few-shot</li>
+        <li><strong>5. Clarify?</strong> — אם confidence&lt;0.85 → שאלה ב-self-chat</li>
+        <li><strong>6. Enrich</strong> — BEE + Monday + Calendar + sites</li>
+        <li><strong>7. Compose</strong> — Mustache template אם יש</li>
+        <li><strong>8. Handle</strong> — dispatch לפי intent</li>
+        <li><strong>9. Audit</strong> — log + telemetry + cost</li>
+      </ul>
+    </div>
+
+    <div class="funnel-arrow">→</div>
+
+    <div class="funnel-col out">
+      <h4>⬆️ פלט (Outputs)</h4>
+      <ul>
+        <li><strong>WhatsApp self-chat</strong> — ⚡ *...* + battery-react</li>
+        <li><strong>WhatsApp Neri group</strong> — digests 10:00/22:00</li>
+        <li><strong>WhatsApp Drafts group</strong> — draft replies</li>
+        <li><strong>WhatsApp Voice group</strong> — transcripts</li>
+        <li><strong>Google Calendar</strong> — 3 calendars (lock)</li>
+        <li><strong>BEE Electron app</strong> — DB write (HTTP API)</li>
+        <li><strong>Monday.com</strong> — item create/update</li>
+        <li><strong>Gmail send</strong> — drafts (--yes gated)</li>
+        <li><strong>Invoice Maven</strong> — חשבונית/קבלה (--yes)</li>
+        <li><strong>File system</strong> — workspace/memory/sites/TASKS</li>
+        <li><strong>Dashboard SSE</strong> — 7 channels live</li>
+        <li><strong>self-improving log</strong> — corrections + proposals</li>
+        <li><strong>External MCPs</strong> — Composio future</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="alert ok">
+    <h4>✅ עקרון יסוד #3 (Constitutional)</h4>
+    <p style="color: var(--text);">
+      <strong>4 outbound destinations only.</strong> כל פלט WhatsApp חייב ללכת לאחד מ-4 היעדים:
+      Barak self-chat / Neri sync / Drafts group / Voice transcripts. אין יוצאים. אסור לסטות.
+      גם אם כל הניתוח מצביע על "כדאי לשלוח X ל-Y" — לא שולחים. רק מוצעים ב-self-chat.
+    </p>
+  </div>
+</section>
+
+<!-- ====== 2. INPUTS ====== -->
+<section id="inputs">
+  <h2>⬇️ 2. 11 מקורות קלט — מאיפה מגיע מידע</h2>
+  <p class="section-lead">כל מקור = ערוץ אחד שמזין את הסוכן. צבע = מצב נוכחי: כחול=פעיל · אפור=passive (קוראים, לא פועלים) · סגול=עתיד.</p>
+
+  <div class="in-grid">
+    <div class="in-card">
+      <div class="title">💬 WhatsApp — DM 1:1 (לא ארכיון) <span class="pill pill-green">live</span></div>
+      <div class="src">via Hermes :3000 bridge → /messages long-poll</div>
+      <div class="desc">לקוחות, ספקים, קבלנים, חברים. כל DM שלא בארכיון מקבל classification מלא. אם מצריך תשובה → draft לקבוצת "מענה לאנשי קשר".</div>
+      <div class="freq">~30-100 הודעות/יום</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">💬 WhatsApp — self-chat (Barak ↔ Barak) <span class="pill pill-green">primary</span></div>
+      <div class="src"><code>+972509554483 ↔ +972509554483</code></div>
+      <div class="desc">הצינור הראשי. כל מסר שברק שולח לעצמו = trigger ל-Alfred. battery-react 🪫 מיידי, עיבוד, 🔋 + ⚡ *...* תגובה.</div>
+      <div class="freq">~20-50 הודעות/יום</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">💬 WhatsApp — קבוצות עבודה <span class="pill pill-green">live</span></div>
+      <div class="src">JID @g.us · 4 מאושרות לתגובה</div>
+      <div class="desc">"כפר יובל - התקנת מערכות" (read-only, site dossier auto-update). שאר קבוצות עבודה = log + monitor.</div>
+      <div class="freq">~20-200 הודעות/יום (תלוי בקבוצה)</div>
+    </div>
+
+    <div class="in-card passive">
+      <div class="title">💬 WhatsApp — קבוצות AI feed <span class="pill pill-blue">passive</span></div>
+      <div class="src">קבוצה "Ai" (archived) + ai-feed-config.json</div>
+      <div class="desc">Idea-incubator של ברק. read-only. כל הודעה → JSONL ב-<code>ai-feed/inbound.jsonl</code>. bee-ai-watcher סורק אחר-כך.</div>
+      <div class="freq">~5-20 הודעות/יום</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">🎤 WhatsApp — voice notes <span class="pill pill-green">live</span></div>
+      <div class="src">mediaType=audio → Groq whisper-large-v3</div>
+      <div class="desc">תמלול אוטומטי. classify ל-5 buckets (task/event/site-note/idea/general). פוסט לקבוצת "תמלולים אלפרד" עם תמלול + סיווג.</div>
+      <div class="freq">~3-10 voice notes/יום</div>
+    </div>
+
+    <div class="in-card future">
+      <div class="title">📸 WhatsApp — תמונות + PDFs <span class="pill pill-purple">חלקית/עתיד</span></div>
+      <div class="src">mediaType=image/document</div>
+      <div class="desc"><strong>היום:</strong> מקבל אבל לא מנתח. <strong>בעתיד (Wave 4):</strong> Gemini Vision → OCR עברית של חשבוניות/רישיונות → BEE.Document.</div>
+      <div class="freq">~5-20 תמונות/יום</div>
+    </div>
+
+    <div class="in-card future">
+      <div class="title">👍 WhatsApp — Reactions <span class="pill pill-purple">עתיד (Wave 3)</span></div>
+      <div class="src">Baileys event emitter</div>
+      <div class="desc">👍 על draft → send אוטומטי. ❌ → cancel. ⭐ → escalate dashboard. control surface ייחודי שלא קיים בעולם.</div>
+      <div class="freq">~5-15 reactions/יום</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">📧 Gmail — inbox <span class="pill pill-green">read-only</span></div>
+      <div class="src">alfred-gmail.js + Google OAuth</div>
+      <div class="desc">cron 08:00. סינון לפי 4 buckets: דחוף · פגישות · השבוע · ספאם. שליחת תקציר ל-self-chat.</div>
+      <div class="freq">~30-100 mails/יום</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">📅 Calendar — events upcoming <span class="pill pill-green">read</span></div>
+      <div class="src">3 calendars × alfred-calendar.js list</div>
+      <div class="desc">cron 21:30 evening-tomorrow-schedule. weather scan 06:30 לאירועים בשטח. conflict detection בעת clarify.</div>
+      <div class="freq">~5-20 events/שבוע</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">🏛️ BEE Operations DB <span class="pill pill-green">snapshot</span></div>
+      <div class="src"><code>secrets/bee-ops-snapshot.db</code> · refresh כל 15 דק' + יומי 06:05</div>
+      <div class="desc">137 clients · 255 sites · 1,425 jobs · 461 alerts · permits. enrich לפי intent (client-status, client-fault).</div>
+      <div class="freq">live read (no events)</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">☀️ SolarEdge API <span class="pill pill-red">403 כרגע</span></div>
+      <div class="src">alfred-solaredge.js · API key פג</div>
+      <div class="desc">production reports + alerts. 87 sites verified. ⚠️ <strong>HTTP 403 — דורש רוטציית מפתח.</strong></div>
+      <div class="freq">poll cron 06:00 (כשעובד)</div>
+    </div>
+
+    <div class="in-card future">
+      <div class="title">🔆 Sungrow / Deye / SMA <span class="pill pill-purple">via BEE</span></div>
+      <div class="src">דרך BEE Operations backend</div>
+      <div class="desc">55 + 24 + 106 אתרים. אין direct integration עדיין. <strong>Wave 4:</strong> bee-sungrow-mcp custom build.</div>
+      <div class="freq">via BEE alerts</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">📊 Monday.com — 100 boards <span class="pill pill-green">poll</span></div>
+      <div class="src">alfred-monday.js (GraphQL) + cache 425KB</div>
+      <div class="desc">cron 07:00 morning-monday-digest. דייג'סט יומי של משימות. <strong>Wave 2:</strong> official MCP יחליף 3 scripts.</div>
+      <div class="freq">poll cron · בעתיד webhooks</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">🏛️ gov.il RSS <span class="pill pill-yellow">CF-blocked</span></div>
+      <div class="src">alfred-gov-rss.js · 3 דפים × 30 keywords</div>
+      <div class="desc">cron 09:30. ⚠️ Cloudflare blocking כרגע — archive fallback קיים. עדכוני משרד אנרגיה + רשות החשמל.</div>
+      <div class="freq">cron יומי</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">🌤️ Open-Meteo Weather <span class="pill pill-green">free</span></div>
+      <div class="src">alfred-weather.js · GHI/DNI/rain · 16d</div>
+      <div class="desc">cron 06:30 morning-weather-scan. אזהרת גשם ≥30% לאירועי שטח. גם בשעת תיאום פגישה.</div>
+      <div class="freq">cron יומי + on-demand</div>
+    </div>
+
+    <div class="in-card future">
+      <div class="title">🚨 Pikud Haoref <span class="pill pill-purple">עתיד</span></div>
+      <div class="src">yaniv-golan/pikud-haoref-alerts MCP</div>
+      <div class="desc">Color-red alerts. ערך: בטיחות עובדים בשטח. עוצר עבודה אם אזעקה באזור האתר.</div>
+      <div class="freq">real-time</div>
+    </div>
+
+    <div class="in-card">
+      <div class="title">⏰ Cron timers — 16 jobs <span class="pill pill-green">live</span></div>
+      <div class="src">~/.openclaw/cron/jobs.json</div>
+      <div class="desc">11 active · 5 disabled. heartbeat 30m · snapshot 15m · clarification-reprompt 1h · 9 daily jobs · 1 weekly.</div>
+      <div class="freq">scheduled</div>
+    </div>
+
+    <div class="in-card future">
+      <div class="title">🚗 Tracer GPS <span class="pill pill-purple">limited</span></div>
+      <div class="src">alfred-tracer.js · 18 רכבים</div>
+      <div class="desc">basic location read. אין API ציבורי. גישה דרך BEE כיום. <strong>Wave 4:</strong> geofences + route history.</div>
+      <div class="freq">poll on-demand</div>
+    </div>
+
+    <div class="in-card future">
+      <div class="title">📞 Voice wake-word "Alfred" <span class="pill pill-purple">Wave 5</span></div>
+      <div class="src">openWakeWord (custom training)</div>
+      <div class="desc">Picovoice עברית עוד לא קיים. openWakeWord 1h colab notebook. ערך: Voice-first מהטלפון/טאבלט בשטח.</div>
+      <div class="freq">on speech detection</div>
+    </div>
+
+    <div class="in-card future">
+      <div class="title">📹 bee-frigate cameras <span class="pill pill-purple">חלקי</span></div>
+      <div class="src">NVR Dahua 8-ch · IP 10.0.0.10</div>
+      <div class="desc">8 מצלמות. תמונות → vision → log. אבל לא wired לסוכן עדיין. ערך: monitoring physical site.</div>
+      <div class="freq">on motion event</div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== 3. TASK TYPES ====== -->
+<section id="task-types">
+  <h2>🧭 3. 13 סוגי משימה — איך הסוכן מסווג</h2>
+  <p class="section-lead">
+    alfred-router.js מסווג כל קלט ל-intent אחד מתוך 13. הסיווג מבוסס על few-shot examples (<code>task-examples.md</code>) + LLM call עם prompt-cache 1h.
+    confidence&lt;0.85 → clarify (שאלת בירור ב-self-chat).
+  </p>
+
+  <table class="std">
+    <thead><tr><th>Intent</th><th>טריגרים טיפוסיים</th><th>דחיפות</th><th>מקור הקלט</th><th>Handler</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>client-status</strong></td>
+        <td>"מה קורה אצל X?" · "ייצור היום?" · שאלה על מצב לקוח</td>
+        <td>בינונית</td>
+        <td>self-chat / DM</td>
+        <td>solar-agent → BEE + SolarEdge</td>
+      </tr>
+      <tr>
+        <td><strong>client-fault</strong></td>
+        <td>תקלה במערכת · alarm · "המערכת כבויה"</td>
+        <td>גבוהה</td>
+        <td>SolarEdge / DM / cron</td>
+        <td>solar-agent → triage + propose action</td>
+      </tr>
+      <tr>
+        <td><strong>client-quote</strong></td>
+        <td>בקשת הצעת מחיר · "כמה יעלה לי..."</td>
+        <td>בינונית</td>
+        <td>DM / Gmail</td>
+        <td>compose template + draft → Drafts group</td>
+      </tr>
+      <tr>
+        <td><strong>client-payment</strong></td>
+        <td>"שילמתי" · "מתי תשלום?" · POS event</td>
+        <td>גבוהה</td>
+        <td>DM / Gmail / Invoice Maven</td>
+        <td>BEE.Invoice check + Invoice Maven create (--yes)</td>
+      </tr>
+      <tr>
+        <td><strong>vendor</strong></td>
+        <td>הודעה מ-Solar-Space / Deye / Eliran / קבלן</td>
+        <td>בינונית</td>
+        <td>DM / Gmail</td>
+        <td>log + draft if needed</td>
+      </tr>
+      <tr>
+        <td><strong>regulatory</strong></td>
+        <td>רגולציה · רישוי · gov.il · IEC · בודק חשמלאי</td>
+        <td>גבוהה</td>
+        <td>gov-rss / DM / deadlines</td>
+        <td>regulatory-agent → self-chat with citation</td>
+      </tr>
+      <tr>
+        <td><strong>internal-task</strong></td>
+        <td>"תזכיר לי..." · "אני צריך ל..." · משימה</td>
+        <td>בינונית</td>
+        <td>self-chat (לרוב)</td>
+        <td>TASKS.md row + calendar reminder (all-day)</td>
+      </tr>
+      <tr>
+        <td><strong>internal-idea</strong></td>
+        <td>"רעיון לעתיד" · "תקלוט: ..." · brain-dump</td>
+        <td>נמוכה</td>
+        <td>self-chat</td>
+        <td>ideas-drawer.md append</td>
+      </tr>
+      <tr>
+        <td><strong>internal-meeting</strong></td>
+        <td>"פגישה ביום X" · "תקבע פגישה עם..."</td>
+        <td>גבוהה</td>
+        <td>self-chat / DM / Gmail</td>
+        <td>calendar-agent → propose 2-3 slots + weather</td>
+      </tr>
+      <tr>
+        <td><strong>voice-transcript</strong></td>
+        <td>voice memo נכנס</td>
+        <td>variable</td>
+        <td>WhatsApp audio</td>
+        <td>Whisper → classify → post Voice group</td>
+      </tr>
+      <tr>
+        <td><strong>site-update</strong></td>
+        <td>הודעה מקבוצת אתר עבודה (Kfar Yuval)</td>
+        <td>בינונית</td>
+        <td>WA group</td>
+        <td>sites/&lt;X&gt;.md auto-append (היסטוריה)</td>
+      </tr>
+      <tr>
+        <td><strong>solar-alert</strong></td>
+        <td>SolarEdge/Sungrow alert · production drop</td>
+        <td>גבוהה</td>
+        <td>API poll / cron</td>
+        <td>solar-agent → severity + propose</td>
+      </tr>
+      <tr>
+        <td><strong>noise</strong></td>
+        <td>greeting · spam · אין פעולה</td>
+        <td>אין</td>
+        <td>any</td>
+        <td>log to memory · אין תגובה</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ====== 4. PROCESSING ====== -->
+<section id="processing">
+  <h2>⚙️ 4. צינור טיפול — מה קורה בכל סוג</h2>
+  <p class="section-lead">
+    לכל intent יש sub-pipeline. השלבים: enrich (איסוף קונטקסט) → decide (האם צריך אישור) → compose (טמפלייט) → execute (פעולה אמיתית).
+  </p>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">🏠 client-status</span>
+      <span class="intent">intent · medium urgency</span>
+    </div>
+    <div class="when">"מה קורה במערכת של פריים אנרג'י באתר אשקלון?" / "ייצור היום?"</div>
+    <div class="flow">
+      <span class="step in">DM/self-chat</span>
+      <span class="arrow">→</span>
+      <span class="step proc">router classify</span>
+      <span class="arrow">→</span>
+      <span class="step proc">enrich: BEE + SolarEdge</span>
+      <span class="arrow">→</span>
+      <span class="step proc">solar-agent compose</span>
+      <span class="arrow">→</span>
+      <span class="step out">self-chat ⚡ *...*</span>
+    </div>
+    <div class="detail">
+      enrich מצריך: <code>alfred-bee.js sites --client=X</code> · <code>alfred-solaredge.js production --site=Y</code> · <code>alfred-bee.js alerts --siteId=Z</code>.
+      <br>compose משתמש ב-template "client-status" עם 4 שדות: kW נוכחי · kWh היום · השוואה ל-7d · alerts פתוחים.
+      <br>אם anomaly (drop ≥30% מהממוצע) → escalate ל-client-fault.
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> WhatsApp self-chat ⚡ *...* · log ב-<code>memory/&lt;date&gt;.md</code>
+    </div>
+  </div>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">🚨 client-fault / solar-alert</span>
+      <span class="intent">intent · HIGH urgency</span>
+    </div>
+    <div class="when">SolarEdge alarm · "המערכת לא עובדת" · production drop &gt;30%</div>
+    <div class="flow">
+      <span class="step in">API poll / DM</span>
+      <span class="arrow">→</span>
+      <span class="step proc">classify severity</span>
+      <span class="arrow">→</span>
+      <span class="step proc">solar-agent diagnose</span>
+      <span class="arrow">→</span>
+      <span class="step proc">propose action</span>
+      <span class="arrow">→</span>
+      <span class="step out">self-chat + maybe Drafts group</span>
+    </div>
+    <div class="detail">
+      Severity buckets: <em>critical</em> (production=0 בשעות שיא) · <em>warning</em> (10-30% drop) · <em>info</em> (noisy alert e.g. NO_PRODUCTION_TODAY בלילה).<br>
+      Output template:<br>
+      <code>⚡ *🚨 לקוח X · אתר Y · INVERTER_OFFLINE לפני 2h<br>
+      ייצור: 0 kW (השוואה: 6.2 kW לפני יום)<br>
+      פעולה מומלצת: reboot remote / ביקור באתר<br>
+      לעדכן את הלקוח? [כן/לא]*</code>
+      <br>אם ברק מאשר → draft ל-Drafts group ללקוח.
+      <br>אם נדרש ביקור → propose calendar event ב-<code>tasks-shlomi-solar</code>.
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> WhatsApp self-chat · BEE.Alert.acknowledged=true · calendar event proposed · אופציונלי draft ללקוח
+    </div>
+  </div>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">💰 client-payment</span>
+      <span class="intent">intent · HIGH urgency · sensitive</span>
+    </div>
+    <div class="when">"שילמתי 5000" · POS event · Gmail "Cardcom payment received"</div>
+    <div class="flow">
+      <span class="step in">DM / Gmail / Invoice Maven</span>
+      <span class="arrow">→</span>
+      <span class="step proc">BEE.Invoice lookup</span>
+      <span class="arrow">→</span>
+      <span class="step proc">amount + match</span>
+      <span class="arrow">→</span>
+      <span class="step proc">propose create receipt</span>
+      <span class="arrow">→</span>
+      <span class="step out">Invoice Maven --yes</span>
+    </div>
+    <div class="detail">
+      enrich: <code>alfred-bee.js invoices --clientId=X --status=open</code>. אם יש invoice פתוח עם amount קרוב → match.<br>
+      propose ב-self-chat: <code>⚡ *💰 קיבלתי תשלום ₪X מלקוח Y. ליצור קבלה? חשבונית פתוחה #1234 = ₪Y. [כן/לא]*</code><br>
+      אחרי "כן" → <code>alfred-invoice-maven.js create-receipt --invoiceId=1234 --amount=X --yes</code>.
+      <br>BEE.Payment record + Monday board "תשלומים" update.
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> Invoice Maven receipt · BEE.Payment write · Monday update · self-chat confirmation
+    </div>
+  </div>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">📋 client-quote</span>
+      <span class="intent">intent · medium urgency</span>
+    </div>
+    <div class="when">"כמה יעלה לי 10kW על הגג שלי?" · בקשת הצעת מחיר</div>
+    <div class="flow">
+      <span class="step in">DM</span>
+      <span class="arrow">→</span>
+      <span class="step proc">parse params</span>
+      <span class="arrow">→</span>
+      <span class="step proc">pricebook lookup</span>
+      <span class="arrow">→</span>
+      <span class="step proc">compose template</span>
+      <span class="arrow">→</span>
+      <span class="step out">Drafts group + self-chat propose</span>
+    </div>
+    <div class="detail">
+      parse: kW · roof type · location · battery yes/no.<br>
+      pricebook: 18 inverters · 9 batteries · 8 panels. compose עם 5/20/35/30/10 terms (חתימה/צמדים/...).<br>
+      template "client-quote" עם 6 שדות. תמיד דרך Drafts group — לעולם לא ישירות ללקוח.
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> Drafts group draft · self-chat "ערכתי טיוטה — לבדוק" · TASKS.md "מעקב אחרי הצעת מחיר ללקוח X"
+    </div>
+  </div>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">📅 internal-meeting</span>
+      <span class="intent">intent · time-sensitive</span>
+    </div>
+    <div class="when">"פגישה עם נרי ביום שלישי" · "תקבע ביקור באתר"</div>
+    <div class="flow">
+      <span class="step in">self-chat</span>
+      <span class="arrow">→</span>
+      <span class="step proc">parse date/time</span>
+      <span class="arrow">→</span>
+      <span class="step proc">conflict check</span>
+      <span class="arrow">→</span>
+      <span class="step proc">weather check (outdoor)</span>
+      <span class="arrow">→</span>
+      <span class="step proc">propose 2-3 slots</span>
+      <span class="arrow">→</span>
+      <span class="step out">Calendar.create (after אישור)</span>
+    </div>
+    <div class="detail">
+      calendar-agent: tag bus auto-pick — <em>"עם נרי" → tasks-neri</em> · <em>סולארי+שלומי → tasks-shlomi-solar</em> · <em>default → personal</em>.<br>
+      conflict: <code>alfred-calendar.js list --timeMin --timeMax</code>. אם conflict → suggest alt.<br>
+      weather: רק אם outdoor (סיור/התקנה). אם ≥30% גשם → suggest reschedule.<br>
+      <strong>3-calendar hard lock:</strong> רק 3 calendars. גם אם משתמש מבקש "primary" → not allowed.
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> Google Calendar event · self-chat confirmation · אם solar-related → propose 2-3 templates first
+    </div>
+  </div>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">🏛️ regulatory</span>
+      <span class="intent">intent · always to self-chat</span>
+    </div>
+    <div class="when">חוזר משרד אנרגיה · רישוי · "מתי מבדק תקופתי?"</div>
+    <div class="flow">
+      <span class="step in">gov-rss / DM</span>
+      <span class="arrow">→</span>
+      <span class="step proc">regulatory-agent</span>
+      <span class="arrow">→</span>
+      <span class="step proc">BEE.Document check (expiry)</span>
+      <span class="arrow">→</span>
+      <span class="step out">self-chat with citation</span>
+    </div>
+    <div class="detail">
+      sources: gov-rss-seen.json · alfred-deadlines.js (מע"מ/מ"ה/בט"ל) · alfred-govmap.js (גוש/חלקה).<br>
+      output: cite source URL · distinguish "binding rule" vs "guidance".<br>
+      רגולציה לא מטופלת ללקוחות — רק לברק. <strong>אסור</strong> להגיב ללקוח על compliance.
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> self-chat · TASKS.md "לטפל ברישוי X עד תאריך Y"
+    </div>
+  </div>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">🎤 voice-transcript</span>
+      <span class="intent">intent · classify-and-act</span>
+    </div>
+    <div class="when">voice memo נכנס ב-self-chat</div>
+    <div class="flow">
+      <span class="step in">audio media</span>
+      <span class="arrow">→</span>
+      <span class="step proc">Groq Whisper STT</span>
+      <span class="arrow">→</span>
+      <span class="step proc">classify bucket</span>
+      <span class="arrow">→</span>
+      <span class="step proc">side-effect propose</span>
+      <span class="arrow">→</span>
+      <span class="step out">Voice group post + maybe action</span>
+    </div>
+    <div class="detail">
+      5 buckets:<br>
+      <strong>task</strong> → propose adding to TASKS.md<br>
+      <strong>event</strong> → propose calendar entry on <code>personal</code><br>
+      <strong>site-note</strong> → propose append to <code>sites/&lt;X&gt;.md</code><br>
+      <strong>idea</strong> → append to <code>ideas-drawer.md</code><br>
+      <strong>general</strong> → just log<br>
+      תמיד post ל-Voice transcripts group עם תמלול + סיווג + מקור.
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> Voice group · TASKS.md (אם task) · Calendar (אם event) · sites/X.md (אם site-note) · ideas-drawer (אם idea)
+    </div>
+  </div>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">🌳 internal-task</span>
+      <span class="intent">intent · routine</span>
+    </div>
+    <div class="when">"תזכיר לי לקרוא לרון מחר" · "צריך לקנות פילטר"</div>
+    <div class="flow">
+      <span class="step in">self-chat</span>
+      <span class="arrow">→</span>
+      <span class="step proc">classify-and-clarify</span>
+      <span class="arrow">→</span>
+      <span class="step proc">TASKS.md append</span>
+      <span class="arrow">→</span>
+      <span class="step out">Calendar all-day reminder</span>
+    </div>
+    <div class="detail">
+      auto-add ל-TASKS.md אם self-chat + confidence ≥0.6. אחרת ask clarification.<br>
+      Calendar: <em>all-day, tag personal, no time-block</em> (העדפת ברק "סולידי").<br>
+      learning loop: example נשמר ב-<code>task-examples.md</code> — router לומד הפעם הבאה.
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> TASKS.md · Calendar all-day · task-examples.md learning · self-chat ack ⚡ *✓ הוספתי.*
+    </div>
+  </div>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">💡 internal-idea</span>
+      <span class="intent">intent · low urgency</span>
+    </div>
+    <div class="when">"תקלוט רעיון: ..." · "רעיון לעתיד: ..."</div>
+    <div class="flow">
+      <span class="step in">self-chat trigger phrase</span>
+      <span class="arrow">→</span>
+      <span class="step proc">strip trigger</span>
+      <span class="arrow">→</span>
+      <span class="step out">ideas-drawer.md prepend</span>
+    </div>
+    <div class="detail">
+      trigger phrases: "תקלוט רעיון:" · "רעיון לעתיד:" · "קלוט:".<br>
+      append at top של ideas-drawer.md (newest first).<br>
+      weekly digest (Sunday 09:00) — סקירת הרעיונות.<br>
+      ack: <code>⚡ *✓ נקלט.*</code> (קצר, לא יותר).
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> ideas-drawer.md · self-chat ack
+    </div>
+  </div>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">🏗️ site-update</span>
+      <span class="intent">intent · auto-process</span>
+    </div>
+    <div class="when">הודעה בקבוצת WA של אתר עבודה</div>
+    <div class="flow">
+      <span class="step in">WA group</span>
+      <span class="arrow">→</span>
+      <span class="step proc">site lookup by JID</span>
+      <span class="arrow">→</span>
+      <span class="step proc">extract entities</span>
+      <span class="arrow">→</span>
+      <span class="step out">sites/&lt;X&gt;.md auto-append</span>
+    </div>
+    <div class="detail">
+      site groups לפי <code>~/.openclaw/workspace/sites/site-groups.json</code>.<br>
+      auto-append ל-<code>## היסטוריית אירועים</code>: <code>| YYYY-MM-DD HH:MM | sender: body excerpt | group JID |</code><br>
+      אם structured info (תאריך/קשר/ציוד) — update relevant section.<br>
+      <strong>read-only</strong> — Alfred לא משיב בקבוצת אתר. Barak owns customer comms.
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> sites/&lt;X&gt;.md · אופציונלי: alfred-contacts-auto.js append (איש קשר חדש) · אופציונלי: TASKS.md (אם blocker זוהה)
+    </div>
+  </div>
+
+  <div class="task-row">
+    <div class="head">
+      <span class="name">⚙️ noise</span>
+      <span class="intent">intent · ignore</span>
+    </div>
+    <div class="when">"בוקר טוב" · "תודה" · spam · greeting</div>
+    <div class="flow">
+      <span class="step in">any</span>
+      <span class="arrow">→</span>
+      <span class="step proc">classify=noise</span>
+      <span class="arrow">→</span>
+      <span class="step out">log only · no reply</span>
+    </div>
+    <div class="detail">
+      router מסווג confidence גבוה ל-noise. log line ב-memory/<date>.md. אין battery-react אם self-chat (כי אין מה לעבד), אבל log.
+    </div>
+    <div class="out-list">
+      <strong>Outputs:</strong> log only (silent)
+    </div>
+  </div>
+</section>
+
+<!-- ====== 5. OUTPUTS ====== -->
+<section id="outputs">
+  <h2>⬆️ 5. 10 יעדי פלט — לאן יוצא</h2>
+  <p class="section-lead">
+    כל פלט חייב לעמוד בחוקי יסוד. ירוק = פעיל ובטוח. אדום = constrained (rule-locked). סגול = עתידי.
+  </p>
+
+  <div class="out-grid">
+    <div class="out-card constrained">
+      <div class="title">💬 WhatsApp self-chat (Barak)</div>
+      <div class="target"><code>+972509554483@s.whatsapp.net</code></div>
+      <div class="desc">⚡ *...* format חובה. battery-react 🪫→🔋 לכל הודעה. כל reply נסגר במסר אחד — לא narration.</div>
+      <div class="rule">🛡️ Constitutional · DM היחיד שמותר לענות בו</div>
+    </div>
+
+    <div class="out-card constrained">
+      <div class="title">💬 WhatsApp Neri sync group</div>
+      <div class="target"><code>120363425994041413@g.us</code></div>
+      <div class="desc">"עדכונים על עבודה על התשתיות". cron only 10:00/22:00 digests. אסור ad-hoc messages.</div>
+      <div class="rule">🛡️ Constitutional · scheduled summaries only</div>
+    </div>
+
+    <div class="out-card constrained">
+      <div class="title">💬 WhatsApp Drafts group</div>
+      <div class="target"><code>120363407758194119@g.us</code></div>
+      <div class="desc">"מענה לאנשי קשר". draft suggestions ללקוחות 1:1. ברק קורא, מחליט, שולח ידנית.</div>
+      <div class="rule">🛡️ Constitutional · drafts only, no Barak↔Alfred dialog</div>
+    </div>
+
+    <div class="out-card constrained">
+      <div class="title">💬 WhatsApp Voice transcripts</div>
+      <div class="target"><code>120363409101459201@g.us</code></div>
+      <div class="desc">"תמלולים אלפרד". פוסט אוטומטי של voice memos עם תמלול + סיווג.</div>
+      <div class="rule">🛡️ Constitutional · voice transcripts only</div>
+    </div>
+
+    <div class="out-card">
+      <div class="title">📅 Google Calendar (3-lock)</div>
+      <div class="target">personal · tasks-neri · tasks-shlomi-solar</div>
+      <div class="desc">create/update/delete events. ISO 8601 + Asia/Jerusalem. all-day לתזכורות, time-block לפגישות. אישור מפורש לפני כל write.</div>
+      <div class="rule">🛡️ Hard lock — לא ניתן לכתוב ליומן אחר</div>
+    </div>
+
+    <div class="out-card planned">
+      <div class="title">🏛️ BEE Operations Electron app</div>
+      <div class="target">HTTP API ⏳ (כיום snapshot read-only)</div>
+      <div class="desc">DB writes: Document.create · Invoice.update · Job.complete · Alert.acknowledge · Payment.record · Client.update. דורש HTTP API ל-Electron app (Wave 4).</div>
+      <div class="rule">🚧 כיום read-only via snapshot · write planned Wave 4</div>
+    </div>
+
+    <div class="out-card planned">
+      <div class="title">📊 Monday.com writes</div>
+      <div class="target">@mondaydotcomorg/monday-api-mcp (Wave 2)</div>
+      <div class="desc">item create/update · status change · file attach · update column. דרך MCP רשמי במקום GraphQL ישיר.</div>
+      <div class="rule">🚧 Wave 2 — install + wire</div>
+    </div>
+
+    <div class="out-card planned">
+      <div class="title">📧 Gmail send</div>
+      <div class="target">alfred-gmail.js + Google OAuth</div>
+      <div class="desc">drafts גם היום, send כפוף ל-<code>--yes</code> gate. ערך: רישוי + לקוחות שמעדיפים מייל.</div>
+      <div class="rule">🚧 כיום read only · send planned Wave 4</div>
+    </div>
+
+    <div class="out-card">
+      <div class="title">📜 Invoice Maven</div>
+      <div class="target">app.invoice-maven.co.il/api/documents</div>
+      <div class="desc">create-invoice / create-receipt / create-invoice-receipt / create-quote. <strong>כל write דורש <code>--yes</code></strong> — חוק יסוד #3.</div>
+      <div class="rule">🛡️ --yes gated · אישור פר-פעולה</div>
+    </div>
+
+    <div class="out-card">
+      <div class="title">💾 File system writes (workspace)</div>
+      <div class="target">~/.openclaw/workspace/</div>
+      <div class="desc">
+        <code>memory/&lt;date&gt;.md</code> · <code>contacts.md</code> · <code>sites/&lt;X&gt;.md</code> · <code>TASKS.md</code> · <code>ideas-drawer.md</code> · <code>task-examples.md</code> · <code>pending-clarifications.json</code> · <code>gov-rss-seen.json</code> · <code>self-improving/*.md</code> · <code>ai-feed/inbound.jsonl</code>
+      </div>
+      <div class="rule">📂 Workspace only · אסור לערוך AGENTS.md / openclaw.json / alfred-*.js בלי אישור מפורש</div>
+    </div>
+
+    <div class="out-card">
+      <div class="title">📊 Dashboard SSE</div>
+      <div class="target">http://127.0.0.1:8765 + 7 SSE channels</div>
+      <div class="desc">clarification-changed · example-added · tasks-changed · memory-line · contacts-changed · ideas-changed · live WhatsApp feed. עדכון Real-time בלי polling.</div>
+      <div class="rule">📊 read-only display · אין side-effects</div>
+    </div>
+
+    <div class="out-card planned">
+      <div class="title">🔗 External MCPs (Composio + n8n)</div>
+      <div class="target">Composio 850-1000 integrations</div>
+      <div class="desc">Wave 2: alfred-mcp-gateway.js → Composio API key → 8000+ apps. n8n self-hosted workflows אופציונלי.</div>
+      <div class="rule">🚧 Wave 2 setup · אחרי Composio הרבה אפשרי</div>
+    </div>
+
+    <div class="out-card planned">
+      <div class="title">📞 Hermes WA bridge POST :3000/send</div>
+      <div class="target">http://127.0.0.1:3000/send</div>
+      <div class="desc">כל outbound WhatsApp עובר כאן (אחרי Wave 1). Alfred outbound = HTTP POST במקום OpenClaw Baileys.</div>
+      <div class="rule">🚧 Wave 1 — לפני זה Alfred גם בעצמו</div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== 6. FILE TYPES ====== -->
+<section id="file-types">
+  <h2>📁 6. סוגי קבצים — מה Alfred קורא וכותב</h2>
+  <p class="section-lead">
+    כחול = read · ירוק = write · cyan = read+write.
+  </p>
+
+  <h3>קבצי קוד וקונפיג</h3>
+  <div class="ft-grid">
+    <div class="ft-card r"><div class="ext">.js</div><div class="use">Alfred scripts (32) · dashboard-server · MCP gateway. read קבוע, write רק עם אישור</div></div>
+    <div class="ft-card r"><div class="ext">.json</div><div class="use">openclaw.json (config) · cron jobs · plugins manifests · cache files</div></div>
+    <div class="ft-card r"><div class="ext">.yaml</div><div class="use">Hermes config.yaml · skill manifests · plugin.yaml</div></div>
+    <div class="ft-card r"><div class="ext">.env</div><div class="use">secrets (read-only inside scripts) · never logged</div></div>
+    <div class="ft-card r"><div class="ext">.txt</div><div class="use">logs · simple text · gateway.log · bridge.log</div></div>
+  </div>
+
+  <h3 style="margin-top: 18px;">קבצי ידע ומצב</h3>
+  <div class="ft-grid">
+    <div class="ft-card rw"><div class="ext">.md (workspace)</div><div class="use">AGENTS.md (read-only) · SOUL.md · USER.md · memory/&lt;date&gt;.md · sites/X.md · contacts.md · TASKS.md · ideas-drawer.md</div></div>
+    <div class="ft-card rw"><div class="ext">.jsonl</div><div class="use">ai-feed/inbound.jsonl · session logs · streaming events</div></div>
+    <div class="ft-card rw"><div class="ext">.sqlite / .db</div><div class="use">BEE snapshot · OpenClaw memory · Hermes state.db (172MB) · kanban.db · messages.sqlite (882MB decrypted WA)</div></div>
+    <div class="ft-card rw"><div class="ext">task-examples.md</div><div class="use">corpus של few-shot — router לומד מכל clarify</div></div>
+    <div class="ft-card rw"><div class="ext">pending-clarifications.json</div><div class="use">תור בירורים פתוחים · ID = <code>clar_YYYY-MM-DD_xxxxxx</code></div></div>
+    <div class="ft-card rw"><div class="ext">gov-rss-seen.json</div><div class="use">URLs שכבר נראו — אין דופליקציה</div></div>
+    <div class="ft-card rw"><div class="ext">self-improving/*.md</div><div class="use">corrections · proposals · weekly review</div></div>
+  </div>
+
+  <h3 style="margin-top: 18px;">קבצי מדיה ומסמכים</h3>
+  <div class="ft-grid">
+    <div class="ft-card r"><div class="ext">.opus / .m4a / .wav</div><div class="use">WhatsApp voice notes → Whisper STT · TTS output (אם Piper מוגדר)</div></div>
+    <div class="ft-card r"><div class="ext">.jpg / .png / .webp</div><div class="use">תמונות מ-WhatsApp · screenshots · site photos. Vision OCR ב-Wave 4</div></div>
+    <div class="ft-card r"><div class="ext">.pdf</div><div class="use">חשבוניות · רישיונות · חוזים · תקנים · permits. document-extract ב-Wave 4</div></div>
+    <div class="ft-card r"><div class="ext">.docx</div><div class="use">דוחות · הצעות · מסמכי לקוח. anthropic-skills:docx</div></div>
+    <div class="ft-card r"><div class="ext">.xlsx</div><div class="use">לוחות זמנים · BOM · spreadsheets לקוחות. anthropic-skills:xlsx · client-ledger skill</div></div>
+    <div class="ft-card w"><div class="ext">.csv</div><div class="use">exports מ-Monday · BEE data dumps · ניתוחים</div></div>
+    <div class="ft-card r"><div class="ext">.mp4 / .mov</div><div class="use">סרטוני אתר · הוכחות התקנה. עדיין לא מנותח</div></div>
+  </div>
+
+  <h3 style="margin-top: 18px;">קבצי גיבוי וייצוא</h3>
+  <div class="ft-grid">
+    <div class="ft-card r"><div class="ext">.zip</div><div class="use">backups לפני שינויי חוקה. <code>Desktop\OpenClawAgent\backups\&lt;topic&gt;-&lt;ISO&gt;/</code></div></div>
+    <div class="ft-card w"><div class="ext">.bak</div><div class="use">config.yaml.bak.YYYYMMDD · openclaw.json.bak לפני שינויים</div></div>
+    <div class="ft-card w"><div class="ext">.snapshot.db</div><div class="use">BEE Operations snapshot · refresh-bee-snapshot.js cron</div></div>
+  </div>
+</section>
+
+<!-- ====== 7. BEE CATEGORIES ====== -->
+<section id="bee-categories">
+  <h2>🏗️ 7. קטגוריות B.E.E — איזה דברים הסוכן מטפל בהם</h2>
+  <p class="section-lead">
+    הסוכן צריך לדעת את הדומיין. כל קטגוריה חיה ב-BEE Operations DB ומשמשת ב-enrich pipeline.
+  </p>
+
+  <div class="cat-grid">
+    <div class="cat-card"><div class="name">👥 Customers</div><div class="count">137</div><div class="meta">Rafael Solar (27 sites, 10.7MW) · Palar (28, 5.6MW) · חכל שדרות (48, 2.6MW) · האגודה למען החייל (13, 1.3MW) · צרויה (11, 2.5MW) · 132 לקוחות נוספים</div></div>
+    <div class="cat-card"><div class="name">📍 Sites</div><div class="count">255</div><div class="meta">אתרים סולאריים. lat/lon ב-sites/X.md · Govmap אם נדרש</div></div>
+    <div class="cat-card"><div class="name">🔋 Inverters</div><div class="count">272</div><div class="meta">SolarEdge 87 · Sungrow 55 · SMA 24 · אחרים 106. brand mix per site</div></div>
+    <div class="cat-card"><div class="name">🛠️ Projects</div><div class="count">~150</div><div class="meta">installations · commissioning · maintenance. kind=installation/commissioning/הקמה</div></div>
+    <div class="cat-card"><div class="name">📋 Jobs</div><div class="count">1,425</div><div class="meta">scheduled work items. BEE.Job.scheduledFor</div></div>
+    <div class="cat-card"><div class="name">🚨 Alerts</div><div class="count">461 open</div><div class="meta">NO_PRODUCTION_TODAY (most frequent) · collector exception ProxyError · LOW_PRODUCTION · INVERTER_OFFLINE</div></div>
+    <div class="cat-card"><div class="name">📜 Documents</div><div class="count">many</div><div class="meta">permit · contract · utility_approval · certificate · drawing · BEE.Document.expiresAt למעקב</div></div>
+    <div class="cat-card"><div class="name">🏛️ Open Tenders</div><div class="count">2</div><div class="meta">חוף אשקלון (deadline 12.5) · Kiryat Gat (deadline 13.5)</div></div>
+    <div class="cat-card"><div class="name">💰 Pricebook</div><div class="count">35 items</div><div class="meta">18 inverters · 9 batteries · 8 panels. compose template "client-quote" משתמש</div></div>
+    <div class="cat-card"><div class="name">👨‍💼 Team</div><div class="count">12 + 8 contractors</div><div class="meta">Barak owner · Shlomi sales/ops · Neri AI/collab · Yosef · Vladimir · Layan · 8 קבלנים (Roni, Haitam/Bigsol, Fares, Avraham, Slava, Shahar, Vicky, Shlomi T, Dror)</div></div>
+    <div class="cat-card"><div class="name">🚗 Fleet</div><div class="count">18 רכבים</div><div class="meta">Tracer GPS. סטטוס מיקום ב-on-demand</div></div>
+    <div class="cat-card"><div class="name">🏭 Suppliers</div><div class="count">~10</div><div class="meta">Solar-Space (פאנלים) · Deye (אינוורטרים) · Eliran (קבלן ביצוע) · ספקים נוספים</div></div>
+  </div>
+
+  <div class="alert ok" style="margin-top: 18px;">
+    <h4>💡 הקשר עסקי שמודגם ב-AGENTS.md</h4>
+    <p style="color: var(--text);">
+      B.E.E = ברק הנדסת חשמל · ~₪8M/שנה revenue · electrical contracting (residential/commercial/solar/industrial)
+      · Hands-on worker + manager with a team · Top priorities: grow business AND build BEE SaaS app equally.<br>
+      <strong>תנאי תשלום סטנדרט: 5/20/35/30/10</strong> (5% חתימה · 20% צמדים · 35% התקנה · 30% הפעלה · 10% מסירה).
+    </p>
+  </div>
+</section>
+
+<!-- ====== 8. WORKED EXAMPLES ====== -->
+<section id="examples">
+  <h2>🎬 8. 10 דוגמאות end-to-end — סנריו אמיתי</h2>
+  <p class="section-lead">
+    כל דוגמא — סנריו → צינור כל-שלב → תוצאה. סוגי כל ה-intents מכוסים.
+  </p>
+
+  <div class="example">
+    <h4>1. 🚨 client-fault: SolarEdge מתריע על אתר ביבנה</h4>
+    <div class="scenario">06:32 בבוקר. SolarEdge API מחזיר alert <code>INVERTER_OFFLINE</code> לאתר "פריים אנרג'י - יבנה". אין מסר ישיר מהלקוח עדיין.</div>
+    <ol class="pipeline-steps">
+      <li>cron <code>morning-weather-scan</code> משלים. cron נוסף (לא קיים עדיין — <strong>Wave 3 TODO</strong>) פולל את SolarEdge.</li>
+      <li>solar-agent מקבל alert. enrich: <code>alfred-bee.js sites --id=Y</code> → לקוח="פריים אנרג'י", contact="רון" 052-...</li>
+      <li>severity=critical (production=0 ב-06:32, מצוין שמש כבר). diagnose: comms drop כנראה</li>
+      <li>compose template "solar-alert-critical": <code>⚡ *🚨 פריים אנרג'י · יבנה · INVERTER_OFFLINE מ-04:18<br>ייצור 0 kW · 7d avg 6.2 kWh<br>אבחנה: comms drop (לא site issue)<br>פעולה: reboot remote · אם לא מתקן → ביקור<br>לעדכן את רון? [כן/לא]*</code></li>
+      <li>שולח ל-self-chat + battery 🔋. ממתין לתגובת ברק</li>
+      <li>ברק עונה "כן, אבל קודם תנסה reboot". Alfred מבצע <code>alfred-solaredge.js reboot --siteId=Y</code> + draft ל-Drafts group ללקוח</li>
+    </ol>
+    <div class="result">✅ פלט: WhatsApp self-chat · BEE.Alert.acknowledged=true · Drafts group עם טיוטה לרון · calendar event proposed (אם reboot ייכשל)</div>
+  </div>
+
+  <div class="example">
+    <h4>2. 💰 client-payment: לקוח שולח "שילמתי 5000 לחשבונית 1234"</h4>
+    <div class="scenario">14:22. DM מלקוח רון פריים אנרג'י: "שילמתי 5000 לחשבונית 1234 בהעברה בנקאית".</div>
+    <ol class="pipeline-steps">
+      <li>WA bridge inbound → allowlist check (DM, not archived) → log line ב-memory/&lt;date&gt;.md</li>
+      <li>router classify: <code>client-payment</code>, confidence=0.92 (גבוה — אין clarify)</li>
+      <li>enrich: <code>alfred-bee.js invoices --invoiceNumber=1234</code> → status=open, amount=5000, client=פריים אנרג'י ✓</li>
+      <li>compose: <code>⚡ *💰 רון פריים אנרג'י דיווח על תשלום 5000 לחשבונית 1234 (פתוחה, סכום תואם).<br>ליצור קבלה ב-Invoice Maven? [כן/לא]*</code> ל-self-chat</li>
+      <li>ברק עונה "כן". Alfred: <code>alfred-invoice-maven.js create-receipt --invoiceId=1234 --amount=5000 --yes</code></li>
+      <li>Invoice Maven מחזיר receipt_id. BEE.Payment.create. Monday board "תשלומים" item create.</li>
+      <li>self-chat: <code>⚡ *✓ קבלה #5678 נוצרה. BEE updated. Monday updated. רון לא נשלח לו אישור — לעשות? [כן/לא]*</code></li>
+    </ol>
+    <div class="result">✅ פלט: Invoice Maven receipt · BEE.Payment write · Monday update · self-chat confirmation · אופציונלי: draft ללקוח</div>
+  </div>
+
+  <div class="example">
+    <h4>3. 📅 internal-meeting: ברק כותב "תקבע ביקור עם שלומי באתר אשקלון מחר"</h4>
+    <div class="scenario">10:15. self-chat: "תקבע ביקור עם שלומי באתר אשקלון מחר אחר הצהריים".</div>
+    <ol class="pipeline-steps">
+      <li>WA inbound (self-chat) → battery 🪫 מיידי</li>
+      <li>router: <code>internal-meeting</code>, confidence=0.88</li>
+      <li>calendar-agent invoked. parse: date=מחר, time=אחר הצהריים (vague → propose 3 options), location=אשקלון, attendee=שלומי, type=solar</li>
+      <li>conflict check: <code>alfred-calendar.js list --timeMin=tomorrow 13:00 --timeMax=tomorrow 18:00 --calendarId=personal</code> + tasks-shlomi-solar. no conflicts.</li>
+      <li>weather check (outdoor!): <code>alfred-weather.js point --lat=31.66 --lon=34.57 --at=tomorrow 14:00</code> → 5% rain ✓</li>
+      <li>tag pick: solar + Shlomi → <code>tasks-shlomi-solar</code>. <strong>Special rule:</strong> 2-3 template proposals before write.</li>
+      <li>self-chat propose: <code>⚡ *📅 ביקור באתר אשקלון עם שלומי, מחר ג'<br>3 אפשרויות:<br>1. 14:00-15:30 (אופטימלי)<br>2. 15:00-16:30 (עומס נמוך)<br>3. 16:00-17:30 (סוף יום)<br>מזג אוויר: 5% גשם · יומן: tasks-shlomi-solar (כתום)<br>לבחור? [1/2/3/אחר]*</code></li>
+      <li>ברק "1". Alfred: <code>alfred-calendar.js create --tag=tasks-shlomi-solar --start='tomorrow 14:00' --end='tomorrow 15:30' --summary='ביקור עם שלומי - אשקלון' --location='אשקלון'</code></li>
+      <li>battery 🔋 + <code>⚡ *✓ נוצר. שלומי קיבל invite (לא ידני). אם אתה רוצה אני שולח לו תזכורת ב-WA — תאשר.*</code></li>
+    </ol>
+    <div class="result">✅ פלט: Google Calendar event (tasks-shlomi-solar) · self-chat confirmation · אופציונלי: draft לשלומי ב-Drafts group</div>
+  </div>
+
+  <div class="example">
+    <h4>4. 🎤 voice-transcript → task: ברק שולח voice memo בנסיעה</h4>
+    <div class="scenario">17:48 בנסיעה. ברק שולח voice memo: "תזכיר לי בבוקר להתקשר לאלירן על הקבוצה החדשה ולבדוק מתי הם מוכנים להתחיל".</div>
+    <ol class="pipeline-steps">
+      <li>WA inbound (self-chat, audio media) → battery 🪫</li>
+      <li>STT: <code>Groq whisper-large-v3</code> מתמלל. text="תזכיר לי בבוקר להתקשר לאלירן..."</li>
+      <li>classify bucket: <strong>task</strong> (verb "תזכיר לי", clear action)</li>
+      <li>post ל-Voice transcripts group: <code>🎤 *17:48 26/05<br>מקור: self<br>תמלול: תזכיר לי בבוקר להתקשר לאלירן על הקבוצה החדשה ולבדוק מתי הם מוכנים להתחיל<br>זיהוי: task*</code></li>
+      <li>side-effect propose ל-self-chat: <code>⚡ *✓ קלטתי. להוסיף ל-TASKS: "התקשר לאלירן על הקבוצה החדשה - מתי מתחילים?" + תזכורת ביומן מחר 09:00? [כן/לא]*</code></li>
+      <li>ברק "כן". Alfred: TASKS.md append + <code>alfred-calendar.js create --allDay=true --summary='להתקשר לאלירן' --tag=personal --start=tomorrow</code></li>
+      <li>battery 🔋 + ack קצר</li>
+    </ol>
+    <div class="result">✅ פלט: Voice transcripts group post · TASKS.md · Google Calendar all-day · task-examples.md learning · self-chat ack</div>
+  </div>
+
+  <div class="example">
+    <h4>5. 📋 client-quote: לקוח חדש שואל מחיר ל-10kW</h4>
+    <div class="scenario">11:03. DM מ-+972544XXXXX (לא בקונטקטים): "שלום, אני רוצה הצעת מחיר ל-10kW על הגג שלי בכפר סבא. יש סוללה?"</div>
+    <ol class="pipeline-steps">
+      <li>WA inbound → allowlist: DM 1:1, לא archived → process</li>
+      <li>router: <code>client-quote</code>, confidence=0.94</li>
+      <li>NOT self-chat → confidence threshold 0.85 → no clarify needed</li>
+      <li>enrich: client not in BEE → potential new lead. params: kW=10, location=כפר סבא, battery=yes (mentioned)</li>
+      <li>pricebook lookup: 10kW Sungrow inverter SG10RT (₪12,500) + 8 panels Solar-Space 550W (₪650 × 18 = ₪11,700) + sample battery Deye 10kWh (₪16,000). install ~₪8,000. total range ~₪48-55K</li>
+      <li>compose template "client-quote": 6 שדות (לקוח · כתובת · KW · ציוד · מחיר טווח · תנאי תשלום 5/20/35/30/10)</li>
+      <li>post ל-Drafts group: <code>📝 *טיוטה עבור 054-4XXX (כפר סבא · 10kW + battery):*<br>...<br>---<br>💬 הודעה מקורית: "שלום, אני רוצה הצעת מחיר..."</code></li>
+      <li>self-chat ack: <code>⚡ *📝 לקוח פוטנציאלי חדש מבקש הצעה (10kW + battery, כפר סבא). טיוטה ב-Drafts. בנוסף הוספתי ל-TASKS מעקב.*</code></li>
+      <li>TASKS.md row: "מעקב אחרי הצעה לקוח חדש 054-4XXX"</li>
+    </ol>
+    <div class="result">✅ פלט: Drafts group draft · self-chat ack · TASKS.md row · אופציונלי: alfred-contacts-auto append</div>
+  </div>
+
+  <div class="example">
+    <h4>6. 🏛️ regulatory: gov-rss מצא חוזר חדש של משרד אנרגיה</h4>
+    <div class="scenario">09:32. cron <code>morning-gov-regulations</code> רץ. מצא חוזר חדש: "עדכון תעריפי הזנה לאוקטובר 2026".</div>
+    <ol class="pipeline-steps">
+      <li><code>alfred-gov-rss.js cron-output</code> מחזיר item חדש (לא ב-gov-rss-seen.json)</li>
+      <li>state update: append URL ל-gov-rss-seen.json</li>
+      <li>regulatory-agent invoked. enrich: BEE.Document filter where kind=utility_approval AND expiresAt&lt;90d (אם רלוונטי)</li>
+      <li>compose template "regulatory-alert": title + source URL + relevant action</li>
+      <li>self-chat: <code>⚡ *🏛️ חוזר חדש: עדכון תעריפי הזנה לאוקטובר 2026 (משרד אנרגיה)<br>קישור: gov.il/he/...<br>השפעה: 3 לקוחות עם feedback tariff פתוחים. לעדכן הצעות פתוחות? [כן/לא]*</code></li>
+      <li>אם ברק "כן" → TASKS.md "עדכון 3 הצעות פתוחות לפי תעריף חדש"</li>
+    </ol>
+    <div class="result">✅ פלט: self-chat with citation · gov-rss-seen.json update · TASKS.md אופציונלי · עתידי: BEE.Document.update (Wave 4)</div>
+  </div>
+
+  <div class="example">
+    <h4>7. 🏗️ site-update: בקבוצת "כפר יובל" מישהו שולח עדכון</h4>
+    <div class="scenario">14:18. בקבוצת WA "כפר יובל - התקנת מערכות": "מהנדס בודק אישר את לוח 3. נשאר לוח 4 ולוח 5".</div>
+    <ol class="pipeline-steps">
+      <li>WA inbound (group <code>120363409665555113@g.us</code>) → site lookup ב-<code>site-groups.json</code> → site=kfar-yuval</li>
+      <li>NOT classify as task — site-update auto-process</li>
+      <li>parse entities: structured info detected (לוח 3 אושר, לוח 4+5 חסרים)</li>
+      <li>auto-append ל-<code>sites/kfar-yuval.md</code> תחת <code>## היסטוריית אירועים</code>:<br><code>| 2026-05-26 14:18 | יוסי: מהנדס בודק אישר את לוח 3. נשאר לוח 4 ולוח 5 | 120363409665555113@g.us |</code></li>
+      <li>structured update: בסעיף <code>## ציוד / טכני</code> → לוח 3 status="אושר"</li>
+      <li>NOT reply בקבוצה (חוק יסוד #3)</li>
+      <li>אופציונלי: TASKS.md row "מעקב לוחות 4+5 כפר יובל"</li>
+    </ol>
+    <div class="result">✅ פלט: sites/kfar-yuval.md auto-update · NO outbound · log to memory/&lt;date&gt;.md</div>
+  </div>
+
+  <div class="example">
+    <h4>8. 💡 internal-idea: ברק כותב "תקלוט רעיון: לבנות calculator לחיסכון בחשמל"</h4>
+    <div class="scenario">23:14. self-chat: "תקלוט רעיון: לבנות calculator לחיסכון בחשמל ללקוחות חדשים, ROI by year".</div>
+    <ol class="pipeline-steps">
+      <li>WA inbound → battery 🪫 → log line</li>
+      <li>router detect trigger phrase "תקלוט רעיון:" → bypass classification → direct ל-ideas handler</li>
+      <li>strip trigger phrase. body="לבנות calculator לחיסכון בחשמל ללקוחות חדשים, ROI by year"</li>
+      <li>prepend at top of <code>ideas-drawer.md</code>:<br><code>## 2026-05-26 23:14<br>לבנות calculator לחיסכון בחשמל ללקוחות חדשים, ROI by year<br><br>**הקשר:** (inferred from recent context: ברק דיבר על הצעות מחיר בשבועיים האחרונים)</code></li>
+      <li>battery 🔋 + <code>⚡ *✓ נקלט.*</code> (קצר, חוק)</li>
+      <li>אין side effects אחרים. weekly digest (Sunday 09:00) יעלה אותו לבדיקה.</li>
+    </ol>
+    <div class="result">✅ פלט: ideas-drawer.md prepend · self-chat ack קצר · אין יותר</div>
+  </div>
+
+  <div class="example">
+    <h4>9. 🌅 cron: morning-urgent-digest רץ ב-10:00</h4>
+    <div class="scenario">10:00 (cron disabled כיום — דוגמה לעתיד אחרי הפעלה).</div>
+    <ol class="pipeline-steps">
+      <li>cron fires → <code>node alfred-handle.js morning-urgent-digest</code></li>
+      <li>read memory/today.md + memory/yesterday.md (12h ↺)</li>
+      <li>קריאות מקבילות: TASKS.md · contacts.md (pending-reply-from-Barak) · BEE.Alert (critical) · Monday (overdue items)</li>
+      <li>compose digest: ⚡ *סיכום בוקר 26/5 10:00:<br>🚨 דחוף (3): ...<br>🔄 ממתינים לי (5): ...<br>📅 פגישות היום (2): ...<br>☀️ alerts פתוחים (12): ...*</li>
+      <li>send ל-self-chat</li>
+    </ol>
+    <div class="result">✅ פלט: WhatsApp self-chat digest מובנה</div>
+  </div>
+
+  <div class="example">
+    <h4>10. 🚧 future: תמונת חשבונית נכנסת (Wave 4)</h4>
+    <div class="scenario">15:33 (עתידי). DM מלקוח מצרף תמונה של חשבונית: "הנה החשבונית מהאלקטרונאי על הגג, כמה אני חייב?"</div>
+    <ol class="pipeline-steps">
+      <li>WA inbound + mediaType=image → battery 🪫</li>
+      <li>media download → <code>vision-tools</code> (Gemini 2.5 Pro) OCR עברית של חשבונית</li>
+      <li>structured extract: vendor="אלקטרונאי X", date=24/05, items=[...], total=₪1,450</li>
+      <li>BEE.Document.create kind=invoice_incoming · BEE.Vendor lookup · אופציונלי Invoice Maven match (אם רלוונטי)</li>
+      <li>self-chat: <code>⚡ *🧾 חשבונית מ-אלקטרונאי X על ₪1,450 (24/05). פרטים: ... להוסיף ל-BEE? [כן/לא]*</code></li>
+      <li>אם "כן" → BEE write · Drafts group draft ללקוח עם reply</li>
+    </ol>
+    <div class="result">🚧 Wave 4 — דורש: Gemini Vision integration + BEE Electron HTTP API + document-extract plugin של OpenClaw</div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>🔀 Alfred · מפת זרימה מלאה</p>
+  <p>📂 קישורים: <a href="https://github.com/Barak-B/bee-assets/blob/claude/capability-extensions-collection-JjV2s/research/agent-architecture.html">agent-architecture.html</a> · <a href="https://github.com/Barak-B/bee-assets/blob/claude/capability-extensions-collection-JjV2s/research/federation-plan.md">federation-plan.md</a> · <a href="https://github.com/Barak-B/bee-assets/blob/claude/capability-extensions-collection-JjV2s/research/tools-deep-audit.md">tools-deep-audit.md</a></p>
+  <p>📅 נוצר 2026-05-26 03:30 · מבוסס על AGENTS.md (52KB) · alfred-router.js · alfred-handle.js · alfred-clarify.js · alfred-enrich.js · 16 cron jobs · capability-tree.md</p>
+  <p style="margin-top: 8px;">מקור: <code>E:\bee-assets\research\agent-io-flow.html</code></p>
+</footer>
+
+</body>
+</html>
