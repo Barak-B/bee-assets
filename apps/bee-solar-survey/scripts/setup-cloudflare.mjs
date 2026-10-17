@@ -19,7 +19,7 @@
  */
 import { spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -37,8 +37,11 @@ const dryRun = flag('dry-run')
 const rotate = flag('rotate-key')
 const skipBuild = flag('skip-build')
 const domain = value('domain')
-// Tests point this at a stub; normally the project's own wrangler.
-const WRANGLER = process.env.WRANGLER_BIN || join(APP, 'node_modules', '.bin', 'wrangler')
+const WIN = process.platform === 'win32'
+// The project's own wrangler, run through node itself — the same on Windows,
+// macOS and Linux (no .cmd shims, no shell). Tests point WRANGLER_BIN at a stub.
+const WRANGLER_JS = join(APP, 'node_modules', 'wrangler', 'bin', 'wrangler.js')
+const WRANGLER = process.env.WRANGLER_BIN || process.execPath
 
 const out = (s = '') => process.stdout.write(`${s}\n`)
 /** "created" — or, in a dry run, "would be created". */
@@ -49,18 +52,23 @@ const fail = (msg) => {
   process.exit(1)
 }
 
-function run(cmd, cmdArgs, { input, mutates = false, quiet = false } = {}) {
+function run(cmd, cmdArgs, { input, mutates = false, quiet = false, shell = false } = {}) {
   if (dryRun && mutates) {
-    out(`  (dry-run) ${cmd === WRANGLER ? 'wrangler' : cmd} ${cmdArgs.join(' ')}`)
+    out(`  (dry-run) ${cmd} ${cmdArgs.join(' ')}`)
     return { ok: true, stdout: '' }
   }
-  const r = spawnSync(cmd, cmdArgs, { cwd: APP, input, encoding: 'utf8', env: process.env })
+  const r = spawnSync(cmd, cmdArgs, { cwd: APP, input, encoding: 'utf8', env: process.env, shell })
   const stdout = `${r.stdout ?? ''}${r.stderr ?? ''}`
   if (!quiet && r.status !== 0) out(stdout.trim().split('\n').slice(-8).join('\n'))
   return { ok: r.status === 0, stdout }
 }
-const wrangler = (a, o) => run(WRANGLER, a, o)
+/** `wrangler <args>`; the dry-run line shows the wrangler arguments only. */
+function wrangler(a, o = {}) {
+  if (dryRun && o.mutates) return run('wrangler', a, o)
+  return process.env.WRANGLER_BIN ? run(WRANGLER, a, o) : run(WRANGLER, [WRANGLER_JS, ...a], o)
+}
 
+if (!process.env.WRANGLER_BIN && !existsSync(WRANGLER_JS)) fail(`חסרות תלויות. הריצו קודם בתיקייה ${APP}:  npm install`)
 if (!process.env.CLOUDFLARE_API_TOKEN) fail('חסר CLOUDFLARE_API_TOKEN (Account → Cloudflare Pages: Edit, Workers R2 Storage: Edit)')
 if (!process.env.CLOUDFLARE_ACCOUNT_ID) fail('חסר CLOUDFLARE_ACCOUNT_ID (מופיע בדשבורד של Cloudflare, בצד ימין של דף החשבון)')
 if (domain && !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) fail(`--domain לא תקין: ${domain}`)
@@ -113,7 +121,7 @@ else {
 
 step(5, 'בנייה ופריסה')
 if (!skipBuild) {
-  const b = run('npm', ['run', 'build'], { quiet: true })
+  const b = run('npm', ['run', 'build'], { quiet: true, shell: WIN })
   if (!b.ok) fail(`הבנייה נכשלה:\n${b.stdout.trim().split('\n').slice(-15).join('\n')}`)
   out('  ✓ נבנה')
 }

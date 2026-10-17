@@ -63,6 +63,26 @@
    CLOUDFLARE_API_TOKEN=… CLOUDFLARE_ACCOUNT_ID=… npm run setup:cloudflare -- --domain app.barak-e.com
    ```
 
+**ב-Windows (PowerShell)** התחביר `VAR=… command` לא עובד. במקומו:
+
+```powershell
+# פעם אחת: Git ו-Node.js 22 LTS (https://nodejs.org) מותקנים
+cd $HOME
+git clone https://github.com/Barak-B/bee-assets.git
+cd bee-assets
+git checkout claude/dazzling-pasteur-17ua3g   # עד שה-PR ימוזג ל-main
+cd apps\bee-solar-survey
+npm install
+
+chcp 65001                                     # שהעברית תוצג נכון בחלון
+$env:CLOUDFLARE_API_TOKEN = "<הטוקן>"
+$env:CLOUDFLARE_ACCOUNT_ID = "<מזהה החשבון>"
+node scripts\setup-cloudflare.mjs --dry-run --domain app.barak-e.com   # רק מראה מה ייעשה
+node scripts\setup-cloudflare.mjs --domain app.barak-e.com             # מבצע
+```
+
+ב-PowerShell עדיף `node scripts\setup-cloudflare.mjs` ולא `npm run setup:cloudflare --`, כי PowerShell לפעמים בולע את ה-`--`.
+
 הסקריפט (`scripts/setup-cloudflare.mjs`) בודק כל שלב ויוצר רק מה שחסר: bucket ‏`bee-quotes`, פרויקט Pages, מפתח ראשי, בנייה ופריסה, דומיין, ובסוף `GET /api/health`.
 - המפתח הראשי נוצר בסקריפט ו**מוצג פעם אחת**. אם כבר יש מפתח, הסקריפט לא נוגע בו (להחלפה: `--rotate-key`).
 - אפשר להריץ שוב בלי חשש.
