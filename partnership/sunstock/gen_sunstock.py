@@ -58,7 +58,6 @@ def emblem(cx, cy, mode='color', scale=1.0, clipid='hc'):
     s=31*scale
     balls=[(0,-0.62,'Y'),(-0.56,-0.3,'R'),(0.56,-0.3,'R'),(0,0,'Y'),(-0.56,0.34,'R'),(0.56,0.34,'R'),(0,0.64,'Y'),(-0.3,-0.02,'R'),(0.3,0.02,'Y')]
     balls.sort(key=lambda b:b[1])
-    S+=f'<circle cx="{cx}" cy="{cy}" r="{s*1.12:.1f}" fill="#FFFFFF" opacity="0.9"/>'
     for dx,dy,c in balls:
         if mono: S+=f'<circle cx="{cx+dx*s:.1f}" cy="{cy+dy*s:.1f}" r="{s*0.44:.1f}" fill="{"#FFFFFF" if c=="Y" else NAVY}" stroke="{NAVY}" stroke-width="{2*scale:.1f}"/>'
         else:    S+=f'<circle cx="{cx+dx*s:.1f}" cy="{cy+dy*s:.1f}" r="{s*0.44:.1f}" fill="url(#g{c})"/>'
