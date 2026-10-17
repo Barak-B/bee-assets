@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+const dir = new URL('.', import.meta.url).pathname.replace(/\/$/, '');
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
+const page = await browser.newPage();
+await page.goto('file://' + dir + '/mou-sunstock-v1.html', { waitUntil: 'networkidle' }).catch(()=>{});
+await page.evaluate(() => document.fonts.ready);
+await page.emulateMedia({ media: 'print' });
+const foot = '<div dir="rtl" style="width:100%;font-family:DejaVu Sans,Arial,sans-serif;font-size:8.5px;color:#3a465c;padding:0 14mm;display:flex;justify-content:space-between;direction:rtl;"><span>מזכר הבנות · ברק הנדסת חשמל × שנל אנרגיה · SUNSTOCK · גרסה 1.0 · טיוטה לדיון</span><span>עמוד <span class="pageNumber"></span> מתוך <span class="totalPages"></span></span></div>';
+await page.pdf({ path: dir + '/mou-sunstock-v1.pdf', format: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>', footerTemplate: foot, margin: { top: '16mm', bottom: '20mm', left: '14mm', right: '14mm' } });
+console.log('pdf done');
+await browser.close();
