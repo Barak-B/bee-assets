@@ -362,6 +362,8 @@ export function priceQuote(
         priceWith(l, winner, env);
       } else if (l.passthrough) {
         l.unit_price = l.unit_cost; // a fee nobody priced stays at cost ("לפי חשבון בפועל")
+      } else if (matching.some((r) => r.action.type === 'price_per_kwp')) {
+        // folded into a lump-sum line that carries the price; the line keeps only its cost (KPI)
       } else {
         const dm = paramValue(config, 'default_margin_pct');
         if (dm === null) {
@@ -486,14 +488,19 @@ export function priceQuote(
       issues.push({ code: 'HUMAN_INPUT_REQUIRED', severity: 'block', ref: `pricing_rule:${r.id}`, message_he: `${r.name_he}: מחיר ל-kWp לא הוגדר`, missing: [`pricing_rules.${r.id}`] });
       continue;
     }
+    const lumpTotal = lumpPrice(v, kwp);
+    if (lumpTotal === null) {
+      issues.push({ code: 'CONFIG_ERROR', severity: 'block', ref: `pricing_rule:${r.id}`, message_he: `${r.name_he}: מחיר ל-kWp אינו מספר או טבלת מדרגות תקינה` });
+      continue;
+    }
     const folded = lines.filter((l) => l.in_lump === r.id && counted(l));
     lumpLines.push({
       ...folded[0]!, key: `lump:${r.id}`, order: order++, source: 'manual', source_ref: { pricing_rule_id: r.id, folded: folded.map((l) => l.key) },
       product: null, kind: null, subkind: null, title_he: 'מערכת סולארית קומפלט', unit: 'kwp', qty: kwp, qty_expr: 'kwp', inputs_used: { kwp: kwp.toString() },
       resolved_by: `pricing_rule:${r.id}`, customer_note_he: null, verification_flag: false, optional: false, option_group: null, selected: true,
       regulatory: [], cost: null, unit_cost: sum(folded.map((l) => (l.unit_cost ? l.unit_cost.times(l.qty) : null))).div(kwp),
-      unit_price: new Decimal(v as number), manual_price: true, rule_ids: [r.id], margin_pct: null, passthrough: false, hide_price: false,
-      in_lump: null, flags: [], discount_pct: ZERO, discount_schedule_id: null, vat_treatment: 'standard', line_total: money(new Decimal(v as number).times(kwp)),
+      unit_price: kwp.isZero() ? lumpTotal : lumpTotal.div(kwp), manual_price: true, rule_ids: [r.id], margin_pct: null, passthrough: false, hide_price: false,
+      in_lump: null, flags: [], discount_pct: ZERO, discount_schedule_id: null, vat_treatment: 'standard', line_total: money(lumpTotal),
     });
   }
   // Lines folded into a priced lump-sum line stay internal (cost, KPI) but leave the customer totals.
@@ -672,6 +679,32 @@ export function priceQuote(
     issues,
     trace,
   };
+}
+
+/**
+ * Lump-sum price for `kwp`: a flat ₪/kWp, or marginal bands like an income-tax table
+ * (`[{ upto_kwp: 25, price_per_kwp: 2900 }, { upto_kwp: null, price_per_kwp: 2700 }]` → the first 25 kWp at
+ * 2900, the rest at 2700). B.E.E prices residential and commercial systems this way. null = not a valid table.
+ */
+export function lumpPrice(v: unknown, kwp: Decimal): Decimal | null {
+  if (typeof v === 'number') return Number.isFinite(v) ? kwp.times(v) : null;
+  if (!Array.isArray(v) || v.length === 0) return null;
+  let total = ZERO;
+  let from = ZERO;
+  for (const [i, band] of v.entries()) {
+    const b = band as { upto_kwp?: unknown; price_per_kwp?: unknown };
+    if (typeof b?.price_per_kwp !== 'number') return null;
+    const last = i === v.length - 1;
+    if (b.upto_kwp === null || b.upto_kwp === undefined) {
+      if (!last) return null;
+    } else if (typeof b.upto_kwp !== 'number' || new Decimal(b.upto_kwp).lte(from)) return null;
+    const upto = b.upto_kwp === null || b.upto_kwp === undefined ? kwp : Decimal.min(kwp, b.upto_kwp as number);
+    if (upto.gt(from)) total = total.plus(upto.minus(from).times(b.price_per_kwp));
+    if (b.upto_kwp === null || b.upto_kwp === undefined) return total;
+    from = new Decimal(b.upto_kwp as number);
+    if (last && kwp.gt(from)) return null; // table ends before the system size
+  }
+  return total;
 }
 
 function toQuoteLine(l: WorkLine, line_no: string, vatRate: Decimal | null): QuoteLine {
