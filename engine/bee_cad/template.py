@@ -40,12 +40,12 @@ class Anchor(BaseModel):
 
 class Pedestal(BaseModel):
     kind: str = "Double-T"
-    profile: str = "קורת פלדה T — לפי יצרן"
+    profile: str = "IPE 200 מגולוון (קורת פלדה Double-T)"
     height_mm: float = 200
     length_mm: Optional[float] = None    # along Y; default = cabinet depth
-    width_mm: float = 100                # flange width (plan)
+    width_mm: float = 100                # flange width (plan) — IPE 200: 100 mm
     count_per_unit: int = 2
-    inset_mm: float = 120                # beam centre from the cabinet side edge
+    inset_mm: float = 0                  # beam centre from the cabinet side edge (Roche G009: beam centred under the edge)
     galvanised: bool = True
 
 
@@ -57,8 +57,10 @@ class Unit(BaseModel):
     x_mm: float                           # footprint front-left corner from the datum
     y_mm: float
     anchors: Optional[list[tuple[float, float]]] = None   # per unit, relative to its front-left corner; None = pattern
-    anchor_inset_x_mm: float = 120        # default pattern: 2 bolts per beam at (inset_x, inset_y) from the corners
-    anchor_inset_y_mm: float = 150
+    anchor_inset_x_mm: float = 30         # default pattern: 2 bolts per beam end, ±inset_x from the beam web
+    anchor_inset_y_mm: float = 150        # bolt row from the beam end (along Y)
+    anchor_offset_y_mm: float = 0         # extra Y shift of both rows (stagger against the neighbouring cabinet's beam)
+    anchor_stagger_mm: float = 100        # the second bolt of each pair sits this much further from the beam end (diagonal pair)
     weight_t: Optional[float] = None
 
 
@@ -72,12 +74,24 @@ class DrillTemplate(BaseModel):
     notes: list[str] = Field(default_factory=list)
     verify: list[str] = Field(default_factory=list)
 
+    def beam_centres(self, u: Unit) -> tuple[float, float]:
+        """X of the two pedestal beams of a unit (absolute)."""
+        return (u.x_mm + self.pedestal.inset_mm, u.x_mm + u.width_mm - self.pedestal.inset_mm)
+
     def anchor_points(self, u: Unit) -> list[tuple[float, float]]:
+        """Absolute anchor coordinates. Default pattern: on each beam, a pair of bolts (±inset_x from the web)
+        at inset_y from the front end and from the rear end — 8 per unit; numbered front row left→right,
+        then rear row."""
         if u.anchors:
             return [(u.x_mm + ax, u.y_mm + ay) for ax, ay in u.anchors]
-        ix, iy = u.anchor_inset_x_mm, u.anchor_inset_y_mm
-        return [(u.x_mm + ix, u.y_mm + iy), (u.x_mm + u.width_mm - ix, u.y_mm + iy),
-                (u.x_mm + ix, u.y_mm + u.depth_mm - iy), (u.x_mm + u.width_mm - ix, u.y_mm + u.depth_mm - iy)]
+        ix, iy, dy, st = u.anchor_inset_x_mm, u.anchor_inset_y_mm, u.anchor_offset_y_mm, u.anchor_stagger_mm
+        length = self.pedestal.length_mm or u.depth_mm
+        y0 = u.y_mm + (u.depth_mm - length) / 2
+        out: list[tuple[float, float]] = []
+        for y, sign in ((y0 + iy + dy, 1.0), (y0 + length - iy + dy, -1.0)):   # front row, rear row (stagger inward)
+            for bx in self.beam_centres(u):
+                out += [(bx - ix, y), (bx + ix, y + sign * st)]
+        return out
 
 
 @dataclass
@@ -158,7 +172,8 @@ class TemplateRenderer:
             zx, zy, zw, zd = s(z["x_mm"]), s(z["y_mm"]), s(z["w_mm"]), s(z["d_mm"])
             ctx.msp.add_lwpolyline([(ox + zx, oy + zy), (ox + zx + zw, oy + zy), (ox + zx + zw, oy + zy + zd), (ox + zx, oy + zy + zd)],
                                    close=True, dxfattribs={"layer": LAYERS["existing"].name})
-            ctx.text(z.get("label", ""), (ox + zx + zw / 2, oy + zy + zd / 2), 1.6, "panel_text", TA.MIDDLE_CENTER)
+            ctx.text(z.get("label", ""), (ox + zx + zw / 2, oy + zy + zd / 2), 1.6, "panel_text", TA.MIDDLE_CENTER,
+                     rotation=90.0 if zd > zw * 1.5 else 0.0)
         for u in t.units:
             ux, uy, uw, ud = ox + s(u.x_mm), oy + s(u.y_mm), s(u.width_mm), s(u.depth_mm)
             ctx.rect(ux, uy, uw, ud, "panel_dev")
@@ -176,21 +191,19 @@ class TemplateRenderer:
                 ctx.text(str(i), (ox + s(x) + 2.0, oy + s(y) + 2.0), 1.3, "dim", TA.BOTTOM_LEFT)
         # dimension chains: X positions of the first anchor column of every unit, overall; Y of anchor rows of unit 1
         self.dim_h(ox, ox + L, oy + W, 10.0, self.scale)
-        self.dim_v(ox + L, oy, oy + W, 10.0, self.scale)
-        xs = [ox]
-        for u in t.units:
-            pts = t.anchor_points(u)
-            xs += sorted({ox + s(p[0]) for p in pts})
-        xs.append(ox + L)
+        self.dim_v(ox + L, oy, oy + W, 18.0, self.scale)
+        xs = sorted({ox} | {ox + s(bx) for u in t.units for bx in t.beam_centres(u)} | {ox + L})
         for a, b in zip(xs, xs[1:]):
             if b - a > 0.5:
                 self.dim_h(a, b, oy, -8.0, self.scale)
-        if t.units:
-            u = t.units[0]
-            ys = [oy] + sorted({oy + s(p[1]) for p in t.anchor_points(u)}) + [oy + W]
+        # Y chains: bolt rows of the first unit on the left, of the second unit (staggered) on the right
+        for u, x, off in ((t.units[0:1], ox, -8.0), (t.units[1:2], ox + L, 8.0)):
+            if not u:
+                continue
+            ys = sorted({oy} | {oy + s(p[1]) for p in t.anchor_points(u[0])} | {oy + W})
             for a, b in zip(ys, ys[1:]):
                 if b - a > 0.5:
-                    self.dim_v(ox, a, b, -8.0, self.scale)
+                    self.dim_v(x, a, b, off, self.scale)
         ctx.text(f"מבט על — שבלונת קידוח   1:{int(self.scale)}", (ox + L / 2, oy - 16.0), 2.6, "panel_text", TA.TOP_CENTER, bold=True)
         return L, W
 
@@ -211,22 +224,23 @@ class TemplateRenderer:
                                    close=True, dxfattribs={"layer": LAYERS["panel_rail"].name})
             ctx.msp.add_line((bx, y0b), (bx, y0b + pl), dxfattribs={"layer": LAYERS["existing"].name})
         pts = [((x - u.x_mm) / sc, (y - u.y_mm) / sc) for x, y in t.anchor_points(u)]
+        beams = [(bx - u.x_mm) / sc for bx in t.beam_centres(u)]
         for i, (px, py) in enumerate(pts, 1):
             self.anchor_mark(ox + px, oy + py, 2.0)
-            if px > uw / 2:   # right column: label to the left of the bolt, inside the footprint
-                ctx.text(f"Ø{t.anchor.hole_dia_mm:g}  {i}", (ox + px - 3.0, oy + py + 2.5), 1.5, "dim", TA.BOTTOM_RIGHT)
+            bx = min(beams, key=lambda b: abs(b - px))
+            if px < bx:       # bolt left of its beam web: label outward to the left, clear of the flange
+                ctx.text(f"Ø{t.anchor.hole_dia_mm:g}  {i}", (ox + bx - pw / 2 - 1.5, oy + py + 2.0), 1.5, "dim", TA.BOTTOM_RIGHT)
             else:
-                ctx.text(f"{i}  Ø{t.anchor.hole_dia_mm:g}", (ox + px + 3.0, oy + py + 2.5), 1.5, "dim", TA.BOTTOM_LEFT)
+                ctx.text(f"{i}  Ø{t.anchor.hole_dia_mm:g}", (ox + bx + pw / 2 + 1.5, oy + py + 2.0), 1.5, "dim", TA.BOTTOM_LEFT)
         xs = sorted({p[0] for p in pts})
         ys = sorted({p[1] for p in pts})
-        chain_x = [0.0] + xs + [uw]
-        for a, b in zip(chain_x, chain_x[1:]):
+        for a, b in zip(xs, xs[1:]):
             if b - a > 0.3:
                 self.dim_h(ox + a, ox + b, oy, -7.0, sc)
-        chain_y = [0.0] + ys + [ud]
+        chain_y = sorted({0.0, ud} | set(ys))
         for a, b in zip(chain_y, chain_y[1:]):
             if b - a > 0.3:
-                self.dim_v(ox, oy + a, oy + b, -7.0, sc)
+                self.dim_v(ox, oy + a, oy + b, -16.0, sc)
         self.dim_h(ox, ox + uw, oy + ud, 7.0, sc)
         self.dim_v(ox + uw, oy, oy + ud, 7.0, sc)
         ctx.text(f"פרט ארון {u.model} — תבנית קידוח   1:{int(sc)}", (ox + uw / 2, oy + ud + 15.0), 2.4, "panel_text", TA.BOTTOM_CENTER, bold=True)
