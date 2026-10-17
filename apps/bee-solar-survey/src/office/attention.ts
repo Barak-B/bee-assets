@@ -7,6 +7,8 @@ import type { OfficeJob } from './api'
 const DAY = 86_400_000
 
 export const ATTENTION_DAYS = {
+  /** A new job with no survey date yet. */
+  noDate: 2,
   /** Survey done, no quote yet. */
   noQuote: 3,
   /** Link sent, the customer has not opened it. */
@@ -24,6 +26,17 @@ export function attentionHe(job: OfficeJob, now = new Date()): string | null {
   if (job.office && job.office.status !== 'active') return null
   const live = job.links.filter((l) => !l.revoked_at)
   switch (job.stage) {
+    case 'lead': {
+      const o = job.office
+      if (!o?.assigned_to_id) return 'לא שובץ סוקר'
+      if (o.planned_date) {
+        // Planned dates are Israeli calendar days; compare as dates, not instants.
+        const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(now)
+        return o.planned_date < today ? `מועד הסקר (${o.planned_date.split('-').reverse().join('.')}) עבר ואין עדיין סקר` : null
+      }
+      const d = age(job.receivedAt, now)
+      return d >= ATTENTION_DAYS.noDate ? `לקבוע מועד סקר (${Math.floor(d)} ימים)` : null
+    }
     case 'survey': {
       const d = age(job.receivedAt, now)
       return d >= ATTENTION_DAYS.noQuote ? `סקר בלי הצעה ${Math.floor(d)} ימים` : null

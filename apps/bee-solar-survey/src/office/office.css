@@ -343,9 +343,38 @@ button.o-kpi {
     padding: 4px 12px;
   }
 
+  /* Nothing to say yet (no quote, no link, no report): skip the line on the card. */
+  .o-table td[data-empty] {
+    display: none;
+  }
+
   .o-table td[data-label]:not(:first-child)::before {
     content: attr(data-label) ': ';
     color: var(--muted);
     font-size: 0.8rem;
   }
+}
+
+.o-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.o-form input,
+.o-form textarea,
+.o-form select,
+.o-status input[type='date'] {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.o-filters .btn {
+  white-space: nowrap;
 }

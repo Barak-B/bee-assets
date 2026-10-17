@@ -5,18 +5,27 @@
  * page already wrote — nothing here is entered twice.
  *
  *   office/<surveyId>   tiny object; customMetadata = the office status row
+ *                       (status, note, assigned surveyor, planned survey date)
  */
-import { deriveStage, isInstallationTemplate, isOfficeStatus, type OfficeStatus, type Stage } from '../../src/stage'
+import { OFFICE_STATUS_LABEL_HE, deriveStage, isInstallationTemplate, isOfficeStatus, type OfficeStatus, type Stage } from '../../src/stage'
+import { listKeys, type Principal } from './auth'
 import type { Env } from './env'
 import { getAcceptance, getViews, listQuoteLinks, type QuoteLinkRow } from './store'
-import { UUID_RE, decodeMeta, encodeMeta, listSurveys, type SurveyIndexRow } from './surveys'
+import { UUID_RE, clip, decodeMeta, encodeMeta, listSurveys, type SurveyIndexRow } from './surveys'
 
 export interface OfficeStatusRow {
   status: OfficeStatus
   note: string
   updated_at: string
   updated_by: string
+  /** Personal key id of the surveyor the job is assigned to ('' = nobody). */
+  assigned_to_id: string
+  assigned_to_name: string
+  /** Planned survey date, YYYY-MM-DD ('' = not set). */
+  planned_date: string
 }
+
+export const EMPTY_OFFICE: Omit<OfficeStatusRow, 'updated_at' | 'updated_by'> = { status: 'active', note: '', assigned_to_id: '', assigned_to_name: '', planned_date: '' }
 
 const officeKey = (id: string) => `office/${id}`
 
@@ -28,11 +37,65 @@ export async function getOfficeStatus(env: Env, id: string): Promise<OfficeStatu
 function rowFromMeta(raw: Record<string, string>): OfficeStatusRow | null {
   const m = decodeMeta(raw)
   if (!isOfficeStatus(m.status)) return null
-  return { status: m.status, note: m.note ?? '', updated_at: m.updated_at ?? '', updated_by: m.updated_by ?? '' }
+  return {
+    status: m.status,
+    note: m.note ?? '',
+    updated_at: m.updated_at ?? '',
+    updated_by: m.updated_by ?? '',
+    assigned_to_id: m.assigned_to_id ?? '',
+    assigned_to_name: m.assigned_to_name ?? '',
+    planned_date: m.planned_date ?? '',
+  }
 }
 
 export async function putOfficeStatus(env: Env, id: string, row: OfficeStatusRow): Promise<void> {
   await env.QUOTES.put(officeKey(id), '', { customMetadata: encodeMeta({ ...row }) })
+}
+
+export interface OfficeUpdate {
+  status?: unknown
+  note?: unknown
+  /** Personal key id, or '' to unassign. */
+  assigned_to?: unknown
+  /** YYYY-MM-DD, or '' to clear. */
+  planned_date?: unknown
+}
+
+/**
+ * A partial update merged into `prev` (only the fields present change), or a
+ * Hebrew error for a bad field. Writes nothing.
+ */
+export async function resolveOfficeUpdate(env: Env, prev: OfficeStatusRow | null, u: OfficeUpdate, by: Principal, now = new Date()): Promise<{ row: OfficeStatusRow } | { error: string }> {
+  const next: OfficeStatusRow = { ...EMPTY_OFFICE, ...(prev ?? {}), updated_at: now.toISOString(), updated_by: by.name }
+  if (u.status !== undefined) {
+    if (!isOfficeStatus(u.status)) return { error: `סטטוס לא מוכר. אפשר: ${Object.values(OFFICE_STATUS_LABEL_HE).join(' / ')}` }
+    next.status = u.status
+  }
+  // 200 code points: R2 metadata is capped at 2 KB and Hebrew URL-encodes to 6 bytes a letter.
+  if (u.note !== undefined) next.note = clip(typeof u.note === 'string' ? u.note.trim() : '', 200)
+  if (u.planned_date !== undefined) {
+    if (u.planned_date !== '' && (typeof u.planned_date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(u.planned_date) || Number.isNaN(Date.parse(u.planned_date)))) return { error: 'תאריך לא תקין (YYYY-MM-DD)' }
+    next.planned_date = u.planned_date as string
+  }
+  if (u.assigned_to !== undefined) {
+    if (u.assigned_to === '') {
+      next.assigned_to_id = ''
+      next.assigned_to_name = ''
+    } else {
+      const key = (await listKeys(env)).find((k) => k.id === u.assigned_to && !k.revoked_at)
+      if (!key) return { error: 'הסוקר לא נמצא, או שהמפתח שלו בוטל' }
+      next.assigned_to_id = key.id
+      next.assigned_to_name = key.name
+    }
+  }
+  return { row: next }
+}
+
+/** Merge a partial update into the job's office row and store it. */
+export async function updateOffice(env: Env, id: string, u: OfficeUpdate, by: Principal, now = new Date()): Promise<{ row: OfficeStatusRow } | { error: string }> {
+  const res = await resolveOfficeUpdate(env, await getOfficeStatus(env, id), u, by, now)
+  if ('row' in res) await putOfficeStatus(env, id, res.row)
+  return res
 }
 
 export interface OfficeLink extends QuoteLinkRow {
@@ -152,6 +215,7 @@ function reportsBySurvey(objs: { key: string; meta: Record<string, string> }[]):
 export async function officeRow(env: Env, row: SurveyIndexRow, reports: OfficeReport[], office: OfficeStatusRow | null): Promise<OfficeRow> {
   const [quote, links] = await Promise.all([latestQuote(env, row.id), officeLinks(env, row.id)])
   const stage = deriveStage({
+    surveyed: row.photoCount > 0 || row.readyForWave54,
     quoteVersions: quote?.version_no ?? 0,
     liveLinks: links.filter((l) => !l.revoked_at).length,
     accepted: links.some((l) => !!l.accepted),

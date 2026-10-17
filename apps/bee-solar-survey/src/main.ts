@@ -5,6 +5,7 @@ import {
   deleteProject,
   exportBackup,
   getProject,
+  countPhotos,
   getOfficeStatus,
   getPublication,
   getPublishSettings,
@@ -128,6 +129,11 @@ async function runSync(manual: boolean) {
       toast(`גיבוי נכשל: ${r.errors[0]}`)
     }
     lastBgSyncError = r.failed ? (r.errors[0] ?? '') : ''
+    if (r.assigned.length) {
+      // New jobs from the office: show them now, then say so (re-render replaces the toast).
+      if (screen === 'list') await render()
+      toast(r.assigned.length === 1 ? `עבודה חדשה מהמשרד: ${r.assigned[0]}` : `${r.assigned.length} עבודות חדשות מהמשרד`)
+    }
   } catch (err) {
     if (manual) toast(err instanceof SyncError ? err.message : 'הגיבוי נכשל')
   }
@@ -143,25 +149,29 @@ function requestSyncLater(id: string) {
 }
 
 /** Where each job stands, from what this phone knows (quotes, links, approvals seen, reports, office status). */
-async function localStage(id: string): Promise<{ stage: Stage; office: string }> {
+async function localStage(id: string): Promise<{ stage: Stage; office: string; planned: string }> {
+  const project = await getProject(id)
   const quotes = await listQuotes(id)
   const pubs = await Promise.all(quotes.map((q) => getPublication(q.id)))
   const reports = await listReports(id)
   const office = await getOfficeStatus(id)
   const stage = deriveStage({
+    surveyed: !!project?.hiveReady || (await countPhotos(id)) > 0,
     quoteVersions: quotes.length,
     liveLinks: pubs.filter((p) => p && !p.revokedAt).length,
     accepted: pubs.some((p) => !!p?.acceptedAt),
     installationReports: reports.filter((r) => isInstallationTemplate(r.templateKey)).length,
     handoverFinal: reports.some((r) => r.templateKey === 'handover' && r.status === 'final'),
   })
-  return { stage, office: office && office.status !== 'active' ? OFFICE_STATUS_LABEL_HE[office.status] : '' }
+  // A planned date matters only until the site is surveyed.
+  const planned = stage === 'lead' && office?.planned_date ? office.planned_date.split('-').reverse().slice(0, 2).join('.') : ''
+  return { stage, office: office && office.status !== 'active' ? OFFICE_STATUS_LABEL_HE[office.status] : '', planned }
 }
 
 async function refreshStageChips() {
   for (const el of app.querySelectorAll<HTMLElement>('[data-stage-chip]')) {
-    const { stage, office } = await localStage(el.dataset.stageChip!)
-    el.textContent = office ? `${STAGE_LABEL_HE[stage]} · ${office}` : STAGE_LABEL_HE[stage]
+    const { stage, office, planned } = await localStage(el.dataset.stageChip!)
+    el.textContent = [STAGE_LABEL_HE[stage], planned && `📅 ${planned}`, office].filter(Boolean).join(' · ')
     el.className = `badge stage-chip stage-${stage}${office ? ' stage-office' : ''}`
     el.dataset.stage = stage
   }

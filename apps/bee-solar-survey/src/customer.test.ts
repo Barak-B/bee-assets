@@ -45,9 +45,12 @@ describe('customer card', () => {
 })
 
 describe('job stage', () => {
-  const base: StageFacts = { quoteVersions: 0, liveLinks: 0, accepted: false, installationReports: 0, handoverFinal: false }
+  const base: StageFacts = { surveyed: true, quoteVersions: 0, liveLinks: 0, accepted: false, installationReports: 0, handoverFinal: false }
   it('moves forward with what actually happened', () => {
+    expect(deriveStage({ ...base, surveyed: false })).toBe('lead')
     expect(deriveStage(base)).toBe('survey')
+    // A quote without photos (typed in from a phone call) still counts as a quote.
+    expect(deriveStage({ ...base, surveyed: false, quoteVersions: 1 })).toBe('quote')
     expect(deriveStage({ ...base, quoteVersions: 2 })).toBe('quote')
     expect(deriveStage({ ...base, quoteVersions: 2, liveLinks: 1 })).toBe('sent')
     // All links taken down and nothing approved: back to "quote".

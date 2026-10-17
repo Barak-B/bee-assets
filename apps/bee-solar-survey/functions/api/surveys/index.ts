@@ -14,5 +14,7 @@ export const onRequestGet: Handler = async ({ request, env }) => {
   if (error) return error
   const [surveys, office] = await Promise.all([listSurveys(env, since), listOfficeStatuses(env)])
   // The office status rides along, so phones pick it up without re-sending unchanged surveys.
-  return json(request, env, { surveys: surveys.map((s) => ({ ...s, office: office.get(s.id) ?? null })) })
+  // assigned_to_me: jobs the office gave this key — the phone pulls them on sync.
+  const me = auth.principal.id
+  return json(request, env, { surveys: surveys.map((s) => ({ ...s, office: office.get(s.id) ?? null, assigned_to_me: office.get(s.id)?.assigned_to_id === me })) })
 }

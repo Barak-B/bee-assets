@@ -50,6 +50,29 @@
 
 ## הפעלה (פעם אחת) — דורש חשבון Cloudflare של החברה
 
+### הדרך הקצרה: פקודה אחת
+
+1. **טוקן:** Cloudflare Dashboard → My Profile → API Tokens → Create Token → Custom, עם ההרשאות:
+   - Account → **Cloudflare Pages: Edit**
+   - Account → **Workers R2 Storage: Edit**
+2. **מזהה חשבון (Account ID):** מופיע בדף הבית של החשבון בדשבורד.
+3. **הרצה:**
+
+   ```bash
+   cd apps/bee-solar-survey
+   CLOUDFLARE_API_TOKEN=… CLOUDFLARE_ACCOUNT_ID=… npm run setup:cloudflare -- --domain app.barak-e.com
+   ```
+
+הסקריפט (`scripts/setup-cloudflare.mjs`) בודק כל שלב ויוצר רק מה שחסר: bucket ‏`bee-quotes`, פרויקט Pages, מפתח ראשי, בנייה ופריסה, דומיין, ובסוף `GET /api/health`.
+- המפתח הראשי נוצר בסקריפט ו**מוצג פעם אחת**. אם כבר יש מפתח, הסקריפט לא נוגע בו (להחלפה: `--rotate-key`).
+- אפשר להריץ שוב בלי חשש.
+- `--dry-run` מראה מה ייעשה בלי לשנות כלום.
+- אם `--domain` לא תואם ל-`PUBLIC_BASE_URL` שב-`wrangler.toml`, הסקריפט עוצר לפני שמתחיל.
+
+אפשר גם לתת לסוכן לעשות את זה: מוסיפים `CLOUDFLARE_API_TOKEN` ו-`CLOUDFLARE_ACCOUNT_ID` כ-secrets בסביבת הענן, והוא מריץ את הפקודה.
+
+### הדרך הידנית (דשבורד)
+
 1. **פרויקט Pages:** Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git → `Barak-B/bee-assets`.
    - Root directory: `apps/bee-solar-survey`
    - Build command: `npm run build`

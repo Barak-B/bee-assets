@@ -31,7 +31,7 @@ import {
 import { buildHiveExportBundle } from './hive'
 import { template } from './reports/model'
 import type { ReportInstance, ReportPhoto } from './reports/types'
-import { assessCompleteness, sha256OfDataUrl } from './schema'
+import { assessCompleteness, emptyProject, sha256OfDataUrl } from './schema'
 import { settingsProblem } from './publish'
 import type { SiteSurveyProject } from './types'
 
@@ -173,6 +173,8 @@ export interface SyncReport {
   quotes: number
   reports: number
   errors: string[]
+  /** Jobs the office assigned to this phone that arrived in this run. */
+  assigned: string[]
 }
 
 async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: SyncReport, deep: boolean): Promise<void> {
@@ -338,12 +340,25 @@ async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: S
 let officePulledAt = 0
 const OFFICE_PULL_MS = 10 * 60_000
 
-async function pullOfficeStatuses(s: PublishSettings, force: boolean, now = Date.now()): Promise<void> {
+/**
+ * One list call: the office's status on every local job, and any job the
+ * office assigned to this phone that is not here yet (pulled in full).
+ */
+async function pullFromOffice(s: PublishSettings, report: SyncReport, force: boolean, now = Date.now()): Promise<void> {
   if (!force && now - officePulledAt < OFFICE_PULL_MS) return
   const res = await call(s, '/api/surveys')
-  const { surveys } = (await res.json()) as { surveys: { id: string; office?: LocalOfficeStatus | null }[] }
+  const { surveys } = (await res.json()) as { surveys: RemoteRow[] }
   const local = new Set((await listProjects()).map((p) => p.id))
-  for (const row of surveys) if (local.has(row.id) && row.office !== undefined) await saveOfficeStatus(row.id, row.office)
+  for (const row of surveys) {
+    if (local.has(row.id)) {
+      if (row.office !== undefined) await saveOfficeStatus(row.id, row.office ?? null)
+    } else if (row.assigned_to_me && (!row.office || row.office.status === 'active')) {
+      // Only live jobs: one the office put on hold or closed does not land on the phone.
+      await importRemoteSurvey(s, row.id)
+      if (row.office) await saveOfficeStatus(row.id, row.office)
+      report.assigned.push(row.projectName || row.id)
+    }
+  }
   officePulledAt = now
 }
 
@@ -368,7 +383,7 @@ export function syncAll(only?: string[], opts: { deep?: boolean } = {}): Promise
     return running
   }
   running = (async () => {
-    const report: SyncReport = { synced: 0, skipped: 0, failed: 0, offline: false, photos: 0, quotes: 0, reports: 0, errors: [] }
+    const report: SyncReport = { synced: 0, skipped: 0, failed: 0, offline: false, photos: 0, quotes: 0, reports: 0, errors: [], assigned: [] }
     const s = await getPublishSettings()
     const problem = settingsProblem(s)
     if (problem || !s) throw new SyncError(problem ?? 'לא הוגדר שרת')
@@ -382,7 +397,7 @@ export function syncAll(only?: string[], opts: { deep?: boolean } = {}): Promise
         throw err
       }
     }
-    if (!report.offline) await pullOfficeStatuses(s, !!opts.deep).catch(() => undefined)
+    if (!report.offline) await pullFromOffice(s, report, !!opts.deep).catch(() => undefined)
     return report
   })().finally(() => {
     running = null
@@ -409,6 +424,9 @@ interface RemoteRow {
   id: string
   projectName: string
   updatedAt: string
+  office?: LocalOfficeStatus | null
+  /** The office assigned this job to the key this phone uses. */
+  assigned_to_me?: boolean
 }
 
 function blobToDataUrl(blob: Blob): Promise<string> {
@@ -433,6 +451,53 @@ export interface RestoreReport {
  * already exist locally are left as they are — the device copy wins and is
  * pushed on the next sync — so a restore can never overwrite field work.
  */
+/** Bring one survey from the server onto this device, with its photos, quote versions and reports. */
+async function importRemoteSurvey(s: PublishSettings, id: string): Promise<{ photos: number; quotes: number; reports: number }> {
+  const r = await call(s, `/api/surveys/${enc(id)}`)
+  const { survey, quotes, reports: wires = [] } = (await r.json()) as { survey: SurveyRecordOut; quotes: QuoteVersion[]; reports?: ReportWire[] }
+  const photos: StoredPhoto[] = []
+  for (const m of survey.photos) {
+    const pr = await call(s, `/api/surveys/${enc(id)}/photos/${enc(m.key)}`)
+    const blob = new Blob([await pr.arrayBuffer()], { type: m.mimeType })
+    photos.push({ id: m.id, projectId: id, field: m.field as StoredPhoto['field'], dataUrl: await blobToDataUrl(blob), mimeType: m.mimeType, sha256: m.sha256, createdAt: m.createdAt, annotated: m.annotated })
+  }
+  const stored: StoredQuote[] = quotes.map((q) => ({
+    id: `${id}:${q.version_no}`,
+    projectId: id,
+    version_no: q.version_no,
+    quote_number: q.quote_number,
+    created_at: q.created_at,
+    snapshot_hash: q.snapshot_hash,
+    quote: q,
+  }))
+  const reports: ReportInstance[] = []
+  for (const w of wires) {
+    const rphotos: ReportPhoto[] = []
+    for (const p of w.photos) {
+      const pr = await call(s, `/api/surveys/${enc(id)}/photos/${enc(p.key)}`)
+      const { key: _k, ...meta } = p
+      rphotos.push({ ...meta, dataUrl: await blobToDataUrl(new Blob([await pr.arrayBuffer()], { type: p.mimeType })) })
+    }
+    const { title_he: _t, outcome: _o, ...rest } = w
+    reports.push({ ...rest, photos: rphotos })
+  }
+  // A job opened by the office carries only the customer and the address; the rest gets the form's defaults.
+  const project: SiteSurveyProject = { ...emptyProject(), ...survey.project, id }
+  await importBackup({ projects: [project], photos, quotes: stored, reports, pricing: null })
+  await saveSyncState(id, {
+    hash: survey.contentHash,
+    projectUpdatedAt: project.updatedAt,
+    syncedAt: new Date().toISOString(),
+    photoKeys: survey.photos.map((p) => p.key),
+    quoteVersions: stored.map((q) => q.version_no),
+    error: null,
+    offline: false,
+    dirty: false,
+    reportRevs: Object.fromEntries(reports.map((x) => [x.id, reportTag(x)])),
+  })
+  return { photos: photos.length, quotes: stored.length, reports: reports.length }
+}
+
 export async function restoreFromServer(): Promise<RestoreReport> {
   const s = await getPublishSettings()
   const problem = settingsProblem(s)
@@ -446,50 +511,12 @@ export async function restoreFromServer(): Promise<RestoreReport> {
       out.skipped++
       continue
     }
-    const r = await call(s, `/api/surveys/${enc(row.id)}`)
-    const { survey, quotes, reports: wires = [] } = (await r.json()) as { survey: SurveyRecordOut; quotes: QuoteVersion[]; reports?: ReportWire[] }
-    const photos: StoredPhoto[] = []
-    for (const m of survey.photos) {
-      const pr = await call(s, `/api/surveys/${enc(row.id)}/photos/${enc(m.key)}`)
-      const blob = new Blob([await pr.arrayBuffer()], { type: m.mimeType })
-      photos.push({ id: m.id, projectId: row.id, field: m.field as StoredPhoto['field'], dataUrl: await blobToDataUrl(blob), mimeType: m.mimeType, sha256: m.sha256, createdAt: m.createdAt, annotated: m.annotated })
-    }
-    const stored: StoredQuote[] = quotes.map((q) => ({
-      id: `${row.id}:${q.version_no}`,
-      projectId: row.id,
-      version_no: q.version_no,
-      quote_number: q.quote_number,
-      created_at: q.created_at,
-      snapshot_hash: q.snapshot_hash,
-      quote: q,
-    }))
-    const reports: ReportInstance[] = []
-    for (const w of wires) {
-      const rphotos: ReportPhoto[] = []
-      for (const p of w.photos) {
-        const pr = await call(s, `/api/surveys/${enc(row.id)}/photos/${enc(p.key)}`)
-        const { key: _k, ...meta } = p
-        rphotos.push({ ...meta, dataUrl: await blobToDataUrl(new Blob([await pr.arrayBuffer()], { type: p.mimeType })) })
-      }
-      const { title_he: _t, outcome: _o, ...rest } = w
-      reports.push({ ...rest, photos: rphotos })
-    }
-    await importBackup({ projects: [survey.project], photos, quotes: stored, reports, pricing: null })
-    await saveSyncState(row.id, {
-      hash: survey.contentHash,
-      projectUpdatedAt: survey.project.updatedAt,
-      syncedAt: new Date().toISOString(),
-      photoKeys: survey.photos.map((p) => p.key),
-      quoteVersions: stored.map((q) => q.version_no),
-      error: null,
-      offline: false,
-      dirty: false,
-      reportRevs: Object.fromEntries(reports.map((x) => [x.id, reportTag(x)])),
-    })
+    const got = await importRemoteSurvey(s, row.id)
+    if (row.office) await saveOfficeStatus(row.id, row.office)
     out.restored++
-    out.reports += reports.length
-    out.photos += photos.length
-    out.quotes += stored.length
+    out.reports += got.reports
+    out.photos += got.photos
+    out.quotes += got.quotes
   }
   return out
 }

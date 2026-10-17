@@ -13,7 +13,8 @@
     "e2e": "playwright test",
     "pages:dev": "wrangler pages dev --port 8788",
     "pages:deploy": "npm run build && wrangler pages deploy",
-    "functions:check": "wrangler pages functions build --outdir .wrangler/functions-check"
+    "functions:check": "wrangler pages functions build --outdir .wrangler/functions-check",
+    "setup:cloudflare": "node scripts/setup-cloudflare.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

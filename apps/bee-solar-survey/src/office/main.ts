@@ -30,9 +30,13 @@ const state: {
   selected: string | null
   keys: KeyRow[]
   newKey: { key: string; row: KeyRow } | null
+  /** People a job can be assigned to (active personal keys). */
+  surveyors: { id: string; name: string; role: string }[]
+  /** The "new job" form is open in the side panel. */
+  creating: boolean
   loading: boolean
   error: string
-} = { api: null, me: null, jobs: [], generatedAt: '', tab: 'jobs', stage: 'any', status: 'active', search: '', selected: null, keys: [], newKey: null, loading: false, error: '' }
+} = { api: null, me: null, jobs: [], generatedAt: '', tab: 'jobs', stage: 'any', status: 'active', search: '', selected: null, keys: [], newKey: null, surveyors: [], creating: false, loading: false, error: '' }
 
 const ROLE_HE: Record<KeyRow['role'], string> = { surveyor: 'סוקר', office: 'משרד', admin: 'מנהל' }
 
@@ -60,6 +64,8 @@ const fmtDate = (iso: string | null | undefined, withTime = false) => {
   return d.toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', year: '2-digit', ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}) })
 }
 
+/** YYYY-MM-DD → dd.mm.yy, without a time zone shift. */
+const fmtDay = (d: string) => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(2, 4)}` : d)
 const ils = (n: number | null | undefined) => `<bdi dir="ltr">${escapeHtml(formatIls(n ?? null))}</bdi>`
 const officeStatus = (j: OfficeJob): OfficeStatus => j.office?.status ?? 'active'
 
@@ -100,8 +106,9 @@ async function load() {
   state.loading = true
   render()
   try {
-    const r = await state.api.overview()
+    const [r, people] = await Promise.all([state.api.overview(), state.api.surveyors().catch(() => ({ surveyors: [] }))])
     state.jobs = r.jobs
+    state.surveyors = people.surveyors
     state.generatedAt = r.generated_at
     state.error = ''
     if (state.me?.role === 'admin' && state.tab === 'keys') state.keys = (await state.api.keys()).keys
@@ -132,7 +139,7 @@ function matches(j: OfficeJob): boolean {
   if (!q) return true
   const phoneQ = normalizePhone(q)
   if (phoneQ && normalizePhone(j.customerPhone) === phoneQ) return true
-  return [j.projectName, j.customerName, j.customerPhone, j.customerEmail, j.address, j.surveyor, j.latestQuote?.quote_number ?? ''].join(' ').toLowerCase().includes(q)
+  return [j.projectName, j.customerName, j.customerPhone, j.customerEmail, j.address, j.surveyor, j.office?.assigned_to_name ?? '', j.latestQuote?.quote_number ?? ''].join(' ').toLowerCase().includes(q)
 }
 
 // ── Render ─────────────────────────────────────────────────────────────
@@ -156,7 +163,7 @@ function render() {
       ${state.error ? `<div class="note note-warn">${escapeHtml(state.error)}</div>` : ''}
       ${state.tab === 'keys' ? keysView() : jobsView()}
     </main>
-    ${state.selected ? drawerView() : ''}
+    ${state.creating ? newJobView() : state.selected ? drawerView() : ''}
     <div class="toast" id="toast"></div>`
 }
 
@@ -196,6 +203,7 @@ function jobsView(): string {
       ${STAGES.map((s) => `<button class="o-step stage-${s} ${state.stage === s ? 'on' : ''}" data-stage="${s}"><span>${STAGE_LABEL_HE[s]}</span><b>${byStage(s).length}</b></button>`).join('')}
     </section>
     <section class="o-filters">
+      <button class="btn btn-primary" id="oNewJob">+ עבודה חדשה</button>
       <input class="search" id="oSearch" placeholder="חיפוש: שם, לקוח, טלפון, כתובת, מספר הצעה" value="${escapeAttr(state.search)}" />
       <select id="oStatus" aria-label="סטטוס משרד">
         ${OFFICE_STATUSES.map((s) => `<option value="${s}" ${state.status === s ? 'selected' : ''}>${OFFICE_STATUS_LABEL_HE[s]}</option>`).join('')}
@@ -211,6 +219,18 @@ function jobsView(): string {
         : `<div class="empty">${state.jobs.length ? 'אין עבודות שמתאימות לסינון.' : 'עדיין לא הגיעו סקרים מהשטח. הם מופיעים כאן אחרי הסנכרון הראשון מהטלפון.'}</div>`
     }
     <p class="meta o-foot">עודכן ${escapeHtml(fmtDate(state.generatedAt, true))} · השלב נקבע לפי מה שקרה בפועל (הצעה, קישור, אישור, דוחות). המשרד מסמן רק מוקפא / לא רלוונטי / סגור.</p>`
+}
+
+/** Who surveys / surveyed it. For a job the office opened, the sender is the office — not a surveyor. */
+function surveyorOf(j: OfficeJob): string {
+  return j.office?.assigned_to_name || j.surveyor || (j.stage === 'lead' ? '' : j.receivedBy) || '—'
+}
+
+/** The next step, with what the office already arranged for a new job. */
+function nextLine(j: OfficeJob): string {
+  const o = j.office
+  if (j.stage === 'lead' && o?.assigned_to_id) return o.planned_date ? `סקר ב-${fmtDay(o.planned_date)} · ${o.assigned_to_name}` : `לקבוע מועד סקר עם ${o.assigned_to_name}`
+  return nextStepHe(j.stage)
 }
 
 function linkCell(j: OfficeJob): string {
@@ -234,12 +254,12 @@ function jobRow(j: OfficeJob, now: Date): string {
       <td data-label="שלב">
         <span class="badge stage-chip stage-${j.stage}">${STAGE_LABEL_HE[j.stage]}</span>
         ${st !== 'active' ? `<span class="badge stage-chip stage-office">${OFFICE_STATUS_LABEL_HE[st]}</span>` : ''}
-        <div class="meta">${att ? `<span class="o-att">⚠ ${escapeHtml(att)}</span>` : escapeHtml(nextStepHe(j.stage))}</div>
+        <div class="meta">${att ? `<span class="o-att">⚠ ${escapeHtml(att)}</span>` : escapeHtml(nextLine(j))}</div>
       </td>
-      <td data-label="הצעה אחרונה">${j.latestQuote ? `<bdi dir="ltr">v${j.latestQuote.version_no}</bdi> · ${ils(j.latestQuote.total_incl_vat_ils)}${j.latestQuote.dc_kwp ? ` · <bdi dir="ltr">${j.latestQuote.dc_kwp} kWp</bdi>` : ''}${j.latestQuote.needs_owner_input ? ' <span class="badge badge-warn">לאימות</span>' : ''}` : '<span class="meta">—</span>'}</td>
-      <td data-label="קישור ללקוח">${linkCell(j)}</td>
-      <td data-label="דוחות">${j.reports.length ? `${j.reports.length}${j.reports.some((r) => r.outcomeTone === 'fail') ? ' <span class="badge badge-fail">כשל</span>' : ''}` : '<span class="meta">—</span>'}</td>
-      <td data-label="סוקר">${escapeHtml(j.surveyor || j.receivedBy || '—')}</td>
+      <td data-label="הצעה אחרונה" ${j.latestQuote ? '' : 'data-empty'}>${j.latestQuote ? `<bdi dir="ltr">v${j.latestQuote.version_no}</bdi> · ${ils(j.latestQuote.total_incl_vat_ils)}${j.latestQuote.dc_kwp ? ` · <bdi dir="ltr">${j.latestQuote.dc_kwp} kWp</bdi>` : ''}${j.latestQuote.needs_owner_input ? ' <span class="badge badge-warn">לאימות</span>' : ''}` : '<span class="meta">—</span>'}</td>
+      <td data-label="קישור ללקוח" ${j.links.length ? '' : 'data-empty'}>${linkCell(j)}</td>
+      <td data-label="דוחות" ${j.reports.length ? '' : 'data-empty'}>${j.reports.length ? `${j.reports.length}${j.reports.some((r) => r.outcomeTone === 'fail') ? ' <span class="badge badge-fail">כשל</span>' : ''}` : '<span class="meta">—</span>'}</td>
+      <td data-label="סוקר">${escapeHtml(surveyorOf(j))}${j.stage === 'lead' && j.office?.planned_date ? `<div class="meta">📅 ${escapeHtml(fmtDay(j.office.planned_date))}</div>` : ''}</td>
       <td data-label="פעילות אחרונה">${escapeHtml(fmtDate(j.lastActivityAt, true))}</td>
     </tr>`
 }
@@ -264,12 +284,14 @@ function drawerView(): string {
         </section>
         <section>
           <h3>שלב: ${STAGE_LABEL_HE[j.stage]}</h3>
-          <div class="meta">${escapeHtml(attentionHe(j) ?? nextStepHe(j.stage))}</div>
+          <div class="meta">${escapeHtml(attentionHe(j) ?? nextLine(j))}</div>
           <div class="o-status">
             <label>סטטוס משרד
               <select id="oSetStatus">${OFFICE_STATUSES.map((s) => `<option value="${s}" ${st === s ? 'selected' : ''}>${OFFICE_STATUS_LABEL_HE[s]}</option>`).join('')}</select>
             </label>
             <label>הערה<input id="oNote" maxlength="200" value="${escapeAttr(j.office?.note ?? '')}" /></label>
+            <label>סוקר${surveyorSelect('oAssign', j.office?.assigned_to_id ?? '')}</label>
+            <label>מועד סקר<input id="oPlanned" type="date" value="${escapeAttr(j.office?.planned_date ?? '')}" /></label>
             <button class="btn btn-primary" id="oSave">שמור</button>
           </div>
           ${j.office ? `<div class="meta">עודכן ע״י ${escapeHtml(j.office.updated_by)} · ${escapeHtml(fmtDate(j.office.updated_at, true))}</div>` : ''}
@@ -312,6 +334,35 @@ function drawerView(): string {
           <div id="oPhotos" class="o-photos"></div>
         </section>
       </div>
+    </aside>`
+}
+
+function surveyorSelect(id: string, selected: string): string {
+  const known = state.surveyors.some((p) => p.id === selected)
+  return `<select id="${id}">
+    <option value="">— לא שובץ —</option>
+    ${state.surveyors.map((p) => `<option value="${escapeAttr(p.id)}" ${p.id === selected ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
+    ${selected && !known ? `<option value="${escapeAttr(selected)}" selected>(מפתח שבוטל)</option>` : ''}
+  </select>`
+}
+
+function newJobView(): string {
+  return `
+    <aside class="o-drawer" role="dialog" aria-modal="false" aria-labelledby="oNewTitle">
+      <header class="dialog-head"><h2 id="oNewTitle">עבודה חדשה</h2><button class="icon-btn" id="oClose">סגור</button></header>
+      <form class="o-drawer-body o-form" id="oJobForm">
+        <p class="meta">שיחה מלקוח או ליד מהאתר. העבודה תופיע בטלפון של הסוקר שמשובץ, בסנכרון הבא שלו.</p>
+        <label>שם הלקוח *<input name="customerName" required maxlength="80" autocomplete="off" /></label>
+        <label>טלפון *<input name="customerPhone" required type="tel" dir="ltr" maxlength="30" autocomplete="off" /></label>
+        <label>מייל<input name="customerEmail" type="email" dir="ltr" maxlength="80" autocomplete="off" /></label>
+        <label>כתובת *<input name="address" required maxlength="160" autocomplete="off" /></label>
+        <label>שם הפרויקט<input name="projectName" maxlength="80" placeholder="ריק = שם הלקוח · העיר" autocomplete="off" /></label>
+        <label>הערה לסוקר<textarea name="note" rows="3" maxlength="500" placeholder="למשל: גג רעפים, הלקוח זמין אחרי 16:00"></textarea></label>
+        <label>סוקר${surveyorSelect('oNewAssign', '')}</label>
+        <label>מועד סקר<input name="planned_date" type="date" /></label>
+        ${state.surveyors.length ? '' : '<div class="note note-warn">אין עדיין סוקרים עם מפתח אישי — אפשר לפתוח את העבודה ולשבץ אחר כך.</div>'}
+        <button class="btn btn-primary" type="submit">פתח עבודה</button>
+      </form>
     </aside>`
 }
 
@@ -399,6 +450,34 @@ root.addEventListener('submit', (e) => {
   if (form.id === 'oLogin') {
     e.preventDefault()
     void login((document.getElementById('oKey') as HTMLInputElement).value.trim())
+  } else if (form.id === 'oJobForm') {
+    e.preventDefault()
+    const f = new FormData(form)
+    const v = (k: string) => String(f.get(k) ?? '').trim()
+    const job = {
+      customerName: v('customerName'),
+      customerPhone: v('customerPhone'),
+      customerEmail: v('customerEmail'),
+      address: v('address'),
+      projectName: v('projectName'),
+      note: v('note'),
+      assigned_to: (document.getElementById('oNewAssign') as HTMLSelectElement).value,
+      planned_date: v('planned_date'),
+    }
+    void (async () => {
+      try {
+        const { id } = await state.api!.createJob(job)
+        state.creating = false
+        await load()
+        state.selected = id
+        state.status = 'active'
+        render()
+        void loadDrawerDetails(id)
+        toast(job.assigned_to ? 'העבודה נפתחה ותופיע בטלפון של הסוקר' : 'העבודה נפתחה')
+      } catch (err) {
+        toast(err instanceof ApiError ? err.message : 'פתיחת העבודה נכשלה')
+      }
+    })()
   } else if (form.id === 'oNewKey') {
     e.preventDefault()
     const name = (document.getElementById('oKeyName') as HTMLInputElement).value
@@ -441,7 +520,15 @@ root.addEventListener('click', (e) => {
     void loadDrawerDetails(state.selected)
     return
   }
+  if (t.closest('#oNewJob')) {
+    state.creating = true
+    state.selected = null
+    render()
+    ;(document.querySelector('#oJobForm input') as HTMLInputElement | null)?.focus()
+    return
+  }
   if (t.closest('#oClose')) {
+    state.creating = false
     state.selected = null
     render()
     return
@@ -456,9 +543,11 @@ root.addEventListener('click', (e) => {
     const id = state.selected!
     const status = (document.getElementById('oSetStatus') as HTMLSelectElement).value as OfficeStatus
     const note = (document.getElementById('oNote') as HTMLInputElement).value
+    const assigned_to = (document.getElementById('oAssign') as HTMLSelectElement).value
+    const planned_date = (document.getElementById('oPlanned') as HTMLInputElement).value
     void (async () => {
       try {
-        const { office } = await state.api!.setStatus(id, status, note)
+        const { office } = await state.api!.updateOffice(id, { status, note, assigned_to, planned_date })
         const job = state.jobs.find((j) => j.id === id)
         if (job) job.office = office
         render()
@@ -516,8 +605,9 @@ root.addEventListener('change', (e) => {
 })
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && state.selected) {
+  if (e.key === 'Escape' && (state.selected || state.creating)) {
     state.selected = null
+    state.creating = false
     render()
   }
 })

@@ -347,6 +347,26 @@ test('office screen: log in, every job with its stage, filters, status and keys'
     return r.fulfill({ json: { ok: true, office: { ...(statusBody as object), updated_at: new Date(now).toISOString(), updated_by: 'מנהל' } } })
   })
   await page.route('**/api/surveys/*', (r) => r.fulfill({ json: { survey: { project: { roofTypeHe: 'בטון', targetKwp: '15' }, photos: [] } } }))
+  let newJob: Record<string, string> | null = null
+  await page.route('**/api/office/surveyors', (r) => r.fulfill({ json: { surveyors: [{ id: 'k-dani', name: 'דני', role: 'surveyor' }] } }))
+  await page.route('**/api/office/jobs', (r) => {
+    newJob = r.request().postDataJSON()
+    const id = crypto.randomUUID()
+    jobs.unshift(
+      job({
+        id,
+        projectName: 'משה אברהם · גדרה',
+        customerName: newJob!.customerName,
+        customerPhone: newJob!.customerPhone,
+        address: newJob!.address,
+        photoCount: 0,
+        readyForWave54: false,
+        stage: 'lead',
+        office: { status: 'active', note: newJob!.note, updated_at: new Date(now).toISOString(), updated_by: 'מנהל', assigned_to_id: newJob!.assigned_to, assigned_to_name: 'דני', planned_date: newJob!.planned_date },
+      }),
+    )
+    return r.fulfill({ status: 201, json: { ok: true, id, office: jobs[0]!.office } })
+  })
   await page.route('**/api/office/keys', (r) => {
     if (r.request().method() === 'POST') {
       const row = { id: crypto.randomUUID(), ...(r.request().postDataJSON() as object), created_at: new Date(now).toISOString(), created_by: 'מנהל', revoked_at: null, hint: 'Zz99' }
@@ -388,9 +408,28 @@ test('office screen: log in, every job with its stage, filters, status and keys'
   await page.fill('#oNote', 'הלקוח ביקש לחזור אליו בנובמבר')
   await page.click('#oSave')
   await expect(page.locator('#toast')).toContainText('נשמר')
-  expect(statusBody).toEqual({ status: 'on_hold', note: 'הלקוח ביקש לחזור אליו בנובמבר' })
+  expect(statusBody).toEqual({ status: 'on_hold', note: 'הלקוח ביקש לחזור אליו בנובמבר', assigned_to: '', planned_date: '' })
   await page.click('#oClose')
   await expect(page.locator('tbody tr[data-job]')).toHaveCount(1) // moved out of the active list
+
+  // A phone call: open a job, assign Dani, set the date.
+  await page.selectOption('#oStatus', 'active')
+  await page.click('#oNewJob')
+  await page.fill('#oJobForm [name="customerName"]', 'משה אברהם')
+  await page.fill('#oJobForm [name="customerPhone"]', '054-1112233')
+  await page.fill('#oJobForm [name="address"]', 'הזית 7, גדרה')
+  await page.fill('#oJobForm [name="note"]', 'גג רעפים')
+  await page.selectOption('#oNewAssign', 'k-dani')
+  await page.fill('#oJobForm [name="planned_date"]', '2026-10-22')
+  await page.click('#oJobForm button[type="submit"]')
+  await expect(page.locator('#toast')).toContainText('תופיע בטלפון של הסוקר')
+  expect(newJob).toMatchObject({ customerName: 'משה אברהם', customerPhone: '054-1112233', address: 'הזית 7, גדרה', note: 'גג רעפים', assigned_to: 'k-dani', planned_date: '2026-10-22' })
+  const lead = page.locator('tr[data-job]', { hasText: 'משה אברהם' })
+  await expect(lead).toContainText('ממתין לסקר')
+  await expect(lead).toContainText('דני')
+  await expect(lead).toContainText('22.10.26')
+  await expect(page.locator('.o-drawer #oAssign')).toHaveValue('k-dani')
+  await page.click('#oClose')
 
   // Keys (admin): the new key is shown once.
   await page.click('[data-tab="keys"]')
@@ -436,7 +475,7 @@ function fakeSurveyServer(key: string) {
   const photos = new Map<string, { body: Buffer; type: string }>()
   const quotes = new Map<string, Record<string, unknown>>()
   const reports = new Map<string, Record<string, unknown>>()
-  const state = { down: false, refuseReports: false, reportPuts: 0, auth: new Set<string>(), office: new Map<string, Record<string, string>>() }
+  const state = { down: false, refuseReports: false, reportPuts: 0, auth: new Set<string>(), office: new Map<string, Record<string, string>>(), assigned: new Set<string>() }
   const handler = async (route: import('@playwright/test').Route) => {
     if (state.down) return route.abort('internetdisconnected')
     const req = route.request()
@@ -449,7 +488,7 @@ function fakeSurveyServer(key: string) {
       return json(200, {
         surveys: [...surveys.values()].map((r) => {
           const id = (r.project as { id: string }).id
-          return { id, projectName: (r.project as { projectName: string }).projectName, office: state.office.get(id) ?? null }
+          return { id, projectName: (r.project as { projectName: string }).projectName, office: state.office.get(id) ?? null, assigned_to_me: state.assigned.has(id) }
         }),
       })
     }
@@ -607,6 +646,28 @@ test('surveys back up to our server, queue while offline, and restore on a new p
   await phone.locator('#rdList [data-r-open]').click()
   await expect(phone.locator('[data-t="defects|0|description"]')).toHaveValue('חסר שלט DC בממיר ')
   await expect(phone.locator('[data-sec="photos"] .thumb')).toHaveCount(1)
+
+  // The office opens a job and assigns it to this phone: it arrives on the next sync, ready to survey.
+  await phone.click('#rpBack')
+  const leadId = crypto.randomUUID()
+  server.surveys.set(leadId, {
+    schema: 'bee.survey-record/1',
+    project: { id: leadId, projectName: 'משה אברהם · גדרה', customerName: 'משה אברהם', customerPhone: '054-1112233', address: 'הזית 7, גדרה', surveyDate: '2026-10-22', generalNotes: 'גג רעפים', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    photos: [],
+    contentHash: `office-${leadId}`,
+  })
+  server.state.assigned.add(leadId)
+  server.state.office.set(leadId, { status: 'active', note: 'גג רעפים', updated_at: new Date().toISOString(), updated_by: 'רונית', assigned_to_id: 'k', assigned_to_name: 'דני', planned_date: '2026-10-22' })
+  await phone.click('#btnSync')
+  await expect(phone.locator('#toast')).toContainText('עבודה חדשה מהמשרד: משה אברהם · גדרה')
+  const leadItem = phone.locator('.project-item', { hasText: 'משה אברהם · גדרה' })
+  await expect(leadItem.locator('[data-stage-chip]')).toHaveText('ממתין לסקר · 📅 22.10')
+  await expect(leadItem.locator('a.tel')).toHaveAttribute('href', 'tel:0541112233')
+  await leadItem.locator('[data-edit]').click()
+  await expect(phone.locator('#f_customerName')).toHaveValue('משה אברהם')
+  await expect(phone.locator('#f_address')).toHaveValue('הזית 7, גדרה')
+  await expect(phone.locator('#f_date')).toHaveValue('2026-10-22')
+  await expect(phone.locator('#f_azimuth')).toHaveValue('180') // the form's defaults filled in
   await fresh.close()
 })
 

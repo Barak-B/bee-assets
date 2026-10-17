@@ -15,6 +15,9 @@ import { onRequestPut as statusPut } from './api/office/status/[id]'
 import { onRequestGet as keysGet, onRequestPost as keysPost } from './api/office/keys/index'
 import { onRequestDelete as keyDelete } from './api/office/keys/[id]'
 import { onRequestGet as meGet } from './api/me'
+import { onRequestPost as jobsPost } from './api/office/jobs/index'
+import { onRequestGet as surveyorsGet } from './api/office/surveyors'
+import { onRequestGet as surveyGet } from './api/surveys/[id]'
 import { onRequestGet as healthGet } from './api/health'
 
 const MASTER = 'test-publish-key-0123456789'
@@ -239,5 +242,53 @@ describe('office overview', () => {
 
     const back = (await (await surveyPut(ctx(e, `/api/surveys/${ID}`, jsonInit('PUT', dani.key, surveyRecord('h2')), { id: ID }))).json()) as { office: { status: string } }
     expect(back.office).toMatchObject({ status: 'on_hold' })
+  })
+})
+
+describe('new jobs from the office and assignment', () => {
+  it('opens a job, assigns it, and the assigned phone sees it as its own', async () => {
+    const e = env()
+    const { body: dani } = await newKey(e, 'דני', 'surveyor')
+    const { body: avi } = await newKey(e, 'אבי', 'surveyor')
+    const { body: ronit } = await newKey(e, 'רונית', 'office')
+    const people = (await (await surveyorsGet(ctx(e, '/api/office/surveyors', { headers: bearer(ronit.key) }))).json()) as { surveyors: { id: string; name: string }[] }
+    expect(people.surveyors.map((p) => p.name)).toEqual(['אבי', 'דני', 'רונית'])
+    expect(JSON.stringify(people)).not.toContain(dani.key)
+    expect((await surveyorsGet(ctx(e, '/api/office/surveyors', { headers: bearer(dani.key) }))).status).toBe(403)
+
+    const open = (body: unknown, key = ronit.key) => jobsPost(ctx(e, '/api/office/jobs', jsonInit('POST', key, body)))
+    // A surveyor cannot open jobs; missing phone / address are refused; an unknown surveyor leaves nothing behind.
+    expect((await open({ customerName: 'x', customerPhone: '1', address: 'y' }, dani.key)).status).toBe(403)
+    expect((await open({ customerName: 'משה', address: 'הזית 7, גדרה' })).status).toBe(400)
+    expect((await open({ customerName: 'משה', customerPhone: '054-1112233' })).status).toBe(400)
+    const bad = await open({ customerName: 'משה', customerPhone: '054-1112233', address: 'הזית 7, גדרה', assigned_to: crypto.randomUUID() })
+    expect(bad.status).toBe(400)
+    expect(await bad.json()).toMatchObject({ message_he: expect.stringContaining('לא נמצא') })
+    expect((e.QUOTES as MemoryBucket).store.size).toBe(3) // only the three keys
+
+    const res = await open({ customerName: 'משה אברהם', customerPhone: '054-1112233', address: 'הזית 7, גדרה', note: 'גג רעפים, זמין אחרי 16:00', assigned_to: dani.row.id, planned_date: '2026-10-22' })
+    expect(res.status).toBe(201)
+    const { id, office } = (await res.json()) as { id: string; office: Record<string, string> }
+    expect(office).toMatchObject({ status: 'active', assigned_to_id: dani.row.id, assigned_to_name: 'דני', planned_date: '2026-10-22', updated_by: 'רונית' })
+
+    // The survey record is an ordinary one: the phone can pull it and carry on.
+    const got = (await (await surveyGet(ctx(e, `/api/surveys/${id}`, { headers: bearer(dani.key) }, { id }))).json()) as { survey: { project: Record<string, unknown>; photos: unknown[] } }
+    expect(got.survey.project).toMatchObject({ id, projectName: 'משה אברהם · גדרה', customerName: 'משה אברהם', customerPhone: '054-1112233', address: 'הזית 7, גדרה', surveyDate: '2026-10-22', generalNotes: 'גג רעפים, זמין אחרי 16:00', customFields: [] })
+    expect(got.survey.photos).toEqual([])
+
+    const list = async (key: string) => ((await (await listGet(ctx(e, '/api/surveys', { headers: bearer(key) }))).json()) as { surveys: { id: string; assigned_to_me: boolean }[] }).surveys
+    expect((await list(dani.key)).find((r) => r.id === id)?.assigned_to_me).toBe(true)
+    expect((await list(avi.key)).find((r) => r.id === id)?.assigned_to_me).toBe(false)
+
+    // On the office screen it waits for its survey, then moves on once the phone sends one with photos.
+    const jobs = async () => ((await (await overviewGet(ctx(e, '/api/office/overview', { headers: bearer(ronit.key) }))).json()) as { jobs: Record<string, any>[] }).jobs
+    expect((await jobs())[0]).toMatchObject({ id, stage: 'lead', receivedBy: 'רונית' })
+
+    // Reassign to Avi, keep the date: only the fields sent change.
+    const re = await statusPut(ctx(e, `/api/office/status/${id}`, jsonInit('PUT', ronit.key, { assigned_to: avi.row.id }), { id }))
+    expect(await re.json()).toMatchObject({ office: { assigned_to_name: 'אבי', planned_date: '2026-10-22', status: 'active', note: 'גג רעפים, זמין אחרי 16:00' } })
+    expect((await list(avi.key)).find((r) => r.id === id)?.assigned_to_me).toBe(true)
+    const badDate = await statusPut(ctx(e, `/api/office/status/${id}`, jsonInit('PUT', ronit.key, { planned_date: '22/10/2026' }), { id }))
+    expect(badDate.status).toBe(400)
   })
 })

@@ -6,10 +6,11 @@
  * Shared by the field app (list chip) and the server (office screen).
  */
 
-export type Stage = 'survey' | 'quote' | 'sent' | 'accepted' | 'installation' | 'handover'
-export const STAGES: Stage[] = ['survey', 'quote', 'sent', 'accepted', 'installation', 'handover']
+export type Stage = 'lead' | 'survey' | 'quote' | 'sent' | 'accepted' | 'installation' | 'handover'
+export const STAGES: Stage[] = ['lead', 'survey', 'quote', 'sent', 'accepted', 'installation', 'handover']
 
 export const STAGE_LABEL_HE: Record<Stage, string> = {
+  lead: 'ממתין לסקר',
   survey: 'סקר',
   quote: 'הצעה',
   sent: 'נשלח ללקוח',
@@ -28,6 +29,8 @@ export const OFFICE_STATUS_LABEL_HE: Record<OfficeStatus, string> = {
 }
 
 export interface StageFacts {
+  /** The site was actually surveyed: photos taken, or the survey is complete enough for design. */
+  surveyed: boolean
   quoteVersions: number
   /** Customer links that are still up. */
   liveLinks: number
@@ -52,12 +55,14 @@ export function deriveStage(f: StageFacts): Stage {
   if (f.accepted) return 'accepted'
   if (f.liveLinks > 0) return 'sent'
   if (f.quoteVersions > 0) return 'quote'
-  return 'survey'
+  return f.surveyed ? 'survey' : 'lead'
 }
 
 /** What the next step is, in the office's words — one line under the stage. */
 export function nextStepHe(stage: Stage): string {
   switch (stage) {
+    case 'lead':
+      return 'לשבץ סוקר ולקבוע מועד'
     case 'survey':
       return 'להפיק הצעת מחיר'
     case 'quote':

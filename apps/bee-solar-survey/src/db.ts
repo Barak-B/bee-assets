@@ -113,6 +113,16 @@ export async function listPhotos(projectId: string): Promise<StoredPhoto[]> {
   })
 }
 
+/** Number of photos of a survey, without loading them (the list's stage chip). */
+export async function countPhotos(projectId: string): Promise<number> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('photos', 'readonly').objectStore('photos').index('byProject').count(projectId)
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
 export async function savePhoto(photo: StoredPhoto): Promise<void> {
   const db = await openDB()
   const tx = db.transaction('photos', 'readwrite')
@@ -326,6 +336,10 @@ export interface LocalOfficeStatus {
   note: string
   updated_at: string
   updated_by: string
+  assigned_to_id?: string
+  assigned_to_name?: string
+  /** Planned survey date, YYYY-MM-DD. */
+  planned_date?: string
 }
 
 async function metaGet<T>(key: string): Promise<T | null> {
