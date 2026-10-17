@@ -65,6 +65,17 @@ def cmd_render(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_from_eplan(args: argparse.Namespace) -> int:
+    from .eplan_bridge import load_from_files
+
+    design = load_from_files(Path(args.spec), Path(args.calc), Path(args.merge) if args.merge else None)
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(design.model_dump_json(indent=2, exclude_none=True), encoding="utf-8")
+    print(f"DESIGN {out}  boards={len(design.boards)} nodes={len(design.nodes)}")
+    return 0
+
+
 def cmd_validate(args: argparse.Namespace) -> int:
     design = load_design(Path(args.design))
     n_circ = sum(len(b.all_circuits()) for b in design.boards)
@@ -87,6 +98,12 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--archive", help="archive root (mirror of 'עבודה/לקוחות חברות ומכרזים'); copies PDF/DXF/JSON into <client>/<project>/<stage>")
     r.add_argument("--stage", default="design", help="intake|survey|quote|licensing|design|execution|asmade|handover|maintenance")
     r.set_defaults(func=cmd_render)
+    e = sub.add_parser("from-eplan", help="eplan spec YAML + calc JSON (eplan pv design --json) → design JSON")
+    e.add_argument("spec")
+    e.add_argument("--calc", required=True)
+    e.add_argument("--merge", help="existing-board design JSON whose MDB groups replace the placeholder")
+    e.add_argument("--out", default="design.json")
+    e.set_defaults(func=cmd_from_eplan)
     v = sub.add_parser("validate", help="validate a design file")
     v.add_argument("design")
     v.set_defaults(func=cmd_validate)

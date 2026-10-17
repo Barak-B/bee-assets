@@ -188,6 +188,9 @@ class SldRenderer:
         for f in b.feeders:
             ctx.line((x, y_bus), (x, y_bus - 4.0))
             yb = self.vdevice(f.device, x, y_bus - 4.0, side="right")
+            if f.rcd:
+                ctx.line((x, yb), (x, yb - 4.0))
+                yb = self.vdevice(f.rcd, x, yb - 4.0, side="right")
             self.feeder_pts[(b.id, f.tag)] = Placed(x, yb)
             if f.cable:
                 ctx.text(f.cable.designation, (x - 2.0, yb - 2.0), 1.6, "sld_text", TA.TOP_RIGHT)
@@ -240,12 +243,12 @@ class SldRenderer:
 
     def draw_node(self, n: Node, x_right: float, y_top: float) -> None:
         ctx = self.ctx
-        x0, y0 = x_right - NODE_W, y_top - NODE_H
+        x0, y0 = x_right - getattr(self, "node_w", NODE_W), y_top - NODE_H
         ctx.msp.add_lwpolyline([(x0, y0), (x_right, y0), (x_right, y0 + NODE_H), (x0, y0 + NODE_H)], close=True,
                                dxfattribs={"layer": LAYERS["sld_board"].name})
         block = {"inverter": "BEE_INVERTER", "battery": "BEE_BATTERY", "generator": "BEE_GENERATOR",
                  "pv": "BEE_PV", "transformer": "BEE_TRANSFORMER", "bess": "BEE_BATTERY", "ups": "BEE_INVERTER",
-                 "load": "BEE_LOAD"}[n.kind]
+                 "load": "BEE_LOAD", "meter": "BEE_METER_KWH"}[n.kind]
         ctx.msp.add_blockref(block, (x0 + 8.0, y0 + 4.0), dxfattribs={"layer": LAYERS["sld_sym"].name, "xscale": 0.7, "yscale": 0.7})
         ctx.text(n.label, (x_right - 2.0, y0 + NODE_H - 1.5), 2.2, "sld_tag", TA.TOP_RIGHT, bold=True)
         ctx.text(n.sublabel, (x_right - 2.0, y0 + NODE_H - 5.2), 1.5, "sld_text", TA.TOP_RIGHT)
@@ -323,8 +326,17 @@ class SldRenderer:
         fed |= {b.id for b in d.boards if b.supply.kind != "utility"}
         mains = [b for b in d.boards if b.id not in fed]
         subs = [b for b in d.boards if b.id in fed]
-        # right band: nodes stacked at the top, sub-boards below them
-        band_w = max([NODE_W] + [self.board_width(b) + 10.0 for b in subs])
+        # right band: nodes at the top (1–2 columns, depending on the room left), sub-boards below them
+        x_main_right = ctx.x0 + 22.0 + sum(self.board_width(b) - 6.0 + BOARD_GAP + 14.0 for b in mains) - BOARD_GAP - 14.0
+        room = ctx.x1 - 4.0 - (x_main_right + 10.0)
+        self.node_w = NODE_W
+        node_cols = 1
+        if len(d.nodes) > 3:
+            if room >= 2 * (NODE_W + 4.0):
+                node_cols = 2
+            elif room >= 2 * (44.0 + 4.0):
+                node_cols, self.node_w = 2, 44.0
+        band_w = max([node_cols * (self.node_w + 4.0) - 4.0] + [self.board_width(b) + 10.0 for b in subs])
         x_band_right = ctx.x1 - 4.0
         x_band_left = x_band_right - band_w
         x = ctx.x0 + 22.0
@@ -336,9 +348,12 @@ class SldRenderer:
             if xr + 2.0 > x_band_left and (d.nodes or subs):
                 self.warnings.append(f"board {b.id} overlaps the right band — reduce circuits per sheet")
         yn = y_top
-        for n in d.nodes:
-            self.draw_node(n, x_band_right, yn)
-            yn -= NODE_H + 4.0
+        for i, n in enumerate(d.nodes):
+            col = i % node_cols
+            xr_node = x_band_right - col * (self.node_w + 4.0)
+            self.draw_node(n, xr_node, yn)
+            if col == node_cols - 1 or i == len(d.nodes) - 1:
+                yn -= NODE_H + 4.0
         for b in subs:
             y_sub_top = yn - 6.0
             xr, yb = self.draw_board(b, x_band_left + 14.0, y_sub_top, False)

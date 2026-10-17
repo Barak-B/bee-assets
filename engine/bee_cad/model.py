@@ -86,6 +86,7 @@ class Circuit(BaseModel):
     load: str = ""                        # Hebrew description of the consumer
     load_kw: Optional[float] = None
     kind: Literal["final", "feeder"] = "final"
+    rcd: Optional[Device] = None          # second device in series (e.g. RCD-INV after Q-INV)
     to_board: Optional[str] = None        # feeder target board id
     to_node: Optional[str] = None         # feeder target node id (inverter, battery...)
 
@@ -142,7 +143,7 @@ class Node(BaseModel):
     """A non-board element on the single-line: inverter, battery, generator, PV, transformer."""
 
     id: str
-    kind: Literal["inverter", "battery", "generator", "pv", "transformer", "load", "bess", "ups"]
+    kind: Literal["inverter", "battery", "generator", "pv", "transformer", "load", "bess", "ups", "meter"]
     label: str
     sublabel: str = ""
     rating: str = ""                      # "15 kW" / "630 kVA 33/0.4kV"

@@ -131,3 +131,28 @@ def test_pdf_and_archive(design: Design, tmp_path: Path):
     assert (folder / "manifest.json").exists()
     assert {e.role for e in man.entries} == {"pdf_set", "pdf_sheet"}
     assert safe_name('a/b:c?') == "a-b-c-"
+
+
+def test_eplan_bridge(tmp_path: Path):
+    from bee_cad.eplan_bridge import device_from_eplan, load_from_files
+
+    d = device_from_eplan({"tag": "RCD-INV", "kind": "RCD", "rating": "32A 300mA", "poles": "4P", "note": "type B — …"})
+    assert (d.kind, d.poles, d.rating_a, d.idn_ma, d.rcd_type) == ("rcd", 4, 32.0, 300, "B")
+    spd = device_from_eplan({"tag": "SPD-AC", "kind": "SPD", "rating": "T2 275V", "poles": "3P+N"})
+    assert (spd.kind, spd.poles) == ("spd", 4)
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "eplan"
+    design = load_from_files(ex / "example.yaml", ex / "example_calc.json")
+    mdb = design.board("MDB")
+    assert mdb.incomer.tag == "Q-MAIN" and mdb.incomer.rating_a == 63
+    f = mdb.feeders[0]
+    assert f.tag == "Q-INV" and f.device.rating_a == 32 and f.rcd.tag == "RCD-INV" and f.to_node == "INV"
+    assert f.cable.designation == "5X6mm² Cu N2XY" and f.cable.du_pct == 0.37
+    assert design.board("BUB").incomer.tag == "Q-BACKUP"
+    assert {n.id for n in design.nodes} == {"INV", "BAT", "PV", "MPV"}
+    assert any(n.startswith("מחרוזות:") for n in design.notes)
+
+    merged = load_from_files(ex / "example.yaml", ex / "example_calc.json", EXAMPLE)
+    assert len(merged.board("MDB").all_circuits()) == 21     # 20 house circuits + Q-INV feeder
+    result = build(merged, ("sld",))
+    assert next(iter(result.values()))[1] == []
