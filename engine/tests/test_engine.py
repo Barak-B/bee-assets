@@ -177,7 +177,7 @@ def test_mv_sheets_audit_clean():
     from bee_cad.audit import audit_sheet
     from bee_cad.mv import wrap
 
-    assert wrap("50/51, 50N/51N, 67N, 27/59", 12, 3) == ["50/51, 50N/51N", "67N, 27/59"]
+    assert wrap("50/51, 50N/51N, 67N, 27/59", 12, 3) == ["50/51", "50N/51N", "67N, 27/59"]
     mv = Path(__file__).resolve().parents[1] / "examples" / "mv_bess_site.json"
     des = Design.model_validate(json.loads(mv.read_text(encoding="utf-8")))
     result = build(des, ("mv",))
