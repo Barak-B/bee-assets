@@ -257,11 +257,15 @@ class SldRenderer:
             ctx.text(" ".join([n.device.tag] + n.device.label_lines()[:1]), (x_right - 2.0, y0 + 1.5), 1.4, "sld_text", TA.BOTTOM_RIGHT)
         self.node_pts[n.id] = Placed(x0, y0 + NODE_H / 2)
 
-    def connect(self, a: Placed, b: Placed, label: str = "") -> None:
-        """Orthogonal route from a feeder device bottom (a) to a target left-mid point (b)."""
+    def connect(self, a: Placed, b: Placed, label: str = "", x_turn: float | None = None) -> None:
+        """Orthogonal route from a feeder device bottom (a) to a target left-mid point (b).
+
+        The vertical run goes up the corridor left of the right band (``x_turn``) so it never
+        crosses a sub-board drawn under the nodes."""
         ctx = self.ctx
         y_run = a.y - 5.0
-        x_turn = b.x - 6.0
+        if x_turn is None:
+            x_turn = b.x - 6.0
         pts = [(a.x, a.y), (a.x, y_run), (x_turn, y_run), (x_turn, b.y), (b.x, b.y)]
         ctx.msp.add_lwpolyline(pts, dxfattribs={"layer": LAYERS["sld_main"].name})
         if label:
@@ -360,7 +364,8 @@ class SldRenderer:
             yn = yb - 4.0
             if yb < ctx.y0 + TB_H + 12.0:
                 self.warnings.append(f"sub-board {b.id} runs into the title block — move it to its own sheet")
-        # connections: feeders → nodes / boards
+        # connections: feeders → nodes / boards (one corridor lane per feeder, left of the band)
+        lane = 0
         for b in d.boards:
             for f in b.feeders:
                 src = self.feeder_pts.get((b.id, f.tag))
@@ -368,7 +373,8 @@ class SldRenderer:
                     continue
                 label = f.cable.designation if f.cable else ""
                 if f.to_node and f.to_node in self.node_pts:
-                    self.connect(src, self.node_pts[f.to_node], label)
+                    self.connect(src, self.node_pts[f.to_node], label, x_turn=x_band_left - 4.0 - 3.0 * lane)
+                    lane += 1
                 elif f.to_board and f.to_board in self.board_x:
                     bx = self.board_x[f.to_board]
                     self.connect(src, Placed(bx - 6.0, self.board_bus[f.to_board][2] + 46.0), label)
