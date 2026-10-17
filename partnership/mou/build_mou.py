@@ -23,7 +23,9 @@ HTML = r'''<!DOCTYPE html>
                   linear-gradient(180deg, #ebe6de 0%, var(--paper) 28%, #f3efe8 100%); }
     .wrap { max-width: 980px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
     header.hero { padding: 1.5rem 0 1.75rem; border-bottom: 1px solid var(--line); margin-bottom: 2rem; }
-    .banner { display: block; width: 100%; max-width: 760px; margin: 0 auto 1.5rem; }
+    .banner { display: block; width: 100%; max-width: 640px; margin: 0 auto 1.25rem; }
+    .sign th img { display: block; height: 44px; margin: 0 auto 0.25rem; }
+    .sign th { text-align: center; }
     .kicker { font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin: 0 0 0.5rem; }
     h1 { font-family: "Frank Local", "Frank Ruhl Libre", serif; font-size: clamp(2rem, 4vw, 2.7rem); line-height: 1.15; margin: 0 0 0.75rem; color: var(--navy); }
     .lede { font-size: 1.1rem; color: var(--ink-soft); max-width: 46rem; margin: 0; }
@@ -51,8 +53,8 @@ HTML = r'''<!DOCTYPE html>
     .badge.ok { background: #e6f4ec; color: var(--green); border-color: #b7dfc7; }
     .note { border-right: 4px solid var(--accent); background: #fff7f1; padding: 0.75rem 1rem; margin: 0.9rem 0; }
     .sign { margin-top: 1rem; }
-    .sign td { height: 2.6rem; }
-    footer { margin-top: 0.75rem; page-break-before: avoid; font-size: 0.85rem; color: var(--ink-soft); text-align: center; border-top: 1px solid var(--line); padding-top: 1rem; }
+    .sign td { height: 2.2rem; }
+    footer { margin-top: 0.4rem; padding-top: 0.5rem; page-break-before: avoid; font-size: 0.85rem; color: var(--ink-soft); text-align: center; border-top: 1px solid var(--line); padding-top: 1rem; }
     @media print {
       @page { size: A4; margin: 16mm 14mm; }
       body { background: #fff; }
@@ -63,13 +65,14 @@ HTML = r'''<!DOCTYPE html>
       table, tr { page-break-inside: avoid; }
       .sign { page-break-inside: avoid; }
       nav.toc { page-break-after: always; }
+      footer { display: none; }
     }
   </style>
 </head>
 <body>
 <div class="wrap">
   <header class="hero">
-    <img class="banner" src="BANNER" alt="B.E.E + SNL Energy" />
+    <img class="banner" src="BANNER" alt="SUNSTOCK · B.E.E × SNL" />
     <p class="kicker">מזכר הבנות · Memorandum of Understanding</p>
     <h1>שותפות ברק הנדסת חשמל ושנל אנרגיה</h1>
     <p class="lede">
@@ -267,7 +270,7 @@ HTML = r'''<!DOCTYPE html>
       מסמך זה אינו מהווה הסכם מחייב למעט סעיפי הסודיות והבלעדיות במשא ומתן. ההסכם המפורט ייערך על ידי עורכי הדין של הצדדים.</div>
     <h3>חתימות</h3>
     <table class="sign">
-      <thead><tr><th style="width:22%"></th><th>ברק הנדסת חשמל</th><th>שנל אנרגיה</th></tr></thead>
+      <thead><tr><th style="width:22%"></th><th><img src="LOGOBEE" alt="B.E.E" />ברק הנדסת חשמל</th><th><img src="LOGOSNL" alt="SNL Energy" />שנל אנרגיה</th></tr></thead>
       <tbody>
         <tr><td>שם החותם</td><td></td><td></td></tr>
         <tr><td>תפקיד</td><td></td><td></td></tr>
@@ -283,6 +286,6 @@ HTML = r'''<!DOCTYPE html>
 </html>
 '''
 import sys
-fontdir, banner, out = sys.argv[1], sys.argv[2], sys.argv[3]
-open(out,'w',encoding='utf-8').write(HTML.replace('FONTDIR',fontdir).replace('BANNER',banner))
+fontdir, banner, out, lbee, lsnl = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
+open(out,'w',encoding='utf-8').write(HTML.replace('FONTDIR',fontdir).replace('BANNER',banner).replace('LOGOBEE',lbee).replace('LOGOSNL',lsnl))
 print('wrote', out)
