@@ -1,0 +1,1110 @@
+{
+  "summary": {
+    "task_id": "task_81e9b2b448d2",
+    "status": "DONE",
+    "phase": "LEARN",
+    "blockers": [],
+    "gaps": {},
+    "conflicts": [],
+    "assumptions": [
+      "datasheet/site value to verify: דגם מהפך ונתוני MPPT (3 MPPT, 1000V, 63A bypass)",
+      "datasheet/site value to verify: דף נתונים מודול: Voc, מקדם טמפרטורה",
+      "datasheet/site value to verify: זרם מצבר מרבי לכל כניסה (200A) ומינימום חתך לפי מדריך GoodWe",
+      "datasheet/site value to verify: אורכי תוואי בפועל (מחרוזות 28 מ', AC 12 מ', מצברים 4–5 מ')"
+    ],
+    "material_uncertainties": [
+      "to verify: דגם מהפך ונתוני MPPT (3 MPPT, 1000V, 63A bypass)",
+      "to verify: דף נתונים מודול: Voc, מקדם טמפרטורה",
+      "to verify: זרם מצבר מרבי לכל כניסה (200A) ומינימום חתך לפי מדריך GoodWe",
+      "to verify: אורכי תוואי בפועל (מחרוזות 28 מ', AC 12 מ', מצברים 4–5 מ')"
+    ],
+    "precedents": [
+      "proj_964670e66a64"
+    ],
+    "project_id": "proj_404aca2cb59e",
+    "spent": {
+      "input_tokens": 141327,
+      "output_tokens": 5172,
+      "tool_calls": 4,
+      "retrieval_calls": 4,
+      "external_searches": 0,
+      "retries": 0,
+      "branches": 0,
+      "research_depth": 0,
+      "estimated_cost": 0.0,
+      "execution_time_s": 0.33044662699967375
+    },
+    "stop_reason": "SUCCESS_CRITERIA_MET"
+  },
+  "report": {
+    "project": "פרויקט לדוגמה — בית פרטי",
+    "p_dc_kwp": 15.6,
+    "p_ac_kw": 15.0,
+    "strings": [
+      {
+        "tag": "S1",
+        "mppt": "MPPT1",
+        "modules": 9,
+        "voc_cold_v": 526.8,
+        "vmp_hot_v": 359.4,
+        "vmp_stc_v": 413.4,
+        "isc_a": 14.06,
+        "imp_a": 13.07,
+        "p_stc_w": 5400.0,
+        "section_mm2": 6.0,
+        "length_m": 28.0,
+        "drop_v": 2.1,
+        "drop_pct": 0.51,
+        "checks": [
+          {
+            "name": "S1 Voc@-5°C ≤ Vdc max",
+            "ok": true,
+            "value": 526.8,
+            "limit": 1000.0,
+            "unit": "V",
+            "margin_pct": 47.32,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          },
+          {
+            "name": "S1 Voc@-5°C ≤ MPPT max",
+            "ok": true,
+            "value": 526.8,
+            "limit": 850.0,
+            "unit": "V",
+            "margin_pct": 38.02,
+            "rule": "inverter datasheet (operating window; Voc may exceed MPPT max but not Vdc max)",
+            "accepted": ""
+          },
+          {
+            "name": "S1 Vmp@70°C ≥ MPPT min",
+            "ok": true,
+            "value": 359.4,
+            "limit": 200.0,
+            "unit": "V",
+            "margin_pct": 79.7,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "S1 Vmp@70°C ≥ start voltage",
+            "ok": true,
+            "value": 359.4,
+            "limit": 200.0,
+            "unit": "V",
+            "margin_pct": null,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "S1 cable section ≥ minimum",
+            "ok": true,
+            "value": 6.0,
+            "limit": 6.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          },
+          {
+            "name": "S1 voltage drop",
+            "ok": true,
+            "value": 0.51,
+            "limit": 1.0,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          }
+        ],
+        "optimizers": 0
+      },
+      {
+        "tag": "S2",
+        "mppt": "MPPT2",
+        "modules": 8,
+        "voc_cold_v": 468.3,
+        "vmp_hot_v": 319.5,
+        "vmp_stc_v": 367.4,
+        "isc_a": 14.06,
+        "imp_a": 13.07,
+        "p_stc_w": 4800.0,
+        "section_mm2": 6.0,
+        "length_m": 28.0,
+        "drop_v": 2.1,
+        "drop_pct": 0.57,
+        "checks": [
+          {
+            "name": "S2 Voc@-5°C ≤ Vdc max",
+            "ok": true,
+            "value": 468.3,
+            "limit": 1000.0,
+            "unit": "V",
+            "margin_pct": 53.17,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          },
+          {
+            "name": "S2 Voc@-5°C ≤ MPPT max",
+            "ok": true,
+            "value": 468.3,
+            "limit": 850.0,
+            "unit": "V",
+            "margin_pct": 44.91,
+            "rule": "inverter datasheet (operating window; Voc may exceed MPPT max but not Vdc max)",
+            "accepted": ""
+          },
+          {
+            "name": "S2 Vmp@70°C ≥ MPPT min",
+            "ok": true,
+            "value": 319.5,
+            "limit": 200.0,
+            "unit": "V",
+            "margin_pct": 59.75,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "S2 Vmp@70°C ≥ start voltage",
+            "ok": true,
+            "value": 319.5,
+            "limit": 200.0,
+            "unit": "V",
+            "margin_pct": null,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "S2 cable section ≥ minimum",
+            "ok": true,
+            "value": 6.0,
+            "limit": 6.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          },
+          {
+            "name": "S2 voltage drop",
+            "ok": true,
+            "value": 0.57,
+            "limit": 1.0,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          }
+        ],
+        "optimizers": 0
+      },
+      {
+        "tag": "S3",
+        "mppt": "MPPT3",
+        "modules": 9,
+        "voc_cold_v": 526.8,
+        "vmp_hot_v": 359.4,
+        "vmp_stc_v": 413.4,
+        "isc_a": 14.06,
+        "imp_a": 13.07,
+        "p_stc_w": 5400.0,
+        "section_mm2": 6.0,
+        "length_m": 28.0,
+        "drop_v": 2.1,
+        "drop_pct": 0.51,
+        "checks": [
+          {
+            "name": "S3 Voc@-5°C ≤ Vdc max",
+            "ok": true,
+            "value": 526.8,
+            "limit": 1000.0,
+            "unit": "V",
+            "margin_pct": 47.32,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          },
+          {
+            "name": "S3 Voc@-5°C ≤ MPPT max",
+            "ok": true,
+            "value": 526.8,
+            "limit": 850.0,
+            "unit": "V",
+            "margin_pct": 38.02,
+            "rule": "inverter datasheet (operating window; Voc may exceed MPPT max but not Vdc max)",
+            "accepted": ""
+          },
+          {
+            "name": "S3 Vmp@70°C ≥ MPPT min",
+            "ok": true,
+            "value": 359.4,
+            "limit": 200.0,
+            "unit": "V",
+            "margin_pct": 79.7,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "S3 Vmp@70°C ≥ start voltage",
+            "ok": true,
+            "value": 359.4,
+            "limit": 200.0,
+            "unit": "V",
+            "margin_pct": null,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "S3 cable section ≥ minimum",
+            "ok": true,
+            "value": 6.0,
+            "limit": 6.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          },
+          {
+            "name": "S3 voltage drop",
+            "ok": true,
+            "value": 0.51,
+            "limit": 1.0,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          }
+        ],
+        "optimizers": 0
+      }
+    ],
+    "mppts": [
+      {
+        "tag": "MPPT1",
+        "strings": [
+          "S1"
+        ],
+        "i_total_a": 13.07,
+        "isc_total_a": 17.57,
+        "p_stc_w": 5400.0,
+        "checks": [
+          {
+            "name": "MPPT1 strings ≤ inputs",
+            "ok": true,
+            "value": 1.0,
+            "limit": 2.0,
+            "unit": "",
+            "margin_pct": null,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT1 Imp total ≤ MPPT Imax",
+            "ok": true,
+            "value": 13.07,
+            "limit": 32.0,
+            "unit": "A",
+            "margin_pct": 59.16,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT1 Isc total ≤ MPPT Isc max",
+            "ok": true,
+            "value": 14.06,
+            "limit": 40.0,
+            "unit": "A",
+            "margin_pct": 64.85,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT1 equal string lengths",
+            "ok": true,
+            "value": 1.0,
+            "limit": 1.0,
+            "unit": "",
+            "margin_pct": null,
+            "rule": "IEC 62548 §6.2 (parallel strings on one MPPT must match)",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT1 string fuses not required",
+            "ok": true,
+            "value": 1.0,
+            "limit": 2.0,
+            "unit": "",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          }
+        ]
+      },
+      {
+        "tag": "MPPT2",
+        "strings": [
+          "S2"
+        ],
+        "i_total_a": 13.07,
+        "isc_total_a": 17.57,
+        "p_stc_w": 4800.0,
+        "checks": [
+          {
+            "name": "MPPT2 strings ≤ inputs",
+            "ok": true,
+            "value": 1.0,
+            "limit": 2.0,
+            "unit": "",
+            "margin_pct": null,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT2 Imp total ≤ MPPT Imax",
+            "ok": true,
+            "value": 13.07,
+            "limit": 32.0,
+            "unit": "A",
+            "margin_pct": 59.16,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT2 Isc total ≤ MPPT Isc max",
+            "ok": true,
+            "value": 14.06,
+            "limit": 40.0,
+            "unit": "A",
+            "margin_pct": 64.85,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT2 equal string lengths",
+            "ok": true,
+            "value": 1.0,
+            "limit": 1.0,
+            "unit": "",
+            "margin_pct": null,
+            "rule": "IEC 62548 §6.2 (parallel strings on one MPPT must match)",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT2 string fuses not required",
+            "ok": true,
+            "value": 1.0,
+            "limit": 2.0,
+            "unit": "",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          }
+        ]
+      },
+      {
+        "tag": "MPPT3",
+        "strings": [
+          "S3"
+        ],
+        "i_total_a": 13.07,
+        "isc_total_a": 17.57,
+        "p_stc_w": 5400.0,
+        "checks": [
+          {
+            "name": "MPPT3 strings ≤ inputs",
+            "ok": true,
+            "value": 1.0,
+            "limit": 2.0,
+            "unit": "",
+            "margin_pct": null,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT3 Imp total ≤ MPPT Imax",
+            "ok": true,
+            "value": 13.07,
+            "limit": 32.0,
+            "unit": "A",
+            "margin_pct": 59.16,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT3 Isc total ≤ MPPT Isc max",
+            "ok": true,
+            "value": 14.06,
+            "limit": 40.0,
+            "unit": "A",
+            "margin_pct": 64.85,
+            "rule": "inverter datasheet",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT3 equal string lengths",
+            "ok": true,
+            "value": 1.0,
+            "limit": 1.0,
+            "unit": "",
+            "margin_pct": null,
+            "rule": "IEC 62548 §6.2 (parallel strings on one MPPT must match)",
+            "accepted": ""
+          },
+          {
+            "name": "MPPT3 string fuses not required",
+            "ok": true,
+            "value": 1.0,
+            "limit": 2.0,
+            "unit": "",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          }
+        ]
+      }
+    ],
+    "cables": [
+      {
+        "tag": "S1",
+        "role": "string S1 → MPPT1",
+        "i_design_a": 17.6,
+        "section_mm2": 6.0,
+        "cores": "2",
+        "material": "Cu",
+        "insulation": "XLPE",
+        "method": "B1",
+        "ampacity_a": 51.8,
+        "length_m": 28.0,
+        "drop_v": 2.1,
+        "drop_pct": 0.51,
+        "checks": [
+          {
+            "name": "S1 ampacity Iz ≥ Ib",
+            "ok": true,
+            "value": 51.8,
+            "limit": 18.5,
+            "unit": "A",
+            "margin_pct": 194.7,
+            "rule": "IEC 60364-5-52 XLPE B1 ×k(35°C,g1), margin ≥5%",
+            "accepted": ""
+          },
+          {
+            "name": "S1 voltage drop",
+            "ok": true,
+            "value": 0.51,
+            "limit": 1.0,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          },
+          {
+            "name": "S1 section ≥ minimum",
+            "ok": true,
+            "value": 6.0,
+            "limit": 6.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "DesignRules / manufacturer",
+            "accepted": ""
+          }
+        ],
+        "designation": "2X6mm² H1Z2Z2-K",
+        "existing": false
+      },
+      {
+        "tag": "S2",
+        "role": "string S2 → MPPT2",
+        "i_design_a": 17.6,
+        "section_mm2": 6.0,
+        "cores": "2",
+        "material": "Cu",
+        "insulation": "XLPE",
+        "method": "B1",
+        "ampacity_a": 51.8,
+        "length_m": 28.0,
+        "drop_v": 2.1,
+        "drop_pct": 0.57,
+        "checks": [
+          {
+            "name": "S2 ampacity Iz ≥ Ib",
+            "ok": true,
+            "value": 51.8,
+            "limit": 18.5,
+            "unit": "A",
+            "margin_pct": 194.7,
+            "rule": "IEC 60364-5-52 XLPE B1 ×k(35°C,g1), margin ≥5%",
+            "accepted": ""
+          },
+          {
+            "name": "S2 voltage drop",
+            "ok": true,
+            "value": 0.57,
+            "limit": 1.0,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          },
+          {
+            "name": "S2 section ≥ minimum",
+            "ok": true,
+            "value": 6.0,
+            "limit": 6.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "DesignRules / manufacturer",
+            "accepted": ""
+          }
+        ],
+        "designation": "2X6mm² H1Z2Z2-K",
+        "existing": false
+      },
+      {
+        "tag": "S3",
+        "role": "string S3 → MPPT3",
+        "i_design_a": 17.6,
+        "section_mm2": 6.0,
+        "cores": "2",
+        "material": "Cu",
+        "insulation": "XLPE",
+        "method": "B1",
+        "ampacity_a": 51.8,
+        "length_m": 28.0,
+        "drop_v": 2.1,
+        "drop_pct": 0.51,
+        "checks": [
+          {
+            "name": "S3 ampacity Iz ≥ Ib",
+            "ok": true,
+            "value": 51.8,
+            "limit": 18.5,
+            "unit": "A",
+            "margin_pct": 194.7,
+            "rule": "IEC 60364-5-52 XLPE B1 ×k(35°C,g1), margin ≥5%",
+            "accepted": ""
+          },
+          {
+            "name": "S3 voltage drop",
+            "ok": true,
+            "value": 0.51,
+            "limit": 1.0,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          },
+          {
+            "name": "S3 section ≥ minimum",
+            "ok": true,
+            "value": 6.0,
+            "limit": 6.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "DesignRules / manufacturer",
+            "accepted": ""
+          }
+        ],
+        "designation": "2X6mm² H1Z2Z2-K",
+        "existing": false
+      },
+      {
+        "tag": "W-AC",
+        "role": "inverter → main board",
+        "i_design_a": 32.0,
+        "section_mm2": 6.0,
+        "cores": "5",
+        "material": "Cu",
+        "insulation": "XLPE",
+        "method": "B1",
+        "ampacity_a": 46.1,
+        "length_m": 12.0,
+        "drop_v": 1.49,
+        "drop_pct": 0.37,
+        "checks": [
+          {
+            "name": "W-AC ampacity Iz ≥ Ib",
+            "ok": true,
+            "value": 46.1,
+            "limit": 33.6,
+            "unit": "A",
+            "margin_pct": 44.1,
+            "rule": "IEC 60364-5-52 XLPE B1 ×k(35°C,g1), margin ≥5%",
+            "accepted": ""
+          },
+          {
+            "name": "W-AC voltage drop",
+            "ok": true,
+            "value": 0.37,
+            "limit": 1.0,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "DesignRules",
+            "accepted": ""
+          },
+          {
+            "name": "W-AC section ≥ minimum",
+            "ok": true,
+            "value": 6.0,
+            "limit": 6.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "DesignRules / manufacturer",
+            "accepted": ""
+          }
+        ],
+        "designation": "5X6mm² Cu N2XY",
+        "existing": false
+      },
+      {
+        "tag": "W-BK",
+        "role": "backup port → backup board",
+        "i_design_a": 63.0,
+        "section_mm2": 16.0,
+        "cores": "5",
+        "material": "Cu",
+        "insulation": "XLPE",
+        "method": "B1",
+        "ampacity_a": 84.5,
+        "length_m": 8.0,
+        "drop_v": 0.94,
+        "drop_pct": 0.24,
+        "checks": [
+          {
+            "name": "W-BK ampacity Iz ≥ Ib",
+            "ok": true,
+            "value": 84.5,
+            "limit": 66.2,
+            "unit": "A",
+            "margin_pct": 34.1,
+            "rule": "IEC 60364-5-52 XLPE B1 ×k(35°C,g1), margin ≥5%",
+            "accepted": ""
+          },
+          {
+            "name": "W-BK voltage drop",
+            "ok": true,
+            "value": 0.24,
+            "limit": 2.0,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "DesignRules",
+            "accepted": ""
+          },
+          {
+            "name": "W-BK section ≥ minimum",
+            "ok": true,
+            "value": 16.0,
+            "limit": 6.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "DesignRules / manufacturer",
+            "accepted": ""
+          }
+        ],
+        "designation": "5X16mm² Cu N2XY",
+        "existing": false
+      },
+      {
+        "tag": "B1",
+        "role": "battery B1 → inverter",
+        "i_design_a": 200.0,
+        "section_mm2": 70.0,
+        "cores": "2",
+        "material": "Cu",
+        "insulation": "XLPE",
+        "method": "B1",
+        "ampacity_a": 242.9,
+        "length_m": 4.0,
+        "drop_v": 0.39,
+        "drop_pct": 0.77,
+        "checks": [
+          {
+            "name": "B1 ampacity Iz ≥ Ib",
+            "ok": true,
+            "value": 242.9,
+            "limit": 210.0,
+            "unit": "A",
+            "margin_pct": 21.5,
+            "rule": "IEC 60364-5-52 XLPE B1 ×k(35°C,g1), margin ≥5%",
+            "accepted": ""
+          },
+          {
+            "name": "B1 voltage drop",
+            "ok": true,
+            "value": 0.77,
+            "limit": 1.5,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "DesignRules",
+            "accepted": ""
+          }
+        ],
+        "designation": "2X70mm² Cu flexible (battery)",
+        "existing": false
+      },
+      {
+        "tag": "B2",
+        "role": "battery B2 → inverter",
+        "i_design_a": 200.0,
+        "section_mm2": 70.0,
+        "cores": "2",
+        "material": "Cu",
+        "insulation": "XLPE",
+        "method": "B1",
+        "ampacity_a": 242.9,
+        "length_m": 4.0,
+        "drop_v": 0.39,
+        "drop_pct": 0.77,
+        "checks": [
+          {
+            "name": "B2 ampacity Iz ≥ Ib",
+            "ok": true,
+            "value": 242.9,
+            "limit": 210.0,
+            "unit": "A",
+            "margin_pct": 21.5,
+            "rule": "IEC 60364-5-52 XLPE B1 ×k(35°C,g1), margin ≥5%",
+            "accepted": ""
+          },
+          {
+            "name": "B2 voltage drop",
+            "ok": true,
+            "value": 0.77,
+            "limit": 1.5,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "DesignRules",
+            "accepted": ""
+          }
+        ],
+        "designation": "2X70mm² Cu flexible (battery)",
+        "existing": false
+      },
+      {
+        "tag": "B3",
+        "role": "battery B3 → inverter",
+        "i_design_a": 200.0,
+        "section_mm2": 50.0,
+        "cores": "2",
+        "material": "Cu",
+        "insulation": "XLPE",
+        "method": "E",
+        "ampacity_a": 216.0,
+        "length_m": 5.0,
+        "drop_v": 0.69,
+        "drop_pct": 1.35,
+        "checks": [
+          {
+            "name": "B3 ampacity Iz ≥ Ib",
+            "ok": true,
+            "value": 216.0,
+            "limit": 210.0,
+            "unit": "A",
+            "margin_pct": 8.0,
+            "rule": "IEC 60364-5-52 XLPE E ×k(35°C,g1), margin ≥5%",
+            "accepted": ""
+          },
+          {
+            "name": "B3 voltage drop",
+            "ok": true,
+            "value": 1.35,
+            "limit": 1.5,
+            "unit": "%",
+            "margin_pct": null,
+            "rule": "DesignRules",
+            "accepted": ""
+          }
+        ],
+        "designation": "2X50mm² Cu flexible (battery)",
+        "existing": false
+      }
+    ],
+    "devices": [
+      {
+        "tag": "SPD-DC",
+        "kind": "SPD",
+        "rating": "T2 1000V DC",
+        "poles": "2P",
+        "location": "inverter DC input",
+        "note": "IEC 61643-31 class II; at inverter; on every MPPT input"
+      },
+      {
+        "tag": "QS-MPPT1",
+        "kind": "DC isolator",
+        "rating": "25A 1000V",
+        "poles": "2P",
+        "location": "inverter DC input",
+        "note": "1 string(s) × 14.06A × 1.25; external, lockable"
+      },
+      {
+        "tag": "QS-MPPT2",
+        "kind": "DC isolator",
+        "rating": "25A 1000V",
+        "poles": "2P",
+        "location": "inverter DC input",
+        "note": "1 string(s) × 14.06A × 1.25; external, lockable"
+      },
+      {
+        "tag": "QS-MPPT3",
+        "kind": "DC isolator",
+        "rating": "25A 1000V",
+        "poles": "2P",
+        "location": "inverter DC input",
+        "note": "1 string(s) × 14.06A × 1.25; external, lockable"
+      },
+      {
+        "tag": "QS-B1",
+        "kind": "DC switch-fuse",
+        "rating": "200A / 250A gPV",
+        "poles": "2P",
+        "location": "battery B1",
+        "note": "I_max 200A → switch 200A, fuse 250A (≥1.25×I, Vdc ≥ 57.6V)"
+      },
+      {
+        "tag": "QS-B2",
+        "kind": "DC switch-fuse",
+        "rating": "200A / 250A gPV",
+        "poles": "2P",
+        "location": "battery B2",
+        "note": "I_max 200A → switch 200A, fuse 250A (≥1.25×I, Vdc ≥ 57.6V)"
+      },
+      {
+        "tag": "QS-B3",
+        "kind": "DC switch-fuse",
+        "rating": "200A / 250A gPV",
+        "poles": "2P",
+        "location": "battery B3",
+        "note": "I_max 200A → switch 200A, fuse 250A (≥1.25×I, Vdc ≥ 57.6V)"
+      },
+      {
+        "tag": "BAT",
+        "kind": "battery",
+        "rating": "30.72kWh 51.2V",
+        "poles": "",
+        "location": "battery room",
+        "note": "3×LFP 51.2V rack; voltage window compatible with inverter"
+      },
+      {
+        "tag": "QS-AC",
+        "kind": "AC isolator",
+        "rating": "32A",
+        "poles": "4P",
+        "location": "next to inverter",
+        "note": "load-break switch at the inverter AC output (isolation for service)"
+      },
+      {
+        "tag": "Q-INV",
+        "kind": "MCB",
+        "rating": "32A",
+        "poles": "4P",
+        "location": "main board",
+        "note": "inverter grid port: 25A × 1.25 = 31.2A → 32A, curve C"
+      },
+      {
+        "tag": "RCD-INV",
+        "kind": "RCD",
+        "rating": "32A 300mA",
+        "poles": "4P",
+        "location": "main board",
+        "note": "type B — type B (IEC 62109-2) unless inverter declares transformerless DC-fault separation; verify"
+      },
+      {
+        "tag": "SPD-AC",
+        "kind": "SPD",
+        "rating": "T2 275V",
+        "poles": "3P+N",
+        "location": "main board",
+        "note": "IEC 61643-11 class II at the main board; plus at inverter if AC run > 10 m"
+      },
+      {
+        "tag": "Q-BACKUP",
+        "kind": "MCB",
+        "rating": "63A",
+        "poles": "4P",
+        "location": "backup board",
+        "note": "backup/bypass port passes up to 63A per phase from grid → 63A"
+      },
+      {
+        "tag": "CO-1",
+        "kind": "changeover switch",
+        "rating": "63A",
+        "poles": "4P",
+        "location": "backup board",
+        "note": "I-0-II: backup loads on inverter backup port (I) or direct grid (II) for maintenance bypass"
+      },
+      {
+        "tag": "Q-MAIN",
+        "kind": "MCCB/MCB",
+        "rating": "63A",
+        "poles": "4P",
+        "location": "main board",
+        "note": "carries 63A bypass current during backup → ≥63A"
+      },
+      {
+        "tag": "QS-M1",
+        "kind": "isolator — before meter",
+        "rating": "32A",
+        "poles": "4P",
+        "location": "production-meter cabinet",
+        "note": "load-break switch on the inverter side of the meter"
+      },
+      {
+        "tag": "M-PV",
+        "kind": "production meter",
+        "rating": "3×32A",
+        "poles": "",
+        "location": "production-meter cabinet",
+        "note": "production meter of the PV generator; meter type (direct / CT) and sealing per the utility"
+      },
+      {
+        "tag": "QS-M2",
+        "kind": "isolator — after meter",
+        "rating": "32A",
+        "poles": "4P",
+        "location": "production-meter cabinet",
+        "note": "load-break switch on the grid side of the meter"
+      },
+      {
+        "tag": "M-BI",
+        "kind": "bidirectional meter",
+        "rating": "utility",
+        "poles": "",
+        "location": "meter cabinet (existing)",
+        "note": "existing consumption meter replaced by a bidirectional meter at utility commissioning"
+      }
+    ],
+    "earthing": [
+      {
+        "tag": "PE-S",
+        "role": "structure bond",
+        "i_design_a": 0.0,
+        "section_mm2": 16.0,
+        "cores": "1",
+        "material": "Cu",
+        "insulation": "PVC",
+        "method": "C",
+        "ampacity_a": 0.0,
+        "length_m": 0.0,
+        "drop_v": 0.0,
+        "drop_pct": 0.0,
+        "checks": [
+          {
+            "name": "structure bond section",
+            "ok": true,
+            "value": 16.0,
+            "limit": 16.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream) (array 15.60 kWp)",
+            "accepted": ""
+          }
+        ],
+        "designation": "1X16mm² Cu G/Y",
+        "existing": false
+      },
+      {
+        "tag": "PE-M",
+        "role": "module frame bond",
+        "i_design_a": 0.0,
+        "section_mm2": 10.0,
+        "cores": "1",
+        "material": "Cu",
+        "insulation": "PVC",
+        "method": "C",
+        "ampacity_a": 0.0,
+        "length_m": 0.0,
+        "drop_v": 0.0,
+        "drop_pct": 0.0,
+        "checks": [
+          {
+            "name": "module bond section",
+            "ok": true,
+            "value": 10.0,
+            "limit": 10.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          }
+        ],
+        "designation": "1X10mm² Cu G/Y",
+        "existing": false
+      },
+      {
+        "tag": "PE-I",
+        "role": "inverter body bond",
+        "i_design_a": 0.0,
+        "section_mm2": 10.0,
+        "cores": "1",
+        "material": "Cu",
+        "insulation": "PVC",
+        "method": "C",
+        "ampacity_a": 0.0,
+        "length_m": 0.0,
+        "drop_v": 0.0,
+        "drop_pct": 0.0,
+        "checks": [
+          {
+            "name": "inverter bond section",
+            "ok": true,
+            "value": 10.0,
+            "limit": 10.0,
+            "unit": "mm²",
+            "margin_pct": null,
+            "rule": "caller (sourced upstream)",
+            "accepted": ""
+          }
+        ],
+        "designation": "1X10mm² Cu G/Y",
+        "existing": false
+      }
+    ],
+    "system_checks": [
+      {
+        "name": "DC/AC ratio ≤ inverter max",
+        "ok": true,
+        "value": 1.04,
+        "limit": 2.0,
+        "unit": "",
+        "margin_pct": null,
+        "rule": "inverter datasheet",
+        "accepted": ""
+      },
+      {
+        "name": "RCD-INV In ≥ Q-INV",
+        "ok": true,
+        "value": 32.0,
+        "limit": 32.0,
+        "unit": "A",
+        "margin_pct": null,
+        "rule": "RCD not overload-protected otherwise (IEC 60364-5-53)",
+        "accepted": ""
+      },
+      {
+        "name": "battery branches ≤ inverter ports",
+        "ok": true,
+        "value": 3.0,
+        "limit": 3.0,
+        "unit": "",
+        "margin_pct": null,
+        "rule": "inverter datasheet",
+        "accepted": ""
+      },
+      {
+        "name": "battery I_max ≤ inverter port I_max",
+        "ok": true,
+        "value": 200.0,
+        "limit": 200.0,
+        "unit": "A",
+        "margin_pct": null,
+        "rule": "inverter datasheet",
+        "accepted": ""
+      }
+    ],
+    "verify": [
+      "דגם מהפך ונתוני MPPT (3 MPPT, 1000V, 63A bypass)",
+      "דף נתונים מודול: Voc, מקדם טמפרטורה",
+      "זרם מצבר מרבי לכל כניסה (200A) ומינימום חתך לפי מדריך GoodWe",
+      "אורכי תוואי בפועל (מחרוזות 28 מ', AC 12 מ', מצברים 4–5 מ')",
+      "כיוון צפון בתוכנית הגג — לאימות באתר"
+    ]
+  }
+}
