@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const dir = new URL('.', import.meta.url).pathname.replace(/\/$/, '');
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
+const page = await browser.newPage();
+await page.goto('file://' + dir + '/mou-sunstock-v1.html', { waitUntil: 'networkidle' }).catch(()=>{});
+await page.evaluate(() => document.fonts.ready);
+await page.emulateMedia({ media: 'print' });
+await page.pdf({ path: dir + '/mou-sunstock-v1.pdf', format: 'A4', printBackground: true, margin: { top: '16mm', bottom: '16mm', left: '14mm', right: '14mm' } });
+console.log('pdf done');
+await browser.close();

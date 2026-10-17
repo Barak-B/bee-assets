@@ -29,3 +29,9 @@ Public assets for email signatures and external use.
 ## Planning
 
 - [`docs/plan/00-master-plan.md`](docs/plan/00-master-plan.md) — תוכנית אב ל-B.E.E Engine (הצעות, כתבי כמויות, תוכניות, הגשה לחח"י, CRM מחזור חיים) + דוחות מחקר ב-`docs/plan/research/`.
+
+## מזכר הבנות (MoU) — SUNSTOCK
+
+- [`partnership/mou/mou-sunstock-v1.html`](partnership/mou/mou-sunstock-v1.html) — מזכר ההבנות בין ברק הנדסת חשמל לשנל אנרגיה בתבנית הבית (RTL, Assistant + Frank Ruhl Libre). טיוטה 1.0 עם מקומות ריקים להשלמה.
+- [`partnership/mou/mou-sunstock-v1.pdf`](partnership/mou/mou-sunstock-v1.pdf) — אותו מסמך כ-PDF A4 (8 עמודים), מיוצא מ-Chromium.
+- מקור: `build_mou.py` מייצר את ה-HTML, `render_mou.mjs` מייצא PDF דרך Playwright.
