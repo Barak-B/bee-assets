@@ -1,0 +1,5700 @@
+{
+  "$comment": "B.E.E Engine — seed לטבלת rules (טיוטה 0.1, 2026-10-10). מקורות: research/02 §6 (R1–R24), office-rules.md (22), eplan seed_items (18), research/01 §8/§11 (SLA/תהליך), תוכנית אב §3/§6/§11. אין מספרים מומצאים: כל ערך לא-מאומת נושא verification מתאים ו'לאימות'. סכמה: docs/plan/specs/13-submissions-regulation-spec.md §f.",
+  "version": "0.1",
+  "schema": {
+    "key": "מזהה ייחודי יציב (prefix: track./R#./office./eplan./iec./pua./inspection.)",
+    "ref": "מזהה המקור (R7, OFFICE-5, EPLAN-key) או null",
+    "scope": [
+      "pricing",
+      "design",
+      "submission",
+      "inspection"
+    ],
+    "condition": "ביטוי בשפת הכללים (spec §f.2); null בקלט → outcome=needs_input",
+    "consequences": "[{type: add_line|require_document|block|warn|set_flag, params}] — מוערכים בסדר; 'when' בתוך params = תנאי משני",
+    "source": "{doc, section, url, date, research_ref}",
+    "verification": [
+      "unverified",
+      "summary",
+      "office",
+      "validated"
+    ],
+    "verified_by/verified_at": "ממולא רק ב-validated (reviewer) או office (מי קבע את כלל המשרד)",
+    "supersedes": "key של הכלל שהוחלף (היסטוריה נשמרת)",
+    "valid_from/valid_to": "תחולה לפי תאריך ההערכה (למשל מונה נטו עד 2026-12-31)",
+    "priority": "סדר הערכה בתוך scope (נמוך = קודם)",
+    "tests": "[{name, given, expect{fires, blocks?, flags?, add_lines?, outcome?}}] — מריצים ב-CI ובמסך הסקירה",
+    "eplan": "רק לכללי eplan: {knowledge_status, level, authority_level, mandatory, origin}; CANDIDATE→office, VALIDATED→validated"
+  },
+  "verification_mapping": {
+    "[מקור-תקציר] / [מקור]": "summary",
+    "[משרד]": "office",
+    "[ידע כללי] / [זיכרון — לא אומת] / לא אומת / חלקי": "unverified (או summary עם הערה כשיש תקציר חלקי)",
+    "office-rules.md": "office (verified_by: Barak — review corrections)",
+    "eplan CANDIDATE / LEVEL_0": "office + eplan.knowledge_status=CANDIDATE",
+    "eplan VALIDATED / LEVEL_2 (eplan pv seed --approve --reviewer)": "validated + verified_by=reviewer"
+  },
+  "counts": {
+    "total": 97,
+    "by_scope": {
+      "pricing": 14,
+      "design": 54,
+      "submission": 25,
+      "inspection": 4
+    },
+    "by_verification": {
+      "unverified": 14,
+      "summary": 27,
+      "office": 56,
+      "validated": 0
+    }
+  },
+  "rules": [
+    {
+      "key": "track.basis_kw_ac",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "בסיס ההספק לסיווג מסלול = kW AC נומינלי של הממירים",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "track_basis",
+            "value": "p_ac_kw",
+            "note": "האם הרגולציה מודדת kW AC או kWp — לאימות (V3)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/02-regulation-tariffs.md",
+        "section": "§2 (35כ2: 'הספק המתקן (kW) ÷ 0.9'); docs/plan/research/01-iec-process.md §2 שלב 2",
+        "url": null,
+        "date": null,
+        "research_ref": "V3"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 5,
+      "tests": [
+        {
+          "name": "always",
+          "given": {},
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "track.historic_distributor",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "מחלק היסטורי גובר על סיווג לפי גודל",
+      "condition": "distributor_type == 'historic'",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "regulatory_track",
+            "value": "historic_distributor"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "size_tier",
+            "value": "by_p_ac_kw"
+          }
+        }
+      ],
+      "source": {
+        "doc": "scratchpad/up/drawings/electrical-drawing-sets/references/pv-design-rules.md",
+        "section": "§5 'Communities with their own LV network'; docs/plan/research/01-iec-process.md §6",
+        "url": null,
+        "date": null,
+        "research_ref": "V11"
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 10,
+      "tests": [
+        {
+          "name": "kibbutz",
+          "given": {
+            "distributor_type": "historic",
+            "p_ac_kw": 40
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "regulatory_track": "historic_distributor"
+            }
+          }
+        },
+        {
+          "name": "iec",
+          "given": {
+            "distributor_type": "iec",
+            "p_ac_kw": 40
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "track.bess_add",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "תוספת אגירה למתקן קיים",
+      "condition": "distributor_type == 'iec' and storage_mode == 'add_to_existing'",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "regulatory_track",
+            "value": "bess_add"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "bess_shared_production_meter",
+            "value": true
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/00-master-plan.md",
+        "section": "§3 הערות (פרופיל אסדרה); docs/plan/research/02-regulation-tariffs.md §2 (35כ3(א1))",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 20,
+      "tests": [
+        {
+          "name": "add",
+          "given": {
+            "distributor_type": "iec",
+            "storage_mode": "add_to_existing"
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "regulatory_track": "bess_add"
+            }
+          }
+        },
+        {
+          "name": "new_with_pv",
+          "given": {
+            "distributor_type": "iec",
+            "storage_mode": "with_pv"
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "track.residential_le15",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "ביתי עד 15 kW",
+      "condition": "distributor_type == 'iec' and storage_mode != 'add_to_existing' and customer_type == 'residential' and p_ac_kw <= 15",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "regulatory_track",
+            "value": "residential_le15"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "tariff_tier",
+            "value": "tier_le15"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/01-iec-process.md",
+        "section": "§3 (ספים [ידע כללי]); docs/plan/research/02-regulation-tariffs.md §6 R2",
+        "url": "https://www.globes.co.il/news/article.aspx?did=1001353015",
+        "date": null,
+        "research_ref": "V3"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 30,
+      "tests": [
+        {
+          "name": "10kw_home",
+          "given": {
+            "distributor_type": "iec",
+            "storage_mode": "none",
+            "customer_type": "residential",
+            "p_ac_kw": 10
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "regulatory_track": "residential_le15"
+            }
+          }
+        },
+        {
+          "name": "boundary_15",
+          "given": {
+            "distributor_type": "iec",
+            "storage_mode": "none",
+            "customer_type": "residential",
+            "p_ac_kw": 15
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "16kw_home",
+          "given": {
+            "distributor_type": "iec",
+            "storage_mode": "none",
+            "customer_type": "residential",
+            "p_ac_kw": 16
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": "כלילות הגבול (≤15 או <15) לאימות"
+    },
+    {
+      "key": "track.commercial_15_100",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "עסקי/חקלאי 15–100 kW",
+      "condition": "distributor_type == 'iec' and storage_mode != 'add_to_existing' and p_ac_kw > 15 and p_ac_kw <= 100",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "regulatory_track",
+            "value": "commercial_15_100"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "tariff_tier",
+            "value": "tier_15_100"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/02-regulation-tariffs.md",
+        "section": "§6 R2; §1.5",
+        "url": "https://ylsolar.co.il/%D7%A8%D7%92%D7%95%D7%9C%D7%A6%D7%99%D7%94-%D7%91%D7%AA%D7%97%D7%95%D7%9D-%D7%94%D7%90%D7%A0%D7%A8%D7%92%D7%99%D7%94-%D7%94%D7%A1%D7%95%D7%9C%D7%90%D7%A8%D7%99%D7%AA/",
+        "date": null,
+        "research_ref": "V3"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 31,
+      "tests": [
+        {
+          "name": "50kw",
+          "given": {
+            "distributor_type": "iec",
+            "storage_mode": "none",
+            "customer_type": "commercial",
+            "p_ac_kw": 50
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "regulatory_track": "commercial_15_100"
+            }
+          }
+        },
+        {
+          "name": "101kw",
+          "given": {
+            "distributor_type": "iec",
+            "storage_mode": "none",
+            "customer_type": "commercial",
+            "p_ac_kw": 101
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "track.commercial_100_630",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "100–630 kW (מ\"נ גדול)",
+      "condition": "distributor_type == 'iec' and storage_mode != 'add_to_existing' and p_ac_kw > 100 and p_ac_kw <= 630",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "regulatory_track",
+            "value": "commercial_100_630"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "tariff_tier",
+            "value": "tier_100_630"
+          }
+        },
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "roof_agreement_55406",
+            "step": "pre.04.build_pack",
+            "note": "הסכם גגות 55406/1326 — תחולה מדויקת לאימות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/01-iec-process.md; docs/plan/research/02-regulation-tariffs.md",
+        "section": "01 §3; 02 §1.2, §6 R2",
+        "url": "https://www.gov.il/BlobFolder/policy/55406/he/Files_Hachlatot_55406_1326_heskem_gagot.pdf",
+        "date": null,
+        "research_ref": "V3"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 32,
+      "tests": [
+        {
+          "name": "300kw",
+          "given": {
+            "distributor_type": "iec",
+            "storage_mode": "none",
+            "customer_type": "commercial",
+            "p_ac_kw": 300
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "regulatory_track": "commercial_100_630"
+            }
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "track.mv_gt630",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "מעל 630 kW — חיבור במתח גבוה",
+      "condition": "distributor_type == 'iec' and storage_mode != 'add_to_existing' and p_ac_kw > 630",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "regulatory_track",
+            "value": "mv_gt630"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "tariff_tier",
+            "value": "tier_gt630"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "סקר חיבור מורחב, תשלום לפי הצעת חיבור, בודק סוג 3, היתר הפעלה — [ידע כללי] לאימות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/01-iec-process.md",
+        "section": "§3 (>630 kW [ידע כללי])",
+        "url": null,
+        "date": null,
+        "research_ref": "V3"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 33,
+      "tests": [
+        {
+          "name": "1mw",
+          "given": {
+            "distributor_type": "iec",
+            "storage_mode": "none",
+            "customer_type": "commercial",
+            "p_ac_kw": 1000
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "regulatory_track": "mv_gt630"
+            }
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "track.warn.small_nonresidential",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "מתקן ≤15 kW שאינו ביתי — מדרגת תעריף/מסלול לא ברורים",
+      "condition": "distributor_type == 'iec' and customer_type != 'residential' and p_ac_kw <= 15",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "regulatory_track",
+            "value": "commercial_15_100"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "≤15 kW לא-ביתי: המחקר מגדיר את מדרגת ≤15 כ'ביתי' בלבד — לאימות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/01-iec-process.md",
+        "section": "§3",
+        "url": null,
+        "date": null,
+        "research_ref": "V3"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 34,
+      "tests": [
+        {
+          "name": "shop_10kw",
+          "given": {
+            "distributor_type": "iec",
+            "customer_type": "commercial",
+            "p_ac_kw": 10
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "track.warn.residential_gt15",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "בית פרטי מעל 15 kW — מונה ייצור ומדרגה עסקית",
+      "condition": "distributor_type == 'iec' and customer_type == 'residential' and p_ac_kw > 15",
+      "consequences": [
+        {
+          "type": "warn",
+          "params": {
+            "message": "בית פרטי >15 kW: חלים מונה ייצור (R8) ומדרגת 15–100; פטור המס הביתי (R5) — תחולה לאימות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/02-regulation-tariffs.md",
+        "section": "§1.4 'גודל מתקן זכאי — לא אומת'; §2",
+        "url": null,
+        "date": null,
+        "research_ref": "V3"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 35,
+      "tests": [
+        {
+          "name": "villa_20kw",
+          "given": {
+            "distributor_type": "iec",
+            "customer_type": "residential",
+            "p_ac_kw": 20
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R1.net_metering_window",
+      "ref": "R1",
+      "scope": "pricing",
+      "name_he": "מונה נטו אפשרי רק אם תאריך החיבור הצפוי ≤ 31.12.2026",
+      "condition": "expected_connection_date <= date('2026-12-31')",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "net_metering_possible",
+            "value": true
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "roi_tracks",
+            "value": [
+              "net_metering",
+              "feed_in"
+            ]
+          }
+        }
+      ],
+      "source": {
+        "doc": "כלכליסט — תפוגת מונה נטו",
+        "section": null,
+        "url": "https://www.calcalist.co.il/local_news/article/syjspn0rme",
+        "date": null,
+        "research_ref": "V4"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": "2026-12-31",
+      "priority": 200,
+      "tests": [
+        {
+          "name": "before",
+          "given": {
+            "expected_connection_date": "2026-11-01"
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "after",
+          "given": {
+            "expected_connection_date": "2027-02-01"
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": "תאריך תפוגה מדויק, מגבלות צבירה וגודל מרבי — לאימות (02 §8.4). פרמטר `net_metering_expiry` ניתן לעריכה"
+    },
+    {
+      "key": "R2.tariff_tier",
+      "ref": "R2",
+      "scope": "pricing",
+      "name_he": "מדרגת תעריף לפי הספק: ≤15 / 15–100 / 100–630 / >630 kW",
+      "condition": "p_ac_kw is not null",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "tariff_tier",
+            "value": "tier(p_ac_kw) → tier_le15 | tier_15_100 | tier_100_630 | tier_gt630"
+          }
+        }
+      ],
+      "source": {
+        "doc": "גלובס 1001353015; ylsolar",
+        "section": null,
+        "url": "https://www.globes.co.il/news/article.aspx?did=1001353015",
+        "date": null,
+        "research_ref": "V3,V4"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "40kw",
+          "given": {
+            "p_ac_kw": 40
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "tariff_tier": "tier_15_100"
+            }
+          }
+        }
+      ],
+      "notes": "ערכי התעריף לכל מדרגה חלקיים; 100–630 ו->630 לאימות"
+    },
+    {
+      "key": "R3.feed_in_tariff_15_100",
+      "ref": "R3",
+      "scope": "pricing",
+      "name_he": "תעריף הזנה 15–100 kW: 41 → 38.4 (עד סוף 2025) → 35.67 (עד סוף 2026) אג'/kWh",
+      "condition": "tariff_tier == 'tier_15_100'",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "feed_in_tariff_agorot",
+            "value": {
+              "until_2024-12-31": 41,
+              "2025": 38.4,
+              "2026": 35.67,
+              "2027+": null
+            }
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "תעריפים לפי תקציר; יש לשאוב מספר לוחות התעריפים 01/2026 — לאימות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "Traders Union 2839588 / ylsolar / globes",
+        "section": null,
+        "url": "https://tradersunion.com/he/news/business-wealth/show/2839588-electricity-authority-solar-roof-tariff-cut/",
+        "date": "2025",
+        "research_ref": "V4"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": "2025-01-01",
+      "valid_to": "2026-12-31",
+      "priority": 200,
+      "tests": [
+        {
+          "name": "tier",
+          "given": {
+            "tariff_tier": "tier_15_100"
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R4.residential_consumption_tariff",
+      "ref": "R4",
+      "scope": "pricing",
+      "name_he": "תעריף צריכה ביתי 54.25 אג' ללא מע\"מ (64.02 כולל) — בסיס לחיסכון מצריכה עצמית",
+      "condition": "customer_type == 'residential'",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "consumption_tariff_agorot_ex_vat",
+            "value": 54.25
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "consumption_tariff_agorot_inc_vat",
+            "value": 64.02
+          }
+        }
+      ],
+      "source": {
+        "doc": "Volta Solar — מחירי החשמל",
+        "section": null,
+        "url": "https://volta.solar/knowledge-center/%D7%9E%D7%97%D7%99%D7%A8%D7%99-%D7%94%D7%97%D7%A9%D7%9E%D7%9C-%D7%91%D7%99%D7%A9%D7%A8%D7%90%D7%9C-%D7%9E%D7%93%D7%A8%D7%99%D7%9A-%D7%9E%D7%A7%D7%99%D7%A3-%D7%A2%D7%9C-%D7%A2%D7%9C%D7%95%D7%AA-%D7%94/",
+        "date": "2025-04",
+        "research_ref": "V4"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": "2025-04-01",
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "home",
+          "given": {
+            "customer_type": "residential"
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": "תעריף ≤15 kW בתוקף (48 אג' ישן / הצעה ~35) לאימות; TOU לא מקודד"
+    },
+    {
+      "key": "R5.residential_tax_exemption",
+      "ref": "R5",
+      "scope": "pricing",
+      "name_he": "פטור מס הכנסה למשק בית: 26,100 ₪ (2024) / 27,000 ₪ (2025); 10% מעל עד תקרה",
+      "condition": "customer_type == 'residential'",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "tax_exemption_ils",
+            "value": {
+              "2024": 26100,
+              "2025": 27000,
+              "2026": null
+            }
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "tax_rate_above_exemption",
+            "value": 0.1
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "tax_reduced_rate_cap_ils",
+            "value": {
+              "value": 120000,
+              "verification": "לאימות"
+            }
+          }
+        }
+      ],
+      "source": {
+        "doc": "shirancpa / efraty / roeahesbon (חוק עידוד השקעה באנרגיות מתחדשות 2016)",
+        "section": null,
+        "url": "https://www.shirancpa.co.il/%D7%94%D7%99%D7%A2%D7%A8%D7%9B%D7%95%D7%AA-%D7%9C%D7%A9%D7%A0%D7%AA-2025-%D7%95%D7%9C%D7%A1%D7%99%D7%95%D7%9D-%D7%A9%D7%A0%D7%AA-2024/",
+        "date": "2025",
+        "research_ref": "V4"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "home",
+          "given": {
+            "customer_type": "residential"
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "biz",
+          "given": {
+            "customer_type": "commercial"
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": "2026, תקרת 120,000, 'פטור חלקי 11,308', מע\"מ/ביטוח לאומי, גודל מתקן זכאי — לאימות (02 §8.7)"
+    },
+    {
+      "key": "R6.bookkeeping_exemption",
+      "ref": "R6",
+      "scope": "pricing",
+      "name_he": "פטור מניהול ספרים/דו\"ח שנתי עד 24,000 ₪ הכנסה בשנה",
+      "condition": "customer_type == 'residential' and roi.annual_income_ils <= 24000",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "note",
+            "section": "roi",
+            "text_he": "הכנסה שנתית צפויה מתחת ל-24,000 ₪ — פטור מניהול ספרים (לאימות מול רו\"ח)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "roeahesbon — מיסוי מערכת סולארית",
+        "section": null,
+        "url": "https://roeahesbon.com/%D7%9E%D7%99%D7%A1%D7%95%D7%99-%D7%9E%D7%A2%D7%A8%D7%9B%D7%AA-%D7%A1%D7%95%D7%9C%D7%90%D7%A8%D7%99%D7%AA/",
+        "date": null,
+        "research_ref": "V4"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "under",
+          "given": {
+            "customer_type": "residential",
+            "roi": {
+              "annual_income_ils": 9000
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "over",
+          "given": {
+            "customer_type": "residential",
+            "roi": {
+              "annual_income_ils": 30000
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R7.connection_size",
+      "ref": "R7",
+      "scope": "pricing",
+      "name_he": "גודל חיבור: P(kW)/0.9 ≤ S(kVA) של החיבור; אחרת הגדלת חיבור או הגבלת הספק",
+      "condition": "p_ac_kw / 0.9 > connection_kva",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "connection_upgrade_needed",
+            "value": true
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "service",
+            "product_key": "iec_connection_upgrade",
+            "qty": 1,
+            "text_he": "הגדלת חיבור חח\"י (דמי חח\"י + עבודות) — או הגבלת הספק",
+            "price": "from_catalog"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "חלופה: הגבלת הספק ל-0.9 × S_kVA"
+          }
+        }
+      ],
+      "source": {
+        "doc": "ספר אמות המידה — אמת מידה 35כ2 (דרך scratchpad/up/drawings/electrical-drawing-sets/references/pv-design-rules.md §5)",
+        "section": "35כ2",
+        "url": "https://www.gov.il/BlobFolder/generalpage/amotmidabook/he/Files_General_sefer_am_12_2024.pdf",
+        "date": null,
+        "research_ref": "V3"
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "50kw_on_3x80",
+          "given": {
+            "p_ac_kw": 50,
+            "connection_kva": 55.4
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "50kw_on_3x100",
+          "given": {
+            "p_ac_kw": 50,
+            "connection_kva": 69.3
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": "connection_kva = √3×400×I/1000 (תלת-פאזי) או 230×I/1000 (חד-פאזי) — חישוב אריתמטי; סדרת גדלי החיבור לאימות"
+    },
+    {
+      "key": "R8.production_meter",
+      "ref": "R8",
+      "scope": "pricing",
+      "name_he": "מונה ייצור חובה מעל 15 kW; במוצא AC של הממיר, קרוב למונה הצריכה; המחלק מספק ומתקין",
+      "condition": "p_ac_kw > 15",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "production_meter_required",
+            "value": true
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "assembly",
+            "product_key": "production_meter_cabinet",
+            "qty": 1,
+            "text_he": "ארון מונה ייצור + 2 מנתקים (לפני/אחרי מונה)"
+          }
+        },
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "sld_signed",
+            "note": "ציון מונה ייצור ומיקומו בחד-קו ובמסמכי חח\"י"
+          }
+        }
+      ],
+      "source": {
+        "doc": "ספר אמות המידה — 35כ3(י) (דרך scratchpad/up/drawings/electrical-drawing-sets/references/pv-design-rules.md §5)",
+        "section": "35כ3(י)",
+        "url": "https://www.gov.il/BlobFolder/generalpage/amotmidabook/he/Files_General_sefer_am_12_2024.pdf",
+        "date": null,
+        "research_ref": "V3"
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "20kw",
+          "given": {
+            "p_ac_kw": 20
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "15kw",
+          "given": {
+            "p_ac_kw": 15
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R9.ct_metering",
+      "ref": "R9",
+      "scope": "pricing",
+      "name_he": "מדידה ישירה עד 3×100A; מעל — מדידה עקיפה במשני זרם (CT)",
+      "condition": "connection_phases == 3 and connection_amps > 100",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "ct_metering",
+            "value": true
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "assembly",
+            "product_key": "ct_metering_set",
+            "qty": 1,
+            "text_he": "מדידה עקיפה / משני זרם בלוח + מנתקים"
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיית חח\"י (לא אותרה) — דרך scratchpad/up/drawings/electrical-drawing-sets/references/pv-design-rules.md §5 וסטים Y6/SH",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": "V8"
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "3x160",
+          "given": {
+            "connection_phases": 3,
+            "connection_amps": 160
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "3x100",
+          "given": {
+            "connection_phases": 3,
+            "connection_amps": 100
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": "[משרד] — לא אומת מול מסמך חח\"י"
+    },
+    {
+      "key": "R10.export_limit",
+      "ref": "R10",
+      "scope": "design",
+      "name_he": "מגבלת הזרמה ניתנת להטלה רק מעל 100 kW → אופציית zero-export/EMS",
+      "condition": "p_ac_kw > 100",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "export_limit_possible",
+            "value": true
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "לשקול zero-export/EMS; שדה design.export_limit_kw"
+          }
+        }
+      ],
+      "source": {
+        "doc": "ספר אמות המידה — 35כ2(ט)(3) (דרך scratchpad/up/drawings/electrical-drawing-sets/references/pv-design-rules.md §5)",
+        "section": "35כ2(ט)(3)",
+        "url": "https://www.gov.il/BlobFolder/generalpage/amotmidabook/he/Files_General_sefer_am_12_2024.pdf",
+        "date": null,
+        "research_ref": "V3"
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "200kw",
+          "given": {
+            "p_ac_kw": 200
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "80kw",
+          "given": {
+            "p_ac_kw": 80
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R11.pv_main_switch",
+      "ref": "R11",
+      "scope": "design",
+      "name_he": "§7 מפסק ראשי למיתקן PV בצד AC (2P/4P), נגיש, עם שלט 'מפסק ראשי של מיתקן פוטו-וולטאי' לבן על אדום",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "pv_main_switch",
+            "qty": 1
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "sign_pv_main_switch",
+            "qty": 1
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "when": "design.pv_main_switch_present != true",
+            "message": "חסר מפסק ראשי PV (§7)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיות מנהל מינהל החשמל למיתקן PV 24.01.2022",
+        "section": "§7",
+        "url": "https://www.gov.il/BlobFolder/generalpage/mm_ezer_tak_han_peir_hav_2025/he/Files_Minhal_Hashmal_Files_Seder_Hadash_2025_Hanhayot_files_Miykan_photo_voltahi_hanhayoy%20pv%2024.01.2022.pdf",
+        "date": "2022-01-24",
+        "research_ref": "V8"
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "always",
+          "given": {},
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "missing",
+          "given": {
+            "design": {
+              "pv_main_switch_present": false
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R12a.inverter_output_breaker",
+      "ref": "R12",
+      "scope": "design",
+      "name_he": "§11(א) מפסק אוטומטי במוצא הממיר, בטווח ראייה ו-≤3 מ'",
+      "condition": "ac.inverter_to_board_m <= 3",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "inverter_output_breaker",
+            "qty": "per_inverter"
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיות PV 24.01.2022",
+        "section": "§11(א)",
+        "url": "https://www.gov.il/BlobFolder/generalpage/mm_ezer_tak_han_peir_hav_2025/he/Files_Minhal_Hashmal_Files_Seder_Hadash_2025_Hanhayot_files_Miykan_photo_voltahi_hanhayoy%20pv%2024.01.2022.pdf",
+        "date": "2022-01-24",
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "2m",
+          "given": {
+            "ac": {
+              "inverter_to_board_m": 2
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R12b.inverter_output_disconnector",
+      "ref": "R12",
+      "scope": "design",
+      "name_he": "§11(ב) מנתק במקום מפסק: מוליכי AC ≤25 מ', Iz ≥ זרם תקלה של הממיר, מנתק 3P/4P",
+      "condition": "ac.inverter_to_board_m > 3 and ac.inverter_to_board_m <= 25 and ac.cable_iz_a >= inverter.fault_current_a",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "inverter_output_disconnector_3p4p",
+            "qty": "per_inverter"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "inverter_breaker_at_board",
+            "value": true
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיות PV 24.01.2022",
+        "section": "§11(ב)",
+        "url": "https://www.gov.il/BlobFolder/generalpage/mm_ezer_tak_han_peir_hav_2025/he/Files_Minhal_Hashmal_Files_Seder_Hadash_2025_Hanhayot_files_Miykan_photo_voltahi_hanhayoy%20pv%2024.01.2022.pdf",
+        "date": "2022-01-24",
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "12m_ok",
+          "given": {
+            "ac": {
+              "inverter_to_board_m": 12,
+              "cable_iz_a": 80
+            },
+            "inverter": {
+              "fault_current_a": 60
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "12m_iz_low",
+          "given": {
+            "ac": {
+              "inverter_to_board_m": 12,
+              "cable_iz_a": 50
+            },
+            "inverter": {
+              "fault_current_a": 60
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R12c.inverter_output_too_far",
+      "ref": "R12",
+      "scope": "design",
+      "name_he": "§11: מרחק >25 מ' ללא מפסק ≤3 מ' — חסימה",
+      "condition": "ac.inverter_to_board_m > 25 and design.breaker_near_inverter != true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "מוצא הממיר רחוק מ-25 מ' מהלוח וללא מפסק בטווח 3 מ' (§11)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיות PV 24.01.2022",
+        "section": "§11",
+        "url": "https://www.gov.il/BlobFolder/generalpage/mm_ezer_tak_han_peir_hav_2025/he/Files_Minhal_Hashmal_Files_Seder_Hadash_2025_Hanhayot_files_Miykan_photo_voltahi_hanhayoy%20pv%2024.01.2022.pdf",
+        "date": "2022-01-24",
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "30m",
+          "given": {
+            "ac": {
+              "inverter_to_board_m": 30
+            },
+            "design": {
+              "breaker_near_inverter": false
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R13.rcd_type_b",
+      "ref": "R13",
+      "scope": "design",
+      "name_he": "§19 פחת סוג B אלא אם לממיר בידוד גלווני או עומד ב-IEC 62109-1 והיצרן אינו דורש סוג B",
+      "condition": "rcd.installed == true and not inverter.galvanic_isolation and not (inverter.iec62109_declared and inverter.maker_requires_type_b == false)",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "rcd_type_b",
+            "qty": "per_inverter"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "when": "design.rcd_type != 'B'",
+            "message": "נדרש RCD סוג B (§19)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיות PV 24.01.2022",
+        "section": "§19",
+        "url": "https://www.gov.il/BlobFolder/generalpage/mm_ezer_tak_han_peir_hav_2025/he/Files_Minhal_Hashmal_Files_Seder_Hadash_2025_Hanhayot_files_Miykan_photo_voltahi_hanhayoy%20pv%2024.01.2022.pdf",
+        "date": "2022-01-24",
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "tl_no_decl",
+          "given": {
+            "rcd": {
+              "installed": true
+            },
+            "inverter": {
+              "galvanic_isolation": false,
+              "iec62109_declared": false
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "saj_type_a",
+          "given": {
+            "rcd": {
+              "installed": true
+            },
+            "inverter": {
+              "galvanic_isolation": false,
+              "iec62109_declared": true,
+              "maker_requires_type_b": false
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": "כשלא נופל: RCD לפי היצרן (למשל סוג A 300 mA)"
+    },
+    {
+      "key": "R14.earthing_conductors",
+      "ref": "R14",
+      "scope": "design",
+      "name_he": "§17 הארקות: מודולים→קונסטרוקציה ≥10 mm² (או מהדק ייעודי), קונסטרוקציה→פס ≥16 mm², גוף ממיר ≥10 mm²",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "cable",
+            "product_key": "pe_cu_10",
+            "qty": "f(module_rows)"
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "cable",
+            "product_key": "pe_cu_16_bare",
+            "qty": "f(tray_length)"
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "earthing_clamp_anodised",
+            "qty": "f(modules)"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "when": "earthing.module_bond_mm2 < 10 or earthing.structure_bond_mm2 < 16 or earthing.inverter_bond_mm2 < 10",
+            "message": "חתכי הארקה מתחת ל-§17"
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיות PV 24.01.2022",
+        "section": "§17(ד),(ה),(ז)",
+        "url": "https://www.gov.il/BlobFolder/generalpage/mm_ezer_tak_han_peir_hav_2025/he/Files_Minhal_Hashmal_Files_Seder_Hadash_2025_Hanhayot_files_Miykan_photo_voltahi_hanhayoy%20pv%2024.01.2022.pdf",
+        "date": "2022-01-24",
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "ok",
+          "given": {
+            "earthing": {
+              "module_bond_mm2": 10,
+              "structure_bond_mm2": 16,
+              "inverter_bond_mm2": 16
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": false
+          }
+        },
+        {
+          "name": "thin",
+          "given": {
+            "earthing": {
+              "module_bond_mm2": 6,
+              "structure_bond_mm2": 16,
+              "inverter_bond_mm2": 10
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": "סתירה עם eplan.bond_structure_mm2_small (10 mm² עד 15 kWp) — ראו spec §h"
+    },
+    {
+      "key": "R15a.dc_class_ii_iso_monitor",
+      "ref": "R15",
+      "scope": "design",
+      "name_he": "§23–24 צד DC מעל 60V: ציוד מחלקה II + משגוח בידוד",
+      "condition": "dc.max_voltage_v > 60",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "when": "design.dc_class_ii != true",
+            "message": "ציוד DC אינו מחלקה II (§23)"
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "insulation_monitor",
+            "qty": 1,
+            "when": "inverter.iso_monitor_integrated != true",
+            "text_he": "משגוח בידוד נפרד (הממיר לא מצהיר ISO)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיות PV 24.01.2022",
+        "section": "§23–24",
+        "url": "https://www.gov.il/BlobFolder/generalpage/mm_ezer_tak_han_peir_hav_2025/he/Files_Minhal_Hashmal_Files_Seder_Hadash_2025_Hanhayot_files_Miykan_photo_voltahi_hanhayoy%20pv%2024.01.2022.pdf",
+        "date": "2022-01-24",
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "600v_integrated",
+          "given": {
+            "dc": {
+              "max_voltage_v": 600
+            },
+            "inverter": {
+              "iso_monitor_integrated": true
+            },
+            "design": {
+              "dc_class_ii": true
+            }
+          },
+          "expect": {
+            "fires": true,
+            "add_lines": 0
+          }
+        },
+        {
+          "name": "600v_no_iso",
+          "given": {
+            "dc": {
+              "max_voltage_v": 600
+            },
+            "inverter": {
+              "iso_monitor_integrated": false
+            },
+            "design": {
+              "dc_class_ii": true
+            }
+          },
+          "expect": {
+            "fires": true,
+            "add_lines": 1
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R15b.dc_rcm_transformerless",
+      "ref": "R15",
+      "scope": "design",
+      "name_he": "§25 ממיר ללא הפרדה גלוונית: משגוח זרם דלף DC (RCMU/GFCI) — משולב בממיר או פריט נפרד",
+      "condition": "dc.max_voltage_v > 60 and inverter.galvanic_isolation == false",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "dc_residual_current_monitor",
+            "qty": 1,
+            "when": "inverter.rcmu_integrated != true"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "rcmu_declared_by_inverter",
+            "value": "inverter.rcmu_integrated"
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיות PV 24.01.2022 + doctorat.co.il (תקציר §25)",
+        "section": "§25",
+        "url": "https://www.gov.il/BlobFolder/generalpage/mm_ezer_tak_han_peir_hav_2025/he/Files_Minhal_Hashmal_Files_Seder_Hadash_2025_Hanhayot_files_Miykan_photo_voltahi_hanhayoy%20pv%2024.01.2022.pdf",
+        "date": "2022-01-24",
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "tl_rcmu",
+          "given": {
+            "dc": {
+              "max_voltage_v": 600
+            },
+            "inverter": {
+              "galvanic_isolation": false,
+              "rcmu_integrated": true
+            }
+          },
+          "expect": {
+            "fires": true,
+            "add_lines": 0
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R16.signer_license_class",
+      "ref": "R16",
+      "scope": "design",
+      "name_he": "רישיון החותם מול גודל המפסק הראשי: מוסמך 3×80A, ראשי 3×250A, הנדסאי 3×630A, מהנדס ללא הגבלה",
+      "condition": "main_breaker_amps > license_limit_a(signer.license_class)",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "דרגת הרישיון של החותם אינה מכסה את גודל המפסק הראשי (תקנות החשמל (רשיונות) 1985)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "תקנות החשמל (רשיונות), התשמ\"ה-1985 (תקציר)",
+        "section": null,
+        "url": "https://www.nevo.co.il/law_html/law01/159_015.htm",
+        "date": null,
+        "research_ref": "V7"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "certified_100a",
+          "given": {
+            "main_breaker_amps": 100,
+            "signer": {
+              "license_class": "certified"
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        },
+        {
+          "name": "engineer_400a",
+          "given": {
+            "main_breaker_amps": 400,
+            "signer": {
+              "license_class": "engineer"
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": "טכנאי לאימות; תלת-פאזי בלבד; חד-פאזי לאימות",
+      "params": {
+        "license_limit_a": {
+          "certified": 80,
+          "chief": 250,
+          "technician": null,
+          "practical_engineer": 630,
+          "engineer": null
+        }
+      }
+    },
+    {
+      "key": "R17.inspector_type",
+      "ref": "R17",
+      "scope": "inspection",
+      "name_he": "סוג בודק (1/2/3) לפי גודל/מתח — ספים לא אומתו",
+      "condition": "p_ac_kw is not null",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "service",
+            "product_key": "inspector_visit",
+            "qty": 1,
+            "text_he": "בדיקת בודק מוסמך סוג {inspector_type} (לאימות)"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "inspector_type",
+            "value": {
+              "proposal": "≤3×250A→1? ; ≤3×630A→2? ; מ\"ג→3?",
+              "verification": "לאימות"
+            }
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "ספי בודק סוג 1/2/3 לא אומתו (V7) — בחירה ידנית עד אימות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "תקנות החשמל (רשיונות) 1985 — [ידע כללי]; docs/plan/research/01-iec-process.md §7",
+        "section": null,
+        "url": "https://www.nevo.co.il/law_html/law01/159_015.htm",
+        "date": null,
+        "research_ref": "V7"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 400,
+      "tests": [
+        {
+          "name": "any",
+          "given": {
+            "p_ac_kw": 50
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R18.permit_exemption",
+      "ref": "R18",
+      "scope": "submission",
+      "name_he": "תקנה 24: פטור מהיתר ≤700 kW על גג מבנה חוקי, לא חורג מהגג, לפי ת\"י 62548, עם דיווח לרשות הרישוי",
+      "condition": "p_ac_kw <= 700 and site.ground_mount != true and site.building_legal == true and site.array_exceeds_roof != true",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "permit_exemption_eligible",
+            "value": true
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "service",
+            "product_key": "exemption_report",
+            "qty": 1,
+            "text_he": "דיווח פטור מהיתר לרשות הרישוי"
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "service",
+            "product_key": "structural_engineer",
+            "qty": 1,
+            "text_he": "אישור קונסטרוקטור (לאימות אם תנאי לפטור)"
+          }
+        },
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "building_permit_or_exemption_report",
+            "step": "mun.03.submit_report"
+          }
+        },
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "structural_engineer_approval",
+            "step": "mun.03.submit_report"
+          }
+        }
+      ],
+      "source": {
+        "doc": "תקנות התכנון והבנייה (עבודות ומבנים הפטורים מהיתר) 2014 — תקנה 24 (תקציר)",
+        "section": "תקנה 24",
+        "url": "https://www.nevo.co.il/law_html/law01/501_065.htm",
+        "date": null,
+        "research_ref": "V6"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "eligible",
+          "given": {
+            "p_ac_kw": 100,
+            "site": {
+              "ground_mount": false,
+              "building_legal": true,
+              "array_exceeds_roof": false
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "ground",
+          "given": {
+            "p_ac_kw": 100,
+            "site": {
+              "ground_mount": true,
+              "building_legal": true
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        },
+        {
+          "name": "unknown_legal",
+          "given": {
+            "p_ac_kw": 100,
+            "site": {
+              "ground_mount": false,
+              "building_legal": null
+            }
+          },
+          "expect": {
+            "fires": null,
+            "outcome": "needs_input"
+          }
+        }
+      ],
+      "notes": "כשלא נופל → add_line 'היתר בנייה' (צעד mun.04). יחידת הסף kW/kWp, 'למבנה' או 'לחלקה', מרחק מקצה גג — לאימות"
+    },
+    {
+      "key": "R19a.fire_signage_disconnects",
+      "ref": "R19",
+      "scope": "design",
+      "name_he": "כבאות: שילוט בכניסה ('מתקן פוטו-וולטאי — מתח גבוה'), שילוט מנתקי DC, מעברים חופשיים, גישה לניתוק",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "sign_pv_building_entrance",
+            "qty": 1
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "sign_dc_danger",
+            "qty": "per_dc_switch"
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "emergency_disconnect_button",
+            "qty": 1,
+            "when": "site.building_use in ['public','commercial']"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "רוחב מעברים/מרחק מקצה גג לאימות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "מסמכי מכרז/יועצים (sng.org.il 02/2025; haifa.ac.il תקנה 11א) — תקצירים",
+        "section": "הוראה 543 / פרק 500 (לאימות)",
+        "url": "https://www.sng.org.il/uploads/n/1750260294.4666.pdf",
+        "date": null,
+        "research_ref": "V9"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "always",
+          "given": {},
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": "חלקי — מספרי הוראות וסף תוכנית בטיחות אש לא אומתו"
+    },
+    {
+      "key": "R19b.fire_safety_plan_threshold",
+      "ref": "R19",
+      "scope": "submission",
+      "name_he": "סף לתוכנית בטיחות אש / אישור כבאות — לא אומת",
+      "condition": "site.building_use in ['public','commercial']",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "fire_plan_required",
+            "value": {
+              "value": null,
+              "verification": "לאימות"
+            }
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "לבדוק עם יועץ בטיחות אש אם נדרש נספח/אישור כבאות (V9)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "asfire — הוראות מכ\"ר 531/535 (תקצירים)",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": "V9"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "public",
+          "given": {
+            "site": {
+              "building_use": "public"
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "home",
+          "given": {
+            "site": {
+              "building_use": "residential"
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R19c.rapid_shutdown_option",
+      "ref": "R19",
+      "scope": "pricing",
+      "name_he": "ניתוק ברמת הפאנל (אופטימייזרים/rapid shutdown) — לא נמצאה דרישה ישראלית מחייבת; מוצג כאופציה",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "option",
+            "product_key": "optimizers_rapid_shutdown",
+            "qty": "per_module",
+            "optional": true,
+            "text_he": "אופציה: אופטימייזרים/ניתוק ברמת הפאנל"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/02-regulation-tariffs.md",
+        "section": "§3.3",
+        "url": null,
+        "date": null,
+        "research_ref": "V9"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "always",
+          "given": {},
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R20.storage_guidelines_2021",
+      "ref": "R20",
+      "scope": "design",
+      "name_he": "הנחיות אגירה 24.03.2021: מפסק ראשי משולט, מפסק PCS בטווח ראייה ≤3 מ', לחצן חירום משולט, מעבר חופשי ≥0.6 מ'",
+      "condition": "storage_mode != 'none'",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "bess_main_switch_signed",
+            "qty": 1
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "pcs_breaker",
+            "qty": "per_pcs"
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "product",
+            "product_key": "bess_emergency_button_signed",
+            "qty": 1
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "when": "layout.bess_clearance_m < 0.6 or layout.pcs_breaker_distance_m > 3",
+            "message": "פריסת האגירה אינה עומדת ב-§3.1.1/§3.1.4"
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיות מנהל מינהל החשמל למערכות אגירה 24.03.2021 (דרך eplan/bess/calc.py)",
+        "section": "§3.1.1, §3.1.4(א–ג)",
+        "url": null,
+        "date": "2021-03-24",
+        "research_ref": "V8"
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "bess",
+          "given": {
+            "storage_mode": "with_pv",
+            "layout": {
+              "bess_clearance_m": 0.8,
+              "pcs_breaker_distance_m": 2
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": false
+          }
+        },
+        {
+          "name": "tight",
+          "given": {
+            "storage_mode": "with_pv",
+            "layout": {
+              "bess_clearance_m": 0.4,
+              "pcs_breaker_distance_m": 2
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R21.storage_iec_approval",
+      "ref": "R21",
+      "scope": "submission",
+      "name_he": "אגירה: אישור חח\"י ל-kW/kWh; הספק האגירה מוגבל ב-EMS להספק המאושר",
+      "condition": "storage_mode != 'none'",
+      "consequences": [
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "bess_approval_iec",
+            "step": "pre.02b.bess_approval_request"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "when": "storage_kw > bess_approval.approved_kw or storage_kwh > bess_approval.approved_kwh",
+            "message": "אגירה מעל האישור"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "ems_limit_kw",
+            "value": "bess_approval.approved_kw"
+          }
+        }
+      ],
+      "source": {
+        "doc": "מסמכי המשרד (eplan/bess) — אישור חח\"י פרויקטלי",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": "V8"
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "within",
+          "given": {
+            "storage_mode": "with_pv",
+            "storage_kw": 10,
+            "storage_kwh": 20,
+            "bess_approval": {
+              "approved_kw": 10,
+              "approved_kwh": 20
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": false
+          }
+        },
+        {
+          "name": "missing",
+          "given": {
+            "storage_mode": "with_pv",
+            "storage_kw": 10,
+            "bess_approval": null
+          },
+          "expect": {
+            "fires": true,
+            "outcome": "needs_input"
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R22.battery_standard_62619",
+      "ref": "R22",
+      "scope": "design",
+      "name_he": "סוללות ליתיום לפי ת\"י 62619 — ולידציה של נתוני יצרן",
+      "condition": "storage_mode != 'none' and battery.iec62619_cert != true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "לסוללה אין אסמכתת ת\"י 62619 בקטלוג (null = חסר נתון)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "מכון התקנים / energycenter (תקצירים)",
+        "section": null,
+        "url": "https://www.sii.org.il/he/pv",
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "certified",
+          "given": {
+            "storage_mode": "with_pv",
+            "battery": {
+              "iec62619_cert": true
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        },
+        {
+          "name": "unknown",
+          "given": {
+            "storage_mode": "with_pv",
+            "battery": {
+              "iec62619_cert": null
+            }
+          },
+          "expect": {
+            "fires": true,
+            "outcome": "needs_input"
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R23.boards_61439",
+      "ref": "R23",
+      "scope": "pricing",
+      "name_he": "לוחות חשמל לפי ת\"י 61439 (תו תקן ללוח 61439-2)",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "note",
+            "section": "boards",
+            "text_he": "לוח בתו תקן ת\"י 61439-2"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "when": "board.standard_mark_61439 != true",
+            "message": "לוח ללא תו תקן 61439-2"
+          }
+        }
+      ],
+      "source": {
+        "doc": "מכון התקנים — תו תקן ללוחות",
+        "section": null,
+        "url": "https://www.sii.org.il/he/electrical-panel",
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "always",
+          "given": {},
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "R24.dc_design_62548",
+      "ref": "R24",
+      "scope": "design",
+      "name_he": "תכן צד DC לפי ת\"י 62548 (מחרוזות, הגנות, מיתוג, הארקה) — ולידטורי eplan",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "dc_design_standard",
+            "value": "IEC 62548"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "eplan_rule_set",
+            "value": "pv_design_limit"
+          }
+        }
+      ],
+      "source": {
+        "doc": "מכון התקנים — ת\"י 62548; eplan rules.py",
+        "section": null,
+        "url": "https://www.sii.org.il/he/pv",
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 100,
+      "tests": [
+        {
+          "name": "always",
+          "given": {},
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.design.every_element_sourced",
+      "ref": "OFFICE-1",
+      "scope": "design",
+      "name_he": "אין תוספות שמרניות/רזרבות/המלצות כדרישות; כל אלמנט עם מקור",
+      "condition": "design.items_without_source_count > 0",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "פריטים ללא מקור: {design.items_without_source_count}"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#1",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 51,
+      "tests": [
+        {
+          "name": "unsourced",
+          "given": {
+            "design": {
+              "items_without_source_count": 2
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        },
+        {
+          "name": "ok",
+          "given": {
+            "design": {
+              "items_without_source_count": 0
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.design.engineer_module_count_exact",
+      "ref": "OFFICE-2",
+      "scope": "design",
+      "name_he": "מספר וסוג המודולים של המהנדס בדיוק; חריגה שהמהנדס בחר מוצגת כ'בעלים' (ערך, גבול, תאריך, סיבה), לא ככישלון ולא כ-OK",
+      "condition": "design.module_count != engineer.module_count or design.module_model != engineer.module_model or (design.limit_exceeded_by_owner == true and design.deviation_display != 'owner')",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "סטייה מהמהנדס או תצוגת חריגה לא נכונה"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#2",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 52,
+      "tests": [
+        {
+          "name": "mismatch",
+          "given": {
+            "design": {
+              "module_count": 118,
+              "module_model": "A"
+            },
+            "engineer": {
+              "module_count": 120,
+              "module_model": "A"
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        },
+        {
+          "name": "owner_ok",
+          "given": {
+            "design": {
+              "module_count": 120,
+              "module_model": "A",
+              "limit_exceeded_by_owner": true,
+              "deviation_display": "owner"
+            },
+            "engineer": {
+              "module_count": 120,
+              "module_model": "A"
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.design.options_sheet_while_choosing",
+      "ref": "OFFICE-3",
+      "scope": "design",
+      "name_he": "כשיש בחירה אמיתית — גיליון אופציות נפרד, כל אופציה מחושבת במנוע",
+      "condition": "design.open_options_count > 0",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "include_options_sheet",
+            "value": true
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#3",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 53,
+      "tests": [
+        {
+          "name": "open",
+          "given": {
+            "design": {
+              "open_options_count": 2
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.design.products_available_in_israel",
+      "ref": "OFFICE-4",
+      "scope": "design",
+      "name_he": "מציעים רק מוצרים זמינים בישראל",
+      "condition": "product.available_il != true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "המוצר אינו מסומן זמין בישראל (null = חסר נתון)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#4",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 54,
+      "tests": [
+        {
+          "name": "na",
+          "given": {
+            "product": {
+              "available_il": false
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        },
+        {
+          "name": "ok",
+          "given": {
+            "product": {
+              "available_il": true
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.design.one_face_per_string",
+      "ref": "OFFICE-5",
+      "scope": "design",
+      "name_he": "מחרוזות לפי פאת גג: כיוון אחד למחרוזת; חיפוש כל הפיצולים לפני הצעה",
+      "condition": "strings.mixed_faces_in_series_count > 0 or strings.split_search_exhaustive != true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "מחרוזת עם יותר מפאה אחת, או שלא בוצע חיפוש ממצה של פיצולים"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#5",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 55,
+      "tests": [
+        {
+          "name": "mixed",
+          "given": {
+            "strings": {
+              "mixed_faces_in_series_count": 1,
+              "split_search_exhaustive": true
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        },
+        {
+          "name": "ok",
+          "given": {
+            "strings": {
+              "mixed_faces_in_series_count": 0,
+              "split_search_exhaustive": true
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.design.parallel_strings_equal_length",
+      "ref": "OFFICE-6",
+      "scope": "design",
+      "name_he": "מחרוזות במקביל על MPPT אחד — אותו אורך; מותר כיוונים שונים; אסור לערבב פאות בטור",
+      "condition": "mppt.parallel_unequal_length_count > 0",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "מחרוזות באורכים שונים במקביל על אותו MPPT"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#6",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 56,
+      "tests": [
+        {
+          "name": "unequal",
+          "given": {
+            "mppt": {
+              "parallel_unequal_length_count": 1
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.design.startup_voltage_whole_inverter",
+      "ref": "OFFICE-7",
+      "scope": "design",
+      "name_he": "מתח ההתנעה חל על הממיר כולו; MPPT במתח נמוך צריך רק את מינימום ה-MPPT שלו; תשובה = נקודת עבודה מול כל גבול",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "mppt_min_check_mode",
+            "value": "startup_once_then_mppt_min"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "when": "qa.low_voltage_mppt_failed_on_startup == true",
+            "message": "בדיקת התנעה הוחלה בטעות על MPPT בודד"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#7",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 57,
+      "tests": [
+        {
+          "name": "always",
+          "given": {},
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.design.roof_vocabulary_fields",
+      "ref": "OFFICE-8",
+      "scope": "design",
+      "name_he": "אוצר מילים נכון: בגג רעפים 'שדות' ולא 'בלוקים'",
+      "condition": "site.roof_type == 'tile' and qa.text_uses_block_for_tile == true",
+      "consequences": [
+        {
+          "type": "warn",
+          "params": {
+            "message": "להחליף 'בלוק' ב'שדה' בגג רעפים"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#8",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 58,
+      "tests": [
+        {
+          "name": "tile_block",
+          "given": {
+            "site": {
+              "roof_type": "tile"
+            },
+            "qa": {
+              "text_uses_block_for_tile": true
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.process.research_only_what_asked",
+      "ref": "OFFICE-9",
+      "scope": "design",
+      "name_he": "חוקרים רק מה שהמהנדס ביקש; מצטטים מקורות; לא מעלים נושאים שנפסלו",
+      "condition": "assistant.topic_requested != true or assistant.topic_ruled_out == true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "נושא שלא התבקש / נפסל — לא להעלות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#9",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 59,
+      "tests": [
+        {
+          "name": "ruled_out",
+          "given": {
+            "assistant": {
+              "topic_requested": true,
+              "topic_ruled_out": true
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": "נאכף בפרומפט הסוכן (Design assistant) ולא בולידטור"
+    },
+    {
+      "key": "office.process.engineer_answer_closes_verify",
+      "ref": "OFFICE-10",
+      "scope": "design",
+      "name_he": "תשובת המהנדס סוגרת מיד את פריט האימות; השרטוטים עוקבים",
+      "condition": "verify.item.answered_by_engineer == true",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "verify_item_status",
+            "value": "closed"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "regenerate_set",
+            "value": true
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#10",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 60,
+      "tests": [
+        {
+          "name": "answered",
+          "given": {
+            "verify": {
+              "item": {
+                "answered_by_engineer": true
+              }
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.geometry_core_deliverable",
+      "ref": "OFFICE-11",
+      "scope": "design",
+      "name_he": "גיאומטריה היא תוצר ליבה: מודל אחד, ציוד כפי שהוא נראה, הכל ממודד",
+      "condition": "set.has_dimensioned_model != true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "אין מודל ממודד אחד בסט"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#11",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 61,
+      "tests": [
+        {
+          "name": "missing",
+          "given": {
+            "set": {
+              "has_dimensioned_model": false
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.no_stamps_unless_asked",
+      "ref": "OFFICE-12",
+      "scope": "design",
+      "name_he": "ללא חותמות/חתימות אלא אם התבקש",
+      "condition": "set.has_stamps_or_signatures == true and request.stamps_requested != true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "חותמת/חתימה בסט ללא בקשה"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#12",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 62,
+      "tests": [
+        {
+          "name": "stamp",
+          "given": {
+            "set": {
+              "has_stamps_or_signatures": true
+            },
+            "request": {
+              "stamps_requested": false
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.label_clearance_1_3mm",
+      "ref": "OFFICE-13",
+      "scope": "design",
+      "name_he": "תוויות על רקע לבן שומרות ≥1.3 mm מטקסט אחר; audit לא מספיק — להסתכל על כל גיליון",
+      "condition": "qa.min_label_clearance_mm < 1.3",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "מרווח תוויות מתחת ל-1.3 mm"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#13",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 63,
+      "tests": [
+        {
+          "name": "tight",
+          "given": {
+            "qa": {
+              "min_label_clearance_mm": 0.9
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        },
+        {
+          "name": "ok",
+          "given": {
+            "qa": {
+              "min_label_clearance_mm": 1.5
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.clean_visual_energy",
+      "ref": "OFFICE-14",
+      "scope": "design",
+      "name_he": "תג + ייעוד בלבד; ללא כותרות-משנה אפורות; ללא שורות מקור; הערות כלליות רק ב-E-01, ≤7",
+      "condition": "qa.grey_subcaptions_count > 0 or qa.source_lines_count > 0 or sheet.E01.general_notes_count > 7 or qa.general_notes_outside_E01 == true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "הפרת 'אנרגיה ויזואלית נקייה'"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#14",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 64,
+      "tests": [
+        {
+          "name": "notes_9",
+          "given": {
+            "qa": {
+              "grey_subcaptions_count": 0,
+              "source_lines_count": 0,
+              "general_notes_outside_E01": false
+            },
+            "sheet": {
+              "E01": {
+                "general_notes_count": 9
+              }
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.string_colours_everywhere",
+      "ref": "OFFICE-15",
+      "scope": "design",
+      "name_he": "צבעי מחרוזות בולטים בכל גיליון: קווי מתאר בתוכנית גג, קווי DC בחד-קו, דוגמיות בטבלאות",
+      "condition": "qa.string_colour_missing_sheets_count > 0",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "צבעי מחרוזות חסרים ב-{qa.string_colour_missing_sheets_count} גיליונות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#15",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 65,
+      "tests": [
+        {
+          "name": "missing",
+          "given": {
+            "qa": {
+              "string_colour_missing_sheets_count": 1
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.no_redundant_zone_labels",
+      "ref": "OFFICE-16",
+      "scope": "design",
+      "name_he": "להסיר תוויות אזור שרק חוזרות על מידה, וכיתובים על קווי סכמה",
+      "condition": "qa.zone_labels_restating_dimension_count > 0 or qa.captions_on_schematic_lines_count > 0",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "תוויות מיותרות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#16",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 66,
+      "tests": [
+        {
+          "name": "zones",
+          "given": {
+            "qa": {
+              "zone_labels_restating_dimension_count": 2,
+              "captions_on_schematic_lines_count": 0
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.each_table_once",
+      "ref": "OFFICE-17",
+      "scope": "design",
+      "name_he": "כל טבלה פעם אחת בסט: אין טבלת מכשירים (E-01 מכילה), בדיקות מערכת רק בכישלון, אין עמודות קבועות, כבלי מחרוזת לא חוזרים בטבלת כבלים",
+      "condition": "qa.device_table_present == true or qa.system_checks_shown_without_failure == true or qa.constant_columns_count > 0 or qa.string_cables_in_cable_table == true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "כפילות טבלאות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#17",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 67,
+      "tests": [
+        {
+          "name": "dev_table",
+          "given": {
+            "qa": {
+              "device_table_present": true,
+              "system_checks_shown_without_failure": false,
+              "constant_columns_count": 0,
+              "string_cables_in_cable_table": false
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.no_decision_sheet_after_decision",
+      "ref": "OFFICE-18",
+      "scope": "design",
+      "name_he": "אין להשאיר גיליון החלטה בסט אחרי שההחלטה התקבלה",
+      "condition": "design.open_options_count == 0 and set.has_options_sheet == true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "גיליון אופציות נשאר אחרי ההחלטה"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#18",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 68,
+      "tests": [
+        {
+          "name": "stale",
+          "given": {
+            "design": {
+              "open_options_count": 0
+            },
+            "set": {
+              "has_options_sheet": true
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.sld_iec_symbols",
+      "ref": "OFFICE-19",
+      "scope": "design",
+      "name_he": "חד-קו בסמלי IEC: סמל גנרטור PV; ללא תמונות מוצר; טיפוגרפיה אחידה; ללא מהלכי הארקה (ב-E-02); תווית MPPT = קונפיגורציה בלבד ('2×19')",
+      "condition": "qa.sld_pv_generator_symbol != true or qa.sld_has_product_pictures == true or qa.sld_typography_uniform != true or qa.sld_has_earthing_runs == true or qa.sld_mppt_label_config_only != true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "חד-קו לא לפי תקן המשרד"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#19",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 69,
+      "tests": [
+        {
+          "name": "pictures",
+          "given": {
+            "qa": {
+              "sld_pv_generator_symbol": true,
+              "sld_has_product_pictures": true,
+              "sld_typography_uniform": true,
+              "sld_has_earthing_runs": false,
+              "sld_mppt_label_config_only": true
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.e02_earthing_single_line",
+      "ref": "OFFICE-20",
+      "scope": "design",
+      "name_he": "E-02 הוא חד-קו הארקה בסגנון המשרד, לא תוכנית גג; ההארקה מצוירת בבירור בחזית קיר הממיר",
+      "condition": "sheet.E02.kind != 'earthing_single_line' or sheet.E05.earthing_drawn != true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "E-02/E-05 לא לפי כלל 20"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#20",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 70,
+      "tests": [
+        {
+          "name": "roofplan",
+          "given": {
+            "sheet": {
+              "E02": {
+                "kind": "roof_plan"
+              },
+              "E05": {
+                "earthing_drawn": true
+              }
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.roof_plan_clean_rectangles",
+      "ref": "OFFICE-21",
+      "scope": "design",
+      "name_he": "תוכנית גג: מודולים כמלבנים נקיים עם מזהה קטן, וקו מתאר עבה בצבע המחרוזת סביב מודולי כל מחרוזת",
+      "condition": "qa.roof_modules_clean_rectangles != true or qa.string_outline_missing == true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "תוכנית גג לא לפי כלל 21"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#21",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 71,
+      "tests": [
+        {
+          "name": "outline",
+          "given": {
+            "qa": {
+              "roof_modules_clean_rectangles": true,
+              "string_outline_missing": true
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "office.drawing.no_fixing_details_unless_asked",
+      "ref": "OFFICE-22",
+      "scope": "design",
+      "name_he": "ללא פרטי ברגים/נעלי כבל אלא אם התבקש (fixing_details: false)",
+      "condition": "set.has_fixing_details == true and spec.fixing_details != true",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "פרטי חיבור ברמת בורג ללא בקשה"
+          }
+        }
+      ],
+      "source": {
+        "doc": "electrical-drawing-sets/references/office-rules.md",
+        "section": "#22",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": "Barak (review correction)",
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 72,
+      "tests": [
+        {
+          "name": "bolts",
+          "given": {
+            "set": {
+              "has_fixing_details": true
+            },
+            "spec": {
+              "fixing_details": false
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "eplan.v_dc_max_safety",
+      "ref": "EPLAN-v_dc_max_safety",
+      "scope": "design",
+      "name_he": "Voc בטמפרטורת התכן המינימלית × מודולים בטור ≤ min(מתח DC מרבי של הממיר, מתח מערכת מרבי של המודול) × 1.0",
+      "condition": "strings.voc_cold_v > min(inverter.vdc_max_v, module.max_system_voltage_v) * 1.0",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.v_dc_max_safety",
+            "value": 1.0,
+            "unit": "×"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "message": "Voc_cold חורג ממתח ה-DC המרבי"
+          }
+        }
+      ],
+      "source": {
+        "doc": "IEC 62548:2016",
+        "section": "§6.1, §7.3.1",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "over",
+          "given": {
+            "strings": {
+              "voc_cold_v": 1010
+            },
+            "inverter": {
+              "vdc_max_v": 1000
+            },
+            "module": {
+              "max_system_voltage_v": 1500
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "STANDARD",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 1.0,
+      "unit": "×"
+    },
+    {
+      "key": "eplan.dc_cable_min_mm2",
+      "ref": "EPLAN-dc_cable_min_mm2",
+      "scope": "design",
+      "name_he": "כבלי מחרוזת: מינימום 6 mm² נחושת, H1Z2Z2-K (EN 50618)",
+      "condition": "cable.dc.section_mm2 < 6",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.dc_cable_min_mm2",
+            "value": 6.0,
+            "unit": "mm²"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "message": "חתך DC מתחת ל-6 mm²"
+          }
+        }
+      ],
+      "source": {
+        "doc": "B.E.E. design rule — Amendment 2c",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "4mm",
+          "given": {
+            "cable": {
+              "dc": {
+                "section_mm2": 4
+              }
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        },
+        {
+          "name": "6mm",
+          "given": {
+            "cable": {
+              "dc": {
+                "section_mm2": 6
+              }
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "INTERNAL",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 6.0,
+      "unit": "mm²"
+    },
+    {
+      "key": "eplan.dc_drop_max_pct",
+      "ref": "EPLAN-dc_drop_max_pct",
+      "scope": "design",
+      "name_he": "מפל מתח במחרוזת ב-Imp ו-Vmp_STC ≤ 1 % (המלצה)",
+      "condition": "cable.dc.drop_pct > 1.0",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.dc_drop_max_pct",
+            "value": 1.0,
+            "unit": "%"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "מפל מתח DC מעל 1 %"
+          }
+        }
+      ],
+      "source": {
+        "doc": "IEC 62548:2016",
+        "section": "§7.3.5 (recommendation)",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "1.4",
+          "given": {
+            "cable": {
+              "dc": {
+                "drop_pct": 1.4
+              }
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "STANDARD",
+        "mandatory": false,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 1.0,
+      "unit": "%"
+    },
+    {
+      "key": "eplan.dc_current_factor",
+      "ref": "EPLAN-dc_current_factor",
+      "scope": "design",
+      "name_he": "זרם תכן לכבלים/מכשירי DC: 1.25 × Isc_STC",
+      "condition": "cable.dc.design_current_a < 1.25 * strings.isc_total_a",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.dc_current_factor",
+            "value": 1.25,
+            "unit": "×"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "message": "זרם תכן DC מתחת ל-1.25×Isc"
+          }
+        }
+      ],
+      "source": {
+        "doc": "IEC 62548:2016",
+        "section": "§6.3",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "low",
+          "given": {
+            "cable": {
+              "dc": {
+                "design_current_a": 12
+              }
+            },
+            "strings": {
+              "isc_total_a": 14
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "STANDARD",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 1.25,
+      "unit": "×"
+    },
+    {
+      "key": "eplan.string_fuse_above_strings",
+      "ref": "EPLAN-string_fuse_above_strings",
+      "scope": "design",
+      "name_he": "הגנת יתר-זרם למחרוזת נדרשת כשיותר משתי מחרוזות במקביל לכניסה אחת",
+      "condition": "mppt.parallel_strings > 2 and mppt.string_fuses != true",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.string_fuse_above_strings",
+            "value": 2,
+            "unit": "strings"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "message": "נדרשים נתיכי מחרוזת (>2 במקביל)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "IEC 62548:2016",
+        "section": "§6.5.3",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "3_no_fuse",
+          "given": {
+            "mppt": {
+              "parallel_strings": 3,
+              "string_fuses": false
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        },
+        {
+          "name": "2",
+          "given": {
+            "mppt": {
+              "parallel_strings": 2,
+              "string_fuses": false
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "STANDARD",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 2,
+      "unit": "strings"
+    },
+    {
+      "key": "eplan.vd_conductor_temp_c",
+      "ref": "EPLAN-vd_conductor_temp_c",
+      "scope": "design",
+      "name_he": "חישוב מפל מתח בהתנגדות מוליך ב-20 °C (IEC 60228); בדיקת העמסה לפי דירוג הבידוד",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.vd_conductor_temp_c",
+            "value": 20.0,
+            "unit": "°C"
+          }
+        }
+      ],
+      "source": {
+        "doc": "IEC 60228:2004 / B.E.E. convention",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "always",
+          "given": {},
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "INTERNAL",
+        "mandatory": false,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 20.0,
+      "unit": "°C"
+    },
+    {
+      "key": "eplan.iz_margin_min_pct",
+      "ref": "EPLAN-iz_margin_min_pct",
+      "scope": "design",
+      "name_he": "Iz מתוקן עולה על זרם התכן ב-5 % לפחות",
+      "condition": "cable.iz_a < cable.ib_a * 1.05",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.iz_margin_min_pct",
+            "value": 5.0,
+            "unit": "%"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "מרווח Iz מתחת ל-5 %"
+          }
+        }
+      ],
+      "source": {
+        "doc": "B.E.E. design rule",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "tight",
+          "given": {
+            "cable": {
+              "iz_a": 41,
+              "ib_a": 40
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "INTERNAL",
+        "mandatory": false,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 5.0,
+      "unit": "%"
+    },
+    {
+      "key": "eplan.ac_cable_min_mm2",
+      "ref": "EPLAN-ac_cable_min_mm2",
+      "scope": "design",
+      "name_he": "כבל AC במוצא ממיר: לא מתחת ל-6 mm² Cu",
+      "condition": "cable.ac.section_mm2 < 6",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.ac_cable_min_mm2",
+            "value": 6.0,
+            "unit": "mm²"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "כבל AC מתחת ל-6 mm²"
+          }
+        }
+      ],
+      "source": {
+        "doc": "B.E.E. design rule",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "4",
+          "given": {
+            "cable": {
+              "ac": {
+                "section_mm2": 4
+              }
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "INTERNAL",
+        "mandatory": false,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 6.0,
+      "unit": "mm²"
+    },
+    {
+      "key": "eplan.ac_drop_max_pct",
+      "ref": "EPLAN-ac_drop_max_pct",
+      "scope": "design",
+      "name_he": "מפל מתח מהדקי AC של הממיר עד נקודת החיבור ≤ 1 %",
+      "condition": "cable.ac.drop_pct > 1.0",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.ac_drop_max_pct",
+            "value": 1.0,
+            "unit": "%"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "מפל מתח AC מעל 1 %"
+          }
+        }
+      ],
+      "source": {
+        "doc": "IEC 60364-7-712 / utility (IEC) connection practice",
+        "section": "712.5",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "1.2",
+          "given": {
+            "cable": {
+              "ac": {
+                "drop_pct": 1.2
+              }
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "GUIDANCE",
+        "mandatory": false,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 1.0,
+      "unit": "%"
+    },
+    {
+      "key": "eplan.backup_drop_max_pct",
+      "ref": "EPLAN-backup_drop_max_pct",
+      "scope": "design",
+      "name_he": "מפל מתח בהזנת הגיבוי (bypass) ≤ 2 %",
+      "condition": "cable.backup.drop_pct > 2.0",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.backup_drop_max_pct",
+            "value": 2.0,
+            "unit": "%"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "מפל מתח גיבוי מעל 2 %"
+          }
+        }
+      ],
+      "source": {
+        "doc": "B.E.E. design rule",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "2.5",
+          "given": {
+            "cable": {
+              "backup": {
+                "drop_pct": 2.5
+              }
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "INTERNAL",
+        "mandatory": false,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 2.0,
+      "unit": "%"
+    },
+    {
+      "key": "eplan.breaker_factor",
+      "ref": "EPLAN-breaker_factor",
+      "scope": "design",
+      "name_he": "מפסק AC של הממיר: In ≥ 1.25 × זרם המוצא המרבי הרציף",
+      "condition": "device.q_inv_in_a < 1.25 * inverter.i_ac_max_a",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.breaker_factor",
+            "value": 1.25,
+            "unit": "×"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "message": "Q-INV קטן מ-1.25×I_ac"
+          }
+        }
+      ],
+      "source": {
+        "doc": "IEC 60364-4-43 / inverter installation manuals",
+        "section": "433.1",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "low",
+          "given": {
+            "device": {
+              "q_inv_in_a": 25
+            },
+            "inverter": {
+              "i_ac_max_a": 22
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        },
+        {
+          "name": "ok",
+          "given": {
+            "device": {
+              "q_inv_in_a": 32
+            },
+            "inverter": {
+              "i_ac_max_a": 22
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "STANDARD",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 1.25,
+      "unit": "×"
+    },
+    {
+      "key": "eplan.storage_drop_max_pct",
+      "ref": "EPLAN-storage_drop_max_pct",
+      "scope": "design",
+      "name_he": "כבלי סוללה: מפל מתח בזרם רציף מרבי ≤ 1.5 %",
+      "condition": "cable.battery.drop_pct > 1.5",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.storage_drop_max_pct",
+            "value": 1.5,
+            "unit": "%"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "מפל מתח סוללה מעל 1.5 %"
+          }
+        }
+      ],
+      "source": {
+        "doc": "B.E.E. design rule — Amendment 2b",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "2",
+          "given": {
+            "cable": {
+              "battery": {
+                "drop_pct": 2.0
+              }
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "INTERNAL",
+        "mandatory": false,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 1.5,
+      "unit": "%"
+    },
+    {
+      "key": "eplan.storage_current_factor",
+      "ref": "EPLAN-storage_current_factor",
+      "scope": "design",
+      "name_he": "זרם תכן כבל סוללה = זרם רציף מרבי × 1.0 (לפי מדריך היצרן)",
+      "condition": "cable.battery.design_current_a < 1.0 * battery.i_max_continuous_a",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.storage_current_factor",
+            "value": 1.0,
+            "unit": "×"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "message": "זרם תכן סוללה מתחת לזרם הרציף"
+          }
+        }
+      ],
+      "source": {
+        "doc": "battery / inverter manufacturer manuals",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "low",
+          "given": {
+            "cable": {
+              "battery": {
+                "design_current_a": 90
+              }
+            },
+            "battery": {
+              "i_max_continuous_a": 100
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "MANUFACTURER",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 1.0,
+      "unit": "×"
+    },
+    {
+      "key": "eplan.bond_structure_mm2_small",
+      "ref": "EPLAN-bond_structure_mm2_small",
+      "scope": "design",
+      "name_he": "השוואת פוטנציאלים של הקונסטרוקציה: 10 mm² Cu למערכים עד 15 kWp",
+      "condition": "p_dc_kwp <= 15 and earthing.structure_bond_mm2 < 10",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.bond_structure_mm2_small",
+            "value": 10.0,
+            "unit": "mm²"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "message": "חתך הארקת קונסטרוקציה מתחת ל-10 mm²"
+          }
+        }
+      ],
+      "source": {
+        "doc": "תקנות החשמל (התקנת מערכות PV) / IEC 62548 §7.4",
+        "section": "§7.4",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "8mm",
+          "given": {
+            "p_dc_kwp": 10,
+            "earthing": {
+              "structure_bond_mm2": 8
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": "סתירה לכאורה עם R14/§17(ה) (≥16 mm² קונסטרוקציה→פס ללא תלות בגודל) ועם office pv-design-rules §6 — להכרעת ברק (spec §h)",
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "STANDARD",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 10.0,
+      "unit": "mm²"
+    },
+    {
+      "key": "eplan.bond_structure_mm2_large",
+      "ref": "EPLAN-bond_structure_mm2_large",
+      "scope": "design",
+      "name_he": "השוואת פוטנציאלים של הקונסטרוקציה: 16 mm² Cu למערכים מעל 15 kWp",
+      "condition": "p_dc_kwp > 15 and earthing.structure_bond_mm2 < 16",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.bond_structure_mm2_large",
+            "value": 16.0,
+            "unit": "mm²"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "message": "חתך הארקת קונסטרוקציה מתחת ל-16 mm²"
+          }
+        }
+      ],
+      "source": {
+        "doc": "B.E.E. design rule — Amendment 2a",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "10mm",
+          "given": {
+            "p_dc_kwp": 30,
+            "earthing": {
+              "structure_bond_mm2": 10
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "INTERNAL",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 16.0,
+      "unit": "mm²"
+    },
+    {
+      "key": "eplan.bond_structure_threshold_kwp",
+      "ref": "EPLAN-bond_structure_threshold_kwp",
+      "scope": "design",
+      "name_he": "סף בין הארקת קונסטרוקציה קטנה לגדולה: 15 kWp",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.bond_structure_threshold_kwp",
+            "value": 15.0,
+            "unit": "kWp"
+          }
+        }
+      ],
+      "source": {
+        "doc": "B.E.E. design rule — Amendment 2a",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "always",
+          "given": {},
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "INTERNAL",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 15.0,
+      "unit": "kWp"
+    },
+    {
+      "key": "eplan.bond_module_mm2",
+      "ref": "EPLAN-bond_module_mm2",
+      "scope": "design",
+      "name_he": "מוליך הארקה למסגרות מודולים ולממיר: 10 mm² Cu",
+      "condition": "earthing.module_bond_mm2 < 10 or earthing.inverter_bond_mm2 < 10",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.bond_module_mm2",
+            "value": 10.0,
+            "unit": "mm²"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "message": "חתך הארקת מודולים/ממיר מתחת ל-10 mm²"
+          }
+        }
+      ],
+      "source": {
+        "doc": "B.E.E. design rule — Amendment 2a",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "6mm",
+          "given": {
+            "earthing": {
+              "module_bond_mm2": 6,
+              "inverter_bond_mm2": 10
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "INTERNAL",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 10.0,
+      "unit": "mm²"
+    },
+    {
+      "key": "eplan.ambient_ref_c",
+      "ref": "EPLAN-ambient_ref_c",
+      "scope": "design",
+      "name_he": "טמפרטורת סביבה ייחוס לטבלאות העמסה: 30 °C",
+      "condition": "true",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "limit.ambient_ref_c",
+            "value": 30.0,
+            "unit": "°C"
+          }
+        }
+      ],
+      "source": {
+        "doc": "IEC 60364-5-52:2009",
+        "section": "Table B.52.14",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "office",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 80,
+      "tests": [
+        {
+          "name": "always",
+          "given": {},
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null,
+      "eplan": {
+        "knowledge_status": "CANDIDATE",
+        "level": "LEVEL_0",
+        "authority_level": "STANDARD",
+        "mandatory": true,
+        "origin": "scratchpad/up/eplan/domain/electrical/pv/rules.py (seed_items) + eplan/docs/GENERATOR.md 'Seeded limits'"
+      },
+      "value": 30.0,
+      "unit": "°C"
+    },
+    {
+      "key": "iec.sla.inspection_after_payment",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "בדיקת מתקן ע\"י בודק המחלק תוך 7 ימי עבודה מיום התשלום",
+      "condition": "step.id == 'insp.05.wait_iec_inspection' and fee.paid_at is not null",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "due_at",
+            "value": "add_business_days(fee.paid_at, 7)"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "sla_param",
+            "value": "sla.iec_inspection_bd"
+          }
+        }
+      ],
+      "source": {
+        "doc": "אמות מידה (תקציר nevo/wikisource) — מס' אמת מידה לאימות",
+        "section": null,
+        "url": "https://www.nevo.co.il/law_html/law01/501_864.htm",
+        "date": null,
+        "research_ref": "V1"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "paid",
+          "given": {
+            "step": {
+              "id": "insp.05.wait_iec_inspection"
+            },
+            "fee": {
+              "paid_at": "2026-09-28"
+            }
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "due_at": "2026-10-07 (לפי לוח עסקי)"
+            }
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.sla.connection_complete",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "השלמת החיבור והבדיקה תוך 30 ימי עבודה מיום התשלום",
+      "condition": "step.id == 'insp.08.operation_approval' and fee.paid_at is not null",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "due_at",
+            "value": "add_business_days(fee.paid_at, 30)"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "sla_param",
+            "value": "sla.connection_complete_bd"
+          }
+        }
+      ],
+      "source": {
+        "doc": "אמות מידה (תקציר)",
+        "section": null,
+        "url": "https://www.nevo.co.il/law_html/law01/501_864.htm",
+        "date": null,
+        "research_ref": "V1"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "paid",
+          "given": {
+            "step": {
+              "id": "insp.08.operation_approval"
+            },
+            "fee": {
+              "paid_at": "2026-09-28"
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.sla.survey_publication",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "פרסום סקרים (היתכנות/תכנון/חיבור) 7–14 ימי עבודה ממשלוח הסקר למבקש",
+      "condition": "step.id == 'pre.07.wait_distributor_answer' and survey.sent_at is not null",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "due_at_min",
+            "value": "add_business_days(survey.sent_at, 7)"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "due_at_max",
+            "value": "add_business_days(survey.sent_at, 14)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "אמות מידה (תקציר)",
+        "section": null,
+        "url": "https://www.nevo.co.il/law_html/law01/501_864.htm",
+        "date": null,
+        "research_ref": "V1"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "sent",
+          "given": {
+            "step": {
+              "id": "pre.07.wait_distributor_answer"
+            },
+            "survey": {
+              "sent_at": "2026-10-01"
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": "לא ברור אם 'משלוח הסקר' = הגשת הבקשה או שלב אחר — לאימות"
+    },
+    {
+      "key": "iec.sla.distributor_answer",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "SLA לתשובת מחלק — מספר ימי עבודה לא אומת; נשמר כפרמטר null",
+      "condition": "step.id == 'pre.07.wait_distributor_answer'",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "due_at",
+            "value": "add_business_days(sla.anchor, param('sla.distributor_answer_bd'))"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "SLA תשובת מחלק לא ידוע (V1) — תזכורות 7/14/30 בלבד"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/01-iec-process.md",
+        "section": "§2 שלב 5, §11.1",
+        "url": null,
+        "date": null,
+        "research_ref": "V1"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "step",
+          "given": {
+            "step": {
+              "id": "pre.07.wait_distributor_answer"
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.sla.small_system_marketing_30d",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "ציפייה שיווקית: אישור 'עד 30 יום' למערכות קטנות (לא SLA רגולטורי)",
+      "condition": "regulatory_track == 'residential_le15' and step.id == 'pre.07.wait_distributor_answer'",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "expected_calendar_days",
+            "value": 30
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "מקור שיווקי (ylsolar 2025) — לא לשימוש כ-dueAt"
+          }
+        }
+      ],
+      "source": {
+        "doc": "ylsolar — עדכוני רגולציה 2025",
+        "section": null,
+        "url": "https://ylsolar.co.il/%D7%A8%D7%92%D7%95%D7%9C%D7%A6%D7%99%D7%94-%D7%91%D7%AA%D7%97%D7%95%D7%9D-%D7%94%D7%90%D7%A0%D7%A8%D7%92%D7%99%D7%94-%D7%94%D7%A1%D7%95%D7%9C%D7%90%D7%A8%D7%99%D7%AA/",
+        "date": "2025",
+        "research_ref": "V12"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "home",
+          "given": {
+            "regulatory_track": "residential_le15",
+            "step": {
+              "id": "pre.07.wait_distributor_answer"
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.refund.negative_answer_stale_grid_data",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "חובת החזר תשלום כשתשובת המחלק שלילית בגלל זמינות רשת ונתוני הרשת לא עודכנו בתדירות הנדרשת",
+      "condition": "distributor_answer.result == 'negative' and distributor_answer.reason == 'network_availability' and grid_data_stale != false",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "refund_eligible",
+            "value": "candidate"
+          }
+        },
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "task",
+            "text_he": "לבדוק עדכון נתוני רשת של המחלק ולהגיש דרישת החזר"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "תדירות העדכון הנדרשת ונוסח אמת המידה לאימות"
+          }
+        }
+      ],
+      "source": {
+        "doc": "אמות מידה (תקציר)",
+        "section": null,
+        "url": "https://www.nevo.co.il/law_html/law01/501_864.htm",
+        "date": null,
+        "research_ref": "V1"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "negative_stale",
+          "given": {
+            "distributor_answer": {
+              "result": "negative",
+              "reason": "network_availability"
+            },
+            "grid_data_stale": null
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "refund_eligible": "candidate"
+            }
+          }
+        },
+        {
+          "name": "negative_fresh",
+          "given": {
+            "distributor_answer": {
+              "result": "negative",
+              "reason": "network_availability"
+            },
+            "grid_data_stale": false
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.fee.residential_pre_application",
+      "ref": null,
+      "scope": "pricing",
+      "name_he": "אגרת רישום/טיפול למערכת ביתית ~704 ₪ (2026); 625 ₪ במקור ישן; קבלה 28.09.26: 704.22 ₪",
+      "condition": "regulatory_track == 'residential_le15'",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "fee",
+            "product_key": "iec_pre_application_fee",
+            "qty": 1,
+            "amount_ils": 704.22,
+            "text_he": "אגרת חח\"י — בקשת שילוב (לאימות: סעיף בלוח התעריפים, מע\"מ)"
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "expected_fee_ils",
+            "value": 704.22
+          }
+        }
+      ],
+      "source": {
+        "doc": "midrag / mako 2026 (תקצירים); קבלה חח\"י 28.09.26 (הצעת חשבון 52181659, אסמכתא 0403063); sunforeveryone (625 ₪ ישן)",
+        "section": null,
+        "url": "https://www.midrag.co.il/Midragonim/Answer/17384",
+        "date": "2026",
+        "research_ref": "V2"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "home",
+          "given": {
+            "regulatory_track": "residential_le15"
+          },
+          "expect": {
+            "fires": true,
+            "add_lines": 1
+          }
+        },
+        {
+          "name": "biz",
+          "given": {
+            "regulatory_track": "commercial_15_100"
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": "704/1.18 ≈ 597 ₪ לפני מע\"מ — השערה; מהות האגרה לגדלים אחרים לאימות"
+    },
+    {
+      "key": "iec.fee.other_tracks_unknown",
+      "ref": null,
+      "scope": "pricing",
+      "name_he": "אגרות חח\"י למסלולים שאינם ביתיים — סכום לא ידוע; שורת placeholder",
+      "condition": "regulatory_track in ['commercial_15_100','commercial_100_630','mv_gt630','bess_add']",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "fee",
+            "product_key": "iec_pre_application_fee",
+            "qty": 1,
+            "amount_ils": null,
+            "text_he": "אגרת חח\"י — לפי הצעת חשבון (לאימות)"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "סכום האגרה למסלול זה לא אומת (V2)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/01-iec-process.md",
+        "section": "§8, §11.2",
+        "url": null,
+        "date": null,
+        "research_ref": "V2"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "biz",
+          "given": {
+            "regulatory_track": "commercial_15_100"
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.form.22_8_22_required",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "טופס 'בקשת שילוב מתקן ייצור פוטו-וולטאי לרשת חח\"י' גרסה 22-8-22 כולל הצהרת מבקש (קרבה לעובדי החברה)",
+      "condition": "submission.kind == 'iec_pre'",
+      "consequences": [
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "iec_form_22_8_22",
+            "step": "pre.04.build_pack"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "האם קיים טופס חדש 2024–2026 — לאימות (V5)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "חח\"י — טופס בקשת שילוב 22-8-22",
+        "section": null,
+        "url": "https://ieccontent.iec.co.il/media/u4ndfafz/%D7%98%D7%95%D7%A4%D7%A1-%D7%91%D7%A7%D7%A9%D7%AA-%D7%A9%D7%99%D7%9C%D7%95%D7%91-%D7%9E%D7%AA%D7%A7%D7%9F-22-8-22.pdf",
+        "date": "2022-08-22",
+        "research_ref": "V5"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "pre",
+          "given": {
+            "submission": {
+              "kind": "iec_pre"
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.docs.pdf_only_electricity_admin",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "מינהל החשמל מקבל מסמכים ב-PDF בלבד; digitalorders — פורמטים לא אומתו → PDF לכל החבילות",
+      "condition": "document.format != 'pdf'",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "מסמך שאינו PDF בחבילת הגשה"
+          }
+        }
+      ],
+      "source": {
+        "doc": "תקציר gov.il (מינהל החשמל); docs/plan/research/01-iec-process.md §4 'פורמט קבצים'",
+        "section": null,
+        "url": null,
+        "date": null,
+        "research_ref": "V5"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "jpg",
+          "given": {
+            "document": {
+              "format": "jpg"
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        },
+        {
+          "name": "pdf",
+          "given": {
+            "document": {
+              "format": "pdf"
+            }
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.portal.manual_submission",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "אין API/intake מובנה בחח\"י — כל הגשה היא משימה ידנית עם חבילה מוכנה; מעקב סטטוס ידני/חצי-ידני",
+      "condition": "submission.kind in ['iec_pre','iec_inspection','tariff_registration']",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "requiresHumanPick",
+            "value": true
+          }
+        },
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "status_tracking",
+            "value": "manual"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/01-iec-process.md",
+        "section": "§5 'API / intake'",
+        "url": "https://digitalorders.iec.co.il",
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "pre",
+          "given": {
+            "submission": {
+              "kind": "iec_pre"
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.inspection.private_before_iec",
+      "ref": null,
+      "scope": "inspection",
+      "name_he": "בדיקת בודק פרטי (טופס בדיקה לפי מינהל החשמל + דוח) לפני הזמנת בדיקת חח\"י",
+      "condition": "submission.kind == 'iec_inspection'",
+      "consequences": [
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "iec_inspection_form",
+            "step": "insp.01.gate_private_inspection"
+          }
+        },
+        {
+          "type": "block",
+          "params": {
+            "when": "inspection.defects.open > 0",
+            "message": "ליקויים פתוחים לפני הזמנת בדיקת חח\"י"
+          }
+        }
+      ],
+      "source": {
+        "doc": "הנחיות מינהל החשמל — טופס בדיקה/דו\"ח בדיקה (תוספת שנייה); docs/plan/research/01-iec-process.md §7",
+        "section": null,
+        "url": "https://www.gov.il/BlobFolder/generalpage/hanayot_minhal_db_files/he/Files_Minhal_Hashmal_FILES_~2.PDF",
+        "date": null,
+        "research_ref": "V7"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 400,
+      "tests": [
+        {
+          "name": "defects",
+          "given": {
+            "submission": {
+              "kind": "iec_inspection"
+            },
+            "inspection": {
+              "defects": {
+                "open": 2
+              }
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.inspection.pack_contents",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "חבילת בדיקת מתקן: חד-קו חתום כולל הארקה, טופס בדיקה, דפי נתונים ממיר+מודולים, אישור גודל חיבור",
+      "condition": "submission.kind == 'iec_inspection'",
+      "consequences": [
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "sld_signed",
+            "step": "insp.02.build_pack"
+          }
+        },
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "iec_inspection_form",
+            "step": "insp.02.build_pack"
+          }
+        },
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "inverter_datasheet",
+            "step": "insp.02.build_pack"
+          }
+        },
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "module_datasheet",
+            "step": "insp.02.build_pack"
+          }
+        },
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "connection_size_approval",
+            "step": "insp.02.build_pack"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "הצהרות מתקין/מתכנן, קונסטרוקטור, ביטוח, רשות מקומית — לא אומת כדרישת חח\"י (V6)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "תקציר טופס השילוב + הנחיות מינהל החשמל; docs/plan/research/01-iec-process.md §4",
+        "section": null,
+        "url": "https://ieccontent.iec.co.il/media/u4ndfafz/%D7%98%D7%95%D7%A4%D7%A1-%D7%91%D7%A7%D7%A9%D7%AA-%D7%A9%D7%99%D7%9C%D7%95%D7%91-%D7%9E%D7%AA%D7%A7%D7%9F-22-8-22.pdf",
+        "date": null,
+        "research_ref": "V5,V6"
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "insp",
+          "given": {
+            "submission": {
+              "kind": "iec_inspection"
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.tariff.registration_portal",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "רישום לאסדרה דרך 'פורטל יצרנים' (מדריך 10-10-2023) אחרי אישור חיבור",
+      "condition": "submission.kind == 'tariff_registration' and document.operation_approval is null",
+      "consequences": [
+        {
+          "type": "block",
+          "params": {
+            "message": "אין אישור הפעלה — לא ניתן לרשום לאסדרה"
+          }
+        }
+      ],
+      "source": {
+        "doc": "חח\"י — מדריך יצירת בקשת רישום לאסדרה חדשה",
+        "section": null,
+        "url": "https://ieccontent.iec.co.il/media/m2ac3uuz/",
+        "date": "2023-10-10",
+        "research_ref": null
+      },
+      "verification": "summary",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "no_approval",
+          "given": {
+            "submission": {
+              "kind": "tariff_registration"
+            },
+            "document": {
+              "operation_approval": null
+            }
+          },
+          "expect": {
+            "fires": true,
+            "blocks": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.fast_track_70104",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "מסלול מהיר להחלטה 70104 (הרחבת המסלול המהיר לחיבור PV/אגירה) — תוכן לא נקרא",
+      "condition": "regulatory_track in ['residential_le15']",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "fast_track_candidate",
+            "value": {
+              "value": null,
+              "verification": "לאימות"
+            }
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "מי זכאי ומה מקוצר — לאימות (V12)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "רשות החשמל — החלטה 70104 (RIA)",
+        "section": null,
+        "url": "https://www.gov.il/BlobFolder/policy/70104/he/Files_Hachlatot_70104_ria.pdf",
+        "date": null,
+        "research_ref": "V12"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "home",
+          "given": {
+            "regulatory_track": "residential_le15"
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "pua.operating_permit_04_2026",
+      "ref": null,
+      "scope": "submission",
+      "name_he": "היתר הפעלה מרשות החשמל למתקן ייצור באנרגיה מתחדשת (עמוד חדש 04/2026) — סף גודל לא אומת",
+      "condition": "regulatory_track is not null",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "operating_permit_required",
+            "value": "regulatory_track == 'mv_gt630' ? true : null"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "לאילו גדלים חל ההיתר ומה הקשר לאישור חח\"י — לאימות (V10)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "gov.il — heiter_mithadeshet_new_04_2026; hashmalnet טופס בקשה להיתר הפעלה",
+        "section": null,
+        "url": "https://www.gov.il/he/pages/heiter_mithadeshet_new_04_2026",
+        "date": "2026-04",
+        "research_ref": "V10"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 300,
+      "tests": [
+        {
+          "name": "mv",
+          "given": {
+            "regulatory_track": "mv_gt630"
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "operating_permit_required": true
+            }
+          }
+        },
+        {
+          "name": "home",
+          "given": {
+            "regulatory_track": "residential_le15"
+          },
+          "expect": {
+            "fires": true,
+            "flags": {
+              "operating_permit_required": null
+            }
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "iec.meter.remote_reading_gt50",
+      "ref": null,
+      "scope": "pricing",
+      "name_he": "מעל 50 kW מונה קריאה מרחוק על חשבון הבעלים — לאימות",
+      "condition": "p_ac_kw > 50",
+      "consequences": [
+        {
+          "type": "add_line",
+          "params": {
+            "kind": "fee",
+            "product_key": "iec_remote_reading_meter",
+            "qty": 1,
+            "amount_ils": null,
+            "text_he": "מונה קריאה מרחוק (לאימות)"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "לא נמצא מקור בדוחות המחקר; מופיע בתוכנית אב §6.1 כ'לאימות'"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/00-master-plan.md",
+        "section": "§6.1",
+        "url": null,
+        "date": null,
+        "research_ref": null
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 200,
+      "tests": [
+        {
+          "name": "60kw",
+          "given": {
+            "p_ac_kw": 60
+          },
+          "expect": {
+            "fires": true
+          }
+        },
+        {
+          "name": "40kw",
+          "given": {
+            "p_ac_kw": 40
+          },
+          "expect": {
+            "fires": false
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "inspection.periodic_5y",
+      "ref": null,
+      "scope": "inspection",
+      "name_he": "בדיקה חוזרת כל 5 שנים — מקור: מדריך מתקין, לא רגולטורי מאומת",
+      "condition": "gridconnection.activatedAt is not null",
+      "consequences": [
+        {
+          "type": "set_flag",
+          "params": {
+            "flag": "periodic_inspection_due",
+            "value": "add_years(gridconnection.activatedAt, 5)"
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "מקור רגולטורי לאימות (V20)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/00-master-plan.md; research/06",
+        "section": "§11",
+        "url": null,
+        "date": null,
+        "research_ref": "V20"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 400,
+      "tests": [
+        {
+          "name": "active",
+          "given": {
+            "gridconnection": {
+              "activatedAt": "2026-10-01"
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    },
+    {
+      "key": "inspection.report_62446_category1",
+      "ref": null,
+      "scope": "inspection",
+      "name_he": "דוח בודק לפי IEC 62446-1 קטגוריה 1 (+2 כשנדרש) כתבנית המשרד; מעמד רשמי בישראל לא אומת",
+      "condition": "submission.kind == 'iec_inspection'",
+      "consequences": [
+        {
+          "type": "require_document",
+          "params": {
+            "kind": "inspector_report_62446",
+            "step": "insp.02.build_pack",
+            "optional": true
+          }
+        },
+        {
+          "type": "warn",
+          "params": {
+            "message": "האם חח\"י/מינהל החשמל דורשים דוח 62446-1 — לאימות (V7)"
+          }
+        }
+      ],
+      "source": {
+        "doc": "docs/plan/research/02-regulation-tariffs.md",
+        "section": "§3.2 ת\"י 62446-1; docs/plan/00-master-plan.md §11",
+        "url": null,
+        "date": null,
+        "research_ref": "V7"
+      },
+      "verification": "unverified",
+      "verified_by": null,
+      "verified_at": null,
+      "supersedes": null,
+      "valid_from": null,
+      "valid_to": null,
+      "priority": 400,
+      "tests": [
+        {
+          "name": "insp",
+          "given": {
+            "submission": {
+              "kind": "iec_inspection"
+            }
+          },
+          "expect": {
+            "fires": true
+          }
+        }
+      ],
+      "notes": null
+    }
+  ]
+}

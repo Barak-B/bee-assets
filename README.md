@@ -25,3 +25,7 @@ Public assets for email signatures and external use.
 - [`partnership/sunstock/sunstock-icon-600.png`](partnership/sunstock/sunstock-icon-600.png) — הסמל בלבד, לאייקונים ולתמונות פרופיל.
 - [`partnership/sunstock/sunstock-brand-sheet.png`](partnership/sunstock/sunstock-brand-sheet.png) — דף מותג: שם, סלוגנים, משמעות הסמל, גרסאות, צבעים וגופן.
 - מקור: `gen_sunstock.py` מייצר את קובצי ה-HTML/SVG, `render.mjs` מייצא PNG דרך Playwright.
+
+## Planning
+
+- [`docs/plan/00-master-plan.md`](docs/plan/00-master-plan.md) — תוכנית אב ל-B.E.E Engine (הצעות, כתבי כמויות, תוכניות, הגשה לחח"י, CRM מחזור חיים) + דוחות מחקר ב-`docs/plan/research/`.
