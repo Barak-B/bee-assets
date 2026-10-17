@@ -134,12 +134,13 @@ def test_pdf_and_archive(design: Design, tmp_path: Path):
 
 
 def test_eplan_bridge(tmp_path: Path):
-    from bee_cad.eplan_bridge import device_from_eplan, load_from_files
+    from bee_cad.eplan_bridge import _poles, device_from_eplan, load_from_files
 
     d = device_from_eplan({"tag": "RCD-INV", "kind": "RCD", "rating": "32A 300mA", "poles": "4P", "note": "type B — …"})
     assert (d.kind, d.poles, d.rating_a, d.idn_ma, d.rcd_type) == ("rcd", 4, 32.0, 300, "B")
     spd = device_from_eplan({"tag": "SPD-AC", "kind": "SPD", "rating": "T2 275V", "poles": "3P+N"})
     assert (spd.kind, spd.poles) == ("spd", 4)
+    assert [_poles(p) for p in ("1P+N", "3p + n", "4P", "2P", "", "3P")] == [2, 4, 4, 2, 1, 3]
 
     ex = Path(__file__).resolve().parents[1] / "examples" / "eplan"
     design = load_from_files(ex / "example.yaml", ex / "example_calc.json")

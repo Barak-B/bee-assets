@@ -22,7 +22,7 @@ from .model import Board, Busbar, Cable, Circuit, Design, Device, Enclosure, Gro
 
 _RATING = re.compile(r"(\d+(?:\.\d+)?)\s*A")
 _MA = re.compile(r"(\d+)\s*mA")
-_POLES = re.compile(r"(\d)P")
+_POLES = re.compile(r"(\d)P(\s*\+\s*N)?", re.I)
 
 
 def _rating_a(s: str) -> float | None:
@@ -31,11 +31,10 @@ def _rating_a(s: str) -> float | None:
 
 
 def _poles(s: str) -> int:
-    s = s or ""
-    if "3P+N" in s or "4P" in s:
-        return 4
-    m = _POLES.search(s)
-    return int(m.group(1)) if m else 1
+    m = _POLES.search(s or "")
+    if not m:
+        return 1
+    return int(m.group(1)) + (1 if m.group(2) else 0)   # "1P+N" → 2, "3P+N" → 4
 
 
 def _kind(kind: str) -> str:
