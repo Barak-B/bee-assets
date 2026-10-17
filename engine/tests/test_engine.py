@@ -198,8 +198,10 @@ def test_drill_template():
     ex = Path(__file__).resolve().parents[1] / "examples" / "bess_drill_template.json"
     des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
     t = DrillTemplate.model_validate(des.drill_template)
-    assert sum(len(t.anchor_points(u)) for u in t.units) == 16
-    assert t.anchor_points(t.units[0])[0] == (270.0, 468.0)
+    assert sum(len(t.anchor_points(u)) for u in t.units) == 32
+    assert t.anchor_points(t.units[0])[0] == (120.0, 300.0)
+    assert t.anchor_points(t.units[1])[0] == (1209.0, 500.0)
+    assert t.anchor_points(t.units[0])[1] == (180.0, 400.0)
     assert TemplateChecks().run(t).problems == []
     bad = t.model_copy(update={"units": t.units + [Unit(tag="X", x_mm=5000, y_mm=50, width_mm=989, depth_mm=1465)]})
     probs = TemplateChecks().run(bad).problems
