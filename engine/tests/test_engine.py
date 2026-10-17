@@ -171,3 +171,21 @@ def test_audit_clean_on_examples(design: Design):
             assert warnings == [], (no, warnings)
             rep = audit_sheet(doc, i, no)
             assert rep.clean, (no, rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3], rep.text_outside[:3])
+
+
+def test_mv_sheets_audit_clean():
+    from bee_cad.audit import audit_sheet
+    from bee_cad.mv import wrap
+
+    assert wrap("50/51, 50N/51N, 67N, 27/59", 12, 3) == ["50/51, 50N/51N", "67N, 27/59"]
+    mv = Path(__file__).resolve().parents[1] / "examples" / "mv_bess_site.json"
+    des = Design.model_validate(json.loads(mv.read_text(encoding="utf-8")))
+    result = build(des, ("mv",))
+    assert list(result) == ["E-05", "E-05A"]
+    doc = next(iter(result.values()))[0]
+    inserts = [e.dxf.name for e in doc.modelspace().query("INSERT")]
+    assert inserts.count("BEE_ACB_3P") >= 6 and "BEE_VT" in inserts and "BEE_CABLE_HEAD" in inserts
+    for i, (no, (_, warnings)) in enumerate(result.items()):
+        assert warnings == [], (no, warnings)
+        rep = audit_sheet(doc, i, no)
+        assert rep.clean, (no, rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])

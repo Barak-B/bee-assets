@@ -13,13 +13,14 @@ from typing import Iterable
 from ezdxf.document import Drawing
 
 from .model import Design
+from .mv import draw_mv, draw_mv_schedule
 from .panel import draw_panel
 from .sheet import A3_H, A3_W, SheetContext, draw_frame, new_document
 from .sld import draw_sld
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("sld", "panel")
+SHEET_KINDS = ("mv", "sld", "panel")
 
 
 def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = "unicode",
@@ -30,9 +31,28 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
     sheets = list(sheets)
     doc = new_document(mode) if one_file else None
     idx = 0
-    total = sum(1 if s == "sld" else len(design.boards) for s in sheets)
+    total = sum(2 * len(design.mv_boards) if s == "mv" else (1 if s == "sld" else len(design.boards)) for s in sheets)
+    if not design.boards and "sld" in sheets:
+        sheets.remove("sld")
+        total -= 1
     for kind in sheets:
-        if kind == "sld":
+        if kind == "mv":
+            for mb in design.mv_boards:
+                no = design.title.sheet_no if not out else f"{design.title.sheet_no.split('-')[0]}-M{len(out) + 1:02d}"
+                tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total, "sheet_no": no,
+                                                     "sheet_title": design.title.sheet_title or f"חד-קווי מתח גבוה — {mb.title}"})
+                d = doc or new_document(mode)
+                ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
+                draw_frame(ctx, tb)
+                warnings = draw_mv(ctx, design, mb)
+                out[no] = (d, warnings)
+                idx += 1
+                tb2 = tb.model_copy(update={"sheet_index": idx + 1, "sheet_no": no + "A", "sheet_title": f"מפרט תאים וציוד — {mb.title}"})
+                ctx2 = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
+                draw_frame(ctx2, tb2)
+                out[no + "A"] = (d, draw_mv_schedule(ctx2, design, mb))
+                idx += 1
+        elif kind == "sld":
             tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total})
             tb.sheet_title = tb.sheet_title or "חד-קווי — לוחות חשמל"
             d = doc or new_document(mode)

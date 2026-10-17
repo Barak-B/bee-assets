@@ -191,7 +191,47 @@ def _emergency(blk: BlockLayout) -> None:
     blk.add_line((-1.6, 4.1), (1.6, 0.9), dxfattribs={"layer": SYM})
 
 
+def _vt(blk: BlockLayout) -> None:
+    """Voltage transformer: two small circles, primary from the top terminal."""
+    _stub(blk, 7.0, H)
+    blk.add_circle((0, 5.2), 1.9, dxfattribs={"layer": SYM})
+    blk.add_circle((0, 2.6), 1.9, dxfattribs={"layer": SYM})
+    _stub(blk, 0, 0.7)
+
+
+def _earthing_switch(blk: BlockLayout) -> None:
+    """Earthing switch on a line: isolator blade from the line to earth (drawn to the right)."""
+    blk.add_line((0, 5.0), (2.0, 5.0), dxfattribs={"layer": SYM})
+    blk.add_line((2.0, 5.0), (4.6, 7.2), dxfattribs={"layer": SYM})
+    blk.add_line((5.0, 5.0), (7.0, 5.0), dxfattribs={"layer": SYM})
+    blk.add_line((5.0, 3.8), (5.0, 6.2), dxfattribs={"layer": SYM})
+    for i, w in enumerate((1.6, 1.0, 0.5)):
+        blk.add_line((7.0 + i * 0.7, 5.0 - w), (7.0 + i * 0.7, 5.0 + w), dxfattribs={"layer": LAYERS["pe"].name})
+
+
+def _cable_head(blk: BlockLayout) -> None:
+    """Cable termination: triangle on the line (IEC 60617-S00224 style)."""
+    _stub(blk, 4.0, H)
+    blk.add_lwpolyline([(0, 4.0), (-1.6, 0.5), (1.6, 0.5)], close=True, dxfattribs={"layer": SYM})
+    _stub(blk, 0, 0.5)
+
+
+def _vpis(blk: BlockLayout) -> None:
+    blk.add_lwpolyline([(-3.5, 0), (3.5, 0), (3.5, 3.6), (-3.5, 3.6)], close=True, dxfattribs={"layer": SYM})
+    blk.add_text("VPIS", dxfattribs={"layer": SYM, "height": 1.3, "style": "BEE-LAT"}).set_placement((0, 1.8), align=__import__("ezdxf").enums.TextEntityAlignment.MIDDLE_CENTER)
+
+
+def _relay(blk: BlockLayout) -> None:
+    blk.add_lwpolyline([(-3.0, 0), (3.0, 0), (3.0, 4.0), (-3.0, 4.0)], close=True, dxfattribs={"layer": SYM})
+    blk.add_text("R", dxfattribs={"layer": SYM, "height": 1.8, "style": "BEE-LAT"}).set_placement((0, 2.0), align=__import__("ezdxf").enums.TextEntityAlignment.MIDDLE_CENTER)
+
+
 BUILDERS = {
+    "BEE_VT": _vt,
+    "BEE_ES": _earthing_switch,
+    "BEE_CABLE_HEAD": _cable_head,
+    "BEE_VPIS": _vpis,
+    "BEE_RELAY": _relay,
     "BEE_MCB_1P": lambda b: _breaker(b, 1, "mcb"),
     "BEE_MCB_2P": lambda b: _breaker(b, 2, "mcb"),
     "BEE_MCB_3P": lambda b: _breaker(b, 3, "mcb"),

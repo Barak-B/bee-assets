@@ -143,12 +143,42 @@ class Node(BaseModel):
     """A non-board element on the single-line: inverter, battery, generator, PV, transformer."""
 
     id: str
-    kind: Literal["inverter", "battery", "generator", "pv", "transformer", "load", "bess", "ups", "meter"]
+    kind: Literal["inverter", "battery", "generator", "pv", "transformer", "load", "bess", "ups", "meter", "grid", "pcs", "rmu"]
     label: str
     sublabel: str = ""
     rating: str = ""                      # "15 kW" / "630 kVA 33/0.4kV"
     device: Optional[Device] = None       # isolator at the node, if any
     cable: Optional[Cable] = None
+
+
+class MVCell(BaseModel):
+    """One switchgear cell (תא) of an MV board, drawn top → bottom: busbar tap, breaker, CT, earthing switch, VPIS, cable."""
+
+    tag: str                              # +H1
+    device_tag: str                       # CB1 / VT / PM / Q1
+    title: str = ""                       # "מפסק ראשי — תפעול משותף עם חח\"י"
+    kind: Literal["incomer", "feeder", "vt", "metering", "coupler"] = "feeder"
+    breaker: Optional[Device] = None      # VCB: kind "acb" draws a draw-out breaker
+    ct: Optional[str] = None              # "3× 200/1A 5P20 10VA"
+    vt: Optional[str] = None              # "33kV/√3 / 100V/√3 / 100V/3"
+    relay: Optional[str] = None           # "50/51, 50N/51N, 67N, 27/59, 81U/O"
+    earthing_switch: bool = True
+    vpis: bool = True
+    metering: Optional[str] = None        # "תא מניית ייצור דו-כיווני"
+    cable: Optional[Cable] = None         # outgoing / incoming cable
+    to: Optional[str] = None              # node id below the cell (transformer, PCS, grid)
+    direction: Literal["down", "up"] = "down"   # incomer cable arrives from the top (grid) when "up"
+    note: str = ""
+
+
+class MVBoard(BaseModel):
+    id: str
+    title: str                            # "מסדר מ\"ג — חדר פרטי"
+    voltage: str = "33kV"
+    busbar: Busbar = Field(default_factory=lambda: Busbar(label="L1 L2 L3"))
+    cells: list[MVCell] = Field(default_factory=list)
+    aux: str = ""                         # "24VDC"
+    notes: list[str] = Field(default_factory=list)
 
 
 class Enclosure(BaseModel):
@@ -190,6 +220,7 @@ class Design(BaseModel):
 
     title: TitleBlock = Field(default_factory=TitleBlock)
     boards: list[Board] = Field(default_factory=list)
+    mv_boards: list["MVBoard"] = Field(default_factory=list)
     nodes: list[Node] = Field(default_factory=list)
     legend: bool = True
     notes: list[str] = Field(default_factory=list)
