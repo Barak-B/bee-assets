@@ -208,7 +208,7 @@ class TemplateRenderer:
             for i, (x, y) in enumerate(t.anchor_points(u), 1):
                 if self.scale <= 25:
                     self.anchor_mark(ox + s(x), oy + s(y))
-                    ctx.text(str(i), (ox + s(x) + 2.0, oy + s(y) + 2.0), 1.3, "dim", TA.BOTTOM_LEFT)
+                    ctx.text(str(i), (ox + s(x) + 2.0, oy + s(y) + 2.0), 1.4, "dim", TA.BOTTOM_LEFT)
                 else:                      # small scale: a dot per anchor, numbers only on the detail
                     ctx.msp.add_circle((ox + s(x), oy + s(y)), 0.5, dxfattribs={"layer": LAYERS["sld_main"].name})
         # dimension chains: beam centrelines (1:25) or cabinet pitch (smaller scales); Y of anchor rows of unit 1

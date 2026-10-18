@@ -16,7 +16,8 @@ import yaml
 from .archive import archive
 from .audit import audit_sheet
 from .model import Design
-from .render import SHEET_KINDS, build, merge_pdfs, render_pdf, render_png, save_dxf
+from .qa import check_design, check_sheets, write_report
+from .render import SHEET_KINDS, build, merge_pdfs, plan_sheets, render_pdf, render_png, save_dxf
 
 
 def load_design(path: Path) -> Design:
@@ -71,6 +72,14 @@ def cmd_render(args: argparse.Namespace) -> int:
         merge_pdfs(pdf_pages, set_pdf)
         outputs["pdf_set"] = set_pdf
         print(f"PDF   {set_pdf}  ({len(pdf_pages)} pages)")
+    # self-check: model rules + sheet rules → <out>/<stem>_qa.{json,md}
+    qa = check_design(design)
+    check_sheets(qa, doc, result, [e.no for e in plan_sheets(design, sheets)])
+    qj, qm = write_report(qa, out, stem)
+    outputs["qa_json"], outputs["qa_md"] = qj, qm
+    print(f"QA    score={qa.score} errors={len(qa.errors)} warnings={len(qa.warnings)} clean={qa.clean}  {qm}")
+    for f in qa.errors[:8]:
+        print(f"      ERR {f.code} {f.where}: {f.message}")
     folder = man = None
     if args.archive:
         folder, man = archive(design, outputs, Path(args.archive), stage=args.stage)
@@ -78,7 +87,8 @@ def cmd_render(args: argparse.Namespace) -> int:
     if args.job:
         from .hive import job_record, write_job
 
-        rec = job_record(Path(args.design), sheets, outputs, audits, all_warnings, folder, man.drive_root if man else None, started)
+        rec = job_record(Path(args.design), sheets, outputs, audits, all_warnings, folder, man.drive_root if man else None, started,
+                         qa={"score": qa.score, "errors": len(qa.errors), "warnings": len(qa.warnings), "clean": qa.clean})
         job_path = write_job(rec, Path(args.job) if args.job != "auto" else out / f"{stem}_job.json")
         print(f"JOB   {job_path}  status={rec['status']} clean={rec['result']['clean']}")
     return 0
@@ -100,6 +110,23 @@ def cmd_validate(args: argparse.Namespace) -> int:
     n_circ = sum(len(b.all_circuits()) for b in design.boards)
     print(f"OK  boards={len(design.boards)} circuits={n_circ} nodes={len(design.nodes)}")
     return 0
+
+
+def cmd_check(args: argparse.Namespace) -> int:
+    """Model + sheet self-check without writing DXF/PDF (sheets are built in memory)."""
+    design = load_design(Path(args.design))
+    qa = check_design(design)
+    if not args.model_only:
+        sheets = args.sheets.split(",") if args.sheets else list(SHEET_KINDS)
+        result = build(design, sheets)
+        if result:
+            doc = next(iter(result.values()))[0]
+            check_sheets(qa, doc, result, [e.no for e in plan_sheets(design, sheets)])
+    if args.out:
+        qj, qm = write_report(qa, Path(args.out), Path(args.design).stem)
+        print(f"QA    {qm}")
+    print(qa.to_markdown())
+    return 0 if (qa.clean if args.strict else not qa.errors) else 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -124,6 +151,13 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--merge", help="existing-board design JSON whose MDB groups replace the placeholder")
     e.add_argument("--out", default="design.json")
     e.set_defaults(func=cmd_from_eplan)
+    c = sub.add_parser("check", help="self-check: model rules + sheet audit → QA report (exit 1 on errors)")
+    c.add_argument("design")
+    c.add_argument("--sheets", help="comma list of sheet kinds to build for the sheet checks")
+    c.add_argument("--model-only", action="store_true")
+    c.add_argument("--strict", action="store_true", help="also fail on any text collision")
+    c.add_argument("--out", help="write <stem>_qa.json / .md here")
+    c.set_defaults(func=cmd_check)
     v = sub.add_parser("validate", help="validate a design file")
     v.add_argument("design")
     v.set_defaults(func=cmd_validate)

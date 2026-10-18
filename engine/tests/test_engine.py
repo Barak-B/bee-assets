@@ -256,3 +256,31 @@ def test_bess1_18_units_and_job(tmp_path: Path):
         assert k in rec
     assert rec["kind"] in schema["properties"]["kind"]["enum"] and rec["status"] in schema["properties"]["status"]["enum"]
     assert p.exists()
+
+
+def test_qa_checks(design: Design):
+    from bee_cad.model import Cable, Circuit, Device, Group
+    from bee_cad.qa import cable_ampacity, check_design, check_sheets
+
+    assert cable_ampacity("3X2.5", 1) == 24 and cable_ampacity("N2XY 5X10", 3) == 75 * 0.9
+    assert cable_ampacity("2x(4x150)NA2XY", 3) == 315 * 0.9 and cable_ampacity("גמיש", 1) is None
+    rep = check_design(design)
+    assert not rep.errors and rep.score >= 95
+    # break the model on purpose: socket without RCD on a 300 mA group, breaker above cable, feeder to nowhere
+    bad = design.model_copy(deep=True)
+    mdb = bad.board("MDB")
+    mdb.groups.append(Group(tag="RCD-X", device=Device(tag="RCD-X", kind="rcd", poles=4, rating_a=40, idn_ma=300),
+                            circuits=[Circuit(tag="MX", device=Device(tag="MX", kind="mcb", rating_a=32, curve="C"),
+                                              cable=Cable(designation="3X2.5"), load="שקעים — מרפסת")]))
+    mdb.feeders.append(Circuit(tag="QX", device=Device(tag="QX", kind="mccb", poles=4, rating_a=63), kind="feeder", to_board="NOPE"))
+    rep2 = check_design(bad)
+    codes = {f.code for f in rep2.errors}
+    assert {"SOCKET_RCD_300", "CABLE_UNDERSIZED", "FEEDER_TARGET"} <= codes
+    assert rep2.score < rep.score
+    result = build(design, ("cover", "sld"))
+    doc = next(iter(result.values()))[0]
+    check_sheets(rep, doc, result, ["E-00", "E-05"])
+    assert rep.sheet_audit == {"E-00": {"text_text": 0, "text_line": 0, "outside": 0}, "E-05": {"text_text": 0, "text_line": 0, "outside": 0}}
+    check_sheets(rep, doc, result, ["E-00"])
+    assert any(f.code == "PLAN_MISMATCH" for f in rep.errors)
+    assert "# דוח בדיקה עצמית" in rep.to_markdown()

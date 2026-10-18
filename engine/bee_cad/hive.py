@@ -19,8 +19,10 @@ def _now() -> str:
 
 def job_record(design_path: Path, sheets: list[str], outputs: dict[str, Path], audits: dict[str, dict[str, int]],
                warnings: dict[str, list[str]], archive_folder: Path | None, drive_root: str | None,
-               started_at: str, error: str | None = None) -> dict[str, Any]:
+               started_at: str, error: str | None = None, qa: dict[str, Any] | None = None) -> dict[str, Any]:
     clean = all(sum(v.values()) == 0 for v in audits.values()) and not any(warnings.values())
+    if qa is not None:
+        clean = clean and bool(qa.get("clean", True))
     rec: dict[str, Any] = {
         "id": str(uuid.uuid4()),
         "kind": "edit",
@@ -36,6 +38,7 @@ def job_record(design_path: Path, sheets: list[str], outputs: dict[str, Path], a
             "audit": audits,
             "warnings": warnings,
             "clean": clean,
+            "qa": qa,
             "archive_folder": str(archive_folder) if archive_folder else None,
             "drive_root": drive_root,
         },
