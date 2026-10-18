@@ -3,6 +3,8 @@
     bee-cad render examples/house_karka.json --out out/house --png
     bee-cad render design.yaml --sheets sld --mode shx
     bee-cad validate design.json
+    bee-cad check design.json [--json]
+    bee-cad bom design.json --out bom.csv
 """
 from __future__ import annotations
 
@@ -13,20 +15,71 @@ from pathlib import Path
 
 import yaml
 
+from pydantic import ValidationError
+
 from .archive import archive
 from .audit import audit_sheet
+from .bom import bom, write_csv
+from .checks import as_dicts, check, summary
 from .model import Design
 from .render import SHEET_KINDS, build, merge_pdfs, render_pdf, render_png, save_dxf
 
 
+class DesignFileError(Exception):
+    """A design file that cannot be read; the message is Hebrew and names the field."""
+
+
+_PYDANTIC_HE = {
+    "missing": "שדה חובה חסר",
+    "literal_error": "ערך לא מוכר",
+    "float_parsing": "צריך להיות מספר",
+    "int_parsing": "צריך להיות מספר שלם",
+    "string_type": "צריך להיות טקסט",
+    "list_type": "צריך להיות רשימה",
+    "bool_parsing": "צריך להיות true או false",
+}
+
+
+def _where(loc: tuple) -> str:
+    return " → ".join(str(p) for p in loc)
+
+
 def load_design(path: Path) -> Design:
-    text = path.read_text(encoding="utf-8")
-    data = yaml.safe_load(text) if path.suffix.lower() in (".yaml", ".yml") else json.loads(text)
-    return Design.model_validate(data)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise DesignFileError(f"הקובץ לא נמצא: {path}") from None
+    try:
+        data = yaml.safe_load(text) if path.suffix.lower() in (".yaml", ".yml") else json.loads(text)
+    except (json.JSONDecodeError, yaml.YAMLError) as e:
+        raise DesignFileError(f"הקובץ {path.name} לא תקין: {e}") from None
+    try:
+        return Design.model_validate(data)
+    except ValidationError as e:
+        lines = [f"בקובץ {path.name} יש {e.error_count()} שגיאות:"]
+        for err in e.errors():
+            he = _PYDANTIC_HE.get(err["type"], err["msg"])
+            extra = ""
+            if err["type"] == "literal_error":
+                extra = f" (אפשרויות: {err.get('ctx', {}).get('expected', '')})"
+            lines.append(f"  • {_where(err['loc'])}: {he}{extra}")
+        raise DesignFileError("\n".join(lines)) from None
+
+
+def print_findings(design: Design) -> int:
+    findings = check(design)
+    for f in findings:
+        print(f.line())
+    print(summary(findings))
+    return sum(f.level == "error" for f in findings)
 
 
 def cmd_render(args: argparse.Namespace) -> int:
     design = load_design(Path(args.design))
+    errors = print_findings(design)
+    if errors and args.strict:
+        print("לא משרטט: יש שגיאות תכנון (הסר --strict כדי לשרטט בכל זאת)", file=sys.stderr)
+        return 2
     out = Path(args.out)
     stem = args.stem or Path(args.design).stem
     sheets = args.sheets.split(",") if args.sheets else list(SHEET_KINDS)
@@ -88,6 +141,22 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_check(args: argparse.Namespace) -> int:
+    design = load_design(Path(args.design))
+    if args.json:
+        findings = check(design)
+        print(json.dumps(as_dicts(findings), ensure_ascii=False, indent=2))
+        return 1 if any(f.level == "error" for f in findings) else 0
+    return 1 if print_findings(design) else 0
+
+
+def cmd_bom(args: argparse.Namespace) -> int:
+    rows = bom(load_design(Path(args.design)))
+    write_csv(rows, Path(args.out))
+    print(f"BOM   {args.out}  ({len(rows)} שורות, {sum(r.qty for r in rows)} פריטים)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="bee-cad", description="B.E.E. CAD engine")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -101,6 +170,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--pdf", action="store_true", help="one PDF per sheet + merged <stem>_SET.pdf")
     r.add_argument("--dpi", type=int, default=110)
     r.add_argument("--archive", help="archive root (mirror of 'עבודה/לקוחות חברות ומכרזים'); copies PDF/DXF/JSON into <client>/<project>/<stage>")
+    r.add_argument("--strict", action="store_true", help="stop when the design checks find errors")
     r.add_argument("--stage", default="design", help="intake|survey|quote|licensing|design|execution|asmade|handover|maintenance")
     r.set_defaults(func=cmd_render)
     e = sub.add_parser("from-eplan", help="eplan spec YAML + calc JSON (eplan pv design --json) → design JSON")
@@ -112,8 +182,20 @@ def main(argv: list[str] | None = None) -> int:
     v = sub.add_parser("validate", help="validate a design file")
     v.add_argument("design")
     v.set_defaults(func=cmd_validate)
+    c = sub.add_parser("check", help="design rule checks (Hebrew findings)")
+    c.add_argument("design")
+    c.add_argument("--json", action="store_true", help="findings as JSON for the app")
+    c.set_defaults(func=cmd_check)
+    m = sub.add_parser("bom", help="bill of materials → CSV")
+    m.add_argument("design")
+    m.add_argument("--out", default="bom.csv")
+    m.set_defaults(func=cmd_bom)
     args = p.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except DesignFileError as e:
+        print(str(e), file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":  # pragma: no cover

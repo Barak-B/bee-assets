@@ -13,8 +13,26 @@
 cd engine
 pip install -e ".[dev]"
 bee-cad render examples/house_karka.json --out out/house --png
+bee-cad check examples/house_karka.json          # בדיקות תכנון, הודעות בעברית (--json לאפליקציה)
+bee-cad bom examples/house_karka.json --out bom.csv
 python -m pytest -q
 ```
+
+`render` מריץ את הבדיקות לפני השרטוט ומדפיס אותן; עם `--strict` הוא לא משרטט כשיש שגיאות. מפל מתח שלא הוזן מחושב ומודפס בחד-קווי.
+
+### מה נבדק
+
+| קוד | רמה | מה |
+|---|---|---|
+| `CABLE_OVERLOAD` | שגיאה | מפסק גדול מכושר ההולכה של הכבל (IEC 60364-5-52 נספח B, נחושת, 30°C, בלי מקדם קיבוץ; B1 למעגלים סופיים, C ליציאות, אלא אם `cable.method`) |
+| `DU_HIGH` / `DU_COMPUTED` | אזהרה / מידע | מפל מתח מעל 4%, או חישוב שנכתב לשרטוט (זרם מ-`load_kw`, אחרת דירוג המפסק) |
+| `POLES_PHASE`, `NO_PHASE`, `NO_CABLE` | שגיאה / אזהרה | מעגל תלת-פאזי עם מפסק חד-קוטבי, מעגל בלי מופע או בלי כבל |
+| `DUP_TAG`, `BAD_REF` | שגיאה | תג כפול בלוח, יציאה ללוח או רכיב שלא קיים |
+| `RCD_SOCKETS`, `RCD_UNDERRATED` | שגיאה / אזהרה | שקעים בלי פחת 30mA, פחת קטן מהמעגל אחריו |
+| `SELECTIVITY` | אזהרה | יציאה שלא קטנה מהמפסק הראשי (לא כולל הזנה מממיר / מצבר / גנרטור) |
+| `PHASE_BALANCE` | אזהרה | פער של יותר מ-35% בין המופעים |
+
+כתב הכמויות מקבץ פריטים זהים ומסמן כל שורה באות IEC 81346-2 (QA מפסק, FB פחת, FC מגן ברקים, PG מונה, כמו ב-Ecodial).
 
 הפלט: `out/house/house_karka.dxf` (R2018, mm) + PNG לכל גיליון. `--mode shx` כותב עברית בסדר ויזואלי (הפוך) לגופני SHX ישנים (`HEBREW.SHX` וכד').
 
@@ -29,6 +47,9 @@ python -m pytest -q
 | `bee_cad/sld.py` | פריסת החד-קווי (עמודות דטרמיניסטיות) |
 | `bee_cad/panel.py` | מילוי מסילות DIN לפי סדר החד-קווי, חזית וחתך, טבלאות |
 | `bee_cad/text.py` | עברית: סדר לוגי (TTF) / סדר ויזואלי (SHX) בעזרת python-bidi; פיצול שורות עברית/לטינית |
+| `bee_cad/calc.py` | פענוח כינוי כבל, כושר הולכה, מפל מתח, אותיות IEC 81346 |
+| `bee_cad/checks.py` | כללי התכנון וההודעות בעברית |
+| `bee_cad/bom.py` | כתב כמויות → CSV שנפתח באקסל |
 | `bee_cad/render.py` | בניית המסמך, PNG תצוגה מקדימה (ezdxf → matplotlib, רקע לבן, bidi) |
 | `assets/fonts/shx/` | 100 גופני SHX עבריים מהמשרד (HEBREW, SIVAN, NARKIS, MIRYAM, ORON, TECHNO, …) |
 | `assets/plot/` | `SARA.ctb` ו-`DWG To PDF.pc3` מה-eTransmit של הקונסטרוקטור |

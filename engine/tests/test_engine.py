@@ -189,3 +189,64 @@ def test_mv_sheets_audit_clean():
         assert warnings == [], (no, warnings)
         rep = audit_sheet(doc, i, no)
         assert rep.clean, (no, rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])
+
+
+def test_cable_calcs():
+    from bee_cad.calc import ampacity, parse_cable, voltage_drop_pct
+    from bee_cad.model import Cable
+
+    s = parse_cable("3X2.5")
+    assert (s.cores, s.csa_mm2, s.insulation) == (3, 2.5, "PVC")
+    assert parse_cable("N2XY 4X10").insulation == "XLPE"
+    assert parse_cable("3×(1×185/25) Al XLPE") is None
+    assert ampacity(s, "B1", 2) == 24
+    assert ampacity(parse_cable("5X16 Cu N2XY"), "C", 3) == 96
+    du = voltage_drop_pct(Cable(designation="3X2.5", length_m=30), 16, False)
+    assert abs(du - 100 * 2 * 16 * 0.0225 * 30 / 2.5 / 230) < 1e-9
+
+
+def test_design_checks(design: Design):
+    from bee_cad.checks import check
+    from bee_cad.model import Circuit, Group
+
+    assert not [f for f in check(design.model_copy(deep=True)) if f.level == "error"]
+
+    bad = design.model_copy(deep=True)
+    mdb = bad.board("MDB")
+    mdb.groups[0].circuits[0].device.rating_a = 32                       # 32A on 3X2.5
+    mdb.groups[0].circuits[1].tag = mdb.groups[0].circuits[2].tag        # duplicate tag
+    mdb.feeders[0].to_node = "INV-X"                                     # dangling reference
+    mdb.groups.append(Group(tag="RCD-Z", device=Device(tag="RCD-Z", kind="rcd", poles=4, rating_a=40, idn_ma=300),
+                            circuits=[Circuit(tag="S1", device=Device(tag="S1", rating_a=16), phase="L1-3",
+                                              load="שקעים — מחסן",
+                                              cable={"designation": "3X1.5", "length_m": 80})]))
+    codes = {f.code for f in check(bad)}
+    assert {"CABLE_OVERLOAD", "DUP_TAG", "BAD_REF", "RCD_SOCKETS", "POLES_PHASE", "CABLE_OVERLOAD", "DU_HIGH"} <= codes
+    s1 = bad.board("MDB").groups[-1].circuits[0]
+    assert s1.cable.du_pct is not None                                   # computed value written back for the drawing
+    over = next(f for f in check(bad) if f.code == "CABLE_OVERLOAD")
+    assert "להקטין את המפסק" in over.fix
+
+
+def test_bom(design: Design, tmp_path: Path):
+    from bee_cad.bom import bom, write_csv
+
+    rows = bom(design)
+    c16 = next(r for r in rows if r.spec == "1P C16")
+    assert c16.iec == "QA" and c16.qty == 20
+    assert next(r for r in rows if r.item == "מפסק פחת").iec == "FB"
+    write_csv(rows, tmp_path / "bom.csv")
+    assert (tmp_path / "bom.csv").read_text(encoding="utf-8-sig").startswith("IEC 81346")
+
+
+def test_hebrew_load_errors(tmp_path: Path):
+    from bee_cad.cli import DesignFileError, load_design
+
+    p = tmp_path / "bad.json"
+    p.write_text(json.dumps({"boards": [{"title": "x", "groups": [{"tag": "G", "circuits": [
+        {"tag": "M1", "device": {"tag": "M1", "kind": "breaker", "rating_a": "abc"}}]}]}]}), encoding="utf-8")
+    with pytest.raises(DesignFileError) as e:
+        load_design(p)
+    msg = str(e.value)
+    assert "שדה חובה חסר" in msg and "ערך לא מוכר" in msg and "צריך להיות מספר" in msg
+    assert "boards → 0 → id" in msg
