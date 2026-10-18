@@ -38,8 +38,9 @@ def _wrap(s: str, max_chars: int) -> list[str]:
 
 def open_items(design: Design) -> list[str]:
     out: list[str] = []
-    if design.drill_template:
-        out += list(design.drill_template.get("verify", []))
+    for part in (design.drill_template, design.site, design.earthing, design.comm):
+        if part:
+            out += list(part.get("verify", []))
     for n in design.notes:
         if n.startswith("לאימות"):
             out.append(n)
@@ -57,10 +58,17 @@ def draw_cover(ctx: SheetContext, design: Design, entries: list[SheetEntry]) -> 
     ctx.text(tb.site, (x1 - 6.0, y1 - 33.0), 4.0, "frame_text", TA.MIDDLE_RIGHT)
     ctx.text(f"מזמין: {tb.client}", (x1 - 6.0, y1 - 40.0), 3.2, "frame_text", TA.MIDDLE_RIGHT)
     ctx.text(f"מתכנן: {tb.designer}", (x1 - 6.0, y1 - 46.0), 3.2, "frame_text", TA.MIDDLE_RIGHT)
-    # status box at the top-left
-    ctx.rect(x0 + 6.0, y1 - 30.0, 46.0, 14.0, "frame")
-    ctx.text(tb.status, (x0 + 29.0, y1 - 23.0), 6.0, "frame_text", TA.MIDDLE_CENTER, bold=True)
-    ctx.text(f"מהדורה {tb.revision}  ·  {tb.date}", (x0 + 29.0, y1 - 35.0), 2.6, "frame_text", TA.MIDDLE_CENTER)
+    # status strip at the top-left: ☐ לעיון ☑ לאישור ☐ למכרז ☐ לביצוע ☐ AS-MADE
+    ctx.text("מטרת ההגשה:", (x0 + 6.0, y1 - 22.0), 2.6, "frame_text", TA.MIDDLE_LEFT, bold=True)
+    sx = x0 + 40.0
+    for st in ("לעיון", "לאישור", "למכרז", "לביצוע", "AS-MADE"):
+        ctx.rect(sx, y1 - 23.5, 3.0, 3.0, "frame")
+        if st == tb.status:
+            ctx.line((sx, y1 - 23.5), (sx + 3.0, y1 - 20.5), "frame")
+            ctx.line((sx, y1 - 20.5), (sx + 3.0, y1 - 23.5), "frame")
+        ctx.text(st, (sx + 5.0, y1 - 22.0), 2.4, "frame_text", TA.MIDDLE_LEFT, bold=(st == tb.status))
+        sx += 10.0 + len(st) * 2.6
+    ctx.text(f"מהדורה {tb.revision}  ·  {tb.date}", (x0 + 6.0, y1 - 30.0), 2.6, "frame_text", TA.MIDDLE_LEFT)
     ctx.line((x0 + 6.0, y1 - 52.0), (x1 - 6.0, y1 - 52.0), "frame")
 
     # ---- left column: project data ------------------------------------------------------------------
@@ -79,8 +87,9 @@ def draw_cover(ctx: SheetContext, design: Design, entries: list[SheetEntry]) -> 
         t = design.drill_template
         rows.append(("ארונות BESS / משטח", f"{len(t.get('units', []))} × {t.get('units', [{}])[0].get('model', '')}  ·  "
                                             f"{t['slab']['length_mm'] / 1000:g}×{t['slab']['width_mm'] / 1000:g} m"))
+    rows += list(design.project_data)
     rows.append(("גיליונות בסט", str(len(entries))))
-    lx, ly, lw, rh = x0 + 6.0, y1 - 60.0, 150.0, 6.0
+    lx, ly, lw, rh = x0 + 6.0, y1 - 60.0, 150.0, 5.2
     ctx.text("נתוני הפרויקט", (lx + lw, ly + 1.5), 3.2, "legend", TA.BOTTOM_RIGHT, bold=True)
     h = rh * len(rows)
     ctx.rect(lx, ly - h, lw, h, "legend")
@@ -89,8 +98,8 @@ def draw_cover(ctx: SheetContext, design: Design, entries: list[SheetEntry]) -> 
         yy = ly - rh * (i + 0.5)
         if i:
             ctx.line((lx, yy + rh / 2), (lx + lw, yy + rh / 2), "legend")
-        ctx.text(k, (lx + lw - 1.5, yy), 2.0, "legend", TA.MIDDLE_RIGHT, bold=True)
-        ctx.text(v, (lx + lw - 51.5, yy), 2.0, "legend", TA.MIDDLE_RIGHT)
+        ctx.text(k, (lx + lw - 1.5, yy), 1.9, "legend", TA.MIDDLE_RIGHT, bold=True)
+        ctx.text(v[:58], (lx + lw - 51.5, yy), 1.9, "legend", TA.MIDDLE_RIGHT)
 
     # revisions under the data table
     ry = ly - h - 12.0
@@ -116,15 +125,19 @@ def draw_cover(ctx: SheetContext, design: Design, entries: list[SheetEntry]) -> 
             ctx.text(line, (lx + lw - 37.5, yy - rh * (j + 0.5)), 1.9, "legend", TA.MIDDLE_RIGHT)
         yy -= rh * n
 
-    # open items under the revisions
+    # source documents, then open items, under the revisions (left column)
+    oy = yy - 9.0
+    if design.sources:
+        ctx.text("מסמכי מקור", (lx + lw, oy + 1.5), 3.2, "legend", TA.BOTTOM_RIGHT, bold=True)
+        src = design.sources[:8]
+        ctx.mtext([f"{i + 1}. {s}" for i, s in enumerate(src)], (lx + lw, oy - 1.0), 1.7, "notes", width=lw)
+        oy -= 3.0 + 2.6 * sum(1 + len(s) // 80 for s in src) + 8.0
     items = open_items(design)
     if items:
-        oy = yy - 10.0
-        ctx.text("פריטים פתוחים לאימות", (lx + lw, oy + 1.5), 3.2, "legend", TA.BOTTOM_RIGHT, bold=True)
-        lines = []
-        for i, it in enumerate(items, 1):
-            lines.append(f"{i}. {it}")
-        ctx.mtext(lines, (lx + lw, oy - 1.0), 1.8, "notes", width=lw)
+        ctx.text("נושאים לאימות", (lx + lw, oy + 1.5), 3.2, "legend", TA.BOTTOM_RIGHT, bold=True)
+        ctx.mtext([f"{i + 1}. {it}" for i, it in enumerate(items[:10])], (lx + lw, oy - 1.0), 1.7, "notes", width=lw)
+        if len(items) > 10:
+            warnings.append(f"דף שער: {len(items) - 10} נושאים לאימות לא נכנסו")
 
     # ---- right column: sheet index ----------------------------------------------------------------
     sx1, sy = x1 - 6.0, y1 - 60.0
@@ -151,8 +164,8 @@ def draw_cover(ctx: SheetContext, design: Design, entries: list[SheetEntry]) -> 
         ctx.text(e.title[:70], (sx1 - scols[0][1] - 1.5, yy), 2.0, "legend", TA.MIDDLE_RIGHT)
         ctx.text(e.scale, (sx1 - scols[0][1] - scols[1][1] - scols[2][1] / 2, yy), 1.8, "legend", TA.MIDDLE_CENTER)
         ctx.text(tb.revision, (sx0 + scols[3][1] / 2, yy), 1.8, "legend", TA.MIDDLE_CENTER)
-    # footer line above the title block on the right
-    fy = y0 + TB_H + 14.0
-    ctx.text("סט זה הופק אוטומטית ממודל התכנון (bee-cad). כל ערך בגיליונות מקורו במודל או במקור המצוין בהערות; פריטים המסומנים \"לאימות\" אינם מאושרים לביצוע.",
-             (x1 - TB_W - 8.0, fy), 1.8, "notes", TA.MIDDLE_RIGHT)
+    # footer under the sheet list (right column), well above the title block
+    fy = max(sy - sh - 10.0, y0 + TB_H + 5.0 * 3 + 20.0)
+    ctx.mtext(["סט זה הופק אוטומטית ממודל התכנון (bee-cad). כל ערך בגיליונות מקורו במודל או במקור המצוין בהערות; "
+               "פריטים המסומנים \"לאימות\" אינם מאושרים לביצוע."], (sx1, fy), 1.8, "notes", width=sw)
     return warnings

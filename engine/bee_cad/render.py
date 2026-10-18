@@ -14,6 +14,7 @@ from ezdxf.document import Drawing
 
 from .comm import CommNetwork, draw_comm
 from .cover import SheetEntry, draw_cover
+from .schedules import CABLE_COLS, LOAD_COLS, cable_rows, draw_cable_schedule, draw_general_notes, draw_load_schedule, load_rows, rows_per_page
 from .earthing import Earthing, draw_earthing
 from .model import Design
 from .mv import draw_mv, draw_mv_schedule
@@ -25,7 +26,7 @@ from .template import DrillTemplate, draw_template, scale_text
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("cover", "site", "mv", "sld", "earthing", "comm", "panel", "drill")
+SHEET_KINDS = ("cover", "notes", "site", "mv", "sld", "earthing", "comm", "panel", "drill", "schedules")
 
 
 def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[SheetEntry]:
@@ -36,7 +37,17 @@ def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[She
     if "cover" in kinds and len(kinds) > 1:
         plan.append(SheetEntry("cover", f"{prefix}-00", "דף שער — רשימת גיליונות ונתוני הפרויקט"))
     for kind in kinds:
-        if kind == "mv":
+        if kind == "notes" and len(kinds) > 1:
+            plan.append(SheetEntry("notes", f"{prefix}-01", "הערות כלליות, מקרא סמלים וקיצורים"))
+        elif kind == "schedules" and design.boards and design.schedules:
+            n_cab = len(cable_rows(design))
+            n_load = len(load_rows(design)[0])
+            per = 36
+            for p in range((n_cab + per - 1) // per or 1):
+                plan.append(SheetEntry("cables", f"{prefix}-30" + ("" if p == 0 else chr(ord("A") + p - 1)), "רשימת כבלים"))
+            for p in range((n_load + per - 1) // per or 1):
+                plan.append(SheetEntry("loads", f"{prefix}-31" + ("" if p == 0 else chr(ord("A") + p - 1)), "טבלת עומסים וסיכום לפי לוח"))
+        elif kind == "mv":
             for i, mb in enumerate(design.mv_boards):
                 no = design.title.sheet_no if i == 0 else f"{prefix}-M{i + 1:02d}"
                 plan.append(SheetEntry("mv", no, design.title.sheet_title or f"חד-קווי מתח גבוה — {mb.title}"))
@@ -94,6 +105,18 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
         draw_frame(ctx, tb)
         if e.kind == "cover":
             warnings = draw_cover(ctx, design, plan)
+        elif e.kind == "notes":
+            warnings = draw_general_notes(ctx, design)
+        elif e.kind == "cables":
+            rows = cable_rows(design)
+            pages = [x for x in plan if x.kind == "cables"]
+            pno = pages.index(e)
+            warnings = draw_cable_schedule(ctx, design, rows[pno * 36:(pno + 1) * 36], pno + 1, len(pages))
+        elif e.kind == "loads":
+            rows, summary = load_rows(design)
+            pages = [x for x in plan if x.kind == "loads"]
+            pno = pages.index(e)
+            warnings = draw_load_schedule(ctx, design, rows[pno * 36:(pno + 1) * 36], summary, pno + 1, len(pages))
         elif e.kind == "mv":
             cur_mv = next(mv_iter)
             warnings = draw_mv(ctx, design, cur_mv)
@@ -160,6 +183,64 @@ def render_pdf(doc: Drawing, path: Path, sheet_index: int = 0, already_visual: b
                                  render_box=BoundingBox([(x0, 0.0), (x0 + A3_W, A3_H)]))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
+
+
+def render_set(doc: Drawing, sheet_nos: list[str], out_dir: Path, stem: str, png: bool = True, pdf: bool = True,
+               dpi: int = 110) -> tuple[dict[str, Path], dict[str, Path]]:
+    """Render every sheet of a multi-sheet document drawing the model space **once**.
+
+    The per-sheet functions redraw the whole layout for each page (O(n²) on big sets); here the
+    frontend records all entities once and each page is cut out with its own render box / view.
+    Returns ({sheet_no: png_path}, {sheet_no: pdf_path})."""
+    from ezdxf.addons.drawing import Frontend, RenderContext, layout
+    from ezdxf.addons.drawing.config import Configuration, LineweightPolicy
+    from ezdxf.addons.drawing.properties import LayoutProperties
+    from ezdxf.math import BoundingBox
+
+    vdoc = _visual_copy(doc)
+    msp = vdoc.modelspace()
+    props = LayoutProperties.from_layout(msp)
+    props.set_colors("#FFFFFF")
+    cfg = Configuration(lineweight_policy=LineweightPolicy.ABSOLUTE, min_lineweight=0.13)
+    pngs: dict[str, Path] = {}
+    pdfs: dict[str, Path] = {}
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if pdf:
+        from ezdxf.addons.drawing.pymupdf import PyMuPdfBackend
+
+        backend = PyMuPdfBackend()
+        Frontend(RenderContext(vdoc), backend, config=cfg).draw_layout(msp, finalize=False, layout_properties=props)
+        page = layout.Page(A3_W, A3_H, layout.Units.mm, margins=layout.Margins.all(0))
+        (out_dir / "sheets").mkdir(exist_ok=True)
+        for i, no in enumerate(sheet_nos):
+            x0 = (A3_W + 30.0) * i
+            data = backend.get_pdf_bytes(page, settings=layout.Settings(fit_page=False, scale=1.0),
+                                         render_box=BoundingBox([(x0, 0.0), (x0 + A3_W, A3_H)]))
+            p = out_dir / "sheets" / f"{stem}_{no}.pdf"
+            p.write_bytes(data)
+            pdfs[no] = p
+    if png:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
+
+        fig = plt.figure(figsize=(A3_W / 25.4, A3_H / 25.4), dpi=dpi)
+        ax = fig.add_axes([0, 0, 1, 1])
+        Frontend(RenderContext(vdoc), MatplotlibBackend(ax), config=cfg).draw_layout(msp, finalize=False, layout_properties=props)
+        ax.set_aspect("equal")
+        ax.axis("off")
+        fig.patch.set_facecolor("white")
+        for i, no in enumerate(sheet_nos):
+            x0 = (A3_W + 30.0) * i
+            ax.set_xlim(x0 - 1.0, x0 + A3_W + 1.0)
+            ax.set_ylim(-1.0, A3_H + 1.0)
+            p = out_dir / f"{stem}_{no}.png"
+            fig.savefig(p, dpi=dpi, facecolor="white")
+            pngs[no] = p
+        plt.close(fig)
+    return pngs, pdfs
 
 
 def merge_pdfs(pages: list[Path], out: Path) -> None:

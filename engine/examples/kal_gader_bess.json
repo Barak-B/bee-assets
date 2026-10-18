@@ -29,7 +29,9 @@
         "voltage": "400/230V",
         "frequency": "50Hz",
         "cable": {
-          "designation": "2x(4x120)NA2XY"
+          "designation": "2x(4x120)NA2XY",
+          "length_m": 84.0,
+          "method": "תת-קרקעי"
         },
         "earthing": "TN-C-S"
       },
@@ -94,7 +96,9 @@
           "phase": "",
           "kind": "feeder",
           "cable": {
-            "designation": "2x(4x120)NA2XY"
+            "designation": "2x(4x120)NA2XY",
+            "length_m": 9.0,
+            "method": "90.7"
           },
           "to_board": "INVP"
         },
@@ -111,7 +115,10 @@
           "phase": "",
           "kind": "feeder",
           "cable": {
-            "designation": "2x(4x150)NA2XY"
+            "designation": "2x(4x150)NA2XY",
+            "length_m": 42.0,
+            "du_pct": 1.0,
+            "method": "90.7"
           },
           "to_board": "BESSP",
           "note": "Installation 90.7 (IEC), a=De, ΔV=1.0%"
@@ -424,9 +431,12 @@
           "phase": "",
           "kind": "feeder",
           "cable": {
-            "designation": "4x(1x70)N2XY"
+            "designation": "4x(1x70)N2XY",
+            "length_m": 18.0,
+            "method": "90.7"
           },
-          "to_node": "PCS01"
+          "to_node": "PCS01",
+          "load_kw": 125.0
         },
         {
           "tag": "PCS2",
@@ -442,9 +452,12 @@
           "phase": "",
           "kind": "feeder",
           "cable": {
-            "designation": "4x(1x70)N2XY"
+            "designation": "4x(1x70)N2XY",
+            "length_m": 18.0,
+            "method": "90.7"
           },
-          "to_node": "PCS02"
+          "to_node": "PCS02",
+          "load_kw": 125.0
         },
         {
           "tag": "PCS3",
@@ -460,9 +473,12 @@
           "phase": "",
           "kind": "feeder",
           "cable": {
-            "designation": "4x(1x70)N2XY"
+            "designation": "4x(1x70)N2XY",
+            "length_m": 18.0,
+            "method": "90.7"
           },
-          "to_node": "PCS03"
+          "to_node": "PCS03",
+          "load_kw": 125.0
         },
         {
           "tag": "PCS4",
@@ -478,9 +494,12 @@
           "phase": "",
           "kind": "feeder",
           "cable": {
-            "designation": "4x(1x70)N2XY"
+            "designation": "4x(1x70)N2XY",
+            "length_m": 18.0,
+            "method": "90.7"
           },
-          "to_node": "PCS04"
+          "to_node": "PCS04",
+          "load_kw": 125.0
         }
       ],
       "enclosure": {
@@ -1261,5 +1280,34 @@
       "פרוטוקול EMS ↔ PCS (Modbus TCP) וכתובות IP — לפי Roche / AGEERA.",
       "ספק שירות סלולרי ו-APN — לפי המזמין."
     ]
-  }
+  },
+  "sources": [
+    "RCH Kal Gader BESS+PV — G002 Complete Design (Roche Energy / Rochex by Afcon, Aviel.P, 28.09.26, מהדורה A1): G000 שער, G003 תוואי, G005 חד-קווי, G006 הארקות, G009 פריסת תשתיות ותקשורת",
+    "Roche Energy — NORMAL C&I CABINET 261 / REL261 datasheet (2026): 1465×989×2471 מ\"מ, ~2.8 טון, 1P260S LFP 314Ah, IP54",
+    "הצעת מחיר B.E.E 2609-11/2 (11.09.26) — עבודות חשמל, כבילה, תעלות והארקה, כולל משטח בטון, קורות Double-T ועיגון הארונות",
+    "ת\"י 61439-1/2; תקנות החשמל (התקנת לוחות עד 1000V), (הארקות ואמצעי הגנה), (הארקות יסוד), (מעגלים סופיים); IEC 60364-5-52 (העמסת כבלים)",
+    "Hilti HIT-HY 200-A + HAS-U — נתוני ETA לעוגן M16 (c_min/s_min, hef 125) — לאימות מול המסמך העדכני"
+  ],
+  "project_data": [
+    [
+      "מערכת אגירה",
+      "4 × Roche REL261 (Normal 261) — 1,044 kWh / 500 kW DC"
+    ],
+    [
+      "הספק AC",
+      "200 kW (שילוב במערכת סולארית קיימת 200 kW)"
+    ],
+    [
+      "חיבור",
+      "לוח איסוף ראשי PV+BESS חדש בין מונה הייצור ללוח הממירים הקיים"
+    ],
+    [
+      "מתח / הארקה",
+      "400/230V 50Hz, TN-C-S"
+    ],
+    [
+      "משטח",
+      "בטון מזוין 5.2×2.1×0.2 מ', קורות IPE 200, 32 עוגנים M16"
+    ]
+  ]
 }

@@ -102,14 +102,22 @@ class QAReport:
 
 # ----------------------------------------------------------------------------- helpers
 _SIZE_RE = re.compile(r"(\d+)\s*[xX×]\s*(\d+(?:\.\d+)?)")
+_PAR_RE = re.compile(r"^\s*(\d+)\s*[xX×]\s*\(")
 
 
 def cable_size(designation: str) -> Optional[tuple[int, float]]:
-    """'N2XY 4X10' / '5X6mm² Cu N2XY' / '3X2.5' → (cores, mm²)."""
-    m = _SIZE_RE.search(designation)
+    """'N2XY 4X10' / '5X6mm² Cu N2XY' / '3X2.5' / '2x(4x150)NA2XY' → (cores, mm²) of one cable."""
+    inner = designation.split("(", 1)[1] if "(" in designation else designation
+    m = _SIZE_RE.search(inner)
     if not m:
         return None
     return int(m.group(1)), float(m.group(2))
+
+
+def parallel_count(designation: str) -> int:
+    """'2x(4x150)NA2XY' → 2 cables in parallel; otherwise 1."""
+    m = _PAR_RE.match(designation)
+    return int(m.group(1)) if m else 1
 
 
 def cable_ampacity(designation: str, poles: int) -> Optional[float]:
@@ -124,7 +132,7 @@ def cable_ampacity(designation: str, poles: int) -> Optional[float]:
     base = table.get(mm2)
     if base is None:
         return None
-    return base * (THREE_PHASE_FACTOR if poles >= 3 else 1.0)
+    return base * (THREE_PHASE_FACTOR if poles >= 3 else 1.0) * parallel_count(designation)
 
 
 def is_socket(c: Circuit) -> bool:
@@ -180,7 +188,8 @@ def check_board(rep: QAReport, b: Board, design: Design) -> None:
 def check_circuit(rep: QAReport, b: Board, c: Circuit, where: str, protected: bool, feeder: bool = False) -> None:
     w = f"{where} / {c.tag}"
     d = c.device
-    if c.cable is None:
+    spare = "שמור" in c.load or "spare" in c.load.lower() or c.tag.upper().startswith("SP")
+    if c.cable is None and not spare:
         rep.add("warn" if feeder else "error", "NO_CABLE", w, "אין כבל למעגל")
     else:
         amp = cable_ampacity(c.cable.designation, d.poles)

@@ -17,7 +17,7 @@ from .archive import archive
 from .audit import audit_sheet
 from .model import Design
 from .qa import check_design, check_sheets, write_report
-from .render import SHEET_KINDS, build, merge_pdfs, plan_sheets, render_pdf, render_png, save_dxf
+from .render import SHEET_KINDS, build, merge_pdfs, plan_sheets, render_set, save_dxf
 
 
 def load_design(path: Path) -> Design:
@@ -56,17 +56,15 @@ def cmd_render(args: argparse.Namespace) -> int:
         print(rep.summary())
         for c in rep.text_overlaps + rep.text_line_collisions + rep.text_outside:
             print(f"      {c.kind}: {c.a!r} / {c.b!r} @ ({c.at[0]:.0f},{c.at[1]:.0f})")
-        if args.png:
-            png = out / f"{stem}_{no}.png"
-            render_png(doc, png, dpi=args.dpi, sheet_index=i)
-            outputs[f"png:{no}"] = png
-            print(f"PNG   {png}")
-        if args.pdf or args.archive:
-            pdf = out / "sheets" / f"{stem}_{no}.pdf"
-            pdf.parent.mkdir(parents=True, exist_ok=True)
-            render_pdf(doc, pdf, sheet_index=i)
-            pdf_pages.append(pdf)
-            outputs[f"pdf_sheet:{no}"] = pdf
+    want_pdf = bool(args.pdf or args.archive)
+    if args.png or want_pdf:
+        pngs, pdfs = render_set(doc, list(result), out, stem, png=bool(args.png), pdf=want_pdf, dpi=args.dpi)
+        for no, p in pngs.items():
+            outputs[f"png:{no}"] = p
+            print(f"PNG   {p}")
+        for no, p in pdfs.items():
+            outputs[f"pdf_sheet:{no}"] = p
+            pdf_pages.append(p)
     if pdf_pages:
         set_pdf = out / f"{stem}_SET.pdf"
         merge_pdfs(pdf_pages, set_pdf)
@@ -136,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("design")
     r.add_argument("--out", default="out")
     r.add_argument("--stem")
-    r.add_argument("--sheets", help="comma list of: cover,site,mv,sld,earthing,comm,panel,drill (default: all)")
+    r.add_argument("--sheets", help="comma list of: cover,notes,site,mv,sld,earthing,comm,panel,drill,schedules (default: all)")
     r.add_argument("--mode", choices=["unicode", "shx"], default="unicode")
     r.add_argument("--png", action="store_true")
     r.add_argument("--pdf", action="store_true", help="one PDF per sheet + merged <stem>_SET.pdf")
