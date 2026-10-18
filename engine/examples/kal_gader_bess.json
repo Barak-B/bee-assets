@@ -1109,5 +1109,157 @@
       "התנגדות הארקה כוללת נדרשת — לפי תכנון ההגנות (TN-C-S, חח\"י) ודרישות יצרן ה-PCS.",
       "מיקום הטבעת והקוצים במשטח — מול פרט הקונסטרוקטור (זיון המשטח)."
     ]
+  },
+  "comm": {
+    "title": "דיאגרמת חיבור תקשורת — EMS, מונים וארונות PCS",
+    "sheet_no": "E-07",
+    "panel_label": "Comm Panel",
+    "devices": [
+      {
+        "id": "PM3",
+        "label": "SATEC Meter *3 — P.O.C",
+        "kind": "meter",
+        "place": "field",
+        "sublabel": "לוח איסוף PV+BESS, CT 400/5A"
+      },
+      {
+        "id": "PM2",
+        "label": "SATEC Meter *2 — PV",
+        "kind": "meter",
+        "place": "field",
+        "sublabel": "לוח ממירים קיים"
+      },
+      {
+        "id": "PM1",
+        "label": "SATEC Meter *1 — BESS",
+        "kind": "meter",
+        "place": "field",
+        "sublabel": "לוח איסוף BESS"
+      },
+      {
+        "id": "EMS",
+        "label": "EMS Controller AGEERA",
+        "kind": "ems",
+        "place": "panel",
+        "ports": [
+          "Power.IN",
+          "RS485",
+          "LAN"
+        ]
+      },
+      {
+        "id": "SW",
+        "label": "Switch 8 ports",
+        "kind": "switch",
+        "place": "panel",
+        "sublabel": "לא מנוהל"
+      },
+      {
+        "id": "RT",
+        "label": "Cellular Router Modem",
+        "kind": "router",
+        "place": "panel",
+        "sublabel": "(Industrial)",
+        "ports": [
+          "Power.IN",
+          "RS485",
+          "LAN"
+        ]
+      },
+      {
+        "id": "PCS01",
+        "label": "PCS01",
+        "kind": "pcs",
+        "place": "row",
+        "sublabel": "Normal 261"
+      },
+      {
+        "id": "PCS02",
+        "label": "PCS02",
+        "kind": "pcs",
+        "place": "row",
+        "sublabel": "Normal 261"
+      },
+      {
+        "id": "PCS03",
+        "label": "PCS03",
+        "kind": "pcs",
+        "place": "row",
+        "sublabel": "Normal 261"
+      },
+      {
+        "id": "PCS04",
+        "label": "PCS04",
+        "kind": "pcs",
+        "place": "row",
+        "sublabel": "Normal 261"
+      }
+    ],
+    "links": [
+      {
+        "a": "PM3",
+        "b": "SW",
+        "medium": "Cat7",
+        "label": "מונה P.O.C"
+      },
+      {
+        "a": "PM2",
+        "b": "SW",
+        "medium": "Cat7",
+        "label": "מונה PV"
+      },
+      {
+        "a": "PM1",
+        "b": "SW",
+        "medium": "Cat7",
+        "label": "מונה BESS"
+      },
+      {
+        "a": "EMS",
+        "b": "SW",
+        "medium": "Cat7",
+        "label": ""
+      },
+      {
+        "a": "RT",
+        "b": "SW",
+        "medium": "Cat7",
+        "label": "WAN סלולרי"
+      },
+      {
+        "a": "SW",
+        "b": "PCS01",
+        "medium": "Cat7",
+        "label": "EMS ↔ PCS"
+      },
+      {
+        "a": "SW",
+        "b": "PCS02",
+        "medium": "Cat7",
+        "label": "EMS ↔ PCS"
+      },
+      {
+        "a": "SW",
+        "b": "PCS03",
+        "medium": "Cat7",
+        "label": "EMS ↔ PCS"
+      },
+      {
+        "a": "SW",
+        "b": "PCS04",
+        "medium": "Cat7",
+        "label": "EMS ↔ PCS"
+      }
+    ],
+    "notes": [
+      "לפי Kal Gader BESS+PV G009 (Roche/Aviel.P, 28.09.26): שלושה מוני SATEC PM135 (P.O.C, PV, BESS) ב-Cat7 למתג 8 פורטים לא מנוהל בלוח התקשורת; בקר EMS AGEERA וראוטר סלולרי תעשייתי; Cat7 לכל ארון PCS (4×Cat7 בתעלת הרשת 100×85).",
+      "כבלי תקשורת Cat7 S/FTP לחוץ, בתעלת רשת נפרדת מכבלי הכוח; הארקת סיכוך בצד אחד (לוח התקשורת).",
+      "הזנת לוח התקשורת 230V מלוח איסוף BESS דרך UPS 1kVA וספק 230/24V — ראו גיליון E-05.",
+      "כבל גילוי אש מסוכך 2×0.8 (אדום) מהארונות לרכזת גילוי אש — תוואי בתעלת הרשת (לפי פרוגרמת בטיחות אש)."
+    ],
+    "verify": [
+      "פרוטוקול EMS ↔ PCS (Modbus TCP) וכתובות IP — לפי Roche / AGEERA.",
+      "ספק שירות סלולרי ו-APN — לפי המזמין."
+    ]
   }
 }

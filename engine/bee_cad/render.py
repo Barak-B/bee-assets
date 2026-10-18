@@ -12,6 +12,7 @@ from typing import Iterable
 
 from ezdxf.document import Drawing
 
+from .comm import CommNetwork, draw_comm
 from .cover import SheetEntry, draw_cover
 from .earthing import Earthing, draw_earthing
 from .model import Design
@@ -24,7 +25,7 @@ from .template import DrillTemplate, draw_template, scale_text
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("cover", "site", "mv", "sld", "earthing", "panel", "drill")
+SHEET_KINDS = ("cover", "site", "mv", "sld", "earthing", "comm", "panel", "drill")
 
 
 def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[SheetEntry]:
@@ -53,6 +54,9 @@ def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[She
         elif kind == "earthing" and design.earthing:
             e = Earthing.model_validate(design.earthing)
             plan.append(SheetEntry("earthing", e.sheet_no, e.title))
+        elif kind == "comm" and design.comm:
+            n = CommNetwork.model_validate(design.comm)
+            plan.append(SheetEntry("comm", n.sheet_no, n.title))
         elif kind == "panel":
             for b in design.boards:
                 plan.append(SheetEntry("panel", f"{prefix}-P{len(plan) + 1:02d}", f"מבנה לוח {b.id} — חזית וחתך", "לפי ציון"))
@@ -101,6 +105,8 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
             warnings = draw_sld(ctx, sld_subset(design, e.no) if design.sld_groups else design, design)
         elif e.kind == "earthing":
             warnings = draw_earthing(ctx, design, Earthing.model_validate(design.earthing))
+        elif e.kind == "comm":
+            warnings = draw_comm(ctx, design, CommNetwork.model_validate(design.comm))
         elif e.kind == "panel":
             warnings = draw_panel(ctx, design, next(board_iter))
         else:

@@ -343,3 +343,17 @@ def test_earthing_sheet():
     assert rep.clean, (rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])
     texts = [x.dxf.text for x in doc.modelspace().query("TEXT")]
     assert "35 Cu" in texts and any(t.startswith("1×70 Cu/PVC") for t in texts)
+
+
+def test_comm_sheet():
+    from bee_cad.audit import audit_sheet
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "kal_gader_bess.json"
+    des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
+    result = build(des, ("comm",))
+    doc, warnings = result["E-07"]
+    assert warnings == []
+    rep = audit_sheet(doc, 0, "E-07")
+    assert rep.clean, (rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])
+    texts = [x.dxf.text for x in doc.modelspace().query("TEXT")]
+    assert "Switch 8 ports" in texts and texts.count("Cat7 — EMS ↔ PCS") == 4
