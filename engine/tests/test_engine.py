@@ -284,3 +284,23 @@ def test_qa_checks(design: Design):
     check_sheets(rep, doc, result, ["E-00"])
     assert any(f.code == "PLAN_MISMATCH" for f in rep.errors)
     assert "# דוח בדיקה עצמית" in rep.to_markdown()
+
+
+def test_site_sheet():
+    from bee_cad.audit import audit_sheet
+    from bee_cad.render import plan_sheets
+    from bee_cad.site import SiteLayout, site_scale
+    from bee_cad.template import DrillTemplate
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "bess_drill_template.json"
+    des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
+    lay = SiteLayout.model_validate(des.site)
+    assert site_scale(DrillTemplate.model_validate(des.drill_template), lay) == 40.0
+    plan = plan_sheets(des, ("cover", "site", "drill"))
+    assert [e.no for e in plan] == ["E-00", "E-02", "E-20"] and plan[1].scale == "1:40"
+    result = build(des, ("site",))
+    doc, warnings = result["E-02"]
+    assert warnings == []
+    rep = audit_sheet(doc, 0, "E-02")
+    assert rep.clean, (rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])
+    assert doc.modelspace().query("HATCH") and len(doc.modelspace().query("DIMENSION")) >= 12
