@@ -6,7 +6,7 @@
  */
 import { isPublicBaseUrl, publishBlockers, toPublicQuote, type QuoteVersion } from '@bee/quote-core'
 import { idLast4 } from './customer'
-import type { Publication, PublishSettings } from './db'
+import { getCompanyProfile, type Publication, type PublishSettings } from './db'
 import type { SiteSurveyProject } from './types'
 
 export class PublishError extends Error {}
@@ -62,7 +62,7 @@ export async function publishQuote(quote: QuoteVersion, project: SiteSurveyProje
   if (blockers.length) throw new PublishError(blockers.join(' · '))
 
   const { buildQuotePdf } = await import('./quotePdf')
-  const pdf = await buildQuotePdf(quote, project, { audience: 'customer' })
+  const pdf = await buildQuotePdf(quote, project, { audience: 'customer', company: await getCompanyProfile().catch(() => null) })
   const res = await call(settings, '/api/quotes', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

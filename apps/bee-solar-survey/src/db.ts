@@ -1,4 +1,5 @@
 import type { Catalog, PricingRules, QuoteVersion } from '@bee/quote-core'
+import type { CompanyProfile } from './company'
 import type { Milestones } from './stage'
 import type { ReportInstance } from './reports/types'
 import type { SiteSurveyProject, SurveyPhoto } from './types'
@@ -366,6 +367,9 @@ export const savePublishSettings = (s: PublishSettings) => metaPut('publish', s)
 export const getPublication = (quoteId: string) => metaGet<Publication>(`pub:${quoteId}`)
 export const savePublication = (quoteId: string, p: Publication) => metaPut(`pub:${quoteId}`, p)
 export const getOfficeStatus = (projectId: string) => metaGet<LocalOfficeStatus>(`office:${projectId}`)
+/** The company profile as the server last gave it (for PDFs). */
+export const getCompanyProfile = () => metaGet<CompanyProfile>('company')
+export const saveCompanyProfile = (c: CompanyProfile) => metaPut('company', c)
 export const saveOfficeStatus = (projectId: string, s: LocalOfficeStatus | null) => metaPut(`office:${projectId}`, s)
 
 // ── Server backup state (per survey) ───────────────────────────────────

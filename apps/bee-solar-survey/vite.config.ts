@@ -15,7 +15,7 @@ export default defineConfig({
     VitePWA({
       // A new version waits for the user (banner in main.ts) — no reload mid-survey.
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'icon.svg', 'icons.svg', 'fonts/*.woff2'],
+      includeAssets: ['favicon.svg', 'icon.svg', 'icons.svg', 'fonts/*.woff2', 'brand/bee-logo.png'],
       manifest: {
         name: 'B.E.E סקר אתר סולארי',
         short_name: 'BEE Survey',

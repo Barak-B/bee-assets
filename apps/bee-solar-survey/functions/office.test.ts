@@ -21,6 +21,8 @@ import { onRequestGet as surveyGet } from './api/surveys/[id]'
 import { onRequestGet as healthGet } from './api/health'
 import { onRequestGet as messagesGet, onRequestPost as messagesPost } from './api/office/messages/[id]'
 import { onRequestGet as timelineGet } from './api/office/timeline/[id]'
+import { onRequestGet as companyGet } from './api/company'
+import { onRequestPut as companyPut } from './api/office/company'
 import { onRequestGet as submissionGet, onRequestPut as submissionPut } from './api/office/submission/[id]'
 import { onRequestGet as pageGet } from './q/[token]'
 
@@ -497,5 +499,33 @@ describe('customer page after the approval', () => {
     expect(await page()).toContain('הפרויקט בהמתנה כרגע')
     await status({ status: 'lost' })
     expect(await page()).not.toContain('איפה הפרויקט עומד')
+  })
+})
+
+describe('company profile', () => {
+  it('admins set it; anyone reads it; the customer page carries it', async () => {
+    const e = env()
+    const { body: office } = await newKey(e, 'רונית', 'office')
+    const read = async () => ((await (await companyGet(ctx(e, '/api/company'))).json()) as { company: Record<string, string> }).company
+    expect(await read()).toMatchObject({ brand: 'B.E.E', name_he: 'ברק אלקטריק אנג׳ינירינג', phone: '' })
+
+    const put = (key: string, body: unknown) => companyPut(ctx(e, '/api/office/company', jsonInit('PUT', key, body)))
+    expect((await put(office.key, { name_he: 'x' })).status).toBe(403)
+    const bad = await put(MASTER, { name_he: 'ברק אלקטריק אנג׳ינירינג', company_id: '123456789' })
+    expect(bad.status).toBe(400)
+    expect(((await bad.json()) as { message_he: string }).message_he).toContain('ח״פ')
+    expect((await put(MASTER, { name_he: 'ברק אלקטריק אנג׳ינירינג', company_id: '123456782', phone: '08-1234567', email: 'office@barak-e.com', address: 'גדרה' })).status).toBe(200)
+    expect(await read()).toMatchObject({ company_id: '123456782', phone: '08-1234567' })
+
+    await surveyPut(ctx(e, `/api/surveys/${ID}`, jsonInit('PUT', MASTER, surveyRecord()), { id: ID }))
+    const { pq } = await publicQuote()
+    const { token } = (await (await publishPost(ctx(e, '/api/quotes', jsonInit('POST', MASTER, { quote: pq, survey_id: ID })))).json()) as { token: string }
+    let html = await (await pageGet(ctx(e, `/q/${token}`, {}, { token }))).text()
+    expect(html).toContain('src="/brand/bee-logo.png"')
+    expect(html).toContain('ח״פ <bdi>123456782</bdi>')
+    expect(html).toContain('href="tel:+97281234567"')
+    await accept(e, token, '1234', pq.reference)
+    html = await (await pageGet(ctx(e, `/q/${token}`, {}, { token }))).text()
+    expect(html).toMatch(/לשאלות — התקשרו אלינו: <a href="tel:\+97281234567">/)
   })
 })

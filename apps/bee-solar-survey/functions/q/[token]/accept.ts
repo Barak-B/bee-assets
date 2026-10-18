@@ -7,6 +7,7 @@
  */
 import { QUOTE_TOKEN_RE } from '../../../../../packages/quote-core/src/public'
 import type { Handler } from '../../_lib/env'
+import { getCompany } from '../../_lib/company'
 import { html, israelToday, param, redirect } from '../../_lib/http'
 import { renderMessagePage, renderQuotePage } from '../../_lib/render'
 import { MAX_ACCEPT_FAILS, addAcceptFail, getAcceptFails, getAcceptance, getPdf, getQuote, putAcceptance } from '../../_lib/store'
@@ -66,7 +67,7 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
   else if (!/^\d{4}$/.test(id4)) error = 'נא למלא 4 ספרות אחרונות של תעודת הזהות או ח״פ.'
   else if (!agree) error = 'נא לסמן שקראתם את ההצעה ואתם מאשרים אותה.'
   if (error) {
-    return html(renderQuotePage(rec.quote, { token, hasPdf: rec.has_pdf, now, acceptError: error, form: { name } }), 400)
+    return html(renderQuotePage(rec.quote, { token, hasPdf: rec.has_pdf, now, acceptError: error, form: { name }, company: await getCompany(env) }), 400)
   }
 
   // When the surveyor recorded the customer's ID, the 4 digits must match it.
@@ -79,7 +80,7 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
       if (fails >= MAX_ACCEPT_FAILS) return locked()
       const left = MAX_ACCEPT_FAILS - fails
       return html(
-        renderQuotePage(rec.quote, { token, hasPdf: rec.has_pdf, now, acceptError: `4 הספרות אינן תואמות את פרטי הלקוח שנמסרו לנו. נותרו ${left} ניסיונות.`, form: { name } }),
+        renderQuotePage(rec.quote, { token, hasPdf: rec.has_pdf, now, acceptError: `4 הספרות אינן תואמות את פרטי הלקוח שנמסרו לנו. נותרו ${left} ניסיונות.`, form: { name }, company: await getCompany(env) }),
         400,
       )
     }

@@ -4,6 +4,7 @@
  * what's missing). Every unverified value is marked "לאימות"; the document is
  * watermarked as a draft.
  */
+import { DEFAULT_COMPANY, companyLine, type CompanyProfile } from './company'
 import { ROOF_LABELS_HE, flagLabelHe, formatIls, pct, scheduleAmounts, type QuoteLine, type QuoteVersion } from '@bee/quote-core'
 import { MUTED, WARN_RED, Writer, createDoc, safeFilename } from './pdfkit'
 import { formatNumber } from './rtl'
@@ -60,6 +61,8 @@ export interface QuotePdfOptions {
    * A customer PDF is only built for a quote that passed publishBlockers().
    */
   audience?: 'internal' | 'customer'
+  /** Who we are, for the customer copy's footer (name, ח״פ, license, phone). */
+  company?: CompanyProfile | null
 }
 
 export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProject, opts: QuotePdfOptions = {}): Promise<QuotePdfResult> {
@@ -82,7 +85,7 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
           sub: `${quote.input.customerName ? `${quote.input.customerName} · ` : ''}${quote.input.projectName} · ${quote.input.address} · ${fmtDate(quote.created_at)}${project.surveyor ? ` · סקר: ${project.surveyor} ${fmtDay(project.surveyDate)}` : ` · סקר: ${fmtDay(project.surveyDate)}`}`,
         },
     customer
-      ? { right: 'B.E.E · ברק אלקטריק אנג׳ינירינג · * = ייקבע סופית בתכנון המפורט', left: `${quote.quote_number} v${quote.version_no} · ${quote.snapshot_hash.slice(0, 12)}` }
+      ? { right: `${(opts.company ?? DEFAULT_COMPANY).brand} · ${companyLine(opts.company ?? DEFAULT_COMPANY)} · * = ייקבע סופית בתכנון המפורט`, left: `${quote.quote_number} v${quote.version_no} · ${quote.snapshot_hash.slice(0, 12)}` }
       : {
           right: 'טיוטה בלבד · Law #2 · לא נשלח ללקוח ללא אישור ברק · * = לאימות',
           left: `${quote.quote_number} v${quote.version_no} · ${quote.snapshot_hash.slice(0, 8)}`,

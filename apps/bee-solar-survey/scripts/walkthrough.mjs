@@ -191,6 +191,10 @@ try {
   const customer = await customerCtx.newPage()
   let link = ''
 
+  await step('admin: company details, once (made-up test values)', async () => {
+    await api('PUT', '/api/office/company', MASTER, { brand: 'B.E.E', name_he: 'ברק אלקטריק אנג׳ינירינג', company_id: '123456782', license: 'קבלן חשמל (בדיקה)', address: 'רחוב הבדיקה 1', phone: '08-1234567', email: 'office@example.com' })
+  })
+
   await step('office: log in and open a job for a phone call, assigned to Dani', async () => {
     await office.goto(`${PUBLIC}/office`)
     await office.fill('#oKey', ronit.key)
@@ -304,6 +308,7 @@ try {
   await step('customer: opens the link on an iPhone, reads, gets the ID wrong, approves', async () => {
     await customer.goto(link)
     await customer.waitForSelector('form[action*="/accept"]')
+    if (!(await customer.locator('header img[src="/brand/bee-logo.png"]').evaluate((img) => img.complete && img.naturalWidth > 0))) throw new Error('logo did not load')
     await snap(customer, 'customer-quote-top')
     await snap(customer, 'customer-quote-full', true)
     // The request API bypasses the origin mapping, so ask the local server directly.
@@ -441,8 +446,13 @@ try {
     findings.customerProgress = await customer.locator('#progress').innerText()
     if (!/בהתקנה|התקנה/.test(await customer.locator('#progress li.now').innerText())) throw new Error('customer page not at installation')
     for (const secret of ['7004512', 'R-118', 'PO-2231', 'רונית']) if ((await customer.content()).includes(secret)) throw new Error(`internal detail on the customer page: ${secret}`)
+    // Who we are, with a call link.
+    if (!(await customer.locator('#progress a[href="tel:+97281234567"]').count())) throw new Error('no call link on the progress card')
+    if (!(await customer.locator('footer').innerText()).includes('123456782')) throw new Error('company number missing from the footer')
     await customer.locator('#progress').scrollIntoViewIfNeeded()
     await snap(customer, 'customer-progress')
+    await customer.locator('footer').scrollIntoViewIfNeeded()
+    await snap(customer, 'customer-footer')
   })
 } catch {
   failed = true

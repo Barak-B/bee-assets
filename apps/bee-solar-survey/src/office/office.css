@@ -643,3 +643,26 @@ button.o-kpi {
   color: var(--warn, #b45309);
   font-size: 0.85rem;
 }
+
+.o-company {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.o-company label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.o-company input {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font: inherit;
+  background: #fff;
+}

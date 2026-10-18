@@ -27,7 +27,8 @@ import {
 import type { OfficeUpdate } from './api'
 import { Api, ApiError, type KeyRow, type Me, type OfficeJob, type TimelineEvent } from './api'
 import { attentionHe } from './attention'
-import { composerSlot, forgetComposerLogs, mountComposer } from './composer'
+import { COMPANY_FIELDS, DEFAULT_COMPANY, type CompanyProfile } from '../company'
+import { composerSlot, forgetComposerLogs, mountComposer, setCompanyPhone } from './composer'
 import { forgetSubmissions, mountSubmission, submissionSlot } from './submissionPanel'
 
 const root = document.querySelector<HTMLDivElement>('#office')!
@@ -47,13 +48,14 @@ const state: {
   selected: string | null
   keys: KeyRow[]
   newKey: { key: string; row: KeyRow } | null
+  company: CompanyProfile
   /** People a job can be assigned to (active personal keys). */
   surveyors: { id: string; name: string; role: string }[]
   /** The "new job" form is open in the side panel. */
   creating: boolean
   loading: boolean
   error: string
-} = { api: null, me: null, jobs: [], generatedAt: '', tab: 'jobs', stage: 'any', status: 'active', search: '', selected: null, keys: [], newKey: null, surveyors: [], creating: false, loading: false, error: '' }
+} = { api: null, me: null, jobs: [], generatedAt: '', tab: 'jobs', stage: 'any', status: 'active', search: '', selected: null, keys: [], newKey: null, company: { ...DEFAULT_COMPANY }, surveyors: [], creating: false, loading: false, error: '' }
 
 const ROLE_HE: Record<KeyRow['role'], string> = { surveyor: 'סוקר', office: 'משרד', admin: 'מנהל' }
 
@@ -125,7 +127,11 @@ async function load() {
   try {
     forgetComposerLogs()
     forgetSubmissions()
-    const [r, people] = await Promise.all([state.api.overview(), state.api.surveyors().catch(() => ({ surveyors: [] }))])
+    const [r, people, co] = await Promise.all([state.api.overview(), state.api.surveyors().catch(() => ({ surveyors: [] })), state.api.company().catch(() => null)])
+    if (co) {
+      state.company = co.company
+      setCompanyPhone(co.company.phone)
+    }
     state.jobs = r.jobs
     state.surveyors = people.surveyors
     state.generatedAt = r.generated_at
@@ -173,7 +179,7 @@ function render() {
       <div class="brand"><div class="brand-mark">BEE</div><div class="brand-text"><strong>משרד · עבודות</strong><span>${escapeHtml(state.me.name)} · ${escapeHtml(state.me.role_he)}</span></div></div>
       <nav class="o-tabs">
         <button class="o-tab ${state.tab === 'jobs' ? 'on' : ''}" data-tab="jobs">עבודות</button>
-        ${state.me.role === 'admin' ? `<button class="o-tab ${state.tab === 'keys' ? 'on' : ''}" data-tab="keys">מפתחות</button>` : ''}
+        ${state.me.role === 'admin' ? `<button class="o-tab ${state.tab === 'keys' ? 'on' : ''}" data-tab="keys">הגדרות</button>` : ''}
         <button class="o-tab" id="oRefresh">${state.loading ? 'טוען…' : 'רענון'}</button>
         <button class="o-tab" id="oLogout">יציאה</button>
       </nav>
@@ -522,6 +528,14 @@ function keysView(): string {
             : '<tr><td colspan="5" class="meta">אין עדיין מפתחות אישיים.</td></tr>'
         }</tbody>
       </table>
+    </section>
+    <section class="o-card o-wide">
+      <h2>פרטי החברה</h2>
+      <p class="meta">מה שהלקוח רואה בדף ההצעה, ב-PDF ובהודעות: שם, ח״פ, רישיון, כתובת וטלפון. שדה ריק פשוט לא מוצג.</p>
+      <form id="oCompany" class="o-company">
+        ${COMPANY_FIELDS.map((f) => `<label>${escapeHtml(f.label_he)}<input name="${f.key}" maxlength="${f.max}" ${f.ltr ? 'dir="ltr"' : ''} value="${escapeAttr(state.company[f.key])}" /></label>`).join('')}
+        <button class="btn btn-primary" type="submit">שמור פרטי חברה</button>
+      </form>
     </section>`
 }
 
@@ -592,6 +606,19 @@ root.addEventListener('submit', (e) => {
   if (form.id === 'oLogin') {
     e.preventDefault()
     void login((document.getElementById('oKey') as HTMLInputElement).value.trim())
+  } else if (form.id === 'oCompany') {
+    e.preventDefault()
+    const f = new FormData(form)
+    const c = Object.fromEntries(COMPANY_FIELDS.map((x) => [x.key, String(f.get(x.key) ?? '').trim()])) as unknown as CompanyProfile
+    void state.api!.saveCompany(c).then(
+      (r) => {
+        state.company = r.company
+        setCompanyPhone(r.company.phone)
+        render()
+        toast('פרטי החברה נשמרו')
+      },
+      (err) => toast(err instanceof ApiError ? err.message : 'השמירה נכשלה'),
+    )
   } else if (form.id === 'oJobForm') {
     e.preventDefault()
     const f = new FormData(form)

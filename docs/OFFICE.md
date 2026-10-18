@@ -138,6 +138,17 @@
   - אישור הפעלה → "אישור הפעלה".
 - **יומן:** כל סימון נכנס ליומן העבודה.
 
+## פרטי החברה
+
+מסך משרד → **הגדרות** (מנהל בלבד) → "פרטי החברה": מותג, שם, ח״פ (נבדקת ספרת ביקורת), רישיון, כתובת, טלפון, מייל ואתר. **שום פרט לא ממולא מראש מלבד השם**, ושדה ריק לא מוצג.
+
+| איפה | מה |
+|---|---|
+| דף הלקוח | לוגו בראש הדף (`/brand/bee-logo.png`, על רקע בהיר). בתחתית: שם, ח״פ, רישיון, כתובת, טלפון לחיץ, מייל ואתר |
+| "איפה הפרויקט עומד" | "לשאלות — התקשרו אלינו" עם הטלפון |
+| PDF ללקוח | בשורה התחתונה: שם, ח״פ, רישיון וטלפון. הטלפון של הסוקר מושך את הפרטים בסנכרון, עד 5 שניות, וזה לא מעכב את הסנכרון |
+| הודעה ללקוח | "הטלפון שלנו" ממולא מטלפון החברה, אם לא הוקלד אחר |
+
 ## דף הלקוח אחרי האישור
 
 אחרי שהלקוח אישר, אותו קישור (`/q/<token>`) מראה גם **"איפה הפרויקט עומד"**:
@@ -213,6 +224,8 @@
 | `GET /api/office/overview` | משרד | כל העבודות: שורת סקר + לקוח + `stage` + `office` + `milestones` (כולל הנגזרות, עם `auto`) + `latestQuote` + `links` (צפיות, אישור) + `reports` + `lastActivityAt` |
 | `PUT /api/office/status/<surveyId>` | משרד | כל אחד מ-`{ status, note, assigned_to: <id מפתח>\|'', planned_date: YYYY-MM-DD\|'', milestones: { <אבן דרך>: { date, ref? } \| null } }`. משתנה רק מה שנשלח. `null` מבטל אבן דרך |
 | `POST /api/office/jobs` | משרד | עבודה חדשה: `{ customerName, customerPhone, address, customerEmail?, projectName?, note?, assigned_to?, planned_date? }` → `{ id, office }` |
+| `GET /api/company` | ללא מפתח | פרטי החברה הציבוריים |
+| `PUT /api/office/company` | מנהל | שמירת פרטי החברה, עם ולידציה |
 | `GET /api/office/submission/<surveyId>` | משרד | `{ submission \| null, suggested: { id, why_he } }` |
 | `PUT /api/office/submission/<surveyId>` | משרד | `{ track?, steps?: { <שלב>: { date, ref? } \| null }, docs?: { <מסמך>: { date } \| null }, na?: [mun\|fire\|op] }`. מחזיר `{ submission, office }`, ו-`office` רק כשאבן דרך סומנה |
 | `GET /api/office/timeline/<surveyId>` | משרד | יומן העבודה: `{ events: [{ at, kind, text_he, by, tone? }] }`, מהחדש לישן |
@@ -237,6 +250,7 @@ quotes/<token>/accept-fails.json    ניסיונות אישור עם ספרות 
 messages/<surveyId>/<iso>_<rand>.json  הודעה שנפתחה ללקוח (אובייקט לכל הודעה, בלי דריסה)
 events/<surveyId>/<iso>_<n><rand>.json שינוי של המשרד בעבודה (שורה ליומן)
 submission/<surveyId>.json            תיק ההגשה: מסלול, שלבים, מסמכים, חלקים לא רלוונטיים
+settings/company.json                 פרטי החברה
 ```
 
 ## בדיקות
@@ -251,6 +265,7 @@ submission/<surveyId>.json            תיק ההגשה: מסלול, שלבים,
 | יומן הודעות: הרשאות, ולידציה, מהחדשה לישנה | `apps/bee-solar-survey/functions/office.test.ts` |
 | יומן העבודה: כל סוגי האירועים, מי עשה, סדר, הרשאות | `apps/bee-solar-survey/functions/office.test.ts` |
 | תיק הגשה: בחירת מסלול, שלבים ומסמכים, תוויות, התקדמות | `apps/bee-solar-survey/src/submission.test.ts` |
+| פרטי החברה: ולידציה, שורת תחתית; בשרת רק מנהל שומר, כולם קוראים, הדף מציג לוגו, ח״פ וטלפון | `apps/bee-solar-survey/src/company.test.ts`, `functions/office.test.ts` |
 | דף הלקוח אחרי האישור: מתעדכן מאבני הדרך ומהתיק, מוקפא / לא רלוונטי, בלי פרטים פנימיים | `apps/bee-solar-survey/functions/office.test.ts` |
 | תיק הגשה בשרת: הצעה, ולידציה, החלפת מסלול, שלב מסמן אבן דרך, יומן | `apps/bee-solar-survey/functions/office.test.ts` |
 | אבני דרך בשרת: ולידציה, חוזה על הנייר, `null`, נגזרות, הכול נכנס ב-2KB, מגיע לטלפון | `apps/bee-solar-survey/functions/office.test.ts` |

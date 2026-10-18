@@ -23,14 +23,19 @@ interface Draft {
 const drafts = new Map<string, Draft>()
 const logs = new Map<string, MessageEntry[] | 'loading' | 'error'>()
 const SENDER_KEY = 'bee-office-sender'
+/** The company's phone (office screen loads it): the default for "our phone". */
+let companyPhone = ''
+export function setCompanyPhone(p: string) {
+  companyPhone = p
+}
 const CHANNELS: Channel[] = ['whatsapp', 'sms', 'email']
 
 function readSender(me: Me): Sender {
   try {
     const s = JSON.parse(localStorage.getItem(SENDER_KEY) ?? '{}') as Partial<Sender>
-    return { name: s.name || me.name, phone: s.phone ?? '' }
+    return { name: s.name || me.name, phone: s.phone || companyPhone }
   } catch {
-    return { name: me.name, phone: '' }
+    return { name: me.name, phone: companyPhone }
   }
 }
 

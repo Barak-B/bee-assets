@@ -3,6 +3,8 @@
  * no JavaScript, RTL Hebrew, self-hosted fonts from the same Pages project.
  */
 import type { PublicQuote, PublicQuoteLine, PublicRoi } from '../../../../packages/quote-core/src/public'
+import { DEFAULT_COMPANY, type CompanyProfile } from '../../src/company'
+import { normalizePhone } from '../../src/customer'
 import { CUSTOMER_LABEL_HE, CUSTOMER_NOW_HE, STAGES, type Stage } from '../../src/stage'
 import type { Acceptance } from './store'
 import { israelToday } from './http'
@@ -67,6 +69,9 @@ header{background:var(--ink);color:#fff;padding:20px 16px}
 header .wrap{padding:0}
 .brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand b{color:var(--honey);font-size:22px;letter-spacing:.04em}
+.brand .logo{background:#fff;border-radius:10px;padding:4px 8px;display:inline-flex;line-height:0}
+.brand .logo img{height:40px;width:auto}
+footer a{color:inherit}
 h1{font-size:22px;margin:12px 0 2px}
 .sub{color:#cfd8de;font-size:14px}
 main{padding:16px 0 40px}
@@ -230,6 +235,29 @@ export interface RenderOpts {
   justAccepted?: boolean
   /** After the approval: where the project stands, in the customer's words. */
   progress?: CustomerProgress | null
+  /** Who we are: header, footer, contact. */
+  company?: CompanyProfile
+}
+
+/** Logo on a light tile (the logo's text is dark; the header is not). */
+function brandHtml(c: CompanyProfile): string {
+  return `<div class="brand"><span class="logo"><img src="/brand/bee-logo.png" alt="${esc(c.brand)}" width="104" height="54"></span><span class="sub">${esc(c.name_he)}</span></div>`
+}
+
+/** Phone as a call link, email as a mail link; nothing for empty fields. */
+function contactHtml(c: CompanyProfile): string {
+  const tel = normalizePhone(c.phone)
+  return [
+    c.phone ? `<a href="tel:${esc(tel ? `+972${tel.slice(1)}` : c.phone)}"><bdi dir="ltr">${esc(c.phone)}</bdi></a>` : '',
+    c.email ? `<a href="mailto:${esc(c.email)}"><bdi dir="ltr">${esc(c.email)}</bdi></a>` : '',
+    c.website ? `<a href="${esc(/^https?:/.test(c.website) ? c.website : `https://${c.website}`)}" rel="noopener"><bdi dir="ltr">${esc(c.website.replace(/^https?:\/\//, ''))}</bdi></a>` : '',
+  ].filter(Boolean).join(' · ')
+}
+
+function footerHtml(c: CompanyProfile, extra = ''): string {
+  const legal = [esc(c.name_he), c.company_id && `ח״פ <bdi>${esc(c.company_id)}</bdi>`, c.license && esc(c.license), c.address && esc(c.address)].filter(Boolean).join(' · ')
+  const contact = contactHtml(c)
+  return `<footer>${esc(c.brand)} · ${legal}${contact ? `<br>${contact}` : ''}${extra ? `<br>${extra}` : ''}</footer>`
 }
 
 export interface CustomerProgress {
@@ -243,7 +271,7 @@ export interface CustomerProgress {
 /** The customer's part of the lifecycle: from the approval to service. */
 const CUSTOMER_STAGES = STAGES.slice(STAGES.indexOf('accepted'))
 
-function progressCard(p: CustomerProgress): string {
+function progressCard(p: CustomerProgress, c: CompanyProfile): string {
   const at = CUSTOMER_STAGES.indexOf(p.stage)
   const items = CUSTOMER_STAGES.map((s, i) => {
     const state = i < at ? 'done' : i === at ? 'now' : 'todo'
@@ -255,7 +283,7 @@ function progressCard(p: CustomerProgress): string {
     <h2>איפה הפרויקט עומד</h2>
     ${now ? `<p class="now-line">${esc(now)}</p>` : ''}
     <ol class="steps">${items}</ol>
-    <p class="muted">הדף מתעדכן לבד בכל שלב. לשאלות — השיבו להודעה שקיבלתם מאיתנו.</p>
+    <p class="muted">הדף מתעדכן לבד בכל שלב. לשאלות — ${c.phone ? `התקשרו אלינו: ${contactHtml({ ...c, email: '', website: '' })}` : 'השיבו להודעה שקיבלתם מאיתנו'}.</p>
   </section>`
 }
 
@@ -294,6 +322,7 @@ function acceptCard(q: PublicQuote, opts: RenderOpts, expired: boolean): string 
 }
 
 export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
+  const company = opts.company ?? DEFAULT_COMPANY
   const now = opts.now ?? new Date()
   const expired = !!q.valid_until && q.valid_until < israelToday(now)
   const s = q.system
@@ -326,14 +355,14 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
   const body = `
 <header>
   <div class="wrap">
-    <div class="brand"><b>B.E.E</b><span class="sub">ברק אלקטריק אנג׳ינירינג</span></div>
+    ${brandHtml(company)}
     <h1>הצעת מחיר למערכת סולארית <bdi>${num(s.dc_kwp, 2)} kWp</bdi></h1>
     <div class="sub">הצעה <bdi>${esc(q.quote_number)}</bdi> · גרסה ${esc(q.version_no)} · ${formatDate(q.issued_at)}${q.valid_until ? ` · בתוקף עד ${formatDate(q.valid_until)}` : ''}</div>
   </div>
 </header>
 <main class="wrap">
   ${opts.acceptance ? `<div class="card ok banner">ההצעה אושרה ב-${formatDateTime(opts.acceptance.accepted_at)} · <a href="#accept">פרטים</a></div>` : ''}
-  ${opts.acceptance && opts.progress ? progressCard(opts.progress) : ''}
+  ${opts.acceptance && opts.progress ? progressCard(opts.progress, company) : ''}
   ${expired ? `<div class="card note">תוקף ההצעה הסתיים ב-${formatDate(q.valid_until)}. לעדכון ההצעה פנו אלינו.</div>` : ''}
 
   <section class="card">
@@ -411,15 +440,16 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
 
   ${opts.hasPdf ? `<p style="text-align:center"><a class="btn" href="/q/${esc(opts.token)}/pdf">הורדת ההצעה כ-PDF</a></p>` : ''}
 </main>
-<footer>B.E.E · ברק אלקטריק אנג׳ינירינג · אסמכתא <bdi>${esc(q.reference)}</bdi></footer>`
+${footerHtml(company, `אסמכתא <bdi>${esc(q.reference)}</bdi>`)}`
 
-  return page(`הצעת מחיר ${q.quote_number} · B.E.E`, body)
+  return page(`הצעת מחיר ${q.quote_number} · ${company.brand}`, body)
 }
 
-export function renderMessagePage(title: string, message: string): string {
+export function renderMessagePage(title: string, message: string, company: CompanyProfile = DEFAULT_COMPANY): string {
   return page(
-    `${title} · B.E.E`,
-    `<header><div class="wrap"><div class="brand"><b>B.E.E</b><span class="sub">ברק אלקטריק אנג׳ינירינג</span></div><h1>${esc(title)}</h1></div></header>
-<main class="wrap"><section class="card"><p>${esc(message)}</p></section></main>`,
+    `${title} · ${company.brand}`,
+    `<header><div class="wrap">${brandHtml(company)}<h1>${esc(title)}</h1></div></header>
+<main class="wrap"><section class="card"><p>${esc(message)}</p></section></main>
+${footerHtml(company)}`,
   )
 }

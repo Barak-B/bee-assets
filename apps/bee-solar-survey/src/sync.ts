@@ -9,6 +9,7 @@
  * never lists a photo it does not have, and a quote never arrives before its
  * survey. Nothing here sends anything to a customer (Law #2).
  */
+import { normalizeCompany } from './company'
 import { canonicalJson, sha256Hex, type QuoteVersion } from '@bee/quote-core'
 import {
   getProject,
@@ -20,6 +21,7 @@ import {
   listProjects,
   listQuotes,
   listReports,
+  saveCompanyProfile,
   saveOfficeStatus,
   saveSyncState,
   type LocalOfficeStatus,
@@ -359,6 +361,12 @@ async function pullFromOffice(s: PublishSettings, report: SyncReport, force: boo
       report.assigned.push(row.projectName || row.id)
     }
   }
+  // The company's public details, for the customer PDF footer. Best effort.
+  // Capped: a slow answer must never hold up the sync.
+  const co = await call(s, '/api/company', { signal: AbortSignal.timeout(5000) })
+    .then((r) => r.json() as Promise<{ company?: unknown }>)
+    .catch(() => null)
+  if (co?.company) await saveCompanyProfile(normalizeCompany(co.company))
   officePulledAt = now
 }
 

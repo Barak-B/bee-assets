@@ -2,6 +2,7 @@
 import { QUOTE_TOKEN_RE } from '../../../../packages/quote-core/src/public'
 import type { Handler } from '../_lib/env'
 import { html, param } from '../_lib/http'
+import { getCompany } from '../_lib/company'
 import { jobFor } from '../_lib/office'
 import { renderMessagePage, renderQuotePage, type CustomerProgress } from '../_lib/render'
 import { STAGES, stageMilestones, type Stage } from '../../src/stage'
@@ -23,8 +24,8 @@ export const onRequestGet: Handler = async ({ request, env, params, waitUntil })
   }
   const acceptance = await getAcceptance(env, token)
   const justAccepted = !!acceptance && new URL(request.url).searchParams.get('accepted') === '1'
-  const progress = acceptance && rec.survey_id ? await customerProgress(env, rec.survey_id).catch(() => null) : null
-  return html(renderQuotePage(rec.quote, { token, hasPdf: rec.has_pdf, acceptance, justAccepted, progress }))
+  const [progress, company] = await Promise.all([acceptance && rec.survey_id ? customerProgress(env, rec.survey_id).catch(() => null) : null, getCompany(env)])
+  return html(renderQuotePage(rec.quote, { token, hasPdf: rec.has_pdf, acceptance, justAccepted, progress, company }))
 }
 
 /**
