@@ -1,0 +1,70 @@
+{
+  "title": {
+    "designer": "ברק הנדסת חשמל",
+    "project": "מתחם אגירה — דוגמה 33kV",
+    "site": "אתר לדוגמה, רמה ג",
+    "client": "דוגמה — מנוע התכנון",
+    "sheet_no": "E-05",
+    "sheet_title": "חד-קווי מתח גבוה",
+    "revision": "A",
+    "date": "2026-10-17",
+    "scale": "ללא קנ\"מ",
+    "status": "לעיון",
+    "revisions": [["A", "2026-10-17", "הגשה ראשונה — לעיון"]]
+  },
+  "notes": [
+    "גודל החיבור, מבנה החיבור ותצורת ההגנות — לפי הנחיות חח\"י לחיבור במתח גבוה ואישור מהנדס מאשר.",
+    "מפסק CB1: תפעול משותף עם חח\"י; מנעול ושילוט לפי נוהל חח\"י.",
+    "הגנת LOM על CB1/CB3 לפי דרישת חח\"י; ערכי הגנה (27/59, 81, df/dt) — טבלה בגיליון E-05A.",
+    "כל ערכי הדוגמה — להדגמת המנוע; אינם תכנון מאושר."
+  ],
+  "mv_boards": [
+    {
+      "id": "MVS",
+      "title": "מסדר מ\"ג — חדר פרטי",
+      "voltage": "33kV",
+      "aux": "24VDC",
+      "busbar": {"label": "L1 L2 L3", "rating_a": 630, "icw_ka": 16},
+      "cells": [
+        {"tag": "+H1", "device_tag": "CB1", "kind": "incomer", "title": "מפסק ראשי — תפעול משותף עם חח\"י",
+         "breaker": {"tag": "CB1", "kind": "acb", "poles": 3, "rating_a": 630, "icu_ka": 16},
+         "ct": "3× 200/1A 5P20 10VA", "relay": "50/51, 50N/51N, 67N, 27/59, 81U/O/R + LOM",
+         "earthing_switch": true, "vpis": true,
+         "cable": {"designation": "3×(1×185/25) Al XLPE 26/45(52) kV", "length_m": 6}, "to": "GRID"},
+        {"tag": "+H2", "device_tag": "VT", "kind": "vt", "title": "משני מתח לפס הצבירה",
+         "vt": "33kV/√3 / 100V/√3 / 100V/3", "earthing_switch": true, "vpis": false},
+        {"tag": "+H3", "device_tag": "CB2", "kind": "feeder", "title": "מפסק צריכה — שנאי עזר",
+         "breaker": {"tag": "CB2", "kind": "acb", "poles": 3, "rating_a": 630, "icu_ka": 16},
+         "ct": "3× 50/1A 5P20 10VA", "relay": "50/51, 50N/51N",
+         "cable": {"designation": "3×(1×185/25) Al XLPE", "length_m": 66}, "to": "TR-AUX"},
+        {"tag": "+H4", "device_tag": "CB3", "kind": "feeder", "title": "מפסק ייצור (PV + אגירה)",
+         "breaker": {"tag": "CB3", "kind": "acb", "poles": 3, "rating_a": 630, "icu_ka": 16},
+         "ct": "3× 200/1A 5P20 10VA", "relay": "50/51, 50N/51N + LOM",
+         "cable": null, "to": null},
+        {"tag": "+H5", "device_tag": "PM", "kind": "metering", "title": "תא מניית ייצור דו-כיווני",
+         "breaker": null, "ct": "3× 200/1A 0.2s 10VA", "vt": "33kV/√3 / 100V/√3 0.2", "metering": "מונה חח\"י דו-כיווני",
+         "earthing_switch": false, "vpis": false, "to": null},
+        {"tag": "+H6", "device_tag": "Q1", "kind": "feeder", "title": "מפסק יציאה ל-PCS-1",
+         "breaker": {"tag": "Q1", "kind": "acb", "poles": 3, "rating_a": 630, "icu_ka": 16},
+         "ct": "3× 200/1A 5P20 10VA", "relay": "50/51, 50N/51N",
+         "cable": {"designation": "3×(1×300/25) Al XLPE", "length_m": 52}, "to": "PCS-1"},
+        {"tag": "+H7", "device_tag": "Q2", "kind": "feeder", "title": "מפסק יציאה ל-PCS-2",
+         "breaker": {"tag": "Q2", "kind": "acb", "poles": 3, "rating_a": 630, "icu_ka": 16},
+         "ct": "3× 200/1A 5P20 10VA", "relay": "50/51, 50N/51N",
+         "cable": {"designation": "3×(1×300/25) Al XLPE", "length_m": 74}, "to": "PCS-2"},
+        {"tag": "+H8", "device_tag": "Q3", "kind": "feeder", "title": "מפסק יציאה ל-PV-MVS",
+         "breaker": {"tag": "Q3", "kind": "acb", "poles": 3, "rating_a": 630, "icu_ka": 16},
+         "ct": "3× 150/1A 5P20 10VA", "relay": "50/51, 50N/51N",
+         "cable": {"designation": "3×(1×185/25) Al XLPE", "length_m": 73}, "to": "PV-MVS"}
+      ],
+      "notes": ["ציוד התאים לפי IEC 62271-200, 36kV, 630A, 16kA/1s; פירוט בגיליון E-05A."]
+    }
+  ],
+  "nodes": [
+    {"id": "GRID", "kind": "grid", "label": "רשת חח\"י", "sublabel": "חיבור במתח גבוה — באחריות חח\"י", "rating": "Isc 16kA / 1s"},
+    {"id": "TR-AUX", "kind": "transformer", "label": "שנאי עזר", "sublabel": "630kVA 33/0.4kV Dyn11", "rating": "uk 6% · לוח LV-AUX"},
+    {"id": "PCS-1", "kind": "pcs", "label": "PCS-1", "sublabel": "RMU + שנאי 10MVA 33/0.69kV", "rating": "6.25MWh"},
+    {"id": "PCS-2", "kind": "pcs", "label": "PCS-2", "sublabel": "RMU + שנאי 10MVA 33/0.69kV", "rating": "6.25MWh"},
+    {"id": "PV-MVS", "kind": "transformer", "label": "PV-MVS", "sublabel": "RMU + שנאי 6400kVA 33/0.8kV", "rating": "4.72MWp DC"}
+  ]
+}

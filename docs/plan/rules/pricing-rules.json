@@ -1,0 +1,285 @@
+{
+  "$schema": "https://bee.local/schemas/rules/pricing-rules.schema.json",
+  "$comment": "B.E.E Engine — seed של PricingRule / DiscountSchedule / ApprovalThreshold / פרמטרי תמחור ו-ROI. טיוטה 0.1 (2026-10-10). כל ערך מספרי הוא placeholder (null) עד שברק ממלא; אין כאן אף מחיר, תעריף או סף חוקי. verification לפי Rule.verification של תוכנית האב §5. ראו specs/12-cpq-documents-spec.md §3.2, §5.4.",
+  "version": "0.1",
+  "needs_owner_input": true,
+  "status": "seed_unverified",
+  "expr_dsl": "qty_expr DSL (specs/12 §2.3): arithmetic, comparisons, and/or/not, if(), ceil/floor/round/up(x,step), max/min/sum/len, lookup(table,key); variables: line.*, inputs.*, totals.*, customer.*, product.*",
+
+  "parameters": {
+    "vat_rate": { "value": null, "unit": "fraction", "valid_from": null, "source_he": "דוח 04 §4.3 / 03 §5.2 — 18% מ-01.01.2025 (תקציר)", "verification": "summary", "needs_owner_input": true, "note_he": "לאימות מול רשות המסים בכל תחילת שנה" },
+    "default_margin_pct": { "value": null, "unit": "pct", "verification": "unverified", "needs_owner_input": true, "note_he": "מרווח ברירת מחדל כשאין PricingRule תואם" },
+    "rounding": { "line": "ROUND_HALF_UP_2DP", "totals": "ROUND_HALF_UP_2DP", "final_round_step_ils": null, "final_round_as_explicit_line": true, "needs_owner_input": true },
+    "validity_days_default": { "value": null, "unit": "days", "needs_owner_input": true, "note_he": "דוח 03 §6: 14–30 יום נפוץ" },
+    "price_stale_days": { "value": null, "unit": "days", "needs_owner_input": true, "note_he": "דוח 04 §7: 90 יום הוזכר כפרקטיקה — לא מחייב" },
+    "price_jump_alert_pct": { "value": null, "unit": "pct", "needs_owner_input": true },
+    "block_on_stale": { "value": false, "needs_owner_input": true },
+    "import_confidence_min": { "value": null, "unit": "fraction", "needs_owner_input": true },
+    "dc_ac_ratio_max": { "value": null, "needs_owner_input": true, "note_he": "לבחירת ממיר בערכות; לאימות מול יצרן ומול eplan" },
+    "crane_height_threshold_m": { "value": null, "unit": "m", "needs_owner_input": true },
+    "spd_dc_threshold_m": { "value": null, "unit": "m", "needs_owner_input": true, "note_he": "eplan: SPD-DC כשמחרוזות > 10 מ' — כלל משרד, לאימות" },
+    "fx_rate_source": { "value": "boi", "options": ["boi", "manual"], "needs_owner_input": true, "note_he": "API בנק ישראל — URL לאימות" },
+    "allocation_threshold_ils": { "value": null, "unit": "ILS", "valid_from": null, "verification": "unverified", "needs_owner_input": true, "note_he": "V18 — סתירה 15,000 / 5,000 ₪ (2026); לאימות מול רשות המסים" },
+    "always_request_allocation": { "value": false, "needs_owner_input": true },
+    "contract_value_requires_qualified_signature_ils": { "value": null, "unit": "ILS", "needs_owner_input": true, "note_he": "מעל סף זה — Documenso/ספק מאושר במקום click-to-accept; לאימות עו\"ד (V17)" },
+    "labour_warranty_years": { "value": null, "unit": "years", "needs_owner_input": true },
+    "mounting_warranty_years": { "value": null, "unit": "years", "needs_owner_input": true },
+    "sealing_warranty_years": { "value": null, "unit": "years", "needs_owner_input": true }
+  },
+
+  "pricing_rules": [
+    {
+      "id": "PR-001", "name_he": "מרווח ברירת מחדל — ציוד ראשי (מודולים, ממירים, אופטימייזרים, סוללות)",
+      "priority": 100,
+      "scope": { "kind": ["module", "inverter", "optimizer", "battery"] },
+      "when": "line.unit_cost > 0",
+      "action": { "type": "margin_pct", "value": null },
+      "stack": false, "valid_from": null, "valid_to": null,
+      "verification": "unverified", "needs_owner_input": true, "source_he": "ברק — לקבוע"
+    },
+    {
+      "id": "PR-002", "name_he": "מרווח — חומרי BOS (כבלים, הגנות, לוחות, תעלות, אביזרים, קונסטרוקציה)",
+      "priority": 110,
+      "scope": { "kind": ["cable", "breaker", "cabinet", "tray", "accessory", "mounting", "meter"] },
+      "when": "line.unit_cost > 0",
+      "action": { "type": "margin_pct", "value": null },
+      "stack": false, "verification": "unverified", "needs_owner_input": true
+    },
+    {
+      "id": "PR-003", "name_he": "עבודה — מחיר לפי מודול × סוג גג (מחירון מכירה פנימי)",
+      "priority": 120,
+      "scope": { "kind": ["labour"], "subkind": ["install_modules"] },
+      "when": "true",
+      "action": { "type": "price_per_unit", "value": null, "lookup": { "table": "labour_price_per_module", "key": "inputs.roof_type" } },
+      "stack": false, "verification": "unverified", "needs_owner_input": true,
+      "note_he": "טבלת lookup: tile / tin / concrete_flat / pergola / facade / ground → ₪ למודול (placeholders)"
+    },
+    {
+      "id": "PR-004", "name_he": "שירותים פנימיים (תכנון, ליווי חח\"י, As-Made, הדרכה) — מחיר קבוע",
+      "priority": 130,
+      "scope": { "kind": ["service"], "subkind": ["design", "simulation", "iec_followup", "as_made", "training", "monitoring_setup", "survey", "permit_exempt_report"] },
+      "when": "true",
+      "action": { "type": "price_per_unit", "value": null },
+      "stack": false, "verification": "unverified", "needs_owner_input": true
+    },
+    {
+      "id": "PR-005", "name_he": "קבלני משנה (קונסטרוקטור, בודק, מנוף, פיגום) — עלות + מרווח",
+      "priority": 140,
+      "scope": { "kind": ["service", "labour"], "subkind": ["constructor", "inspector", "crane", "scaffold", "lifeline", "insurance_cw"] },
+      "when": "line.unit_cost > 0",
+      "action": { "type": "markup_pct", "value": null },
+      "stack": false, "verification": "unverified", "needs_owner_input": true
+    },
+    {
+      "id": "PR-006", "name_he": "אגרות חח\"י / רשויות — passthrough ללא מרווח, לפי חשבון בפועל",
+      "priority": 10,
+      "scope": { "kind": ["fee"] },
+      "when": "product.tech.passthrough == true",
+      "action": { "type": "passthrough" },
+      "stack": false, "verification": "office", "needs_owner_input": false,
+      "note_he": "מוצג 'לפי חשבון חח\"י בפועל'; אומדן (אם קיים) לא נכלל בסה\"כ. מהות האגרה (V2) לאימות"
+    },
+    {
+      "id": "PR-007", "name_he": "רצפת מרווח כולל להצעה",
+      "priority": 900,
+      "scope": {},
+      "when": "true",
+      "action": { "type": "min_margin_pct", "value": null, "level": "quote" },
+      "stack": true, "verification": "unverified", "needs_owner_input": true,
+      "note_he": "חריגה → flags.min_margin_breach → ApprovalThreshold AT-002"
+    },
+    {
+      "id": "PR-008", "name_he": "עיגול מחיר יחידה — ציוד ראשי",
+      "priority": 500,
+      "scope": { "kind": ["module", "inverter", "optimizer", "battery"] },
+      "when": "true",
+      "action": { "type": "round_unit_price", "step": null },
+      "stack": true, "verification": "unverified", "needs_owner_input": true
+    },
+    {
+      "id": "PR-009", "name_he": "הצמדה למט\"ח — מודולים וממירים שנרכשים ב-USD/EUR",
+      "priority": 600,
+      "scope": { "kind": ["module", "inverter", "optimizer", "battery"] },
+      "when": "line.price_snapshot.cost.currency != 'ILS'",
+      "action": { "type": "linkage", "currency": "auto", "base_rate_source": "boi", "threshold_pct": null },
+      "stack": true, "verification": "unverified", "needs_owner_input": true,
+      "note_he": "קובע terms.linkage.kind='fx' בהצעה; הנוסח המשפטי לאימות עו\"ד"
+    },
+    {
+      "id": "PR-010", "name_he": "מחיר חוזי / מכרז — דריסה לפי PriceList sale ללקוח",
+      "priority": 5,
+      "scope": {},
+      "when": "exists(sale_price_list(customer.id, line.product_id))",
+      "action": { "type": "price_per_unit", "value": "from_sale_price_list" },
+      "stack": false, "verification": "unverified", "needs_owner_input": true
+    },
+    {
+      "id": "PR-011", "name_he": "מצב 'מחיר ל-kWp' להצעה מקוצרת (lump sum)",
+      "priority": 50,
+      "scope": { "boq_section": ["08.02", "08.03", "08.04", "08.05", "08.06"] },
+      "when": "inputs.price_mode == 'lump_sum' and inputs.regulatory_track == 'residential_le15'",
+      "action": { "type": "price_per_kwp", "value": null, "lookup": { "table": "price_per_kwp_by_roof", "key": "inputs.roof_type" } },
+      "stack": false, "verification": "unverified", "needs_owner_input": true,
+      "note_he": "מחליף את מחירי השורות בפרקים אלה בשורה אחת 'מערכת סולארית קומפלט'; הפירוט נשמר internal בלבד. ערכי ₪/kWp — placeholders; לא לקודד מספרים צרכניים (דוח 04 §10.18)"
+    },
+    {
+      "id": "PR-012", "name_he": "שורות 'כלול' — אביזרים קטנים ללא מחיר נפרד בתצוגת לקוח",
+      "priority": 700,
+      "scope": { "kind": ["accessory"] },
+      "when": "inputs.price_mode != 'by_line'",
+      "action": { "type": "hide_price" },
+      "stack": true, "verification": "office", "needs_owner_input": true,
+      "note_he": "העלות נספגת בשורת-האב של הפרק (למשל 08.04.0070); internal מציג הכל"
+    },
+    {
+      "id": "PR-013", "name_he": "תוספת למחירים ישנים (stale) — אזהרה בלבד, ללא שינוי מחיר",
+      "priority": 950,
+      "scope": {},
+      "when": "line.price_snapshot.cost.is_stale == true",
+      "action": { "type": "flag", "flag": "stale_price" },
+      "stack": true, "verification": "office", "needs_owner_input": false
+    }
+  ],
+
+  "lookup_tables": {
+    "labour_price_per_module": { "unit": "ILS/module", "needs_owner_input": true, "rows": { "tile": null, "tin": null, "concrete_flat": null, "pergola": null, "facade": null, "ground": null } },
+    "price_per_kwp_by_roof": { "unit": "ILS/kWp", "needs_owner_input": true, "rows": { "tile": null, "tin": null, "concrete_flat": null, "pergola": null } },
+    "tray_support_spacing_m": { "unit": "m", "needs_owner_input": true, "source_he": "eplan spec.cabling.tray_support_spacing_m", "rows": { "tile": null, "tin": null, "concrete_flat": null, "pergola": null, "facade": null } },
+    "kva_by_amps": { "unit": "kVA", "verification": "office", "source_he": "דוח 02 §2 — אריתמטיקה √3×400×I/1000; סדרת גדלי החיבור של חח\"י לאימות", "rows": { "1x25": 5.75, "1x40": 9.2, "3x25": 17.3, "3x40": 27.7, "3x63": 43.6, "3x80": 55.4, "3x100": 69.3, "3x125": 86.6, "3x160": 110.9, "3x200": 138.6, "3x250": 173.2, "3x400": 277.1, "3x630": 436.5 } }
+  },
+
+  "discount_schedules": [
+    {
+      "id": "DS-001", "name_he": "הנחת גודל לפי kWp (מדרגות)",
+      "applies_to": { "customer_type": ["private", "business", "agricultural"], "regulatory_track": null },
+      "basis": "totals.before_discount",
+      "tiers": [
+        { "kwp_from": 0, "kwp_to": null, "discount_pct": null },
+        { "kwp_from": null, "kwp_to": null, "discount_pct": null },
+        { "kwp_from": null, "kwp_to": null, "discount_pct": null }
+      ],
+      "stack_with_manual": false, "verification": "unverified", "needs_owner_input": true
+    },
+    {
+      "id": "DS-002", "name_he": "הנחת לקוח חוזר / הפניה",
+      "applies_to": { "when": "customer.is_returning == true or customer.referral_id != null" },
+      "basis": "totals.before_discount",
+      "tiers": [ { "discount_pct": null } ],
+      "stack_with_manual": true, "verification": "unverified", "needs_owner_input": true
+    },
+    {
+      "id": "DS-003", "name_he": "הנחה ידנית (ברק) — ללא מדרגות, כפופה לספי אישור",
+      "applies_to": {},
+      "basis": "totals.before_discount",
+      "tiers": [ { "discount_pct": "manual" } ],
+      "stack_with_manual": true, "verification": "office", "needs_owner_input": false
+    },
+    {
+      "id": "DS-004", "name_he": "מחיר לבלוק (block price) — אופטימייזרים/מודולים בכמות",
+      "applies_to": { "kind": ["optimizer", "module"] },
+      "basis": "line.qty",
+      "tiers": [
+        { "qty_from": 0, "qty_to": null, "unit_price_adjust_pct": null },
+        { "qty_from": null, "qty_to": null, "unit_price_adjust_pct": null }
+      ],
+      "stack_with_manual": true, "verification": "unverified", "needs_owner_input": true
+    }
+  ],
+
+  "approval_thresholds": [
+    {
+      "id": "AT-001", "name_he": "הנחה כוללת מעל סף — דורש אישור בעלים",
+      "when": "totals.discount_pct_effective > threshold",
+      "threshold": { "value": null, "unit": "pct" },
+      "approver_role": "owner", "effect": "pending_approval",
+      "verification": "unverified", "needs_owner_input": true
+    },
+    {
+      "id": "AT-002", "name_he": "מרווח כולל מתחת לרצפה (PR-007)",
+      "when": "flags.min_margin_breach == true",
+      "threshold": { "value": null, "unit": "pct" },
+      "approver_role": "owner", "effect": "pending_approval",
+      "verification": "unverified", "needs_owner_input": true
+    },
+    {
+      "id": "AT-003", "name_he": "סכום הצעה מעל סף — אישור בעלים גם ללא הנחה",
+      "when": "totals.before_vat > threshold",
+      "threshold": { "value": null, "unit": "ILS" },
+      "approver_role": "owner", "effect": "pending_approval",
+      "verification": "unverified", "needs_owner_input": true
+    },
+    {
+      "id": "AT-004", "name_he": "הצעה שנוצרה ע\"י סוכן AI (Quote drafter) — תמיד אישור אדם",
+      "when": "version.created_by.role == 'agent'",
+      "threshold": null,
+      "approver_role": "owner", "effect": "pending_approval",
+      "verification": "office", "needs_owner_input": false,
+      "note_he": "תוכנית האב §14 — Law #1"
+    },
+    {
+      "id": "AT-005", "name_he": "שורות ללא עלות / ללא מיפוי BOM / כלל unverified בלי הערה — חסימה (לא אישור)",
+      "when": "flags.missing_cost or flags.unmapped_bom or flags.rule_without_threshold",
+      "threshold": null,
+      "approver_role": null, "effect": "blocked",
+      "verification": "office", "needs_owner_input": false,
+      "note_he": "HUMAN_INPUT_REQUIRED — תוכנית האב §2.2"
+    },
+    {
+      "id": "AT-006", "name_he": "מחירים ישנים (stale) בהצעה — אזהרה; חסימה רק אם block_on_stale",
+      "when": "len(flags.stale_prices) > 0",
+      "threshold": null,
+      "approver_role": "owner", "effect": "warn_or_block_by_param",
+      "verification": "office", "needs_owner_input": false
+    }
+  ],
+
+  "payment_schedule_defaults": {
+    "needs_owner_input": true,
+    "verification": "unverified",
+    "note_he": "דוח 03 §6.7: מקדמה 10–30%, אספקה/תחילת התקנה 40–60%, יתרה בסיום/חיבור — טווחי שוק, לא ערכים",
+    "by_customer_type": {
+      "private": [
+        { "seq": 1, "milestone_key": "contract_signed", "pct": null },
+        { "seq": 2, "milestone_key": "equipment_delivered", "pct": null },
+        { "seq": 3, "milestone_key": "installation_done", "pct": null },
+        { "seq": 4, "milestone_key": "iec_connection", "pct": null }
+      ],
+      "business": [
+        { "seq": 1, "milestone_key": "contract_signed", "pct": null },
+        { "seq": 2, "milestone_key": "iec_pre_approval", "pct": null },
+        { "seq": 3, "milestone_key": "equipment_delivered", "pct": null },
+        { "seq": 4, "milestone_key": "installation_done", "pct": null },
+        { "seq": 5, "milestone_key": "iec_connection", "pct": null },
+        { "seq": 6, "milestone_key": "handover", "pct": null }
+      ]
+    }
+  },
+
+  "roi_parameters": {
+    "needs_owner_input": true,
+    "note_he": "ראו specs/12 §5.4 — כל ערך null עד אימות; מקורות: R1–R6 (דוח 02 §6), דוח 03 §5",
+    "net_metering_sunset": { "value": null, "rule_id": "R1", "verification": "summary" },
+    "feed_in_tariff_ils_kwh": {
+      "residential_le15": { "value": null, "valid_from": null, "rule_id": "R2", "verification": "unverified" },
+      "commercial_15_100": { "value": null, "valid_from": null, "rule_id": "R3", "verification": "summary", "note_he": "38.4 (2025) / 35.67 (2026) אג' בתקציר — לא לקודד בלי ספר התעריפים" },
+      "commercial_100_630": { "value": null, "valid_from": null, "rule_id": "R2", "verification": "unverified" },
+      "mv_gt630": { "value": null, "verification": "unverified" }
+    },
+    "consumption_tariff_ils_kwh": { "residential": { "value": null, "valid_from": null, "rule_id": "R4", "verification": "summary" }, "tou_business": { "value": null, "verification": "unverified" } },
+    "surplus_tariff_ils_kwh": { "value": null, "verification": "unverified", "note_he": "לא לקודד (דוח 02 §1.3)" },
+    "tariff_term_years": { "value": null, "verification": "unverified" },
+    "tariff_indexation": { "value": null, "options": ["none", "cpi"], "verification": "unverified" },
+    "tariff_escalation_pct": { "value": null },
+    "tax_private": { "exemption_ils_by_year": { "2024": null, "2025": null, "2026": null }, "reduced_rate_pct": null, "reduced_cap_ils": null, "books_exemption_ils": null, "rule_ids": ["R5", "R6"], "verification": "summary" },
+    "degradation_pct_year_by_tech": { "topcon": null, "perc": null, "hjt": null, "note_he": "מהמוצר (Product.tech.warranty) כשקיים; כאן ברירת מחדל" },
+    "first_year_degradation_pct": { "value": null },
+    "discount_rate_pct": { "value": null },
+    "horizon_years": { "value": 25 },
+    "om_cost_pct_capex": { "value": null },
+    "insurance_ils_year": { "value": null },
+    "monitoring_ils_year": { "value": null },
+    "inverter_replacement": { "year": null, "cost_ils": null },
+    "self_consumption_share_default": { "private": null, "business": null },
+    "co2_factor_kg_kwh": { "value": null, "verification": "unverified" }
+  }
+}

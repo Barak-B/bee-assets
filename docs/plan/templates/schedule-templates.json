@@ -1,0 +1,4158 @@
+{
+  "$comment": "B.E.E Engine — תבניות לו\"ז לפי מסלול אסדרה. נוצר ב-S04 (create_schedule_from_template). כל משך ב-ימי עבודה (business_calendar). estimate:true = הערכה ללא מקור, לכיול מ-actuals. duration_param = פרמטר IEC מטבלת iec_sla_params (לאימות, ראו 00-master-plan.md §9.1).",
+  "version": "0.1",
+  "generated_by": "docs/plan/specs/11-projects-workflow-spec.md §(c)",
+  "units": "business_days",
+  "anchor": "S04.schedule_created = max(contract.signed, payment.deposit.received)",
+  "dependency_types": {
+    "FS": "finish-to-start (ברירת מחדל)",
+    "SS": "start-to-start (+lag_business_days)"
+  },
+  "buffer_semantics": "buffer_days נוסף אחרי סיום הפעילות לפני תחילת העוקבות (ES(succ) = EF(pred) + buffer + lag); לא נספר כחלק מהנתיב הקריטי של הפעילות עצמה",
+  "resources": {
+    "crew": "צוות התקנה",
+    "crane": "מנוף/הנפה",
+    "inspector": "בודק חשמל מוסמך",
+    "iec": "חברת החשמל (מחלק)",
+    "customer": "הלקוח",
+    "engineer": "מהנדס/ברק",
+    "pm": "מנהל פרויקט",
+    "surveyor": "סוקר",
+    "supplier": "ספק",
+    "constructor": "קונסטרוקטור",
+    "distributor": "מחלק היסטורי",
+    "authority": "רשות (רשות החשמל/רשות מקומית/כבאות)"
+  },
+  "parameters": {
+    "IEC_DISTRIBUTOR_ANSWER_BD": {
+      "value": null,
+      "candidates_business_days": [
+        7,
+        14,
+        30
+      ],
+      "unit": "business_days",
+      "source": "00-master-plan.md §9.1 / research/01-iec-process.md §5",
+      "verification": "לאימות",
+      "note_he": "תשובת מחלק לבקשת שילוב; אמות המידה מצוינות בתקצירים כ-7/14/30 י\"ע ללא מספר סעיף. עד לאימות — להשתמש ב-30 לצורך CPM ולסמן confidence='param'."
+    },
+    "IEC_INSPECTION_AFTER_PAYMENT_BD": {
+      "value": 7,
+      "unit": "business_days",
+      "source": "00-master-plan.md §9.1 (תקציר אמות מידה)",
+      "verification": "לאימות",
+      "note_he": "בדיקת מתקן תוך 7 י\"ע מהתשלום"
+    },
+    "IEC_CONNECTION_COMPLETE_BD": {
+      "value": 30,
+      "unit": "business_days",
+      "source": "00-master-plan.md §9.1 (תקציר אמות מידה)",
+      "verification": "לאימות",
+      "note_he": "השלמת חיבור+בדיקה תוך 30 י\"ע מהתשלום"
+    },
+    "IEC_CONNECTION_COMPLETE_REMAINDER_BD": {
+      "value": null,
+      "derived": "IEC_CONNECTION_COMPLETE_BD - IEC_INSPECTION_AFTER_PAYMENT_BD",
+      "unit": "business_days",
+      "verification": "לאימות (נגזר)",
+      "note_he": "מונה + אישור הפעלה אחרי הבדיקה; נגזר מהפרמטרים לעיל"
+    },
+    "IEC_SURVEY_PUBLISH_BD": {
+      "value": null,
+      "candidates_business_days": [
+        7,
+        14
+      ],
+      "unit": "business_days",
+      "source": "00-master-plan.md §9.1",
+      "verification": "לאימות",
+      "note_he": "פרסום סקרים 7–14 י\"ע"
+    }
+  },
+  "tracks": {
+    "RES_LE_15": {
+      "name_he": "ביתי עד 15 kW",
+      "pre_application_required": "לאימות (ברירת מחדל: נדרש)",
+      "notes_he": "מסלול בסיס. מסלול מהיר (החלטה 70104) ייתכן ומקצר את תשובת המחלק — לאימות. בודק סוג 1 — לאימות (R17).",
+      "activities": [
+        {
+          "id": "S01.lead_qualify",
+          "name_he": "סיווג ליד ופרופיל אסדרה משוער",
+          "stage": "S01",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_schedule",
+          "name_he": "תיאום מועד סקר עם הלקוח",
+          "stage": "S02",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.bill_received",
+          "name_he": "קבלת חשבון חשמל אחרון",
+          "stage": "S02",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_visit",
+          "name_he": "סקר אתר (PWA)",
+          "stage": "S02",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_schedule"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "surveyor",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S03.design_lite_quote",
+          "name_he": "תכנון ראשוני, תפוקה והצעת מחיר",
+          "stage": "S03",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_visit",
+            "S02.bill_received"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S03.quote_sent",
+          "name_he": "הצעה נשלחה (דרך שער האמון)",
+          "stage": "S03",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S03.design_lite_quote"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.negotiation",
+          "name_he": "מו\"מ ורוויזיות",
+          "stage": "S04",
+          "duration_business_days": 10,
+          "estimate": true,
+          "depends_on": [
+            "S03.quote_sent"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.contract_sign",
+          "name_he": "חתימת הסכם (OTP)",
+          "stage": "S04",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.negotiation"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.deposit",
+          "name_he": "תשלום מקדמה",
+          "stage": "S04",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S04.contract_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.schedule_created",
+          "name_he": "יצירת לו\"ז מתבנית (anchor)",
+          "stage": "S04",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S04.deposit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_pack_prepare",
+          "name_he": "הכנת חבילת בקשת שילוב (טופס 22-8-22, נספחים לפי מסלול)",
+          "stage": "S05",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_form_sign",
+          "name_he": "חתימת לקוח על הבקשה / ייפוי כוח",
+          "stage": "S05",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_pack_prepare"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_submit",
+          "name_he": "הגשה ב-digitalorders ורישום מספר בקשה",
+          "stage": "S05",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_form_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S05.iec_fee_payment",
+          "name_he": "תשלום הצעת חשבון (אגרה — סכום לאימות)",
+          "stage": "S05",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_submit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_distributor_answer",
+          "name_he": "תשובת מחלק",
+          "stage": "S05",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S05.iec_fee_payment"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 3,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_DISTRIBUTOR_ANSWER_BD"
+        },
+        {
+          "id": "S06.spec_eplan",
+          "name_he": "spec YAML + הרצת eplan + גיליונות E-00…E-08",
+          "stage": "S06",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.constructor_drawing",
+          "name_he": "שרטוט/אישור קונסטרוקטור",
+          "stage": "S06",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "constructor",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.design_review",
+          "name_he": "סבב STATUS/RESULT/NEXT ואישור בעלים",
+          "stage": "S06",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.spec_eplan",
+            "S06.constructor_drawing"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.dwg_convert",
+          "name_he": "המרה ל-DWG 2018 והדפסה (Windows worker)",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.bom_diff",
+          "name_he": "השוואת BOM להצעה (ChangeOrder אם נדרש)",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.po_issue",
+          "name_he": "פיצול BOM לספקים והוצאת הזמנות רכש",
+          "stage": "S07",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.dwg_convert",
+            "S06.bom_diff"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.supplier_lead_time",
+          "name_he": "זמן אספקה ציוד ראשי (מודולים/ממירים/קונסטרוקציה)",
+          "stage": "S07",
+          "duration_business_days": 10,
+          "estimate": true,
+          "depends_on": [
+            "S07.po_issue"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 3,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.delivery",
+          "name_he": "אספקה לאתר/מחסן ובדיקת חוסרים",
+          "stage": "S07",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.supplier_lead_time"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.crew_assign",
+          "name_he": "שיבוץ צוות ומנוף, סנכרון יומן",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.delivery",
+            "S05.iec_distributor_answer"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.install_mech",
+          "name_he": "התקנה מכנית (קונסטרוקציה + מודולים)",
+          "stage": "S08",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S08.crew_assign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S08.install_electrical",
+          "name_he": "התקנה חשמלית (DC/AC, לוחות, הארקה, שילוט)",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_mech"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 1,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.checklist_close",
+          "name_he": "סגירת צ'קליסט, תמונות, דוחות יומיים",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_electrical"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspector_booking",
+          "name_he": "הזמנת בודק (סוג לפי R17 — לאימות)",
+          "stage": "S09",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S08.checklist_close"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 1,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspection",
+          "name_he": "בדיקת בודק + דוח 62446-1",
+          "stage": "S09",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspector_booking"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": true
+        },
+        {
+          "id": "S09.defects_fix",
+          "name_he": "תיקון ליקויים (אם יש) ובדיקה חוזרת",
+          "stage": "S09",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "optional": true
+        },
+        {
+          "id": "S09.report_signed",
+          "name_he": "דוח בודק חתום, 0 ליקויים",
+          "stage": "S09",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S09.defects_fix"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S10.iec_final_pack",
+          "name_he": "חבילת בדיקת מתקן חח\"י (חד-קו חתום, הצהרות, דפי נתונים, as-made)",
+          "stage": "S10",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S09.report_signed"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S10.iec_inspection_order_pay",
+          "name_he": "הזמנת בדיקה ב-digitalorders + תשלום",
+          "stage": "S10",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_final_pack"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 1,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S10.iec_inspection",
+          "name_he": "בדיקת חח\"י בשטח",
+          "stage": "S10",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S10.iec_inspection_order_pay"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_INSPECTION_AFTER_PAYMENT_BD"
+        },
+        {
+          "id": "S10.iec_meter_activation",
+          "name_he": "החלפת/התקנת מונה ואישור הפעלה",
+          "stage": "S10",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S10.iec_inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_CONNECTION_COMPLETE_REMAINDER_BD"
+        },
+        {
+          "id": "S10.tariff_registration",
+          "name_he": "רישום לאסדרה בפורטל יצרנים",
+          "stage": "S10",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_meter_activation"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.commissioning",
+          "name_he": "commissioning + צ'קליסט הפעלה",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_meter_activation",
+            "S10.tariff_registration"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_pack",
+          "name_he": "תיק מתקן, אחריות, חשבון סופי",
+          "stage": "S11",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S11.commissioning"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.monitoring_link",
+          "name_he": "MonitoringLink + אימות סנכרון ראשון",
+          "stage": "S11",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S11.commissioning"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_sign",
+          "name_he": "פגישת מסירה, הדרכה וחתימה",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S11.handover_pack",
+            "S11.monitoring_link"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S12.om_start",
+          "name_he": "מעבר לניטור ותחזוקה",
+          "stage": "S12",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S11.handover_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        }
+      ],
+      "activity_count": 41
+    },
+    "COM_LE_100": {
+      "name_he": "עסקי/חקלאי 15–100 kW",
+      "pre_application_required": "לאימות (ברירת מחדל: נדרש)",
+      "notes_he": "מונה ייצור נפרד (35כ3(י)); מעל 50 kW מונה קריאה מרחוק על חשבון הבעלים — לאימות. סוג בודק — לאימות.",
+      "activities": [
+        {
+          "id": "S01.lead_qualify",
+          "name_he": "סיווג ליד ופרופיל אסדרה משוער",
+          "stage": "S01",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_schedule",
+          "name_he": "תיאום מועד סקר עם הלקוח",
+          "stage": "S02",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.bill_received",
+          "name_he": "קבלת חשבון חשמל אחרון",
+          "stage": "S02",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_visit",
+          "name_he": "סקר אתר (PWA)",
+          "stage": "S02",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_schedule"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "surveyor",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S03.design_lite_quote",
+          "name_he": "תכנון ראשוני, תפוקה והצעת מחיר",
+          "stage": "S03",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_visit",
+            "S02.bill_received"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S03.quote_sent",
+          "name_he": "הצעה נשלחה (דרך שער האמון)",
+          "stage": "S03",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S03.design_lite_quote"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.negotiation",
+          "name_he": "מו\"מ ורוויזיות",
+          "stage": "S04",
+          "duration_business_days": 15,
+          "estimate": true,
+          "depends_on": [
+            "S03.quote_sent"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.contract_sign",
+          "name_he": "חתימת הסכם (OTP)",
+          "stage": "S04",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.negotiation"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.deposit",
+          "name_he": "תשלום מקדמה",
+          "stage": "S04",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S04.contract_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.schedule_created",
+          "name_he": "יצירת לו\"ז מתבנית (anchor)",
+          "stage": "S04",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S04.deposit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_pack_prepare",
+          "name_he": "הכנת חבילת בקשת שילוב (טופס 22-8-22, נספחים לפי מסלול)",
+          "stage": "S05",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_form_sign",
+          "name_he": "חתימת לקוח על הבקשה / ייפוי כוח",
+          "stage": "S05",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_pack_prepare"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_submit",
+          "name_he": "הגשה ב-digitalorders ורישום מספר בקשה",
+          "stage": "S05",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_form_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S05.iec_fee_payment",
+          "name_he": "תשלום הצעת חשבון (אגרה — סכום לאימות)",
+          "stage": "S05",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_submit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_distributor_answer",
+          "name_he": "תשובת מחלק",
+          "stage": "S05",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S05.iec_fee_payment"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 3,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_DISTRIBUTOR_ANSWER_BD"
+        },
+        {
+          "id": "S06.spec_eplan",
+          "name_he": "spec YAML + הרצת eplan + גיליונות E-00…E-08",
+          "stage": "S06",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.constructor_drawing",
+          "name_he": "שרטוט/אישור קונסטרוקטור",
+          "stage": "S06",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "constructor",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.design_review",
+          "name_he": "סבב STATUS/RESULT/NEXT ואישור בעלים",
+          "stage": "S06",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.spec_eplan",
+            "S06.constructor_drawing"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.dwg_convert",
+          "name_he": "המרה ל-DWG 2018 והדפסה (Windows worker)",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.bom_diff",
+          "name_he": "השוואת BOM להצעה (ChangeOrder אם נדרש)",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.ancillary_certs",
+          "name_he": "אישורים נלווים: קונסטרוקטור חתום, ביטוח, רשות מקומית (לפי הצורך — לאימות V6)",
+          "stage": "S06",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S06.constructor_drawing"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "authority",
+          "buffer_days": 3,
+          "milestone": false,
+          "customer_visible": false,
+          "optional": true
+        },
+        {
+          "id": "S07.po_issue",
+          "name_he": "פיצול BOM לספקים והוצאת הזמנות רכש",
+          "stage": "S07",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.dwg_convert",
+            "S06.bom_diff"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.supplier_lead_time",
+          "name_he": "זמן אספקה ציוד ראשי (מודולים/ממירים/קונסטרוקציה)",
+          "stage": "S07",
+          "duration_business_days": 15,
+          "estimate": true,
+          "depends_on": [
+            "S07.po_issue"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 3,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.delivery",
+          "name_he": "אספקה לאתר/מחסן ובדיקת חוסרים",
+          "stage": "S07",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.supplier_lead_time"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.crew_assign",
+          "name_he": "שיבוץ צוות ומנוף, סנכרון יומן",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.delivery",
+            "S05.iec_distributor_answer",
+            "S06.ancillary_certs"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.install_mech",
+          "name_he": "התקנה מכנית (קונסטרוקציה + מודולים)",
+          "stage": "S08",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S08.crew_assign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S08.crane",
+          "name_he": "מנוף/הנפה",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_mech"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "crane",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.install_electrical",
+          "name_he": "התקנה חשמלית (DC/AC, לוחות, הארקה, שילוט)",
+          "stage": "S08",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_mech"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 2,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.checklist_close",
+          "name_he": "סגירת צ'קליסט, תמונות, דוחות יומיים",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_electrical"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.production_meter_cabinet",
+          "name_he": "ארון מונה ייצור + מנתקים (R8, >15 kW)",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_electrical"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspector_booking",
+          "name_he": "הזמנת בודק (סוג לפי R17 — לאימות)",
+          "stage": "S09",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S08.checklist_close"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 1,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspection",
+          "name_he": "בדיקת בודק + דוח 62446-1",
+          "stage": "S09",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspector_booking"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": true
+        },
+        {
+          "id": "S09.defects_fix",
+          "name_he": "תיקון ליקויים (אם יש) ובדיקה חוזרת",
+          "stage": "S09",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "optional": true
+        },
+        {
+          "id": "S09.report_signed",
+          "name_he": "דוח בודק חתום, 0 ליקויים",
+          "stage": "S09",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S09.defects_fix"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S10.iec_final_pack",
+          "name_he": "חבילת בדיקת מתקן חח\"י (חד-קו חתום, הצהרות, דפי נתונים, as-made)",
+          "stage": "S10",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S09.report_signed"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S10.iec_inspection_order_pay",
+          "name_he": "הזמנת בדיקה ב-digitalorders + תשלום",
+          "stage": "S10",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_final_pack"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 1,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S10.iec_inspection",
+          "name_he": "בדיקת חח\"י בשטח",
+          "stage": "S10",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S10.iec_inspection_order_pay"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_INSPECTION_AFTER_PAYMENT_BD"
+        },
+        {
+          "id": "S10.iec_meter_activation",
+          "name_he": "החלפת/התקנת מונה ואישור הפעלה",
+          "stage": "S10",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S10.iec_inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_CONNECTION_COMPLETE_REMAINDER_BD"
+        },
+        {
+          "id": "S10.tariff_registration",
+          "name_he": "רישום לאסדרה בפורטל יצרנים",
+          "stage": "S10",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_meter_activation"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.commissioning",
+          "name_he": "commissioning + צ'קליסט הפעלה",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_meter_activation",
+            "S10.tariff_registration"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_pack",
+          "name_he": "תיק מתקן, אחריות, חשבון סופי",
+          "stage": "S11",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S11.commissioning"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.monitoring_link",
+          "name_he": "MonitoringLink + אימות סנכרון ראשון",
+          "stage": "S11",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S11.commissioning"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_sign",
+          "name_he": "פגישת מסירה, הדרכה וחתימה",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S11.handover_pack",
+            "S11.monitoring_link"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S12.om_start",
+          "name_he": "מעבר לניטור ותחזוקה",
+          "stage": "S12",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S11.handover_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        }
+      ],
+      "activity_count": 44
+    },
+    "COM_LE_630": {
+      "name_he": "100–630 kW",
+      "pre_application_required": "לאימות (ברירת מחדל: נדרש)",
+      "notes_he": "הגדלת חיבור, CT, zero-export/EMS — לפי כללי R7/R9/R10. היתר הפעלה — האם חל בטווח זה לאימות (V10).",
+      "activities": [
+        {
+          "id": "S01.lead_qualify",
+          "name_he": "סיווג ליד ופרופיל אסדרה משוער",
+          "stage": "S01",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_schedule",
+          "name_he": "תיאום מועד סקר עם הלקוח",
+          "stage": "S02",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.bill_received",
+          "name_he": "קבלת חשבון חשמל אחרון",
+          "stage": "S02",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_visit",
+          "name_he": "סקר אתר (PWA)",
+          "stage": "S02",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_schedule"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "surveyor",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S03.design_lite_quote",
+          "name_he": "תכנון ראשוני, תפוקה והצעת מחיר",
+          "stage": "S03",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_visit",
+            "S02.bill_received"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S03.quote_sent",
+          "name_he": "הצעה נשלחה (דרך שער האמון)",
+          "stage": "S03",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S03.design_lite_quote"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.negotiation",
+          "name_he": "מו\"מ ורוויזיות",
+          "stage": "S04",
+          "duration_business_days": 20,
+          "estimate": true,
+          "depends_on": [
+            "S03.quote_sent"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.contract_sign",
+          "name_he": "חתימת הסכם (OTP)",
+          "stage": "S04",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.negotiation"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.deposit",
+          "name_he": "תשלום מקדמה",
+          "stage": "S04",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S04.contract_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.schedule_created",
+          "name_he": "יצירת לו\"ז מתבנית (anchor)",
+          "stage": "S04",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S04.deposit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_pack_prepare",
+          "name_he": "הכנת חבילת בקשת שילוב (טופס 22-8-22, נספחים לפי מסלול)",
+          "stage": "S05",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_form_sign",
+          "name_he": "חתימת לקוח על הבקשה / ייפוי כוח",
+          "stage": "S05",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_pack_prepare"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_submit",
+          "name_he": "הגשה ב-digitalorders ורישום מספר בקשה",
+          "stage": "S05",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_form_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S05.iec_fee_payment",
+          "name_he": "תשלום הצעת חשבון (אגרה — סכום לאימות)",
+          "stage": "S05",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_submit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_distributor_answer",
+          "name_he": "תשובת מחלק",
+          "stage": "S05",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S05.iec_fee_payment"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 3,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_DISTRIBUTOR_ANSWER_BD"
+        },
+        {
+          "id": "S05.connection_upgrade",
+          "name_he": "הגדלת חיבור אם P/0.9 > חיבור קיים (R7) — הזמנה ותשלום",
+          "stage": "S05",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_distributor_answer"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "note_he": "משך בפועל לפי הצעת חיבור של חח\"י — לאימות",
+          "optional": true
+        },
+        {
+          "id": "S06.spec_eplan",
+          "name_he": "spec YAML + הרצת eplan + גיליונות E-00…E-08",
+          "stage": "S06",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.constructor_drawing",
+          "name_he": "שרטוט/אישור קונסטרוקטור",
+          "stage": "S06",
+          "duration_business_days": 10,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "constructor",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.design_review",
+          "name_he": "סבב STATUS/RESULT/NEXT ואישור בעלים",
+          "stage": "S06",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.spec_eplan",
+            "S06.constructor_drawing"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.dwg_convert",
+          "name_he": "המרה ל-DWG 2018 והדפסה (Windows worker)",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.bom_diff",
+          "name_he": "השוואת BOM להצעה (ChangeOrder אם נדרש)",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.ancillary_certs",
+          "name_he": "אישורים נלווים: קונסטרוקטור, דיווח פטור (R18, ≤700 kW), ביטוח, כבאות (לאימות V9)",
+          "stage": "S06",
+          "duration_business_days": 10,
+          "estimate": true,
+          "depends_on": [
+            "S06.constructor_drawing"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "authority",
+          "buffer_days": 5,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.po_issue",
+          "name_he": "פיצול BOM לספקים והוצאת הזמנות רכש",
+          "stage": "S07",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.dwg_convert",
+            "S06.bom_diff"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.supplier_lead_time",
+          "name_he": "זמן אספקה ציוד ראשי (מודולים/ממירים/קונסטרוקציה)",
+          "stage": "S07",
+          "duration_business_days": 20,
+          "estimate": true,
+          "depends_on": [
+            "S07.po_issue"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 3,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.delivery",
+          "name_he": "אספקה לאתר/מחסן ובדיקת חוסרים",
+          "stage": "S07",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.supplier_lead_time"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.crew_assign",
+          "name_he": "שיבוץ צוות ומנוף, סנכרון יומן",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.delivery",
+            "S05.iec_distributor_answer",
+            "S05.connection_upgrade",
+            "S06.ancillary_certs"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.install_mech",
+          "name_he": "התקנה מכנית (קונסטרוקציה + מודולים)",
+          "stage": "S08",
+          "duration_business_days": 15,
+          "estimate": true,
+          "depends_on": [
+            "S08.crew_assign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S08.crane",
+          "name_he": "מנוף/הנפה",
+          "stage": "S08",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_mech"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "crane",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.install_electrical",
+          "name_he": "התקנה חשמלית (DC/AC, לוחות, הארקה, שילוט)",
+          "stage": "S08",
+          "duration_business_days": 8,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_mech"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 7,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.checklist_close",
+          "name_he": "סגירת צ'קליסט, תמונות, דוחות יומיים",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_electrical"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.ct_metering_ems",
+          "name_he": "מדידה עקיפה/CT (R9) + zero-export/EMS מעל 100 kW (R10) — הפעלה",
+          "stage": "S08",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_electrical"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspector_booking",
+          "name_he": "הזמנת בודק (סוג לפי R17 — לאימות)",
+          "stage": "S09",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S08.checklist_close"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 1,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspection",
+          "name_he": "בדיקת בודק + דוח 62446-1",
+          "stage": "S09",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspector_booking"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": true
+        },
+        {
+          "id": "S09.defects_fix",
+          "name_he": "תיקון ליקויים (אם יש) ובדיקה חוזרת",
+          "stage": "S09",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "optional": true
+        },
+        {
+          "id": "S09.report_signed",
+          "name_he": "דוח בודק חתום, 0 ליקויים",
+          "stage": "S09",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S09.defects_fix"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S10.iec_final_pack",
+          "name_he": "חבילת בדיקת מתקן חח\"י (חד-קו חתום, הצהרות, דפי נתונים, as-made)",
+          "stage": "S10",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S09.report_signed"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S10.iec_inspection_order_pay",
+          "name_he": "הזמנת בדיקה ב-digitalorders + תשלום",
+          "stage": "S10",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_final_pack"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 1,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S10.iec_inspection",
+          "name_he": "בדיקת חח\"י בשטח",
+          "stage": "S10",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S10.iec_inspection_order_pay"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_INSPECTION_AFTER_PAYMENT_BD"
+        },
+        {
+          "id": "S10.iec_meter_activation",
+          "name_he": "החלפת/התקנת מונה ואישור הפעלה",
+          "stage": "S10",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S10.iec_inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_CONNECTION_COMPLETE_REMAINDER_BD"
+        },
+        {
+          "id": "S10.tariff_registration",
+          "name_he": "רישום לאסדרה בפורטל יצרנים",
+          "stage": "S10",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_meter_activation"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S10.operating_permit",
+          "name_he": "היתר הפעלה מרשות החשמל (04/2026 — האם חל לאימות)",
+          "stage": "S10",
+          "duration_business_days": 15,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_meter_activation"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "authority",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "note_he": "סף גודל והחובה — לאימות (V10)",
+          "optional": true
+        },
+        {
+          "id": "S11.commissioning",
+          "name_he": "commissioning + צ'קליסט הפעלה",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_meter_activation",
+            "S10.tariff_registration"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_pack",
+          "name_he": "תיק מתקן, אחריות, חשבון סופי",
+          "stage": "S11",
+          "duration_business_days": 4,
+          "estimate": true,
+          "depends_on": [
+            "S11.commissioning"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.monitoring_link",
+          "name_he": "MonitoringLink + אימות סנכרון ראשון",
+          "stage": "S11",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S11.commissioning"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_sign",
+          "name_he": "פגישת מסירה, הדרכה וחתימה",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S11.handover_pack",
+            "S11.monitoring_link"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S12.om_start",
+          "name_he": "מעבר לניטור ותחזוקה",
+          "stage": "S12",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S11.handover_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        }
+      ],
+      "activity_count": 46
+    },
+    "LARGE_GT_630": {
+      "name_he": "מעל 630 kW (מ\"ג)",
+      "pre_application_required": "נדרש (לאימות פרטי התהליך)",
+      "notes_he": "כל המשכים הערכה גסה; תהליך מ\"ג מול חח\"י (סקר חיבור, הצעת חיבור, חוזה) לא נחקר לעומק — לאימות.",
+      "activities": [
+        {
+          "id": "S01.lead_qualify",
+          "name_he": "סיווג ליד ופרופיל אסדרה משוער",
+          "stage": "S01",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_schedule",
+          "name_he": "תיאום מועד סקר עם הלקוח",
+          "stage": "S02",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.bill_received",
+          "name_he": "קבלת חשבון חשמל אחרון",
+          "stage": "S02",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_visit",
+          "name_he": "סקר אתר (PWA)",
+          "stage": "S02",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_schedule"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "surveyor",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S03.design_lite_quote",
+          "name_he": "תכנון ראשוני, תפוקה והצעת מחיר",
+          "stage": "S03",
+          "duration_business_days": 10,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_visit",
+            "S02.bill_received"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S03.quote_sent",
+          "name_he": "הצעה נשלחה (דרך שער האמון)",
+          "stage": "S03",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S03.design_lite_quote"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.negotiation",
+          "name_he": "מו\"מ ורוויזיות",
+          "stage": "S04",
+          "duration_business_days": 30,
+          "estimate": true,
+          "depends_on": [
+            "S03.quote_sent"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.contract_sign",
+          "name_he": "חתימת הסכם (OTP)",
+          "stage": "S04",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.negotiation"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.deposit",
+          "name_he": "תשלום מקדמה",
+          "stage": "S04",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S04.contract_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.schedule_created",
+          "name_he": "יצירת לו\"ז מתבנית (anchor)",
+          "stage": "S04",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S04.deposit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_pack_prepare",
+          "name_he": "הכנת חבילת בקשת שילוב (טופס 22-8-22, נספחים לפי מסלול)",
+          "stage": "S05",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_form_sign",
+          "name_he": "חתימת לקוח על הבקשה / ייפוי כוח",
+          "stage": "S05",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_pack_prepare"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_submit",
+          "name_he": "הגשה ב-digitalorders ורישום מספר בקשה",
+          "stage": "S05",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_form_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S05.iec_fee_payment",
+          "name_he": "תשלום הצעת חשבון (אגרה — סכום לאימות)",
+          "stage": "S05",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_submit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_distributor_answer",
+          "name_he": "תשובת מחלק",
+          "stage": "S05",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S05.iec_fee_payment"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 3,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_DISTRIBUTOR_ANSWER_BD"
+        },
+        {
+          "id": "S05.iec_connection_survey",
+          "name_he": "סקר חיבור/תכנון חח\"י למ\"ג (פרסום סקר)",
+          "stage": "S05",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S05.iec_distributor_answer"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "duration_param": "IEC_SURVEY_PUBLISH_BD",
+          "note_he": "תהליך מ\"ג — שלבים מדויקים לאימות"
+        },
+        {
+          "id": "S06.spec_eplan",
+          "name_he": "spec YAML + הרצת eplan + גיליונות E-00…E-08",
+          "stage": "S06",
+          "duration_business_days": 10,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_connection_survey"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.constructor_drawing",
+          "name_he": "שרטוט/אישור קונסטרוקטור",
+          "stage": "S06",
+          "duration_business_days": 15,
+          "estimate": true,
+          "depends_on": [
+            "S05.iec_connection_survey"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "constructor",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.design_review",
+          "name_he": "סבב STATUS/RESULT/NEXT ואישור בעלים",
+          "stage": "S06",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.spec_eplan",
+            "S06.constructor_drawing"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.dwg_convert",
+          "name_he": "המרה ל-DWG 2018 והדפסה (Windows worker)",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.bom_diff",
+          "name_he": "השוואת BOM להצעה (ChangeOrder אם נדרש)",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.mv_design",
+          "name_he": "תכנון מ\"ג: חדר שנאים, מיתוג, הגנות (מהנדס חשמל)",
+          "stage": "S06",
+          "duration_business_days": 10,
+          "estimate": true,
+          "depends_on": [
+            "S06.spec_eplan"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.ancillary_certs",
+          "name_he": "אישורים: קונסטרוקטור, היתר/דיווח (מעל 700 kW היתר — לאימות), ביטוח, כבאות",
+          "stage": "S06",
+          "duration_business_days": 20,
+          "estimate": true,
+          "depends_on": [
+            "S06.constructor_drawing"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "authority",
+          "buffer_days": 10,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.po_issue",
+          "name_he": "פיצול BOM לספקים והוצאת הזמנות רכש",
+          "stage": "S07",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.dwg_convert",
+            "S06.bom_diff"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.supplier_lead_time",
+          "name_he": "זמן אספקה ציוד ראשי (מודולים/ממירים/קונסטרוקציה)",
+          "stage": "S07",
+          "duration_business_days": 30,
+          "estimate": true,
+          "depends_on": [
+            "S07.po_issue"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 3,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.delivery",
+          "name_he": "אספקה לאתר/מחסן ובדיקת חוסרים",
+          "stage": "S07",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.supplier_lead_time"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.mv_equipment",
+          "name_he": "ציוד מ\"ג (שנאי, תאי מיתוג) — זמן אספקה",
+          "stage": "S07",
+          "duration_business_days": 40,
+          "estimate": true,
+          "depends_on": [
+            "S07.po_issue"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 5,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.crew_assign",
+          "name_he": "שיבוץ צוות ומנוף, סנכרון יומן",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.delivery",
+            "S05.iec_connection_survey",
+            "S06.ancillary_certs",
+            "S07.mv_equipment"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.install_mech",
+          "name_he": "התקנה מכנית (קונסטרוקציה + מודולים)",
+          "stage": "S08",
+          "duration_business_days": 40,
+          "estimate": true,
+          "depends_on": [
+            "S08.crew_assign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S08.crane",
+          "name_he": "מנוף/הנפה",
+          "stage": "S08",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_mech"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "crane",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.install_electrical",
+          "name_he": "התקנה חשמלית (DC/AC, לוחות, הארקה, שילוט)",
+          "stage": "S08",
+          "duration_business_days": 20,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_mech"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 20,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.checklist_close",
+          "name_he": "סגירת צ'קליסט, תמונות, דוחות יומיים",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_electrical"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.ct_metering_ems",
+          "name_he": "מדידה, zero-export/EMS, SCADA/ניתוק מרחוק (V8 — לאימות)",
+          "stage": "S08",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_electrical"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspector_booking",
+          "name_he": "הזמנת בודק (סוג לפי R17 — לאימות)",
+          "stage": "S09",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S08.checklist_close"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 1,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspection",
+          "name_he": "בדיקת בודק + דוח 62446-1",
+          "stage": "S09",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspector_booking"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": true
+        },
+        {
+          "id": "S09.defects_fix",
+          "name_he": "תיקון ליקויים (אם יש) ובדיקה חוזרת",
+          "stage": "S09",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "optional": true
+        },
+        {
+          "id": "S09.report_signed",
+          "name_he": "דוח בודק חתום, 0 ליקויים",
+          "stage": "S09",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S09.defects_fix"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S10.iec_final_pack",
+          "name_he": "חבילת בדיקת מתקן חח\"י (חד-קו חתום, הצהרות, דפי נתונים, as-made)",
+          "stage": "S10",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S09.report_signed"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S10.iec_inspection_order_pay",
+          "name_he": "הזמנת בדיקה ב-digitalorders + תשלום",
+          "stage": "S10",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_final_pack"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 1,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S10.iec_inspection",
+          "name_he": "בדיקת חח\"י בשטח",
+          "stage": "S10",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S10.iec_inspection_order_pay"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_INSPECTION_AFTER_PAYMENT_BD"
+        },
+        {
+          "id": "S10.iec_meter_activation",
+          "name_he": "החלפת/התקנת מונה ואישור הפעלה",
+          "stage": "S10",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S10.iec_inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_CONNECTION_COMPLETE_REMAINDER_BD"
+        },
+        {
+          "id": "S10.tariff_registration",
+          "name_he": "רישום לאסדרה בפורטל יצרנים",
+          "stage": "S10",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_meter_activation"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S10.operating_permit",
+          "name_he": "היתר הפעלה מרשות החשמל (04/2026 — האם חל לאימות)",
+          "stage": "S10",
+          "duration_business_days": 15,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_meter_activation"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "authority",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "note_he": "למתקנים גדולים סביר שנדרש — לאימות",
+          "optional": true
+        },
+        {
+          "id": "S11.commissioning",
+          "name_he": "commissioning + צ'קליסט הפעלה",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_meter_activation",
+            "S10.tariff_registration"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_pack",
+          "name_he": "תיק מתקן, אחריות, חשבון סופי",
+          "stage": "S11",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S11.commissioning"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.monitoring_link",
+          "name_he": "MonitoringLink + אימות סנכרון ראשון",
+          "stage": "S11",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S11.commissioning"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_sign",
+          "name_he": "פגישת מסירה, הדרכה וחתימה",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S11.handover_pack",
+            "S11.monitoring_link"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S12.om_start",
+          "name_he": "מעבר לניטור ותחזוקה",
+          "stage": "S12",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S11.handover_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        }
+      ],
+      "activity_count": 48
+    },
+    "BESS_ADD": {
+      "name_he": "תוספת אגירה למתקן קיים",
+      "pre_application_required": "לאימות",
+      "notes_he": "תהליך חח\"י לתוספת אגירה (בקשה, בדיקה, מונה) לא אומת; הנחיות אגירה 24.03.2021 ו-35כ3(א1) — לאימות.",
+      "activities": [
+        {
+          "id": "S01.lead_qualify",
+          "name_he": "סיווג ליד: תוספת אגירה למתקן קיים (נתוני המתקן מהניטור)",
+          "stage": "S01",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_visit",
+          "name_he": "סקר חדר חשמל/מיקום סוללה, אוורור, מרחקים (R20)",
+          "stage": "S02",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "surveyor",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S03.design_lite_quote",
+          "name_he": "הצעת מחיר אגירה (ממיר/PCS, סוללה, הגנות)",
+          "stage": "S03",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_visit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S03.quote_sent",
+          "name_he": "הצעה נשלחה",
+          "stage": "S03",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S03.design_lite_quote"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.negotiation",
+          "name_he": "מו\"מ",
+          "stage": "S04",
+          "duration_business_days": 10,
+          "estimate": true,
+          "depends_on": [
+            "S03.quote_sent"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.contract_sign",
+          "name_he": "חתימת הסכם",
+          "stage": "S04",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.negotiation"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.deposit",
+          "name_he": "מקדמה",
+          "stage": "S04",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S04.contract_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.schedule_created",
+          "name_he": "יצירת לו\"ז",
+          "stage": "S04",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S04.deposit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.iec_storage_application",
+          "name_he": "הודעה/בקשה לחח\"י על תוספת אגירה (אגירה חולקת מונה ייצור, 35כ3(א1)) — תהליך לאימות",
+          "stage": "S05",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "note_he": "האם נדרשת בקשה מקדימה/עדכון בקשה קיימת — לאימות"
+        },
+        {
+          "id": "S05.iec_distributor_answer",
+          "name_he": "אישור חח\"י לתוספת (אם נדרש)",
+          "stage": "S05",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S05.iec_storage_application"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true,
+          "duration_param": "IEC_DISTRIBUTOR_ANSWER_BD",
+          "optional": true
+        },
+        {
+          "id": "S06.spec_eplan",
+          "name_he": "תכנון אגירה: מפסק משולט, PCS ≤3 מ', ניתוק חירום (R20), עדכון חד-קו",
+          "stage": "S06",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.safety_docs",
+          "name_he": "מסמכי בטיחות: ת\"י 62619, אוורור, כבאות (לאימות V9)",
+          "stage": "S06",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S06.spec_eplan"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "authority",
+          "buffer_days": 3,
+          "milestone": false,
+          "customer_visible": false,
+          "optional": true
+        },
+        {
+          "id": "S06.design_review",
+          "name_he": "אישור בעלים",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.spec_eplan"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.po_issue",
+          "name_he": "הזמנת סוללה/PCS",
+          "stage": "S07",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.supplier_lead_time",
+          "name_he": "זמן אספקה סוללות",
+          "stage": "S07",
+          "duration_business_days": 15,
+          "estimate": true,
+          "depends_on": [
+            "S07.po_issue"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 5,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.delivery",
+          "name_he": "אספקה",
+          "stage": "S07",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.supplier_lead_time"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.crew_assign",
+          "name_he": "שיבוץ צוות",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.delivery",
+            "S05.iec_distributor_answer",
+            "S06.safety_docs"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.install_bess",
+          "name_he": "התקנת סוללה, PCS, הגנות, שילוט",
+          "stage": "S08",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S08.crew_assign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S08.commission_pcs",
+          "name_he": "הפעלת PCS/EMS, הגדרת מצבי עבודה",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_bess"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.checklist_close",
+          "name_he": "צ'קליסט ותמונות",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.commission_pcs"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspector_booking",
+          "name_he": "הזמנת בודק",
+          "stage": "S09",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S08.checklist_close"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspection",
+          "name_he": "בדיקת בודק",
+          "stage": "S09",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspector_booking"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": true
+        },
+        {
+          "id": "S09.report_signed",
+          "name_he": "דוח חתום",
+          "stage": "S09",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S09.inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S10.iec_inspection_if_required",
+          "name_he": "בדיקת חח\"י לתוספת אגירה (האם נדרשת — לאימות)",
+          "stage": "S10",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S09.report_signed"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "duration_param": "IEC_INSPECTION_AFTER_PAYMENT_BD",
+          "optional": true
+        },
+        {
+          "id": "S10.meter_update",
+          "name_he": "עדכון מונה/רישום אסדרה (אם נדרש)",
+          "stage": "S10",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S10.iec_inspection_if_required"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "optional": true
+        },
+        {
+          "id": "S11.handover_pack",
+          "name_he": "עדכון תיק מתקן, אחריות סוללה, חשבון סופי",
+          "stage": "S11",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S10.meter_update"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.monitoring_link",
+          "name_he": "עדכון MonitoringLink (BESS)",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S11.handover_pack"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_sign",
+          "name_he": "מסירה והדרכה",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S11.handover_pack",
+            "S11.monitoring_link"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S12.om_start",
+          "name_he": "ניטור ותחזוקה",
+          "stage": "S12",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S11.handover_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        }
+      ],
+      "activity_count": 29
+    },
+    "HISTORIC_DIST": {
+      "name_he": "מחלק היסטורי (קיבוץ/מושב)",
+      "pre_application_required": "נדרש מול המחלק (לאימות)",
+      "notes_he": "שני סקרים (פנימי + חח\"י), מונה ותעריף מול המחלק; משכי המחלק הם הערכות ללא מקור. גדלים 15–100 kW כבסיס; למתקן גדול יותר להרכיב מ-COM_LE_630.",
+      "activities": [
+        {
+          "id": "S01.lead_qualify",
+          "name_he": "סיווג ליד ופרופיל אסדרה משוער",
+          "stage": "S01",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_schedule",
+          "name_he": "תיאום מועד סקר עם הלקוח",
+          "stage": "S02",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.bill_received",
+          "name_he": "קבלת חשבון חשמל אחרון",
+          "stage": "S02",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S01.lead_qualify"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S02.survey_visit",
+          "name_he": "סקר אתר (PWA)",
+          "stage": "S02",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_schedule"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "surveyor",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S03.design_lite_quote",
+          "name_he": "תכנון ראשוני, תפוקה והצעת מחיר",
+          "stage": "S03",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S02.survey_visit",
+            "S02.bill_received"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S03.quote_sent",
+          "name_he": "הצעה נשלחה (דרך שער האמון)",
+          "stage": "S03",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S03.design_lite_quote"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.negotiation",
+          "name_he": "מו\"מ ורוויזיות",
+          "stage": "S04",
+          "duration_business_days": 15,
+          "estimate": true,
+          "depends_on": [
+            "S03.quote_sent"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.contract_sign",
+          "name_he": "חתימת הסכם (OTP)",
+          "stage": "S04",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.negotiation"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S04.deposit",
+          "name_he": "תשלום מקדמה",
+          "stage": "S04",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S04.contract_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S04.schedule_created",
+          "name_he": "יצירת לו\"ז מתבנית (anchor)",
+          "stage": "S04",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S04.deposit"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S05.dist_application",
+          "name_he": "בקשה למחלק ההיסטורי (קיבוץ/חברת ניהול) — טפסים לפי המחלק",
+          "stage": "S05",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "note_he": "טפסים ותהליך — לאימות (V11)"
+        },
+        {
+          "id": "S05.dist_internal_survey",
+          "name_he": "סקר פנימי של המחלק (קיבולת רשת פנימית)",
+          "stage": "S05",
+          "duration_business_days": 10,
+          "estimate": true,
+          "depends_on": [
+            "S05.dist_application"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "distributor",
+          "buffer_days": 5,
+          "milestone": false,
+          "customer_visible": false,
+          "note_he": "משך — לאימות"
+        },
+        {
+          "id": "S05.dist_iec_survey",
+          "name_he": "סקר/אישור חח\"י לקיבולת החיבור במ\"ג של המחלק",
+          "stage": "S05",
+          "duration_business_days": null,
+          "estimate": false,
+          "depends_on": [
+            "S05.dist_internal_survey"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "iec",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "duration_param": "IEC_DISTRIBUTOR_ANSWER_BD",
+          "note_he": "מוגש ע\"י המחלק — לאימות"
+        },
+        {
+          "id": "S05.dist_answer",
+          "name_he": "תשובת המחלק (תנאים, מונה, תעריף)",
+          "stage": "S05",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S05.dist_iec_survey"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "distributor",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S06.spec_eplan",
+          "name_he": "spec YAML + הרצת eplan + גיליונות E-00…E-08",
+          "stage": "S06",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.constructor_drawing",
+          "name_he": "שרטוט/אישור קונסטרוקטור",
+          "stage": "S06",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S04.schedule_created"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "constructor",
+          "buffer_days": 2,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.design_review",
+          "name_he": "סבב STATUS/RESULT/NEXT ואישור בעלים",
+          "stage": "S06",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.spec_eplan",
+            "S06.constructor_drawing"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.dwg_convert",
+          "name_he": "המרה ל-DWG 2018 והדפסה (Windows worker)",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.bom_diff",
+          "name_he": "השוואת BOM להצעה (ChangeOrder אם נדרש)",
+          "stage": "S06",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S06.design_review"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S06.ancillary_certs",
+          "name_he": "אישורים נלווים (קונסטרוקטור, ביטוח; דרישות המחלק)",
+          "stage": "S06",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S06.constructor_drawing"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "authority",
+          "buffer_days": 3,
+          "milestone": false,
+          "customer_visible": false,
+          "optional": true
+        },
+        {
+          "id": "S07.po_issue",
+          "name_he": "פיצול BOM לספקים והוצאת הזמנות רכש",
+          "stage": "S07",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S06.dwg_convert",
+            "S06.bom_diff"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.supplier_lead_time",
+          "name_he": "זמן אספקה ציוד ראשי (מודולים/ממירים/קונסטרוקציה)",
+          "stage": "S07",
+          "duration_business_days": 15,
+          "estimate": true,
+          "depends_on": [
+            "S07.po_issue"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 3,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S07.delivery",
+          "name_he": "אספקה לאתר/מחסן ובדיקת חוסרים",
+          "stage": "S07",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.supplier_lead_time"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "supplier",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.crew_assign",
+          "name_he": "שיבוץ צוות ומנוף, סנכרון יומן",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S07.delivery",
+            "S05.dist_answer",
+            "S06.ancillary_certs"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "pm",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.install_mech",
+          "name_he": "התקנה מכנית (קונסטרוקציה + מודולים)",
+          "stage": "S08",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S08.crew_assign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S08.crane",
+          "name_he": "מנוף/הנפה",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_mech"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "crane",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.install_electrical",
+          "name_he": "התקנה חשמלית (DC/AC, לוחות, הארקה, שילוט)",
+          "stage": "S08",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_mech"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 2,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S08.checklist_close",
+          "name_he": "סגירת צ'קליסט, תמונות, דוחות יומיים",
+          "stage": "S08",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S08.install_electrical"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspector_booking",
+          "name_he": "הזמנת בודק (סוג לפי R17 — לאימות)",
+          "stage": "S09",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S08.checklist_close"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 1,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S09.inspection",
+          "name_he": "בדיקת בודק + דוח 62446-1",
+          "stage": "S09",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspector_booking"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": true
+        },
+        {
+          "id": "S09.defects_fix",
+          "name_he": "תיקון ליקויים (אם יש) ובדיקה חוזרת",
+          "stage": "S09",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S09.inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "crew",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "optional": true
+        },
+        {
+          "id": "S09.report_signed",
+          "name_he": "דוח בודק חתום, 0 ליקויים",
+          "stage": "S09",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S09.defects_fix"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "inspector",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S10.dist_inspection",
+          "name_he": "בדיקת חשמלאי/בודק המחלק",
+          "stage": "S10",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S09.report_signed"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "distributor",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "note_he": "משך — לאימות"
+        },
+        {
+          "id": "S10.dist_meter",
+          "name_he": "התקנת מונה ע\"י המחלק",
+          "stage": "S10",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S10.dist_inspection"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "distributor",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true,
+          "note_he": "משך — לאימות"
+        },
+        {
+          "id": "S10.dist_tariff_agreement",
+          "name_he": "הסדר תעריף/חוזה מול המחלק",
+          "stage": "S10",
+          "duration_business_days": 5,
+          "estimate": true,
+          "depends_on": [
+            "S10.dist_meter"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "distributor",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false,
+          "note_he": "האם נדרש רישום בפורטל יצרנים — לאימות"
+        },
+        {
+          "id": "S11.commissioning",
+          "name_he": "commissioning",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S10.dist_meter"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_pack",
+          "name_he": "תיק מתקן, אחריות, חשבון סופי",
+          "stage": "S11",
+          "duration_business_days": 3,
+          "estimate": true,
+          "depends_on": [
+            "S11.commissioning"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.monitoring_link",
+          "name_he": "MonitoringLink + סנכרון ראשון",
+          "stage": "S11",
+          "duration_business_days": 2,
+          "estimate": true,
+          "depends_on": [
+            "S11.commissioning"
+          ],
+          "dependency_type": "SS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": false,
+          "customer_visible": false
+        },
+        {
+          "id": "S11.handover_sign",
+          "name_he": "מסירה והדרכה",
+          "stage": "S11",
+          "duration_business_days": 1,
+          "estimate": true,
+          "depends_on": [
+            "S11.handover_pack",
+            "S11.monitoring_link",
+            "S10.dist_tariff_agreement"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "customer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        },
+        {
+          "id": "S12.om_start",
+          "name_he": "ניטור ותחזוקה",
+          "stage": "S12",
+          "duration_business_days": 0,
+          "estimate": false,
+          "depends_on": [
+            "S11.handover_sign"
+          ],
+          "dependency_type": "FS",
+          "lag_business_days": 0,
+          "resource": "engineer",
+          "buffer_days": 0,
+          "milestone": true,
+          "customer_visible": true
+        }
+      ],
+      "activity_count": 40
+    }
+  }
+}

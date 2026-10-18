@@ -1,0 +1,103 @@
+# Example project — residential PV + storage, hybrid three-phase inverter.
+# Every value under `verify` and every field commented "VERIFY" is a datasheet / site value the
+# planner must confirm; the engine treats them as inputs, not as truth.
+project: "פרויקט לדוגמה — בית פרטי"
+drawing_set: "E"
+revision: "A"
+date: "2026-10-02"
+designer: "ברק הנדסת חשמל"
+
+site:
+  name: "Example"
+  address: "כתובת לדוגמה"
+  t_min_c: -5          # design cold ambient for Voc (site climate) — VERIFY
+  t_max_cell_c: 70     # design hot cell temperature for Vmp
+  t_ambient_cables_c: 35
+  grid_v_v: 400
+  grid_phases: 3
+  production_meter: true   # separate production meter (tariff with a generator meter) — VERIFY
+
+module:                 # 600 W n-type TOPCon, 132 half-cells — VERIFY against datasheet
+  model: "600W n-type TOPCon bifacial (JKM600N-72HL4 class)"
+  p_max_w: 600
+  voc_v: 54.45
+  vmp_v: 45.93
+  isc_a: 14.06
+  imp_a: 13.07
+  beta_voc_pct_per_c: -0.25
+  gamma_pmax_pct_per_c: -0.29
+  alpha_isc_pct_per_c: 0.046
+  length_mm: 2278
+  width_mm: 1134
+  max_system_voltage_v: 1500
+  max_series_fuse_a: 30
+module_count: 26
+
+inverter:               # GoodWe ET-series three-phase hybrid, 3 MPPT, 1000 V DC — VERIFY exact model
+  model: "GoodWe GW15K-ET (3 MPPT)"
+  kind: hybrid
+  v_dc_max_v: 1000
+  v_start_v: 200
+  mppts:
+    - {tag: MPPT1, v_min_v: 200, v_max_v: 850, i_max_a: 32, isc_max_a: 40, inputs: 2}
+    - {tag: MPPT2, v_min_v: 200, v_max_v: 850, i_max_a: 32, isc_max_a: 40, inputs: 2}
+    - {tag: MPPT3, v_min_v: 200, v_max_v: 850, i_max_a: 32, isc_max_a: 40, inputs: 2}
+  p_ac_nom_w: 15000
+  s_ac_max_va: 16500
+  i_ac_max_a: 25.0
+  phases: 3
+  v_ac_v: 400
+  backup_i_max_a: 63     # grid pass-through on the backup port, per phase
+  battery_v_nom_v: 51.2
+  battery_i_max_a: 200   # per battery port — VERIFY
+  battery_ports: 3
+  battery_cable_min_mm2: null   # GoodWe manual value if stated — VERIFY
+  pv_oversize_ratio_max: 2.0
+
+battery:                 # three LFP 48 V stacks, one per inverter battery port — VERIFY
+  model: "LFP 51.2V rack"
+  v_nom_v: 51.2
+  v_min_v: 44.8
+  v_max_v: 57.6
+  capacity_kwh: 10.24
+  i_max_a: 200
+  branches: 3
+
+# One string per MPPT: 9 + 8 + 9.  (17+9 on two MPPTs leaves <1 % Voc margin at -5 °C; rejected.)
+strings:
+  - {tag: S1, mppt: MPPT1, modules: 9, length_m: 28, method: B1, insulation: XLPE}
+  - {tag: S2, mppt: MPPT2, modules: 8, length_m: 28, method: B1, insulation: XLPE}
+  - {tag: S3, mppt: MPPT3, modules: 9, length_m: 28, method: B1, insulation: XLPE}
+
+ac_run:      {tag: W-AC,  length_m: 12, method: B1, insulation: XLPE}
+backup_run:  {tag: W-BK,  length_m: 8,  method: B1, insulation: XLPE}
+battery_runs:
+  - {tag: B1, length_m: 4, method: B1, insulation: XLPE}   # in conduit
+  - {tag: B2, length_m: 4, method: B1, insulation: XLPE}   # in conduit
+  - {tag: B3, length_m: 5, method: E,  insulation: XLPE}   # on perforated tray
+
+roof:
+  width_m: 14.0
+  depth_m: 8.0
+  azimuth_deg: 180
+  tilt_deg: 12
+  north_from_up_deg: 45      # from site chat — VERIFY (drone heading)
+  north_verified: false
+
+# Three rows, portrait modules, left→right. Row y measured from the roof's bottom edge.
+layout:
+  - {y_m: 0.3, x_m: 1.4, orientation: portrait, gap_m: 0.02, modules: [S1, S1, S1, S1, S1, S1, S1, S1, S1]}
+  - {y_m: 2.9, x_m: 1.4, orientation: portrait, gap_m: 0.02, modules: [S2, S2, S2, S2, S2, S2, S2, S2]}
+  - {y_m: 5.5, x_m: 1.4, orientation: portrait, gap_m: 0.02, modules: [S3, S3, S3, S3, S3, S3, S3, S3, S3]}
+
+notes:
+  - "מודולים 600W, 26 יח', 15.6 kWp. שלוש מחרוזות 9+8+9, מחרוזת אחת לכל MPPT."
+  - "כבלי DC H1Z2Z2-K 2X6mm² במוביל; פרטי ציוד ומפסקים — ראה E-01."
+  - "הארקת קונסטרוקציה 1X16mm² Cu; מודולים ומהפך 1X10mm²."
+  - "כיוון צפון — לאימות באתר."
+
+verify:
+  - "דגם מהפך ונתוני MPPT (3 MPPT, 1000V, 63A bypass)"
+  - "דף נתונים מודול: Voc, מקדם טמפרטורה"
+  - "זרם מצבר מרבי לכל כניסה (200A) ומינימום חתך לפי מדריך GoodWe"
+  - "אורכי תוואי בפועל (מחרוזות 28 מ', AC 12 מ', מצברים 4–5 מ')"
