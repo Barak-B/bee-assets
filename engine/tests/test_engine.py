@@ -263,7 +263,7 @@ def test_qa_checks(design: Design):
     from bee_cad.qa import cable_ampacity, check_design, check_sheets
 
     assert cable_ampacity("3X2.5", 1) == 24 and cable_ampacity("N2XY 5X10", 3) == 75 * 0.9
-    assert cable_ampacity("2x(4x150)NA2XY", 3) == 315 * 0.9 and cable_ampacity("גמיש", 1) is None
+    assert cable_ampacity("2x(4x150)NA2XY", 3) == 315 * 0.9 * 2 and cable_ampacity("גמיש", 1) is None
     rep = check_design(design)
     assert not rep.errors and rep.score >= 95
     # break the model on purpose: socket without RCD on a 300 mA group, breaker above cable, feeder to nowhere
@@ -357,3 +357,26 @@ def test_comm_sheet():
     assert rep.clean, (rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])
     texts = [x.dxf.text for x in doc.modelspace().query("TEXT")]
     assert "Switch 8 ports" in texts and texts.count("Cat7 — EMS ↔ PCS") == 4
+
+
+def test_schedules_notes_cover():
+    from bee_cad.audit import audit_sheet
+    from bee_cad.render import plan_sheets
+    from bee_cad.schedules import STANDARD_NOTES, cable_rows, load_rows
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "kal_gader_bess.json"
+    des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
+    rows = cable_rows(des)
+    assert len(rows) == 24 and rows[0][0] == "W01" and rows[0][3] == "2x(4x120)NA2XY"
+    lrows, summary = load_rows(des)
+    assert len(lrows) == 22 and [s[0] for s in summary] == ["MCP", "INVP", "BESSP", "COMM"]
+    assert any(r[6] == "125.0" for r in lrows)          # given load, not estimated
+    assert len(STANDARD_NOTES) >= 8
+    plan = plan_sheets(des, ("cover", "notes", "schedules"))
+    assert [e.no for e in plan] == ["E-00", "E-01", "E-30", "E-31"]
+    result = build(des, ("cover", "notes", "schedules"))
+    doc = next(iter(result.values()))[0]
+    for i, (no, (_, warnings)) in enumerate(result.items()):
+        assert warnings == [], (no, warnings)
+        rep = audit_sheet(doc, i, no)
+        assert rep.clean, (no, rep.summary(), rep.text_overlaps[:2], rep.text_line_collisions[:2], rep.text_outside[:2])

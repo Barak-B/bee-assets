@@ -241,6 +241,10 @@ class Design(BaseModel):
     nodes: list[Node] = Field(default_factory=list)
     legend: bool = True
     notes: list[str] = Field(default_factory=list)
+    general_notes: list[str] = Field(default_factory=list)   # E-01; empty = office standard notes
+    sources: list[str] = Field(default_factory=list)         # מסמכי מקור (cover + E-01)
+    project_data: list[tuple[str, str]] = Field(default_factory=list)   # extra rows on the cover's data table
+    schedules: bool = True                                   # draw cable / load schedule sheets
 
     def board(self, board_id: str) -> Board:
         for b in self.boards:

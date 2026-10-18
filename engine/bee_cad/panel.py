@@ -181,9 +181,12 @@ class PanelRenderer:
         if e.bottom_gland_plate:
             for yy in (oy + s(4.0), oy + Hh - s(14.0)):
                 ctx.rect(ox + s(40.0), yy, W - s(80.0), s(10.0), "panel_rail")
-        ctx.text("כניסות כבלים", (ox + W - s(42.0), oy + Hh - s(9.0)), 1.4, "panel_text", TA.MIDDLE_RIGHT)
-        # rows: rails from the top
-        top_margin = s(80.0)
+        if s(10.0) >= 2.0:
+            ctx.text("כניסות כבלים", (ox + W - s(42.0), oy + Hh - s(9.0)), 1.4, "panel_text", TA.MIDDLE_RIGHT)
+        else:   # small scale: the plate is thinner than the text — label above the enclosure
+            ctx.text("כניסות כבלים — פלטת מעבר עליונה/תחתונה", (ox + W - 1.0, oy + Hh + 1.5), 1.4, "panel_text", TA.BOTTOM_RIGHT)
+        # rows: rails from the top; the first row leaves room for the rotated tags above the devices
+        top_margin = max(s(80.0), s(DEVICE_H) / 2 + 1.0 + 8.0 + s(24.0))
         for r in range(e.rows):
             y_rail = oy + Hh - top_margin - r * s(e.row_pitch_mm)
             x_rail0, x_rail1 = ox + inset + s(10.0), ox + W - inset - s(10.0)
@@ -224,7 +227,8 @@ class PanelRenderer:
                     else:
                         ctx.text(lines[0], (x + w / 2, y0 - 1.2), 1.2, "panel_text", TA.TOP_CENTER)
         # N bars per RCD group + PE bar at the bottom
-        y_bars = oy + inset + s(30.0)
+        pe_y = oy + inset + max(s(16.0), 3.2)
+        y_bars = pe_y + max(s(14.0), 3.2)
         groups = [g for g in self.board.groups if g.device]
         bx = ox + inset + s(10.0)
         bw = s(90.0)
@@ -234,7 +238,6 @@ class PanelRenderer:
                 ctx.msp.add_circle((bx + (i + 0.5) * bw / 6, y_bars), 0.5, dxfattribs={"layer": LAYERS["n"].name})
             ctx.text(f"פס N — {g.device.tag}", (bx, y_bars + 1.2), 1.3, "panel_text", TA.BOTTOM_LEFT)
             bx += bw + s(15.0)
-        pe_y = y_bars - s(14.0)
         pe_w = W - 2 * inset - s(20.0)
         ctx.msp.add_lwpolyline([(ox + inset + s(10.0), pe_y), (ox + inset + s(10.0) + pe_w, pe_y)],
                                dxfattribs={"layer": LAYERS["pe"].name, "const_width": 0.7})
@@ -330,9 +333,12 @@ class PanelRenderer:
         notes = ["מידות במ\"מ, לפי קטלוג יצרן הארון — לאימות מול הדגם שיוזמן.",
                  "סדר הרכיבים על המסילות זהה לסדר בחד-קווי; מודול = 18 מ\"מ (DIN 43880).",
                  "יש לשלט כל מא\"ז ומפסק לפי התג בתוכנית."] + self.layout.warnings
-        nx = ox + W + 30.0 + D
-        ctx.text("הערות", (nx, base - 12.0), 2.4, "notes", TA.TOP_RIGHT, bold=True)
-        ctx.mtext([f"{i + 1}. {t}" for i, t in enumerate(notes)], (nx, base - 16.0), 1.7, "notes", width=nx - ctx.x0 - 4.0)
+        nx = min(ox + W + 30.0 + D, ctx.x1 - TB_W - 10.0)
+        ny = base - 12.0
+        if ny - 4.0 - 2.4 * (len(notes) + 1) < ctx.y0 + 2.0:     # no room under a tall front view: notes beside the side view
+            nx, ny = ctx.x1 - TB_W - 10.0, ctx.y0 + TB_H + 5.0 * 3 + 36.0
+        ctx.text("הערות", (nx, ny), 2.4, "notes", TA.TOP_RIGHT, bold=True)
+        ctx.mtext([f"{i + 1}. {t}" for i, t in enumerate(notes)], (nx, ny - 4.0), 1.7, "notes", width=min(nx - ctx.x0 - 4.0, 120.0))
         return self.layout.warnings
 
 
