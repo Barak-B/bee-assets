@@ -17,12 +17,13 @@ from .model import Design
 from .mv import draw_mv, draw_mv_schedule
 from .panel import draw_panel
 from .sheet import A3_H, A3_W, SheetContext, draw_frame, new_document
+from .site import SiteLayout, draw_site, site_scale
 from .sld import draw_sld
 from .template import DrillTemplate, draw_template, scale_text
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("cover", "mv", "sld", "panel", "drill")
+SHEET_KINDS = ("cover", "site", "mv", "sld", "panel", "drill")
 
 
 def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[SheetEntry]:
@@ -38,6 +39,10 @@ def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[She
                 no = design.title.sheet_no if i == 0 else f"{prefix}-M{i + 1:02d}"
                 plan.append(SheetEntry("mv", no, design.title.sheet_title or f"חד-קווי מתח גבוה — {mb.title}"))
                 plan.append(SheetEntry("mv_schedule", no + "A", f"מפרט תאים וציוד — {mb.title}"))
+        elif kind == "site" and design.site and design.drill_template:
+            lay = SiteLayout.model_validate(design.site)
+            t = DrillTemplate.model_validate(design.drill_template)
+            plan.append(SheetEntry("site", lay.sheet_no, lay.title, f"1:{int(site_scale(t, lay))}"))
         elif kind == "sld" and design.boards:
             plan.append(SheetEntry("sld", design.title.sheet_no, design.title.sheet_title or "חד-קווי — לוחות חשמל"))
         elif kind == "panel":
@@ -74,6 +79,8 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
             warnings = draw_mv(ctx, design, cur_mv)
         elif e.kind == "mv_schedule":
             warnings = draw_mv_schedule(ctx, design, cur_mv)
+        elif e.kind == "site":
+            warnings = draw_site(ctx, design, SiteLayout.model_validate(design.site))
         elif e.kind == "sld":
             warnings = draw_sld(ctx, design)
         elif e.kind == "panel":

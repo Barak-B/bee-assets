@@ -222,6 +222,7 @@ class Design(BaseModel):
     boards: list[Board] = Field(default_factory=list)
     mv_boards: list["MVBoard"] = Field(default_factory=list)
     drill_template: Optional[dict] = None        # bee_cad.template.DrillTemplate (kept as dict to avoid a cycle)
+    site: Optional[dict] = None                  # bee_cad.site.SiteLayout — infrastructure layout over the same slab/units
     nodes: list[Node] = Field(default_factory=list)
     legend: bool = True
     notes: list[str] = Field(default_factory=list)
