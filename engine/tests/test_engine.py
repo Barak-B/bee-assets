@@ -304,3 +304,24 @@ def test_site_sheet():
     rep = audit_sheet(doc, 0, "E-02")
     assert rep.clean, (rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])
     assert doc.modelspace().query("HATCH") and len(doc.modelspace().query("DIMENSION")) >= 12
+
+
+def test_kal_gader_sld_groups():
+    from bee_cad.audit import audit_sheet
+    from bee_cad.render import plan_sheets
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "kal_gader_bess.json"
+    des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
+    plan = plan_sheets(des, ("cover", "site", "sld", "drill"))
+    assert [e.no for e in plan] == ["E-00", "E-02", "E-03", "E-04", "E-05", "E-20"]
+    result = build(des, ("sld",))
+    assert list(result) == ["E-03", "E-04", "E-05"]
+    doc = next(iter(result.values()))[0]
+    for i, (no, (_, warnings)) in enumerate(result.items()):
+        assert warnings == [], (no, warnings)
+        rep = audit_sheet(doc, i, no)
+        assert rep.clean, (no, rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])
+    texts = [e.dxf.text for e in doc.modelspace().query("TEXT")]
+    assert "SATEC PM135 *1" in texts and any(t.startswith("2x(4x150)NA2XY  → BESSP") for t in texts)
+    inserts = [e.dxf.name for e in doc.modelspace().query("INSERT")]
+    assert inserts.count("BEE_METER_PM") == 3 and inserts.count("BEE_MCCB_3P") == 4
