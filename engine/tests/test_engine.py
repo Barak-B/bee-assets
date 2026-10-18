@@ -380,3 +380,25 @@ def test_schedules_notes_cover():
         assert warnings == [], (no, warnings)
         rep = audit_sheet(doc, i, no)
         assert rep.clean, (no, rep.summary(), rep.text_overlaps[:2], rep.text_line_collisions[:2], rep.text_outside[:2])
+
+
+def test_cabinet_base_holes_and_clearances():
+    from bee_cad.site import SiteLayout, site_checks
+    from bee_cad.template import CabinetBase, DrillTemplate, TemplateChecks
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "kal_gader_bess.json"
+    des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
+    t = DrillTemplate.model_validate(des.drill_template)
+    u = t.units[0]
+    holes = t.base_holes(u)
+    assert len(holes) == 8 and holes[0] == (u.x_mm + 19.5, u.y_mm + 155.0)
+    # outer holes on the IPE 200 flange (±50 of the cabinet edge), inner ones on the cross members
+    assert t.base_holes_on_beam(u) == [True, False, False, True, True, False, False, True]
+    assert TemplateChecks().run(t).problems == []
+    t2 = t.model_copy(update={"pedestal": t.pedestal.model_copy(update={"cross_members": False})})
+    assert any("B" not in p and "חורי בסיס" in p for p in TemplateChecks().run(t2).problems)
+    assert CabinetBase().frame_w_mm == 1064
+    lay = SiteLayout.model_validate(des.site)
+    assert site_checks(t, lay) == []
+    tight = t.model_copy(update={"units": [u, u.model_copy(update={"tag": "X", "x_mm": u.x_mm + u.width_mm + 50})]})
+    assert any("50" in w for w in site_checks(tight, lay))
