@@ -90,11 +90,11 @@ class MVRenderer:
                 ctx.text(line, (xc + 3.2, yy), 1.3, "sld_text", TA.TOP_LEFT)
                 yy -= 1.9
             ctx.rect(xc + 3.2, y - SYM_H + 0.2, 4.6, 2.8, "sld_sym")
-            ctx.text("CC", (xc + 5.5, y - SYM_H + 1.6), 1.0, "sld_text", TA.MIDDLE_CENTER)
+            ctx.text("CC", (xc + 5.5, y - SYM_H + 1.6), 1.2, "sld_text", TA.MIDDLE_CENTER)
             ctx.rect(xc + 3.2, y - SYM_H - 3.0, 4.6, 2.8, "sld_sym")
-            ctx.text("TC", (xc + 5.5, y - SYM_H - 1.6), 1.0, "sld_text", TA.MIDDLE_CENTER)
+            ctx.text("TC", (xc + 5.5, y - SYM_H - 1.6), 1.2, "sld_text", TA.MIDDLE_CENTER)
             if self.board.aux:
-                ctx.text(self.board.aux, (xc + 8.4, y - SYM_H - 0.2), 1.1, "sld_text", TA.MIDDLE_LEFT)
+                ctx.text(self.board.aux, (xc + 8.4, y - SYM_H - 0.2), 1.2, "sld_text", TA.MIDDLE_LEFT)
             y -= SYM_H
         if c.ct:
             ctx.line((xc, y), (xc, y - 3.0), "sld_main")
@@ -107,8 +107,8 @@ class MVRenderer:
         if c.relay:
             ctx.insert("BEE_RELAY", (xc + 7.0, y + 3.0))
             yy = y + 2.0
-            for line in wrap(c.relay, 12, 3):
-                ctx.text(line, (xc + 10.0, yy), 1.0, "sld_text", TA.TOP_CENTER)
+            for line in wrap(c.relay, 11, 4):
+                ctx.text(line, (xc + 10.0, yy), 1.2, "sld_text", TA.TOP_CENTER)
                 yy -= 1.6
         if c.metering:
             ctx.line((xc, y), (xc, y - 3.0), "sld_main")
@@ -143,7 +143,7 @@ class MVRenderer:
         ctx.text(n.label, (x0 + w - 1.5, y_top - 1.2), 1.8, "sld_tag", TA.TOP_RIGHT, bold=True)
         yy = y_top - 4.6
         for line in wrap(n.sublabel, 16, 2):
-            ctx.text(line, (x0 + w - 1.5, yy), 1.1, "sld_text", TA.TOP_RIGHT)
+            ctx.text(line, (x0 + w - 1.5, yy), 1.2, "sld_text", TA.TOP_RIGHT)
             yy -= 1.8
         ctx.text(n.rating, (x0 + w - 1.5, y0 + 1.0), 1.2, "sld_text", TA.BOTTOM_RIGHT)
 
@@ -225,7 +225,7 @@ class MVRenderer:
             ctx.line((xc, yb), (xc, y_nodes), "sld_main")
             if c.cable:
                 txt = c.cable.designation + (f"  L={c.cable.length_m:g}m" if c.cable.length_m else "")
-                ctx.text(txt, (xc - 1.2, yb - 6.0), 1.1, "sld_text", TA.RIGHT, rotation=90)
+                ctx.text(txt, (xc - 1.2, yb - 6.0), 1.2, "sld_text", TA.RIGHT, rotation=90)
             self.draw_node(node, xc, y_nodes)
         self.draw_legend(ctx.x0 + 2.0, ctx.y0 + 2.0)
         notes = b.notes + self.design.notes
