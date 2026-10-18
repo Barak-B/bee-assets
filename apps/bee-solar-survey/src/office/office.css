@@ -666,3 +666,72 @@ button.o-kpi {
   font: inherit;
   background: #fff;
 }
+
+/* Operations week */
+.o-cal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+
+.o-cal-head h2 {
+  margin: 0 8px;
+  font-size: 1.05rem;
+}
+
+.o-cal {
+  display: grid;
+  grid-template-columns: repeat(var(--days, 6), minmax(150px, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.o-cal-day {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.o-cal-day.today {
+  outline: 2px solid var(--honey);
+}
+
+.o-cal-date {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.o-cal-item {
+  text-align: start;
+  border: 1px solid var(--sand-deep);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.o-cal-item.survey {
+  border-inline-start: 4px solid #2563eb;
+}
+
+.o-cal-item.install {
+  border-inline-start: 4px solid #16a34a;
+}
+
+.o-cal-todo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}

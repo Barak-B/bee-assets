@@ -405,6 +405,32 @@ try {
     await snap(office, 'office-drawer-ready-to-install', true)
   })
 
+  await step('office: plans the installation on the week, exports the jobs to Excel', async () => {
+    const d = new Date(Date.now() + 3 * 86_400_000)
+    const installDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(d)
+    await office.locator('#oInstall').fill(installDay)
+    await office.click('#oSave')
+    await waitText(office, '#toast', 'נשמר')
+    await office.click('#oClose')
+    await office.click('[data-tab="calendar"]')
+    if (!(await office.locator(`.o-cal-day[data-day="${installDay}"]`).count())) await office.click('[data-week="1"]')
+    await waitText(office, `.o-cal-day[data-day="${installDay}"]`, 'התקנה · משה אברהם')
+    await snap(office, 'office-calendar')
+    await office.click('[data-tab="jobs"]')
+    const [dl] = await Promise.all([office.waitForEvent('download'), office.click('#oExport')])
+    const file = join(OUT, 'jobs.xlsx')
+    await dl.saveAs(file)
+    const { default: ExcelJS } = await import('exceljs')
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.readFile(file)
+    const ws = wb.getWorksheet('עבודות')
+    const header = ws.getRow(1).values.slice(1)
+    const row = ws.getRow(2).values.slice(1)
+    const col = (h) => row[header.indexOf(h)]
+    findings.excel = { rows: ws.rowCount - 1, stage: col('שלב'), install: col('מועד התקנה'), iec: col('הוגשה בקשה לחח״י'), total: col('סה״כ כולל מע״מ (₪)') }
+    if (findings.excel.stage !== 'בהתקנה' || findings.excel.install !== installDay) throw new Error(`excel row: ${JSON.stringify(findings.excel)}`)
+  })
+
   await step('Dani: syncs, sees it is ready to install, opens a daily report', async () => {
     await phone.click('#btnSync')
     await waitText(phone, '[data-stage-chip]', 'בהתקנה')

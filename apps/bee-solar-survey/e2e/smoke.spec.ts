@@ -459,7 +459,7 @@ test('office screen: log in, every job with its stage, filters, status and keys'
   await page.fill('#oNote', 'הלקוח ביקש לחזור אליו בנובמבר')
   await page.click('#oSave')
   await expect(page.locator('#toast')).toContainText('נשמר')
-  expect(statusBody).toEqual({ status: 'on_hold', note: 'הלקוח ביקש לחזור אליו בנובמבר', assigned_to: '', planned_date: '' })
+  expect(statusBody).toEqual({ status: 'on_hold', note: 'הלקוח ביקש לחזור אליו בנובמבר', assigned_to: '', planned_date: '', install_date: '' })
   await page.click('#oClose')
   await expect(page.locator('tbody tr[data-job]')).toHaveCount(1) // moved out of the active list
 
@@ -496,6 +496,26 @@ test('office screen: log in, every job with its stage, filters, status and keys'
   await expect(lead).toContainText('22.10.26')
   await expect(page.locator('.o-drawer #oAssign')).toHaveValue('k-dani')
   await page.click('#oClose')
+
+  // The operations week: the survey shows on its day; a click opens the job.
+  await page.click('[data-tab="calendar"]')
+  await expect(page.locator('.o-cal-day').first()).toBeVisible()
+  for (let i = 0; i < 60 && !(await page.locator('.o-cal-day[data-day="2026-10-22"]').count()); i++) {
+    const shown = await page.locator('.o-cal-day').first().getAttribute('data-day')
+    await page.click(shown! < '2026-10-18' ? '[data-week="1"]' : '[data-week="-1"]')
+  }
+  const day = page.locator('.o-cal-day[data-day="2026-10-22"]')
+  await expect(day).toContainText('סקר · משה אברהם')
+  await expect(day).toContainText('דני')
+  await expect(page.locator('main')).toContainText('לכל העבודות הפעילות שצריכות מועד יש מועד') // an approved job needs an installation date only from procurement on
+  await day.locator('[data-cal-job]').click()
+  await expect(page.locator('.o-drawer')).toContainText('משה אברהם')
+  await page.click('#oClose')
+
+  // Excel: what is on screen.
+  const [xlsx] = await Promise.all([page.waitForEvent('download'), page.click('#oExport')])
+  expect(xlsx.suggestedFilename()).toMatch(/^bee-jobs-\d{4}-\d{2}-\d{2}\.xlsx$/)
+  await expect(page.locator('#toast')).toContainText('יוצאו')
 
   // Keys (admin): the new key is shown once.
   await page.click('[data-tab="keys"]')

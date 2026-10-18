@@ -65,6 +65,8 @@ export interface OfficeRow {
   assigned_to_id: string
   assigned_to_name: string
   planned_date: string
+  /** Planned installation start, YYYY-MM-DD. */
+  install_date?: string
   milestones: Milestones
 }
 
@@ -73,6 +75,7 @@ export interface OfficeUpdate {
   note?: string
   assigned_to?: string
   planned_date?: string
+  install_date?: string
   /** Only the keys sent change; null clears one. */
   milestones?: Partial<Record<MilestoneKey, Pick<Milestone, 'date' | 'ref'> | null>>
 }

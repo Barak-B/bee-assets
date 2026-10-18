@@ -27,6 +27,7 @@ import {
 import type { OfficeUpdate } from './api'
 import { Api, ApiError, type KeyRow, type Me, type OfficeJob, type TimelineEvent } from './api'
 import { attentionHe } from './attention'
+import { calendarItems, shiftWeek, unscheduled, weekOf, type CalendarKind } from './calendar'
 import { COMPANY_FIELDS, DEFAULT_COMPANY, type CompanyProfile } from '../company'
 import { composerSlot, forgetComposerLogs, mountComposer, setCompanyPhone } from './composer'
 import { forgetSubmissions, mountSubmission, submissionSlot } from './submissionPanel'
@@ -41,7 +42,9 @@ const state: {
   me: Me | null
   jobs: OfficeJob[]
   generatedAt: string
-  tab: 'jobs' | 'keys'
+  tab: 'jobs' | 'keys' | 'calendar'
+  /** A day of the week shown on the calendar tab (YYYY-MM-DD). */
+  week: string
   stage: Stage | 'any' | 'attention'
   status: StatusFilter
   search: string
@@ -55,7 +58,7 @@ const state: {
   creating: boolean
   loading: boolean
   error: string
-} = { api: null, me: null, jobs: [], generatedAt: '', tab: 'jobs', stage: 'any', status: 'active', search: '', selected: null, keys: [], newKey: null, company: { ...DEFAULT_COMPANY }, surveyors: [], creating: false, loading: false, error: '' }
+} = { api: null, me: null, jobs: [], generatedAt: '', tab: 'jobs', week: israelToday(), stage: 'any', status: 'active', search: '', selected: null, keys: [], newKey: null, company: { ...DEFAULT_COMPANY }, surveyors: [], creating: false, loading: false, error: '' }
 
 const ROLE_HE: Record<KeyRow['role'], string> = { surveyor: 'סוקר', office: 'משרד', admin: 'מנהל' }
 
@@ -179,6 +182,7 @@ function render() {
       <div class="brand"><div class="brand-mark">BEE</div><div class="brand-text"><strong>משרד · עבודות</strong><span>${escapeHtml(state.me.name)} · ${escapeHtml(state.me.role_he)}</span></div></div>
       <nav class="o-tabs">
         <button class="o-tab ${state.tab === 'jobs' ? 'on' : ''}" data-tab="jobs">עבודות</button>
+        <button class="o-tab ${state.tab === 'calendar' ? 'on' : ''}" data-tab="calendar">יומן</button>
         ${state.me.role === 'admin' ? `<button class="o-tab ${state.tab === 'keys' ? 'on' : ''}" data-tab="keys">הגדרות</button>` : ''}
         <button class="o-tab" id="oRefresh">${state.loading ? 'טוען…' : 'רענון'}</button>
         <button class="o-tab" id="oLogout">יציאה</button>
@@ -186,7 +190,7 @@ function render() {
     </header>
     <main class="o-main">
       ${state.error ? `<div class="note note-warn">${escapeHtml(state.error)}</div>` : ''}
-      ${state.tab === 'keys' ? keysView() : jobsView()}
+      ${state.tab === 'keys' ? keysView() : state.tab === 'calendar' ? calendarView() : jobsView()}
     </main>
     ${state.creating ? newJobView() : state.selected ? drawerView() : ''}
     <div class="toast" id="toast"></div>`
@@ -272,6 +276,7 @@ function jobsView(): string {
     </section>
     <section class="o-filters">
       <button class="btn btn-primary" id="oNewJob">+ עבודה חדשה</button>
+      <button class="btn btn-secondary" id="oExport" title="העבודות שמוצגות עכשיו, לפי הסינון">ייצוא לאקסל</button>
       <input class="search" id="oSearch" placeholder="חיפוש: שם, לקוח, טלפון, כתובת, מספר הצעה" value="${escapeAttr(state.search)}" />
       <select id="oStatus" aria-label="סטטוס משרד">
         ${OFFICE_STATUSES.map((s) => `<option value="${s}" ${state.status === s ? 'selected' : ''}>${OFFICE_STATUS_LABEL_HE[s]}</option>`).join('')}
@@ -287,6 +292,46 @@ function jobsView(): string {
         : `<div class="empty">${state.jobs.length ? 'אין עבודות שמתאימות לסינון.' : 'עדיין לא הגיעו סקרים מהשטח. הם מופיעים כאן אחרי הסנכרון הראשון מהטלפון.'}</div>`
     }
     <p class="meta o-foot">עודכן ${escapeHtml(fmtDate(state.generatedAt, true))} · השלב נקבע לפי מה שקרה בפועל: הצעה, קישור, אישור, דוחות, ואבני הדרך שהמשרד מסמן בפרטי העבודה (הסכם, חח״י, ציוד, בודק, מונה, מסירה).</p>`
+}
+
+/** Stages where an installation date means something. */
+const INSTALL_STAGES: Stage[] = ['accepted', 'permits', 'procurement', 'installation']
+const DAY_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
+const KIND_HE: Record<CalendarKind, string> = { survey: 'סקר', install: 'התקנה' }
+
+function calendarView(): string {
+  const days = weekOf(state.week)
+  const today = israelToday()
+  const items = calendarItems(state.jobs, days)
+  const todo = unscheduled(state.jobs)
+  const card = (kind: CalendarKind, j: OfficeJob) => `<button class="o-cal-item ${kind}" data-cal-job="${escapeAttr(j.id)}">
+      <span><b>${KIND_HE[kind]}</b> · ${escapeHtml(j.customerName || j.projectName || 'ללא שם')}</span>
+      <span class="meta">${escapeHtml(j.address)}${kind === 'survey' && j.office?.assigned_to_name ? ` · ${escapeHtml(j.office.assigned_to_name)}` : ''}</span></button>`
+  // Saturday only when something is on it.
+  const shown = days.filter((d, i) => i < 6 || items.some((x) => x.day === d))
+  return `
+    <section class="o-cal-head">
+      <button class="btn btn-secondary" data-week="-1" aria-label="שבוע קודם">→</button>
+      <h2>${escapeHtml(fmtDay(days[0]!))} – ${escapeHtml(fmtDay(days[6]!))}</h2>
+      <button class="btn btn-secondary" data-week="1" aria-label="שבוע הבא">←</button>
+      <button class="btn btn-secondary" data-week="0">השבוע</button>
+    </section>
+    <section class="o-cal" style="--days:${shown.length}">
+      ${shown
+        .map((d) => {
+          const list = items.filter((x) => x.day === d)
+          return `<div class="o-cal-day ${d === today ? 'today' : ''}" data-day="${d}">
+            <div class="o-cal-date">${DAY_HE[days.indexOf(d)]} · ${escapeHtml(fmtDay(d))}</div>
+            ${list.length ? list.map((x) => card(x.kind, x.job)).join('') : '<div class="meta">—</div>'}
+          </div>`
+        })
+        .join('')}
+    </section>
+    <section class="o-card o-wide">
+      <h2>צריך לקבוע מועד <span class="meta">(${todo.length})</span></h2>
+      ${todo.length ? `<div class="o-cal-todo">${todo.map((x) => card(x.kind, x.job)).join('')}</div>` : '<p class="meta">לכל העבודות הפעילות שצריכות מועד יש מועד.</p>'}
+    </section>
+    <p class="meta o-foot">מועד סקר נקבע ב"עבודה חדשה" או בפרטי העבודה, ומוצג עד שהאתר נסקר. מועד התקנה נקבע בפרטי העבודה אחרי אישור הלקוח, ומוצג עד שההתקנה הסתיימה.</p>`
 }
 
 /** Who surveys / surveyed it. For a job the office opened, the sender is the office — not a surveyor. */
@@ -414,6 +459,7 @@ function drawerView(): string {
             <label>הערה<input id="oNote" maxlength="200" value="${escapeAttr(j.office?.note ?? '')}" /></label>
             <label>סוקר${surveyorSelect('oAssign', j.office?.assigned_to_id ?? '')}</label>
             <label ${j.stage === 'lead' ? '' : 'hidden'}>מועד סקר<input id="oPlanned" type="date" value="${escapeAttr(j.office?.planned_date ?? '')}" /></label>
+            <label ${INSTALL_STAGES.includes(j.stage) ? '' : 'hidden'}>מועד התקנה<input id="oInstall" type="date" value="${escapeAttr(j.office?.install_date ?? '')}" /></label>
             <button class="btn btn-primary" id="oSave">שמור</button>
           </div>
           ${j.office ? `<div class="meta">עודכן ע״י ${escapeHtml(j.office.updated_by)} · ${escapeHtml(fmtDate(j.office.updated_at, true))}</div>` : ''}
@@ -668,11 +714,43 @@ root.addEventListener('click', (e) => {
   if (t.closest('[data-stop]')) return
   const tab = t.closest<HTMLElement>('[data-tab]')
   if (tab) {
-    state.tab = tab.dataset.tab as 'jobs' | 'keys'
+    state.tab = tab.dataset.tab as typeof state.tab
     state.selected = null
     state.newKey = null
     if (state.tab === 'keys') void state.api!.keys().then((r) => ((state.keys = r.keys), render()), (err) => toast(err.message))
     render()
+    return
+  }
+  const week = t.closest<HTMLElement>('[data-week]')
+  if (week) {
+    const n = Number(week.dataset.week)
+    state.week = n === 0 ? israelToday() : shiftWeek(state.week, n)
+    render()
+    return
+  }
+  const calJob = t.closest<HTMLElement>('[data-cal-job]')
+  if (calJob) {
+    // Open the job where its drawer lives.
+    state.tab = 'jobs'
+    state.status = 'all'
+    state.selected = calJob.dataset.calJob!
+    render()
+    void loadDrawerDetails(state.selected)
+    return
+  }
+  if (t.closest('#oExport')) {
+    const rows = state.jobs.filter(matches)
+    void import('./exportXlsx')
+      .then(({ jobsWorkbook }) => jobsWorkbook(rows))
+      .then((blob) => {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = `bee-jobs-${israelToday()}.xlsx`
+        a.click()
+        setTimeout(() => URL.revokeObjectURL(a.href), 30_000)
+        toast(`יוצאו ${rows.length} עבודות`)
+      })
+      .catch(() => toast('הייצוא נכשל'))
     return
   }
   const stage = t.closest<HTMLElement>('[data-stage]')
@@ -720,7 +798,8 @@ root.addEventListener('click', (e) => {
     const note = (document.getElementById('oNote') as HTMLInputElement).value
     const assigned_to = (document.getElementById('oAssign') as HTMLSelectElement).value
     const planned_date = (document.getElementById('oPlanned') as HTMLInputElement).value
-    void saveOffice(state.selected!, { status, note, assigned_to, planned_date })
+    const install_date = (document.getElementById('oInstall') as HTMLInputElement).value
+    void saveOffice(state.selected!, { status, note, assigned_to, planned_date, install_date })
     return
   }
   if (t.closest('#oSaveMs')) {

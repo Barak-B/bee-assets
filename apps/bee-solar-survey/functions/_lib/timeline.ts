@@ -37,6 +37,7 @@ export function officeChanges(prev: OfficeStatusRow | null, next: OfficeStatusRo
   if (was.note !== next.note) out.push({ kind: 'office', text_he: next.note ? `הערה: ${next.note}` : 'ההערה נמחקה' })
   if (was.assigned_to_id !== next.assigned_to_id) out.push({ kind: 'office', text_he: next.assigned_to_id ? `שובץ לסוקר: ${next.assigned_to_name}` : 'בוטל השיבוץ' })
   if (was.planned_date !== next.planned_date) out.push({ kind: 'office', text_he: next.planned_date ? `מועד סקר: ${day(next.planned_date)}` : 'מועד הסקר בוטל' })
+  if ((was.install_date ?? '') !== (next.install_date ?? '')) out.push({ kind: 'office', text_he: next.install_date ? `מועד התקנה: ${day(next.install_date)}` : 'מועד ההתקנה בוטל' })
   for (const d of MILESTONES) {
     const a = was.milestones?.[d.key]
     const b = next.milestones?.[d.key]

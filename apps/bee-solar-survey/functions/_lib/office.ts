@@ -39,11 +39,13 @@ export interface OfficeStatusRow {
   assigned_to_name: string
   /** Planned survey date, YYYY-MM-DD ('' = not set). */
   planned_date: string
+  /** Planned installation start, YYYY-MM-DD ('' = not set). */
+  install_date: string
   /** Lifecycle milestones the office marked (contract, IEC, meter…). */
   milestones: Milestones
 }
 
-export const EMPTY_OFFICE: Omit<OfficeStatusRow, 'updated_at' | 'updated_by'> = { status: 'active', note: '', assigned_to_id: '', assigned_to_name: '', planned_date: '', milestones: {} }
+export const EMPTY_OFFICE: Omit<OfficeStatusRow, 'updated_at' | 'updated_by'> = { status: 'active', note: '', assigned_to_id: '', assigned_to_name: '', planned_date: '', install_date: '', milestones: {} }
 
 /** R2 caps customMetadata at 2048 bytes (keys + values). */
 const META_LIMIT = 2000
@@ -66,6 +68,7 @@ function rowFromMeta(raw: Record<string, string>): OfficeStatusRow | null {
     assigned_to_id: m.assigned_to_id ?? '',
     assigned_to_name: m.assigned_to_name ?? '',
     planned_date: m.planned_date ?? '',
+    install_date: m.install_date ?? '',
     milestones: decodeMilestones(m.ms),
   }
 }
@@ -88,6 +91,8 @@ export interface OfficeUpdate {
   assigned_to?: unknown
   /** YYYY-MM-DD, or '' to clear. */
   planned_date?: unknown
+  /** Planned installation start, YYYY-MM-DD, or '' to clear. */
+  install_date?: unknown
   /** { <milestone>: { date: YYYY-MM-DD, ref? } | null }; only the keys sent change, null clears. */
   milestones?: unknown
 }
@@ -109,6 +114,10 @@ export async function resolveOfficeUpdate(env: Env, prev: OfficeStatusRow | null
   if (u.planned_date !== undefined) {
     if (u.planned_date !== '' && !isDay(u.planned_date)) return { error: 'תאריך לא תקין (YYYY-MM-DD)' }
     next.planned_date = u.planned_date as string
+  }
+  if (u.install_date !== undefined) {
+    if (u.install_date !== '' && !isDay(u.install_date)) return { error: 'מועד התקנה לא תקין (YYYY-MM-DD)' }
+    next.install_date = u.install_date as string
   }
   if (u.assigned_to !== undefined) {
     if (u.assigned_to === '') {
