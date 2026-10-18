@@ -128,6 +128,7 @@ def draw_calc(ctx: SheetContext, design: Design, rows: list[CalcRow], first: boo
         f"ΔU: ρ = 0.0225 Ω·ממ\"ר/מ'; מצטבר = מהמונה. גבול {DU_LIMIT_LIGHTING_PCT:g}% תאורה, {DU_LIMIT_PCT:g}% אחר (G.52.1).",
         f"Ik1 min: לולאת תקלה בקצה המעגל, c = 0.95, ρ = 1.5 × ρ20; זרם קצר בחיבור: {ik}. Ia = סף מגנטי עליון (B 5In, C 10In, D 20In).",
     ]
+    basis.append("הטבלאות והגבולות הם ברירות מחדל הנדסיות לפי IEC, לא דרישת חוק; המהנדס המתכנן מאשר את שיטת ההתקנה והערכים.")
     ctx.text("הנחות החישוב", (x_right, y), 2.2, "notes", TA.TOP_RIGHT, bold=True)
     ctx.mtext(basis, (x_right, y - 3.5), 1.6, "notes", width=tw / 2 - 6.0)
     serious = [f for f in findings if f.level != "info"][:8]

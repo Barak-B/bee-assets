@@ -333,3 +333,42 @@ def test_calc_sheet(design: Design):
     assert round(q.ib, 1) == 21.7 and q.method == "C" and q.ok           # inverter current, not the 63 A breaker
     result = build(design, ("sld", "panel", "calc"))
     assert list(result)[-1] == "E-C01"
+
+
+def test_studio_api():
+    import json
+    import threading
+    import urllib.request
+    from http.server import ThreadingHTTPServer
+
+    import yaml
+
+    from bee_cad.server import EXAMPLE_BRIEF, Handler, analyse
+
+    brief = yaml.safe_load(EXAMPLE_BRIEF.read_text(encoding="utf-8"))
+    data = analyse({"brief": brief, "sheets": False})
+    assert data["summary"].startswith("בדיקות: 0 שגיאות, 0 אזהרות")
+    assert any(r["tag"] == "Q-INV" and r["method"] == "C" for r in data["rows"])
+    assert data["bom"] and data["design"]["boards"]
+
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        assert "סטודיו" in urllib.request.urlopen(base + "/").read().decode("utf-8")
+        req = urllib.request.Request(base + "/api/design", json.dumps({"brief": brief}).encode(), method="POST")
+        out = json.loads(urllib.request.urlopen(req).read())
+        assert list(out["sheets"]) == ["E-01", "E-P02", "E-P03", "E-C01"]
+        assert all("<svg" in s[:200] for s in out["sheets"].values())
+        req = urllib.request.Request(base + "/api/export?fmt=csv", json.dumps({"brief": brief}).encode(), method="POST")
+        with urllib.request.urlopen(req) as res:
+            assert "filename*=UTF-8''" in res.headers["Content-Disposition"]
+            assert res.read().decode("utf-8-sig").startswith("IEC 81346")
+        bad = urllib.request.Request(base + "/api/design", b'{"brief": {"template": "nope"}}', method="POST")
+        try:
+            urllib.request.urlopen(bad)
+            raise AssertionError("expected 422")
+        except urllib.error.HTTPError as e:
+            assert e.code == 422 and "תבנית" in json.loads(e.read())["error"]
+    finally:
+        httpd.shutdown()

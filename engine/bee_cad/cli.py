@@ -188,6 +188,13 @@ def cmd_bom(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve(args: argparse.Namespace) -> int:
+    from .server import serve
+
+    serve(args.host, args.port)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="bee-cad", description="B.E.E. CAD engine")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -226,6 +233,10 @@ def main(argv: list[str] | None = None) -> int:
     m.add_argument("design")
     m.add_argument("--out", default="bom.csv")
     m.set_defaults(func=cmd_bom)
+    s = sub.add_parser("serve", help="studio: brief form + live sheets, checks and BOM in the browser")
+    s.add_argument("--host", default="127.0.0.1")
+    s.add_argument("--port", type=int, default=8765)
+    s.set_defaults(func=cmd_serve)
     args = p.parse_args(argv)
     try:
         return args.func(args)
