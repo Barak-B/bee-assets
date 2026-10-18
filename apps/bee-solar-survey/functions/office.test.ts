@@ -19,6 +19,7 @@ import { onRequestPost as jobsPost } from './api/office/jobs/index'
 import { onRequestGet as surveyorsGet } from './api/office/surveyors'
 import { onRequestGet as surveyGet } from './api/surveys/[id]'
 import { onRequestGet as healthGet } from './api/health'
+import { onRequestGet as messagesGet, onRequestPost as messagesPost } from './api/office/messages/[id]'
 
 const MASTER = 'test-publish-key-0123456789'
 const ID = '0f8fad5b-d9cb-469f-a165-70867728950e'
@@ -337,5 +338,33 @@ describe('new jobs from the office and assignment', () => {
     expect((await list(avi.key)).find((r) => r.id === id)?.assigned_to_me).toBe(true)
     const badDate = await statusPut(ctx(e, `/api/office/status/${id}`, jsonInit('PUT', ronit.key, { planned_date: '22/10/2026' }), { id }))
     expect(badDate.status).toBe(400)
+  })
+})
+
+describe('messages to the customer', () => {
+  it('the office logs what it opened; newest first, checked, never sent from here', async () => {
+    const e = env()
+    await surveyPut(ctx(e, `/api/surveys/${ID}`, jsonInit('PUT', MASTER, surveyRecord()), { id: ID }))
+    const { body: office } = await newKey(e, 'רונית', 'office')
+    const { body: dani } = await newKey(e, 'דני', 'surveyor')
+    const post = (key: string, body: unknown, id = ID) => messagesPost(ctx(e, `/api/office/messages/${id}`, jsonInit('POST', key, body), { id }))
+    const list = async () => ((await (await messagesGet(ctx(e, `/api/office/messages/${ID}`, { headers: bearer(office.key) }, { id: ID }))).json()) as { messages: Record<string, string>[] }).messages
+    const msg = { template_key: 'quote_sent', channel: 'whatsapp', to: '050-1234567', body: 'שלום ישראל, הצעת המחיר מוכנה' }
+
+    expect((await post(dani.key, msg)).status).toBe(403)
+    expect((await post(office.key, { ...msg, channel: 'fax' })).status).toBe(400)
+    expect((await post(office.key, { ...msg, template_key: 'Quote Sent' })).status).toBe(400)
+    expect((await post(office.key, { ...msg, body: '  ' })).status).toBe(400)
+    expect((await post(office.key, { ...msg, body: 'א'.repeat(2001) })).status).toBe(400)
+    expect((await post(office.key, msg, '3fa85f64-5717-4562-b3fc-2c963f66afa6')).status).toBe(404)
+    expect(await list()).toEqual([])
+
+    const r = await post(office.key, msg)
+    expect(r.status).toBe(201)
+    await post(office.key, { ...msg, template_key: 'quote_email_cover', channel: 'email', to: 'israel@example.com', subject: 'הצעת מחיר' })
+    const got = await list()
+    expect(got.map((m) => m.template_key)).toEqual(['quote_email_cover', 'quote_sent'])
+    expect(got[1]).toMatchObject({ ...msg, by: 'רונית', subject: '' })
+    expect(got[0]).toMatchObject({ channel: 'email', subject: 'הצעת מחיר' })
   })
 })

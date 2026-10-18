@@ -471,3 +471,62 @@ button.o-kpi {
   justify-content: space-between;
   color: #1f6b3d;
 }
+
+/* Message to the customer */
+.o-msg-pick,
+.o-msg-text,
+.o-msg-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.o-msg-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.o-msg select,
+.o-msg input,
+.o-msg textarea {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+}
+
+.o-msg textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.o-msg-fields label.miss input {
+  border-color: var(--warn, #b45309);
+  background: #fff7ed;
+}
+
+.o-msg-send {
+  margin: 8px 0 4px;
+  gap: 8px;
+}
+
+.o-msg h4 {
+  margin: 12px 0 6px;
+  font-size: 0.9rem;
+}
+
+.o-msg-sent {
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.o-msg [hidden] {
+  display: none;
+}

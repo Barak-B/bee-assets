@@ -176,6 +176,8 @@ export interface LatestQuote {
   total_incl_vat_ils: number | null
   dc_kwp: number | null
   needs_owner_input: boolean
+  /** YYYY-MM-DD ('' when the quote has none). */
+  valid_until: string
 }
 
 export interface OfficeRow extends SurveyIndexRow {
@@ -212,6 +214,7 @@ async function latestQuote(env: Env, id: string): Promise<LatestQuote | null> {
     const q = JSON.parse(await obj.text()) as {
       quote_number?: string
       created_at?: string
+      terms?: { valid_until?: string | null }
       needs_owner_input?: boolean
       totals?: { total_incl_vat_ils?: number | null }
       design?: { dc_kwp?: number | null }
@@ -223,6 +226,7 @@ async function latestQuote(env: Env, id: string): Promise<LatestQuote | null> {
       total_incl_vat_ils: typeof q.totals?.total_incl_vat_ils === 'number' ? q.totals.total_incl_vat_ils : null,
       dc_kwp: typeof q.design?.dc_kwp === 'number' ? q.design.dc_kwp : null,
       needs_owner_input: !!q.needs_owner_input,
+      valid_until: typeof q.terms?.valid_until === 'string' ? q.terms.valid_until.slice(0, 10) : '',
     }
   } catch {
     return null

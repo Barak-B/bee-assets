@@ -347,6 +347,16 @@ test('office screen: log in, every job with its stage, filters, status and keys'
     return r.fulfill({ json: { ok: true, office: { ...(statusBody as object), updated_at: new Date(now).toISOString(), updated_by: 'מנהל' } } })
   })
   await page.route('**/api/surveys/*', (r) => r.fulfill({ json: { survey: { project: { roofTypeHe: 'בטון', targetKwp: '15' }, photos: [] } } }))
+  const messages: Record<string, unknown>[] = []
+  await page.route('**/api/office/messages/*', (r) => {
+    if (r.request().method() === 'POST') {
+      const m = { ...(r.request().postDataJSON() as object), at: new Date(now).toISOString(), by: 'מנהל' }
+      messages.unshift(m)
+      return r.fulfill({ status: 201, json: { ok: true, message: m } })
+    }
+    return r.fulfill({ json: { messages } })
+  })
+  await page.context().route('https://wa.me/**', (r) => r.fulfill({ body: 'whatsapp' }))
   let newJob: Record<string, string> | null = null
   await page.route('**/api/office/surveyors', (r) => r.fulfill({ json: { surveyors: [{ id: 'k-dani', name: 'דני', role: 'surveyor' }] } }))
   await page.route('**/api/office/jobs', (r) => {
@@ -403,6 +413,30 @@ test('office screen: log in, every job with its stage, filters, status and keys'
   // Detail drawer → put the job on hold with a note.
   await cohen.click()
   await expect(page.locator('.o-drawer')).toContainText('יוסי כהן')
+
+  // A message from the plan templates: filled from the job, the gaps block the send, WhatsApp opens it, the log keeps it.
+  const msg = page.locator('#oMsg')
+  await expect(msg.locator('[data-c-tpl]')).toHaveValue('quote_followup')
+  await expect(msg.locator('[data-c-body]')).toHaveValue(/^שלום יוסי, רצינו לוודא שהצעת המחיר \(גרסה 1\) התקבלה/)
+  await expect(msg.locator('[data-c-missing]')).toContainText('הטלפון שלנו')
+  await expect(msg.locator('[data-c-send="whatsapp"]')).toBeDisabled()
+  await expect(msg.locator('[data-c-send="email"]')).toBeDisabled() // no email for this customer
+  await msg.locator('[data-c-ph="contact_phone"]').fill('08-1234567')
+  await msg.locator('[data-c-ph="valid_until"]').fill('30.11.2026')
+  await expect(msg.locator('[data-c-missing]')).toBeHidden()
+  const [wa] = await Promise.all([page.context().waitForEvent('page'), msg.locator('[data-c-send="whatsapp"]').click()])
+  await wa.waitForLoadState()
+  expect(wa.url()).toMatch(/^https:\/\/wa\.me\/972501234567\?text=/)
+  expect(new URL(wa.url()).searchParams.get('text')).toContain('08-1234567')
+  await wa.close()
+  await expect(page.locator('#toast')).toContainText('נרשם ביומן')
+  expect(messages[0]).toMatchObject({ template_key: 'quote_followup', channel: 'whatsapp', to: '050-1234567' })
+  await expect(msg.locator('[data-c-log] li')).toHaveCount(1)
+  await expect(msg.locator('[data-c-log]')).toContainText('מעקב אחרי ההצעה')
+  // The sender's phone is remembered for the next message.
+  await msg.locator('[data-c-tpl]').selectOption('quote_sent')
+  await expect(msg.locator('[data-c-ph="contact_phone"]')).toHaveValue('08-1234567')
+  await expect(msg.locator('[data-c-body]')).toHaveValue(/מוכנה: http:\/\/[^ ]+\/q\/AbCdEfGhIjKlMnOpQrStUv\./)
   await expect(page.locator('#oSurvey')).toContainText('סוג גג')
   await page.selectOption('#oSetStatus', 'on_hold')
   await page.fill('#oNote', 'הלקוח ביקש לחזור אליו בנובמבר')

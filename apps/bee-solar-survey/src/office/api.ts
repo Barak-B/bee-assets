@@ -49,7 +49,7 @@ export interface OfficeJob {
   office: OfficeRow | null
   /** The office's milestones plus what locked reports prove (those carry `auto`). */
   milestones: Milestones
-  latestQuote: { version_no: number; quote_number: string; created_at: string; total_incl_vat_ils: number | null; dc_kwp: number | null; needs_owner_input: boolean } | null
+  latestQuote: { version_no: number; quote_number: string; created_at: string; total_incl_vat_ils: number | null; dc_kwp: number | null; needs_owner_input: boolean; valid_until?: string } | null
   links: OfficeLink[]
   reports: OfficeReport[]
   lastActivityAt: string
@@ -96,6 +96,16 @@ export interface KeyRow {
   hint: string
 }
 
+export interface MessageEntry {
+  at: string
+  by: string
+  template_key: string
+  channel: 'whatsapp' | 'sms' | 'email'
+  to: string
+  subject: string
+  body: string
+}
+
 export class ApiError extends Error {
   readonly status: number
   constructor(message: string, status: number) {
@@ -138,6 +148,8 @@ export class Api {
   surveyors = () => this.call<{ surveyors: { id: string; name: string; role: string }[] }>('/api/office/surveyors')
   keys = () => this.call<{ keys: KeyRow[] }>('/api/office/keys')
   createKey = (name: string, role: KeyRow['role']) => this.call<{ key: string; row: KeyRow }>('/api/office/keys', { method: 'POST', body: JSON.stringify({ name, role }) })
+  messages = (id: string) => this.call<{ messages: MessageEntry[] }>(`/api/office/messages/${encodeURIComponent(id)}`)
+  logMessage = (id: string, m: Omit<MessageEntry, 'at' | 'by'>) => this.call<{ message: MessageEntry }>(`/api/office/messages/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify(m) })
   revokeKey = (id: string) => this.call<{ row: KeyRow }>(`/api/office/keys/${encodeURIComponent(id)}`, { method: 'DELETE' })
 
   /** A survey photo as an object URL (photos need the key, so no plain <img src>). */

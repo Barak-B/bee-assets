@@ -27,6 +27,7 @@ import {
 import type { OfficeUpdate } from './api'
 import { Api, ApiError, type KeyRow, type Me, type OfficeJob } from './api'
 import { attentionHe } from './attention'
+import { composerSlot, forgetComposerLogs, mountComposer } from './composer'
 
 const root = document.querySelector<HTMLDivElement>('#office')!
 const STORE = 'bee-office-key'
@@ -121,6 +122,7 @@ async function load() {
   state.loading = true
   render()
   try {
+    forgetComposerLogs()
     const [r, people] = await Promise.all([state.api.overview(), state.api.surveyors().catch(() => ({ surveyors: [] }))])
     state.jobs = r.jobs
     state.surveyors = people.surveyors
@@ -180,6 +182,9 @@ function render() {
     </main>
     ${state.creating ? newJobView() : state.selected ? drawerView() : ''}
     <div class="toast" id="toast"></div>`
+  const slot = document.getElementById('oMsg')
+  const job = state.jobs.find((x) => x.id === state.selected)
+  if (slot && job) mountComposer(slot, job, { api: state.api, me: state.me, toast })
 }
 
 function loginView(): string {
@@ -366,6 +371,7 @@ function drawerView(): string {
           ${j.office ? `<div class="meta">עודכן ע״י ${escapeHtml(j.office.updated_by)} · ${escapeHtml(fmtDate(j.office.updated_at, true))}</div>` : ''}
         </section>
         ${lifecyclePart(j)}
+        ${composerSlot()}
         <section>
           <h3>הצעות וקישורים</h3>
           ${j.latestQuote ? `<div>גרסה אחרונה: <bdi dir="ltr">${escapeHtml(j.latestQuote.quote_number)} v${j.latestQuote.version_no}</bdi> · ${ils(j.latestQuote.total_incl_vat_ils)} · ${escapeHtml(fmtDate(j.latestQuote.created_at))}</div>` : '<div class="meta">אין עדיין הצעה.</div>'}
