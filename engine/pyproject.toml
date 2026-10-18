@@ -26,5 +26,8 @@ bee-cad = "bee_cad.cli:main"
 [tool.setuptools.packages.find]
 include = ["bee_cad*"]
 
+[tool.setuptools.package-data]
+bee_cad = ["web/*.html"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
