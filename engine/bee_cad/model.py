@@ -128,6 +128,8 @@ class Board(BaseModel):
     feeders: list[Circuit] = Field(default_factory=list)
     spd: Optional[Device] = None
     ct: Optional[str] = None              # "3×CT" note on the incomer
+    meter: Optional[str] = None           # power meter on the incomer CTs, e.g. "SATEC PM135 → EMS (Cat7)"
+    existing: bool = False                # drawn dashed / marked "קיים"
     enclosure: Optional["Enclosure"] = None
     notes: list[str] = Field(default_factory=list)
 
@@ -215,11 +217,22 @@ class TitleBlock(BaseModel):
     revisions: list[tuple[str, str, str]] = Field(default_factory=list)  # (rev, date, text)
 
 
+class SldGroup(BaseModel):
+    """One single-line sheet: which boards and nodes it shows (large sites split the SLD over sheets)."""
+
+    sheet_no: str
+    title: str
+    boards: list[str] = Field(default_factory=list)
+    nodes: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class Design(BaseModel):
     """The whole project model."""
 
     title: TitleBlock = Field(default_factory=TitleBlock)
     boards: list[Board] = Field(default_factory=list)
+    sld_groups: list[SldGroup] = Field(default_factory=list)   # empty = one SLD sheet with everything
     mv_boards: list["MVBoard"] = Field(default_factory=list)
     drill_template: Optional[dict] = None        # bee_cad.template.DrillTemplate (kept as dict to avoid a cycle)
     site: Optional[dict] = None                  # bee_cad.site.SiteLayout — infrastructure layout over the same slab/units

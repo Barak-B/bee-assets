@@ -1,0 +1,981 @@
+{
+  "title": {
+    "designer": "ברק הנדסת חשמל",
+    "project": "כל גדר — BESS + PV",
+    "site": "ברקן — אורי פלסט, אזור תעשייה",
+    "client": "אפקון אגירה",
+    "sheet_no": "E-03",
+    "sheet_title": "",
+    "revision": "A",
+    "date": "2026-10-18",
+    "scale": "-",
+    "status": "לעיון",
+    "revisions": [
+      [
+        "A",
+        "2026-10-18",
+        "סט תכנון מלא לפי G002 של Roche (28.09.26) — מודל אחד לכל הגיליונות"
+      ]
+    ]
+  },
+  "boards": [
+    {
+      "id": "MCP",
+      "title": "לוח איסוף ראשי PV+BESS (חדש)",
+      "supply": {
+        "kind": "utility",
+        "label": "לכיוון מונה ייצור — חח\"י",
+        "meter": "מונה ייצור",
+        "voltage": "400/230V",
+        "frequency": "50Hz",
+        "cable": {
+          "designation": "2x(4x120)NA2XY"
+        },
+        "earthing": "TN-C-S"
+      },
+      "incomer": {
+        "tag": "Q.MAIN",
+        "kind": "mccb",
+        "poles": 4,
+        "rating_a": 315,
+        "icu_ka": 36,
+        "lock": true,
+        "note": "מפסק זרם ראשי מערכת סולארית ומערכת אגירה"
+      },
+      "ct": "3×CT 400/5A Cl.0.2s",
+      "meter": "SATEC PM135 *3 / To EMS Cat7",
+      "busbar": {
+        "label": "L1,L2,L3,N,G",
+        "rating_a": 500,
+        "icw_ka": 36
+      },
+      "spd": {
+        "tag": "SPD",
+        "kind": "spd",
+        "poles": 4,
+        "rating_a": null,
+        "note": "T1+T2 3P+N 20kA"
+      },
+      "groups": [
+        {
+          "tag": "AUX",
+          "title": "עזר",
+          "circuits": [
+            {
+              "tag": "FISO",
+              "device": {
+                "tag": "FISO",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 6,
+                "curve": "C"
+              },
+              "load": "הזנת מונה SATEC",
+              "phase": "L1",
+              "kind": "final",
+              "cable": {
+                "designation": "3X1.5"
+              }
+            }
+          ]
+        }
+      ],
+      "feeders": [
+        {
+          "tag": "LB.PV",
+          "device": {
+            "tag": "LB.PV",
+            "kind": "mccb",
+            "poles": 4,
+            "rating_a": 315,
+            "icu_ka": 36
+          },
+          "load": "",
+          "phase": "",
+          "kind": "feeder",
+          "cable": {
+            "designation": "2x(4x120)NA2XY"
+          },
+          "to_board": "INVP"
+        },
+        {
+          "tag": "LB.BESS",
+          "device": {
+            "tag": "LB.BESS",
+            "kind": "mccb",
+            "poles": 4,
+            "rating_a": 400,
+            "icu_ka": 36
+          },
+          "load": "",
+          "phase": "",
+          "kind": "feeder",
+          "cable": {
+            "designation": "2x(4x150)NA2XY"
+          },
+          "to_board": "BESSP",
+          "note": "Installation 90.7 (IEC), a=De, ΔV=1.0%"
+        }
+      ],
+      "enclosure": {
+        "model": "ארון פח IP66 להעמדה חיצונית",
+        "manufacturer": "לפי ת\"י 61439-1",
+        "width_mm": 800,
+        "height_mm": 1200,
+        "depth_mm": 300,
+        "rows": 3,
+        "modules_per_row": 36,
+        "row_pitch_mm": 250,
+        "mounting": "surface",
+        "ip": "IP66"
+      },
+      "notes": [
+        "לוח איסוף ראשי יתאים לדרישות ת\"י 61439-1, מקדם העמסה 1, מתכתי IP66 להעמדה חיצונית — הערות G005."
+      ]
+    },
+    {
+      "id": "INVP",
+      "title": "לוח איסוף ממירים קיים",
+      "existing": true,
+      "supply": {
+        "kind": "board",
+        "from_board": "MCP",
+        "label": "מלוח איסוף PV+BESS — LB.PV",
+        "cable": {
+          "designation": "2x(4x120)NA2XY"
+        },
+        "earthing": ""
+      },
+      "incomer": {
+        "tag": "Q3",
+        "kind": "mccb",
+        "poles": 4,
+        "rating_a": 315,
+        "icu_ka": 36,
+        "note": "מפסק זרם מערכת סולארית"
+      },
+      "ct": "3×CT 400/5A",
+      "meter": "SATEC PM135 *2 / To EMS Cat7",
+      "busbar": {
+        "label": "L1,L2,L3,N,G",
+        "rating_a": 400
+      },
+      "spd": {
+        "tag": "SPD-INV",
+        "kind": "spd",
+        "poles": 4,
+        "rating_a": null,
+        "note": "T2 3P+N 20kA 100A"
+      },
+      "groups": [
+        {
+          "tag": "AUX",
+          "title": "עזר ושירות",
+          "circuits": [
+            {
+              "tag": "C6A",
+              "device": {
+                "tag": "FS1",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 6,
+                "curve": "C"
+              },
+              "load": "FS1 — תרמוסטט/מאוורר",
+              "phase": "L1",
+              "kind": "final",
+              "cable": {
+                "designation": "3X1.5"
+              }
+            },
+            {
+              "tag": "C10A",
+              "device": {
+                "tag": "FS2",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 10,
+                "curve": "C"
+              },
+              "load": "FS2 — ארון תקשורת",
+              "phase": "L2",
+              "kind": "final",
+              "cable": {
+                "designation": "3X2.5"
+              }
+            },
+            {
+              "tag": "C16A",
+              "device": {
+                "tag": "RFS",
+                "kind": "rcbo",
+                "poles": 2,
+                "rating_a": 16,
+                "curve": "C",
+                "idn_ma": 30,
+                "rcd_type": "A"
+              },
+              "load": "שקע שירות",
+              "phase": "L3",
+              "kind": "final",
+              "cable": {
+                "designation": "3X2.5"
+              }
+            }
+          ]
+        }
+      ],
+      "feeders": [
+        {
+          "tag": "Q3.1",
+          "device": {
+            "tag": "Q3.1",
+            "kind": "mccb",
+            "poles": 4,
+            "rating_a": 200,
+            "icu_ka": 25,
+            "note": "160A"
+          },
+          "load": "",
+          "phase": "",
+          "kind": "feeder",
+          "cable": {
+            "designation": "4X95 N2XY"
+          },
+          "to_node": "INV-A"
+        },
+        {
+          "tag": "Q3.2",
+          "device": {
+            "tag": "Q3.2",
+            "kind": "mccb",
+            "poles": 4,
+            "rating_a": 200,
+            "icu_ka": 25,
+            "note": "160A"
+          },
+          "load": "",
+          "phase": "",
+          "kind": "feeder",
+          "cable": {
+            "designation": "4X95 N2XY"
+          },
+          "to_node": "INV-B"
+        }
+      ],
+      "enclosure": {
+        "model": "ארון קיים",
+        "width_mm": 800,
+        "height_mm": 1200,
+        "depth_mm": 300,
+        "rows": 3,
+        "modules_per_row": 36,
+        "row_pitch_mm": 250,
+        "mounting": "surface",
+        "ip": "IP55"
+      }
+    },
+    {
+      "id": "BESSP",
+      "title": "לוח איסוף BESS",
+      "supply": {
+        "kind": "board",
+        "from_board": "MCP",
+        "label": "מלוח איסוף PV+BESS — LB.BESS",
+        "cable": {
+          "designation": "2x(4x150)NA2XY",
+          "length_m": 42,
+          "du_pct": 1.0
+        },
+        "earthing": ""
+      },
+      "incomer": {
+        "tag": "Q.1",
+        "kind": "mccb",
+        "poles": 4,
+        "rating_a": 400,
+        "icu_ka": 36,
+        "lock": true,
+        "note": "מפסק זרם ראשי לוח אגירה"
+      },
+      "ct": "3×CT 400/5A Cl.0.2s",
+      "meter": "SATEC PM135 *1 / To EMS Cat7",
+      "busbar": {
+        "label": "L1,L2,L3,N,G",
+        "rating_a": 500,
+        "icw_ka": 36
+      },
+      "spd": {
+        "tag": "SPD-B",
+        "kind": "spd",
+        "poles": 4,
+        "rating_a": null,
+        "note": "Class 1+2 3P+N 20kA"
+      },
+      "groups": [
+        {
+          "tag": "SRV",
+          "title": "שירות",
+          "circuits": [
+            {
+              "tag": "CM",
+              "device": {
+                "tag": "CM",
+                "kind": "mcb",
+                "poles": 2,
+                "rating_a": 25,
+                "curve": "C"
+              },
+              "load": "לוח תקשורת Comm'",
+              "phase": "L1",
+              "kind": "feeder",
+              "cable": {
+                "designation": "3X4 N2XY"
+              },
+              "to_board": "COMM"
+            },
+            {
+              "tag": "FAN",
+              "device": {
+                "tag": "FAN",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 6,
+                "curve": "C"
+              },
+              "load": "תרמוסטט + מאוורר",
+              "phase": "L2",
+              "kind": "final",
+              "cable": {
+                "designation": "3X1.5"
+              }
+            },
+            {
+              "tag": "SP1",
+              "device": {
+                "tag": "SP1",
+                "kind": "mcb",
+                "poles": 2,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "load": "שמור",
+              "phase": "L3",
+              "kind": "final"
+            },
+            {
+              "tag": "SP2",
+              "device": {
+                "tag": "SP2",
+                "kind": "mcb",
+                "poles": 3,
+                "rating_a": 25,
+                "curve": "C"
+              },
+              "load": "שמור",
+              "phase": "L1-3",
+              "kind": "final"
+            }
+          ]
+        },
+        {
+          "tag": "RCD-S",
+          "title": "שקע שירות",
+          "device": {
+            "tag": "RCD-S",
+            "kind": "rcd",
+            "poles": 2,
+            "rating_a": 40,
+            "idn_ma": 30,
+            "rcd_type": "A"
+          },
+          "circuits": [
+            {
+              "tag": "SKT",
+              "device": {
+                "tag": "SKT",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "load": "שקע שירות",
+              "phase": "L3",
+              "kind": "final",
+              "cable": {
+                "designation": "3X2.5"
+              }
+            }
+          ]
+        }
+      ],
+      "feeders": [
+        {
+          "tag": "PCS1",
+          "device": {
+            "tag": "PCS1",
+            "kind": "mccb",
+            "poles": 3,
+            "rating_a": 200,
+            "icu_ka": 25,
+            "note": "160A"
+          },
+          "load": "",
+          "phase": "",
+          "kind": "feeder",
+          "cable": {
+            "designation": "4x(1x70)N2XY"
+          },
+          "to_node": "PCS01"
+        },
+        {
+          "tag": "PCS2",
+          "device": {
+            "tag": "PCS2",
+            "kind": "mccb",
+            "poles": 3,
+            "rating_a": 200,
+            "icu_ka": 25,
+            "note": "160A"
+          },
+          "load": "",
+          "phase": "",
+          "kind": "feeder",
+          "cable": {
+            "designation": "4x(1x70)N2XY"
+          },
+          "to_node": "PCS02"
+        },
+        {
+          "tag": "PCS3",
+          "device": {
+            "tag": "PCS3",
+            "kind": "mccb",
+            "poles": 3,
+            "rating_a": 200,
+            "icu_ka": 25,
+            "note": "160A"
+          },
+          "load": "",
+          "phase": "",
+          "kind": "feeder",
+          "cable": {
+            "designation": "4x(1x70)N2XY"
+          },
+          "to_node": "PCS03"
+        },
+        {
+          "tag": "PCS4",
+          "device": {
+            "tag": "PCS4",
+            "kind": "mccb",
+            "poles": 3,
+            "rating_a": 200,
+            "icu_ka": 25,
+            "note": "160A"
+          },
+          "load": "",
+          "phase": "",
+          "kind": "feeder",
+          "cable": {
+            "designation": "4x(1x70)N2XY"
+          },
+          "to_node": "PCS04"
+        }
+      ],
+      "enclosure": {
+        "model": "ארון פח IP66 להעמדה חיצונית",
+        "manufacturer": "לפי ת\"י 61439-1",
+        "width_mm": 1000,
+        "height_mm": 1400,
+        "depth_mm": 300,
+        "rows": 3,
+        "modules_per_row": 48,
+        "row_pitch_mm": 300,
+        "mounting": "surface",
+        "ip": "IP66"
+      }
+    },
+    {
+      "id": "COMM",
+      "title": "לוח תקשורת Comm'",
+      "supply": {
+        "kind": "board",
+        "from_board": "BESSP",
+        "label": "From AC Panel 230V",
+        "cable": {
+          "designation": "3X4 N2XY"
+        },
+        "voltage": "230V",
+        "earthing": ""
+      },
+      "incomer": {
+        "tag": "Q-C",
+        "kind": "mcb",
+        "poles": 2,
+        "rating_a": 25,
+        "curve": "C",
+        "icu_ka": 10
+      },
+      "busbar": {
+        "label": "L1,N 230V 25A 10kA",
+        "rating_a": 25
+      },
+      "groups": [
+        {
+          "tag": "UPS",
+          "title": "UPS 1kVA",
+          "circuits": [
+            {
+              "tag": "UPS-IN",
+              "device": {
+                "tag": "UPS1",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 20,
+                "curve": "C"
+              },
+              "load": "UPS 1kVA — כניסה",
+              "phase": "L1",
+              "kind": "final",
+              "cable": {
+                "designation": "3X2.5"
+              }
+            },
+            {
+              "tag": "UPS-OUT",
+              "device": {
+                "tag": "UPS2",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 20,
+                "curve": "C"
+              },
+              "load": "יציאת UPS — מפסק 2/0/1 + מנורת סימון",
+              "phase": "L1",
+              "kind": "final",
+              "cable": {
+                "designation": "3X2.5"
+              }
+            },
+            {
+              "tag": "PSU",
+              "device": {
+                "tag": "PSU",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 6,
+                "curve": "C"
+              },
+              "load": "ספק כוח 230/24V 150VA — EMS, ראוטר, מתג",
+              "phase": "L1",
+              "kind": "final",
+              "cable": {
+                "designation": "3X1.5"
+              }
+            }
+          ]
+        },
+        {
+          "tag": "RCD-C",
+          "title": "שקעים",
+          "device": {
+            "tag": "RCD-C",
+            "kind": "rcd",
+            "poles": 2,
+            "rating_a": 25,
+            "idn_ma": 30,
+            "rcd_type": "A"
+          },
+          "circuits": [
+            {
+              "tag": "SKT-C",
+              "device": {
+                "tag": "SK",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 16,
+                "curve": "C"
+              },
+              "load": "x2 שקע",
+              "phase": "L1",
+              "kind": "final",
+              "cable": {
+                "designation": "3X2.5"
+              }
+            },
+            {
+              "tag": "FAN-C",
+              "device": {
+                "tag": "FN",
+                "kind": "mcb",
+                "poles": 1,
+                "rating_a": 6,
+                "curve": "C"
+              },
+              "load": "תרמוסטט + מאוורר",
+              "phase": "L1",
+              "kind": "final",
+              "cable": {
+                "designation": "3X1.5"
+              }
+            }
+          ]
+        }
+      ],
+      "feeders": [],
+      "enclosure": {
+        "model": "ארון תקשורת IP66",
+        "width_mm": 600,
+        "height_mm": 800,
+        "depth_mm": 300,
+        "rows": 2,
+        "modules_per_row": 24,
+        "row_pitch_mm": 200,
+        "mounting": "surface",
+        "ip": "IP66"
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "INV-A",
+      "kind": "inverter",
+      "label": "ממירים קיימים A",
+      "sublabel": "מערכת סולארית קיימת",
+      "rating": "100 kW AC"
+    },
+    {
+      "id": "INV-B",
+      "kind": "inverter",
+      "label": "ממירים קיימים B",
+      "sublabel": "מערכת סולארית קיימת",
+      "rating": "100 kW AC"
+    },
+    {
+      "id": "PCS01",
+      "kind": "pcs",
+      "label": "PCS01 — Normal 261",
+      "sublabel": "Roche REL261 · 1P260S LFP",
+      "rating": "125 kW / 261 kWh"
+    },
+    {
+      "id": "PCS02",
+      "kind": "pcs",
+      "label": "PCS02 — Normal 261",
+      "sublabel": "Roche REL261 · 1P260S LFP",
+      "rating": "125 kW / 261 kWh"
+    },
+    {
+      "id": "PCS03",
+      "kind": "pcs",
+      "label": "PCS03 — Normal 261",
+      "sublabel": "Roche REL261 · 1P260S LFP",
+      "rating": "125 kW / 261 kWh"
+    },
+    {
+      "id": "PCS04",
+      "kind": "pcs",
+      "label": "PCS04 — Normal 261",
+      "sublabel": "Roche REL261 · 1P260S LFP",
+      "rating": "125 kW / 261 kWh"
+    }
+  ],
+  "sld_groups": [
+    {
+      "sheet_no": "E-03",
+      "title": "חד-קווי — לוח איסוף ראשי PV+BESS ולוח ממירים קיים",
+      "boards": [
+        "MCP",
+        "INVP"
+      ],
+      "nodes": [
+        "INV-A",
+        "INV-B"
+      ],
+      "notes": [
+        "לפי Kal Gader BESS+PV G005 (Roche/Aviel.P, 28.09.26): לוח איסוף ראשי חדש PV+BESS בין מונה הייצור ללוח הממירים הקיים; כבל קיים 2x(4x120)NA2XY ינותק מלוח הממירים ויחובר ללוח האיסוף החדש.",
+        "זהירות — המתקן מוזן מחברת החשמל וגם ממערכת סולארית וממערכת אגירה (שילוט בכל לוח).",
+        "מונה SATEC PM135 על CT 400/5A Cl.0.2s בכל לוח, תקשורת Cat7 ל-EMS (ראו גיליון תקשורת).",
+        "לוחות יתאימו לת\"י 61439-1, מקדם העמסה 1, מתכתיים IP66 להעמדה חיצונית; חישובי טמפרטורה לכל לוח; סימון כבלים ומעגלים תקני."
+      ]
+    },
+    {
+      "sheet_no": "E-04",
+      "title": "חד-קווי — לוח איסוף BESS וארונות PCS",
+      "boards": [
+        "BESSP"
+      ],
+      "nodes": [
+        "PCS01",
+        "PCS02",
+        "PCS03",
+        "PCS04"
+      ],
+      "notes": [
+        "לפי G005/G009 של Roche: Q.1 400A 4P 36kA MCCB, PCS1–4 MCCB 200A (כיול 160A) 3P 25kA, כבל 4x(1x70)N2XY לכל ארון + 1x35Cu הארקה; Comm' 2x25A; שקע שירות דרך פחת 40A 30mA.",
+        "גילוי וכיבוי אש אוטומטי בלוחות החשמל לפי פרוגרמת בטיחות אש של המזמין; חיבור לרכזת גילוי אש ראשית של המפעל."
+      ]
+    },
+    {
+      "sheet_no": "E-05",
+      "title": "חד-קווי — לוח תקשורת Comm'",
+      "boards": [
+        "COMM"
+      ],
+      "nodes": [],
+      "notes": [
+        "לפי Kal Gader G009 (Roche): הזנה 230V מלוח BESS (2x25A, 3x4 N2XY); UPS 1kVA עם מפסק 2/0/1 ומנורת סימון; ספק כוח 230/24V 150VA ל-EMS, ראוטר ומתג; שקעים דרך פחת 25A 30mA.",
+        "דיאגרמת התקשורת (SATEC ×3, EMS AGEERA, מתג 8 פורטים, ראוטר סלולרי, Cat7 ל-PCS01–04) — ראו גיליון תקשורת."
+      ]
+    }
+  ],
+  "notes": [],
+  "drill_template": {
+    "title": "שבלונת קידוח — תושבות Double-T ועיגון ארונות BESS",
+    "slab": {
+      "length_mm": 5200,
+      "width_mm": 2100,
+      "thickness_mm": 200,
+      "edge_min_mm": 100,
+      "datum": "פינה קדמית-שמאלית של משטח הבטון (מבט על, החזית למטה)"
+    },
+    "pedestal": {
+      "kind": "Double-T",
+      "profile": "IPE 200 מגולוון — \"הגבהה קורות מתכת Double T\" לפי G009",
+      "height_mm": 200,
+      "length_mm": 1465,
+      "width_mm": 100,
+      "count_per_unit": 2,
+      "inset_mm": 0,
+      "galvanised": true
+    },
+    "anchor": {
+      "name": "עוגן כימי Hilti HIT-HY 200-A + מוט HAS-U 8.8 מגולוון (או שו\"ע) — לאימות",
+      "bolt": "M16",
+      "hole_dia_mm": 18,
+      "depth_mm": 125,
+      "torque_nm": 80,
+      "spacing_min_mm": 100,
+      "qty_per_unit": 8,
+      "note": "c_min / s_min 80 מ\"מ לפי ETA של העוגן — בתבנית נלקח 100"
+    },
+    "units": [
+      {
+        "tag": "PCS04",
+        "model": "Normal 261",
+        "width_mm": 989,
+        "depth_mm": 1465,
+        "x_mm": 150,
+        "y_mm": 150,
+        "anchor_inset_x_mm": 30,
+        "anchor_inset_y_mm": 150,
+        "anchor_offset_y_mm": 0,
+        "weight_t": 2.8,
+        "anchor_stagger_mm": 100
+      },
+      {
+        "tag": "PCS03",
+        "model": "Normal 261",
+        "width_mm": 989,
+        "depth_mm": 1465,
+        "x_mm": 1239,
+        "y_mm": 150,
+        "anchor_inset_x_mm": 30,
+        "anchor_inset_y_mm": 150,
+        "anchor_offset_y_mm": 200,
+        "weight_t": 2.8,
+        "anchor_stagger_mm": 100
+      },
+      {
+        "tag": "PCS02",
+        "model": "Normal 261",
+        "width_mm": 989,
+        "depth_mm": 1465,
+        "x_mm": 2328,
+        "y_mm": 150,
+        "anchor_inset_x_mm": 30,
+        "anchor_inset_y_mm": 150,
+        "anchor_offset_y_mm": 0,
+        "weight_t": 2.8,
+        "anchor_stagger_mm": 100
+      },
+      {
+        "tag": "PCS01",
+        "model": "Normal 261",
+        "width_mm": 989,
+        "depth_mm": 1465,
+        "x_mm": 3417,
+        "y_mm": 150,
+        "anchor_inset_x_mm": 30,
+        "anchor_inset_y_mm": 150,
+        "anchor_offset_y_mm": 200,
+        "weight_t": 2.8,
+        "anchor_stagger_mm": 100
+      }
+    ],
+    "zones": [
+      {
+        "label": "לוח איסוף BESS",
+        "x_mm": 4556,
+        "y_mm": 150,
+        "w_mm": 150,
+        "d_mm": 1465
+      },
+      {
+        "label": "לוח Comm'",
+        "x_mm": 4556,
+        "y_mm": 1850,
+        "w_mm": 150,
+        "d_mm": 150
+      }
+    ],
+    "notes": [
+      "הארון: Roche Energy REL261 (\"Normal 261\" / Rochex by Afcon) — 989×1465, גובה 2471, כ-2.8 טון, הצבה על רצפה (מדף נתונים Roche 2026).",
+      "מיקום הארונות, המשטח וההגבהה — לפי Kal Gader BESS+PV G009 (Roche/Aviel.P, 28.09.26, A1): משטח 5.2×2.1×0.2 מ', 150 מהקצה השמאלי, 100 בין ארונות, 750 עד הקצה הימני (לוח איסוף), חזית הארון 150 מקצה המשטח הקדמי; \"הגבהה קורות מתכת Double T\" 200 מ\"מ — קורה מתחת לכל קצה-צד של הארון, לכל עומקו.",
+      "ה-Double-T = פרופיל פלדה I (IPE 200, אגף 100). הקורה מעוגנת למשטח דרך האגף התחתון: זוג ברגים אלכסוני בכל קצה (±30 מהגוף, הסטה 100 מ\"מ לאורך הקורה — מרווח 117 מ\"מ בין הזוג) — 4 לקורה, 8 לארון, 32 סה\"כ.",
+      "יחידות זוגיות (PCS03, PCS01): שורות הברגים מוסטות 200 מ\"מ אחורה כדי לשמור מרווח ≥100 מ\"מ בין עוגני קורות סמוכות ברווח ה-100 שבין ארונות (נבדק אוטומטית בגיליון).",
+      "חיבור הארון לאגף העליון של הקורה — לפי חורי מסגרת הבסיס של היצרן (ברגי M12 8.8 + אומים נעולים); קדיחת האגף העליון בשטח לאחר הצבת הארון במנוף.",
+      "משטח הבטון: ב-G009 של Roche נכתב \"יבוצע בהתאם לפרט שיצורף לתכנון\" — גיליון זה הוא הפרט; טבעת הארקת יסוד Ø10 ופלח 50×4 Fe לפי G006. בטון ב-30, פילוס עליון ±2 מ\"מ/2 מ'.",
+      "קידוח לאחר אשפרת הבטון (≥7 ימים); איתור זיון בסורק לפני קידוח; ניקוי החור באוויר דחוס ומברשת ×2; הזרקת דבק, זמן אשפרה לפי טמפרטורה; מומנט הידוק 80 Nm.",
+      "סבולת מיקום חור: ±4 מ\"מ (דרישת יצרני ארונות 261kWh דומים); אין לקדוח בטווח 100 מ\"מ מקצה המשטח."
+    ],
+    "verify": [
+      "שרטוט מסגרת הבסיס של REL261 (חורי החיבור לקורה) — לא פורסם; לבקש מ-Roche Energy / אפקון אגירה (מדריך התקנה).",
+      "פרופיל הקורה (IPE 200 הנחה לפי גובה 200 ב-G009) ועומסי רוח/רעידת אדמה — אישור קונסטרוקטור.",
+      "סוג העוגן, hef ומומנט — לפי ETA של העוגן הנבחר (Hilti HIT-HY 200-A + HAS-U M16: hef 125, Tinst 80 Nm) — לאימות."
+    ]
+  },
+  "site": {
+    "title": "פריסת תשתיות — מבט על, חזית וחתך",
+    "sheet_no": "E-02",
+    "cabinet_height_mm": 2471,
+    "items": [
+      {
+        "tag": "לוח BESS",
+        "label": "לוח איסוף BESS",
+        "kind": "panel",
+        "x_mm": 4556,
+        "y_mm": 150,
+        "w_mm": 150,
+        "d_mm": 600,
+        "z_mm": 900,
+        "h_mm": 1000,
+        "note": "IP66, על מסגרת פלדה — לפי G009"
+      },
+      {
+        "tag": "Comm'",
+        "label": "לוח Comm'",
+        "kind": "comm",
+        "x_mm": 4556,
+        "y_mm": 1700,
+        "w_mm": 150,
+        "d_mm": 400,
+        "z_mm": 1750,
+        "h_mm": 500,
+        "show_front": false
+      }
+    ],
+    "trays": [
+      {
+        "label": "סולם כבלים 300×100 על משטח בטון עם הגבהה",
+        "kind": "ladder",
+        "width_mm": 300,
+        "height_mm": 100,
+        "z_mm": 250,
+        "points": [
+          [
+            300,
+            1800
+          ],
+          [
+            4400,
+            1800
+          ],
+          [
+            4400,
+            1000
+          ]
+        ],
+        "side_y_mm": 1800,
+        "tag": "T1"
+      },
+      {
+        "label": "תעלת רשת 100×85 (תקשורת)",
+        "kind": "mesh",
+        "width_mm": 100,
+        "height_mm": 85,
+        "z_mm": 450,
+        "points": [
+          [
+            300,
+            2000
+          ],
+          [
+            4500,
+            2000
+          ]
+        ],
+        "side_y_mm": 2000,
+        "tag": "T2"
+      }
+    ],
+    "routes": [
+      {
+        "label": "4x(4x(1x70))N2XY + 4x(1x35Cu) — PCS01-04",
+        "kind": "ac",
+        "points": [
+          [
+            644,
+            1615
+          ],
+          [
+            644,
+            1800
+          ],
+          [
+            4400,
+            1800
+          ],
+          [
+            4400,
+            1150
+          ]
+        ],
+        "tag": "R1",
+        "via": "PCS01-04 → T1 → לוח BESS"
+      },
+      {
+        "label": "4xCat7 — EMS",
+        "kind": "comm",
+        "points": [
+          [
+            700,
+            1615
+          ],
+          [
+            700,
+            2000
+          ],
+          [
+            4556,
+            2000
+          ]
+        ],
+        "tag": "R2",
+        "via": "PCS01-04 → T2 → Comm'"
+      }
+    ],
+    "notes": [
+      "פריסה לפי Kal Gader BESS+PV G009 (Roche/Aviel.P, 28.09.26): משטח 5.2×2.1×0.2 מ', ארונות ברווח 100, 150 מהקצה, 750 ללוח איסוף; סולם 300×100 ותעלת רשת 100×85 על הגבהה מאחורי השורה.",
+      "קורות ההגבהה (Double-T, IPE 200, 200 מ\"מ) ועיגונן — ראו גיליון E-20 (שבלונת קידוח); אותו מודל מזין את שני הגיליונות.",
+      "הולכה לכיוון לוח איסוף PV+BESS בתעלה מחורצת עם מכסה על גבי קיר חיצוני — לפי G009; תוואי מחוץ למשטח אינו מוצג כאן.",
+      "משטח הבטון יבוצע לפי פרט קונסטרוקטור; הקבלן המבצע יתכנן ויאשר פתרון להגבהת תעלות על משטח בטון (הערת Roche ב-G009).",
+      "מידות הארון 989×1465×2471 — מדף נתונים Roche REL261 (2026)."
+    ],
+    "verify": [
+      "מידות ומיקום לוח האיסוף ולוח התקשורת (גובה הרכבה 900/1750) — הערכה מ-G009, לאימות מול הספק.",
+      "גובה הגבהת הסולם (250) והרשת (450) — לאימות מול פרט הקבלן."
+    ]
+  }
+}

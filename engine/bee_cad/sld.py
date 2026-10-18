@@ -32,13 +32,16 @@ class Placed:
 
 
 class SldRenderer:
-    def __init__(self, ctx: SheetContext, design: Design):
+    def __init__(self, ctx: SheetContext, design: Design, full_design: Design | None = None):
         self.ctx = ctx
         self.design = design
+        self.full_design = full_design or design
         self.board_x: dict[str, float] = {}           # incomer x per board
         self.board_bus: dict[str, tuple[float, float, float]] = {}  # (x_start, x_end, y_bus)
         self.feeder_pts: dict[tuple[str, str], Placed] = {}          # (board, circuit tag) → bottom of device
         self.node_pts: dict[str, Placed] = {}          # node id → left mid point
+        self.node_box: dict[str, tuple[float, float, float, float]] = {}   # node id → (x0, y0, x1, y1)
+        self.node_col: dict[str, int] = {}             # node id → column in the right band
         self.warnings: list[str] = []
 
     # ------------------------------------------------------------------ helpers
@@ -66,13 +69,19 @@ class SldRenderer:
     def group_width(circuits: list[Circuit]) -> float:
         return max(1, len(circuits)) * PITCH
 
+    @staticmethod
+    def spd_width(b: Board) -> float:
+        """Slot of the SPD on the busbar: wide enough for its longest label line."""
+        longest = max([len(x) for x in b.spd.label_lines()] + [len(b.spd.tag)]) if b.spd else 0
+        return max(14.0, 5.0 + longest * 1.25)
+
     def board_width(self, b: Board) -> float:
         w = 0.0
         for g in b.groups:
             w += self.group_width(g.circuits) + GROUP_GAP
         w += len(b.feeders) * (PITCH + 4.0)
         if b.spd:
-            w += 14.0
+            w += self.spd_width(b)
         return max(w + 14.0, 60.0)
 
     # ------------------------------------------------------------------ drawing
@@ -104,6 +113,8 @@ class SldRenderer:
     def draw_board(self, b: Board, x_in: float, y_top: float, is_main: bool) -> tuple[float, float]:
         """Draw one board. x_in = x of the incomer line. Returns (x_right, y_bottom)."""
         ctx = self.ctx
+        if b.existing:
+            ctx.text("קיים", (x_in - 16.0, y_top - 1.0), 2.0, "sld_text", TA.TOP_LEFT, bold=True)
         y = self.draw_supply(b, x_in, y_top)
         # feeder cable label
         if b.supply.cable:
@@ -119,7 +130,7 @@ class SldRenderer:
         y_board_top = y - 12.0
         ctx.line((x_in, y), (x_in, y_board_top))
         if b.supply.earthing and is_main:
-            ctx.text(f"PEN  איפוס {b.supply.earthing}", (x_in + 2.0, y_board_top + 0.5), 1.6, "sld_text", TA.BOTTOM_LEFT)
+            ctx.text(f"PEN  איפוס {b.supply.earthing}", (x_in - 2.0, y_board_top + 0.5), 1.6, "sld_text", TA.BOTTOM_RIGHT)
 
         # board frame (dash-dot) — closed after we know the extent
         x_left = x_in - 14.0
@@ -133,7 +144,17 @@ class SldRenderer:
         if b.ct:
             ctx.line((x_in, y_cur), (x_in, y_cur - 3.0))
             ctx.insert("BEE_CT", (x_in, y_cur - 3.0 - SYM_H))
-            ctx.text(b.ct, (x_in - 3.0, y_cur - 8.0), 1.6, "sld_text", TA.MIDDLE_RIGHT)
+            ct_lines = _wrap_words(b.ct, 10)
+            for i, line in enumerate(ct_lines):
+                ctx.text(line, (x_in - 3.0, y_cur - 8.0 + 1.0 * (len(ct_lines) - 1) - 2.0 * i), 1.6, "sld_text", TA.MIDDLE_RIGHT)
+            if b.meter:
+                # power meter fed from the CTs: dashed link to a PM symbol at the right
+                xm = x_in + 12.0
+                ym = y_cur - 8.0
+                ctx.msp.add_line((x_in + 1.5, ym), (xm - 4.0, ym), dxfattribs={"layer": LAYERS["comm"].name})
+                ctx.msp.add_blockref("BEE_METER_PM", (xm, ym - 4.0), dxfattribs={"layer": LAYERS["sld_sym"].name, "xscale": 0.8, "yscale": 0.8})
+                for i, line in enumerate(b.meter.split(" / ")):
+                    ctx.text(line, (xm + 5.0, ym + 1.2 - 2.4 * i), 1.5, "sld_text", TA.MIDDLE_LEFT)
             y_cur = y_cur - 3.0 - SYM_H
         y_bus = y_cur - 8.0
         ctx.line((x_in, y_cur), (x_in, y_bus))
@@ -153,7 +174,7 @@ class SldRenderer:
             ctx.insert("BEE_SPD", (x, y_bus - 3.0 - SYM_H))
             ctx.insert("BEE_EARTH", (x, y_bus - 3.0 - SYM_H - 2.0))
             self.device_labels(b.spd, x, y_bus - 3.0, side="right", h=1.5)
-            x += 14.0
+            x += self.spd_width(b)
 
         # groups
         y_bottom = y_bus - 4.0 - SYM_H - 18.0
@@ -173,7 +194,7 @@ class SldRenderer:
             ctx.msp.add_lwpolyline([(gx0 - 2.0, y_sub), (gx0 + gw - PITCH + 2.0, y_sub)],
                                    dxfattribs={"layer": LAYERS["sld_bus"].name, "const_width": 0.7})
             if g.title:
-                ctx.text(g.title, (gx0 + gw - PITCH + 2.0, y_sub + 1.2), 1.6, "sld_text", TA.BOTTOM_RIGHT)
+                ctx.text(g.title, (gx0 + 2.5, y_sub + 1.2), 1.6, "sld_text", TA.BOTTOM_LEFT)
             depth = 0.0
             for i, c in enumerate(g.circuits):
                 cx = gx0 + i * PITCH
@@ -196,8 +217,6 @@ class SldRenderer:
                 ctx.line((x, yb), (x, yb - 4.0))
                 yb = self.vdevice(f.rcd, x, yb - 4.0, side="right")
             self.feeder_pts[(b.id, f.tag)] = Placed(x, yb)
-            if f.cable:
-                ctx.text(f.cable.designation, (x + 2.2, yb - 1.5), 1.6, "sld_text", TA.TOP_LEFT)
             x += PITCH + 4.0
 
         # PE bar
@@ -232,7 +251,7 @@ class SldRenderer:
         d = c.device
         ctx.line((x, y_sub), (x, y_sub - 3.0), "sld_sec")
         ctx.insert(device_block_name(d.kind, d.poles), (x, y_sub - 3.0 - SYM_H))
-        ctx.text(d.tag, (x + 1.8, y_sub - 2.0), 2.0, "sld_tag", TA.TOP_LEFT, bold=True)
+        ctx.text(d.tag, (x + 1.8, y_sub - 2.0), 2.0 if len(d.tag) <= 4 else (1.6 if len(d.tag) <= 6 else 1.3), "sld_tag", TA.TOP_LEFT, bold=True)
         lines = d.label_lines()
         yy = y_sub - 5.2
         for line in lines[:2]:
@@ -258,7 +277,8 @@ class SldRenderer:
                                dxfattribs={"layer": LAYERS["sld_board"].name})
         block = {"inverter": "BEE_INVERTER", "battery": "BEE_BATTERY", "generator": "BEE_GENERATOR",
                  "pv": "BEE_PV", "transformer": "BEE_TRANSFORMER", "bess": "BEE_BATTERY", "ups": "BEE_INVERTER",
-                 "load": "BEE_LOAD", "meter": "BEE_METER_KWH"}[n.kind]
+                 "load": "BEE_LOAD", "meter": "BEE_METER_KWH", "pcs": "BEE_INVERTER", "grid": "BEE_METER_KWH",
+                 "rmu": "BEE_SW_3P"}[n.kind]
         ctx.msp.add_blockref(block, (x0 + 8.0, y0 + 4.0), dxfattribs={"layer": LAYERS["sld_sym"].name, "xscale": 0.7, "yscale": 0.7})
         ctx.text(n.label, (x_right - 2.0, y0 + NODE_H - 1.5), 2.2, "sld_tag", TA.TOP_RIGHT, bold=True)
         ctx.text(n.sublabel, (x_right - 2.0, y0 + NODE_H - 5.2), 1.5, "sld_text", TA.TOP_RIGHT)
@@ -266,20 +286,41 @@ class SldRenderer:
         if n.device:
             ctx.text(" ".join([n.device.tag] + n.device.label_lines()[:1]), (x_right - 2.0, y0 + 1.5), 1.4, "sld_text", TA.BOTTOM_RIGHT)
         self.node_pts[n.id] = Placed(x0, y0 + NODE_H / 2)
+        self.node_box[n.id] = (x0, y0, x_right, y0 + NODE_H)
 
-    def connect(self, a: Placed, b: Placed, label: str = "", x_turn: float | None = None) -> None:
+    def connect(self, a: Placed, b: Placed, label: str = "", x_turn: float | None = None,
+                top_entry: tuple[float, float] | None = None, y_run: float | None = None) -> None:
         """Orthogonal route from a feeder device bottom (a) to a target left-mid point (b).
 
         The vertical run goes up the corridor left of the right band (``x_turn``) so it never
-        crosses a sub-board drawn under the nodes."""
+        crosses a sub-board drawn under the nodes. ``top_entry`` = (x_centre, y_top) of a node in a
+        second column: the route then runs above the row and drops into the node from the top, so it
+        never crosses the first-column node."""
         ctx = self.ctx
-        y_run = a.y - 5.0
+        if y_run is None:
+            y_run = a.y - 5.0
         if x_turn is None:
             x_turn = b.x - 6.0
-        pts = [(a.x, a.y), (a.x, y_run), (x_turn, y_run), (x_turn, b.y), (b.x, b.y)]
+        if top_entry:
+            xc, yt = top_entry
+            y_over = yt + 2.0
+            pts = [(a.x, a.y), (a.x, y_run), (x_turn, y_run), (x_turn, y_over), (xc, y_over), (xc, yt)]
+            y_end = y_over
+        else:
+            pts = [(a.x, a.y), (a.x, y_run), (x_turn, y_run), (x_turn, b.y), (b.x, b.y)]
+            y_end = b.y
         ctx.msp.add_lwpolyline(pts, dxfattribs={"layer": LAYERS["sld_main"].name})
         if label:
-            ctx.text(label, (x_turn + 1.0, (y_run + b.y) / 2), 1.6, "sld_text", TA.MIDDLE_LEFT, rotation=90)
+            # label starts just above the shared horizontal run level: every lane's horizontal runs are at
+            # y_run (same device bottom), and node/board entries are higher, so nothing crosses the text
+            ctx.text(label, (x_turn + 1.7, y_run + 2.5), 1.5, "sld_text", TA.MIDDLE_LEFT, rotation=90)
+
+    def feeder_stub(self, a: Placed, label: str, target: str) -> None:
+        """Feeder whose target is on another sheet: short line, arrow and a rotated label."""
+        ctx = self.ctx
+        ctx.line((a.x, a.y), (a.x, a.y - 12.0))
+        ctx.insert("BEE_LOAD", (a.x, a.y - 12.0 - 3.0))
+        ctx.text(f"{label}  → {target}".strip(), (a.x + 2.4, a.y - 16.0), 1.6, "sld_text", TA.TOP_RIGHT, rotation=90)
 
     def draw_legend(self, x: float, y: float) -> None:
         ctx = self.ctx
@@ -336,8 +377,9 @@ class SldRenderer:
         ctx = self.ctx
         d = self.design
         y_top = ctx.y1 - 12.0
-        fed = {f.to_board for b in d.boards for f in b.feeders if f.to_board}
-        fed |= {b.id for b in d.boards if b.supply.kind != "utility"}
+        ids = {b.id for b in d.boards}
+        fed = {f.to_board for b in d.boards for f in b.feeders if f.to_board and f.to_board in ids}
+        fed |= {b.id for b in d.boards if b.supply.kind not in ("utility", "board") or (b.supply.kind == "board" and b.supply.from_board in ids)}
         mains = [b for b in d.boards if b.id not in fed]
         subs = [b for b in d.boards if b.id in fed]
         # right band: nodes at the top (1–2 columns, depending on the room left), sub-boards below them
@@ -366,6 +408,7 @@ class SldRenderer:
             col = i % node_cols
             xr_node = x_band_left + (col + 1) * (self.node_w + 4.0) - 4.0
             self.draw_node(n, xr_node, yn)
+            self.node_col[n.id] = col
             if col == node_cols - 1 or i == len(d.nodes) - 1:
                 yn -= NODE_H + 4.0
         for b in subs:
@@ -374,8 +417,13 @@ class SldRenderer:
             yn = yb - 4.0
             if yb < ctx.y0 + TB_H + 12.0:
                 self.warnings.append(f"sub-board {b.id} runs into the title block — move it to its own sheet")
-        # connections: feeders → nodes / boards (one corridor lane per feeder, left of the band)
+        # connections: feeders → nodes / boards (one corridor lane per feeder, left of the band).
+        # All horizontal runs share one level (below the lowest feeder) so the rotated lane labels,
+        # which start just above it, are never crossed by another lane's horizontal run.
         lane = 0
+        routed = [self.feeder_pts[(b.id, f.tag)] for b in d.boards for f in b.feeders
+                  if (b.id, f.tag) in self.feeder_pts and (f.to_node or f.to_board)]
+        y_run_all = (min(p.y for p in routed) - 5.0) if routed else None
         for b in d.boards:
             for f in b.feeders:
                 src = self.feeder_pts.get((b.id, f.tag))
@@ -383,13 +431,20 @@ class SldRenderer:
                     continue
                 label = f.cable.designation if f.cable else ""
                 if f.to_node and f.to_node in self.node_pts:
-                    self.connect(src, self.node_pts[f.to_node], label, x_turn=x_band_left - 4.0 - 3.0 * lane)
+                    top = None
+                    if self.node_col.get(f.to_node, 0) > 0:
+                        x0n, y0n, x1n, y1n = self.node_box[f.to_node]
+                        top = ((x0n + x1n) / 2, y1n)
+                    self.connect(src, self.node_pts[f.to_node], label, x_turn=x_band_left - 4.0 - 4.0 * lane, top_entry=top, y_run=y_run_all)
                     lane += 1
                 elif f.to_board and f.to_board in self.board_x:
                     bx = self.board_x[f.to_board]
-                    self.connect(src, Placed(bx - 6.0, self.board_bus[f.to_board][2] + 46.0), label)
+                    self.connect(src, Placed(bx - 6.0, self.board_bus[f.to_board][2] + 46.0), label, x_turn=x_band_left - 4.0 - 4.0 * lane, y_run=y_run_all)
+                    lane += 1
                 elif f.to_board or f.to_node:
-                    self.warnings.append(f"feeder {f.tag}: target {f.to_board or f.to_node} not drawn")
+                    target = f.to_board or f.to_node
+                    sheet = next((g.sheet_no for g in self.full_design.sld_groups if target in g.boards or target in g.nodes), "")
+                    self.feeder_stub(src, label, f"{target}" + (f" ({sheet})" if sheet else ""))
         # legend, notes, summary
         if d.legend:
             self.draw_legend(ctx.x0 + 2.0, ctx.y0 + 2.0)
@@ -401,7 +456,20 @@ class SldRenderer:
         self.draw_phase_summary(ctx.x1 - TB_W - 6.0, ctx.y0 + 4.0)
 
 
-def draw_sld(ctx: SheetContext, design: Design) -> list[str]:
-    r = SldRenderer(ctx, design)
+def _wrap_words(text: str, width: int) -> list[str]:
+    out, cur = [], ""
+    for w in text.split():
+        if cur and len(cur) + 1 + len(w) > width:
+            out.append(cur)
+            cur = w
+        else:
+            cur = f"{cur} {w}".strip()
+    if cur:
+        out.append(cur)
+    return out or [text]
+
+
+def draw_sld(ctx: SheetContext, design: Design, full_design: Design | None = None) -> list[str]:
+    r = SldRenderer(ctx, design, full_design)
     r.draw()
     return r.warnings

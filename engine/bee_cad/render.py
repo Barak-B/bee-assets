@@ -44,7 +44,11 @@ def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[She
             t = DrillTemplate.model_validate(design.drill_template)
             plan.append(SheetEntry("site", lay.sheet_no, lay.title, f"1:{int(site_scale(t, lay))}"))
         elif kind == "sld" and design.boards:
-            plan.append(SheetEntry("sld", design.title.sheet_no, design.title.sheet_title or "חד-קווי — לוחות חשמל"))
+            if design.sld_groups:
+                for g in design.sld_groups:
+                    plan.append(SheetEntry("sld", g.sheet_no, g.title))
+            else:
+                plan.append(SheetEntry("sld", design.title.sheet_no, design.title.sheet_title or "חד-קווי — לוחות חשמל"))
         elif kind == "panel":
             for b in design.boards:
                 plan.append(SheetEntry("panel", f"{prefix}-P{len(plan) + 1:02d}", f"מבנה לוח {b.id} — חזית וחתך", "לפי ציון"))
@@ -52,6 +56,14 @@ def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[She
             t = DrillTemplate.model_validate(design.drill_template)
             plan.append(SheetEntry("drill", design.title.sheet_no, design.title.sheet_title or t.title, scale_text(t)))
     return plan
+
+
+def sld_subset(design: Design, sheet_no: str) -> Design:
+    """The design restricted to one SLD group (boards + nodes + the group's notes)."""
+    g = next(x for x in design.sld_groups if x.sheet_no == sheet_no)
+    return design.model_copy(update={"boards": [b for b in design.boards if b.id in g.boards],
+                                     "nodes": [n for n in design.nodes if n.id in g.nodes],
+                                     "notes": g.notes or design.notes, "sld_groups": []})
 
 
 def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = "unicode",
@@ -82,7 +94,7 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
         elif e.kind == "site":
             warnings = draw_site(ctx, design, SiteLayout.model_validate(design.site))
         elif e.kind == "sld":
-            warnings = draw_sld(ctx, design)
+            warnings = draw_sld(ctx, sld_subset(design, e.no) if design.sld_groups else design, design)
         elif e.kind == "panel":
             warnings = draw_panel(ctx, design, next(board_iter))
         else:
