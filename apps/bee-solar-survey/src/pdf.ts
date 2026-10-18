@@ -15,6 +15,7 @@ import {
   type SiteSurveyProject,
   type SurveyPhoto,
 } from './types'
+import { fmtDateTime } from './dates'
 
 export interface SurveyPdfMeta {
   /** Short content hash printed in the footer (first 8 hex chars). */
@@ -116,7 +117,7 @@ export async function buildSurveyPdfDetailed(
   w.row('כתובת', project.address)
   w.row('GPS', lat != null && lon != null ? `${lat}, ${lon}` : project.gps)
   w.row('מזהה סקר', project.id)
-  w.row('עודכן', project.updatedAt ? project.updatedAt.replace('T', ' ').slice(0, 16) : '')
+  w.row('עודכן', fmtDateTime(project.updatedAt))
   w.space()
 
   // ── Electrical ────────────────────────────────────────────

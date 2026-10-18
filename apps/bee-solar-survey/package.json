@@ -14,7 +14,8 @@
     "pages:dev": "wrangler pages dev --port 8788",
     "pages:deploy": "npm run build && wrangler pages deploy",
     "functions:check": "wrangler pages functions build --outdir .wrangler/functions-check",
-    "setup:cloudflare": "node scripts/setup-cloudflare.mjs"
+    "setup:cloudflare": "node scripts/setup-cloudflare.mjs",
+    "walkthrough": "node scripts/walkthrough.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

@@ -123,7 +123,7 @@ describe('publish API', () => {
     const good = { name: '  ישראל   ישראלי ', id4: '1234', agree: 'yes', ref: pq.reference }
 
     let page = await (await pageGet(ctx(e, url, {}, { token }))).text()
-    expect(page).toContain(`action="/q/${token}/accept"`)
+    expect(page).toContain(`action="/q/${token}/accept#accept"`)
     expect(page).toContain('אני מאשר/ת את ההצעה')
 
     // Validation re-renders the page with the message and keeps the name.
@@ -147,7 +147,7 @@ describe('publish API', () => {
     expect(page).toContain('תודה! ההצעה אושרה')
     expect(page).toContain('ישראל ישראלי')
     expect(page).toMatch(/<bdi dir="ltr">\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}<\/bdi>/) // Israel time, no bidi reordering
-    expect(page).not.toContain(`action="/q/${token}/accept"`)
+    expect(page).not.toContain(`action="/q/${token}/accept`)
 
     // A second post does not overwrite the first approval.
     expect((await form({ ...good, name: 'מישהו אחר' })).status).toBe(303)

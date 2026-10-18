@@ -9,6 +9,7 @@ import { formatNumber } from '../rtl'
 import type { SurveyPhoto } from '../types'
 import { template, visibleSections } from './model'
 import type { ColumnDef, ItemResult, Option, ReportInstance } from './types'
+import { fmtDateTime } from '../dates'
 
 export interface ReportPdfResult {
   blob: Blob
@@ -36,7 +37,7 @@ const pdfUnit = (u: string | undefined) => (u ?? '').replace(/MΩ/g, 'MOhm').rep
 
 function dt(iso: string | null | undefined): string {
   if (!iso) return ''
-  return iso.replace('T', ' ').slice(0, 16)
+  return fmtDateTime(iso)
 }
 
 export async function buildReportPdf(r: ReportInstance): Promise<ReportPdfResult> {

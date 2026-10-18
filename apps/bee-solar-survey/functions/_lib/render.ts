@@ -100,7 +100,12 @@ form{display:grid;gap:12px;margin-top:10px}
 .check input{width:20px;height:20px;margin-top:3px}
 button.btn{border:0;font:inherit;font-weight:700;cursor:pointer;justify-self:start}
 .btn{display:inline-block;background:var(--honey);color:var(--ink);font-weight:700;text-decoration:none;padding:12px 18px;border-radius:12px}
-footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 16px}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 16px 84px}
+details.full{margin-top:10px}
+details.full>summary{cursor:pointer;color:var(--ink);font-weight:700;padding:8px 0}
+table.chapters tr.sec td{background:transparent;font-weight:400}
+.cta-bar{position:fixed;inset-inline:0;bottom:0;z-index:5;display:flex;justify-content:center;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(255,253,248,.96);border-top:1px solid var(--line)}
+.cta-bar .btn{width:100%;max-width:520px;text-align:center}
 .sm-only{display:none}
 @media (max-width:560px){
 .stats{grid-template-columns:1fr}
@@ -117,7 +122,7 @@ table.items td.qty::after{content:' ×'}
 table.items td.total{margin-inline-start:auto}
 .sm-only{display:inline}
 }
-@media print{body{background:#fff}.btn{display:none}.card{break-inside:avoid;border-color:#ccc}}
+@media print{body{background:#fff}.btn,.cta-bar{display:none}.card{break-inside:avoid;border-color:#ccc}details.full>*{display:block}}
 `
 
 function page(title: string, body: string): string {
@@ -240,7 +245,7 @@ function acceptCard(q: PublicQuote, opts: RenderOpts, expired: boolean): string 
     <h2>אישור ההצעה</h2>
     <p class="muted">האישור מתייחס לגרסה ${esc(q.version_no)} של ההצעה (אסמכתא <bdi>${esc(q.reference)}</bdi>) ומאפשר לנו להתקדם להסכם. ההסכם עצמו ותנאיו ייחתמו בנפרד.</p>
     ${opts.acceptError ? `<div class="note" role="alert">${esc(opts.acceptError)}</div>` : ''}
-    <form method="post" action="/q/${esc(opts.token)}/accept">
+    <form method="post" action="/q/${esc(opts.token)}/accept#accept">
       <input type="hidden" name="ref" value="${esc(q.reference)}">
       <label class="fld">שם מלא<input name="name" required minlength="2" maxlength="80" autocomplete="name" value="${esc(opts.form?.name ?? '')}"></label>
       <label class="fld">4 ספרות אחרונות של ת״ז / ח״פ<input name="id4" required inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" dir="ltr"></label>
@@ -272,6 +277,11 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
       return `<tr class="sec"><td class="name" colspan="4"><bdi>${esc(sec.code)}</bdi> · ${esc(sec.title_he)}</td><td class="n total">${ils(sec.total_ils, 2)}</td></tr>${lines}`
     })
     .join('')
+  // The page opens on the chapter totals; every line is one tap away (no script needed).
+  const chapterRows = q.sections
+    .map((sec) => `<tr class="sec"><td class="name" colspan="4"><bdi>${esc(sec.code)}</bdi> · ${esc(sec.title_he)}</td><td class="n total">${ils(sec.total_ils, 2)}</td></tr>`)
+    .join('')
+  const lineCount = q.sections.reduce((n, sec) => n + sec.lines.length, 0)
 
   const vatLabel = t.vat_rate === null ? 'מע״מ' : `מע״מ (<bdi>${num(t.vat_rate * 100, t.vat_rate * 100 % 1 ? 1 : 0)}%</bdi>)`
 
@@ -311,16 +321,22 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
 
   <section class="card">
     <h2>פירוט ומחיר</h2>
-    <table class="items">
-      <thead><tr><th>פריט</th><th>יח׳</th><th class="n">כמות</th><th class="n">מחיר יח׳</th><th class="n">סה״כ</th></tr></thead>
+    <table class="items chapters">
       <tbody>
-        ${rows}
+        ${chapterRows}
         ${t.rounding_ils ? `<tr class="vat"><td class="name" colspan="4">עיגול</td><td class="n total">${ils(t.rounding_ils, 2)}</td></tr>` : ''}
         <tr class="sum"><td class="name" colspan="4">סה״כ לפני מע״מ</td><td class="n total">${ils(t.subtotal_excl_vat_ils, 2)}</td></tr>
         <tr class="vat"><td class="name" colspan="4">${vatLabel}</td><td class="n total">${ils(t.vat_ils, 2)}</td></tr>
         <tr class="sum grand"><td class="name" colspan="4">סה״כ כולל מע״מ</td><td class="n total">${ils(t.total_incl_vat_ils, 2)}</td></tr>
       </tbody>
     </table>
+    <details class="full">
+      <summary>פירוט מלא לפי פריטים (<bdi>${lineCount}</bdi> שורות)</summary>
+      <table class="items">
+        <thead><tr><th>פריט</th><th>יח׳</th><th class="n">כמות</th><th class="n">מחיר יח׳</th><th class="n">סה״כ</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </details>
     <p class="muted">${esc(t.passthrough_note_he)}${t.price_per_kwp_excl_vat_ils ? ` · מחיר ל-kWp לפני מע״מ: ${ils(t.price_per_kwp_excl_vat_ils)}` : ''}</p>
   </section>
 
@@ -352,6 +368,7 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
   ${textCards(q)}
 
   ${acceptCard(q, opts, expired)}
+  ${!opts.acceptance && !expired && !opts.acceptError ? '<nav class="cta-bar" aria-label="אישור"><a class="btn" href="#accept">לאישור ההצעה</a></nav>' : ''}
 
   ${opts.hasPdf ? `<p style="text-align:center"><a class="btn" href="/q/${esc(opts.token)}/pdf">הורדת ההצעה כ-PDF</a></p>` : ''}
 </main>

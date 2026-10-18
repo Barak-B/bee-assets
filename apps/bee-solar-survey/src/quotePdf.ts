@@ -8,6 +8,7 @@ import { ROOF_LABELS_HE, flagLabelHe, formatIls, pct, scheduleAmounts, type Quot
 import { MUTED, WARN_RED, Writer, createDoc, safeFilename } from './pdfkit'
 import { formatNumber } from './rtl'
 import type { SiteSurveyProject } from './types'
+import { fmtDate, fmtDay } from './dates'
 
 const KIND_LABEL: Record<QuoteLine['kind'], string> = {
   module: 'מודולים',
@@ -74,11 +75,11 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
     customer
       ? {
           title: `הצעת מחיר · ${quote.quote_number} · גרסה ${quote.version_no}`,
-          sub: `${quote.input.customerName ? `לכבוד ${quote.input.customerName} · ` : ''}${quote.input.projectName} · ${quote.input.address} · ${quote.created_at.slice(0, 10)}`,
+          sub: `${quote.input.customerName ? `לכבוד ${quote.input.customerName} · ` : ''}${quote.input.projectName} · ${quote.input.address} · ${fmtDate(quote.created_at)}`,
         }
       : {
           title: `הצעת מחיר ראשונית · ${quote.quote_number} · גרסה ${quote.version_no} · טיוטה`,
-          sub: `${quote.input.customerName ? `${quote.input.customerName} · ` : ''}${quote.input.projectName} · ${quote.input.address} · ${quote.created_at.slice(0, 10)}${project.surveyor ? ` · סקר: ${project.surveyor} ${project.surveyDate}` : ` · סקר: ${project.surveyDate}`}`,
+          sub: `${quote.input.customerName ? `${quote.input.customerName} · ` : ''}${quote.input.projectName} · ${quote.input.address} · ${fmtDate(quote.created_at)}${project.surveyor ? ` · סקר: ${project.surveyor} ${fmtDay(project.surveyDate)}` : ` · סקר: ${fmtDay(project.surveyDate)}`}`,
         },
     customer
       ? { right: 'B.E.E · ברק אלקטריק אנג׳ינירינג · * = ייקבע סופית בתכנון המפורט', left: `${quote.quote_number} v${quote.version_no} · ${quote.snapshot_hash.slice(0, 12)}` }

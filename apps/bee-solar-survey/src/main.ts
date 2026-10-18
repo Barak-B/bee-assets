@@ -23,6 +23,8 @@ import {
 } from './db'
 import { BackupError, parseBackup } from './backup'
 import { customerWarnings, normalizePhone } from './customer'
+import { countsHe } from './counts'
+import { fmtDay, israelToday } from './dates'
 import { OFFICE_STATUS_LABEL_HE, STAGE_LABEL_HE, deriveStage, isInstallationTemplate, type Stage } from './stage'
 import { buildHiveExportBundle } from './hive'
 import { revokeQuote, settingsProblem } from './publish'
@@ -121,7 +123,7 @@ async function runSync(manual: boolean) {
           : r.failed
             ? `גיבוי נכשל: ${r.errors[0]}`
             : r.synced
-              ? `גובו ${r.synced} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות · ${r.reports} דוחות`
+              ? `גובה לשרת: ${countsHe({ surveys: r.synced, photos: r.photos, quotes: r.quotes, reports: r.reports })}`
               : 'הכול כבר מגובה ✓',
       )
     } else if (r.failed && r.errors[0] !== lastBgSyncError) {
@@ -149,7 +151,7 @@ function requestSyncLater(id: string) {
 }
 
 /** Where each job stands, from what this phone knows (quotes, links, approvals seen, reports, office status). */
-async function localStage(id: string): Promise<{ stage: Stage; office: string; planned: string }> {
+async function localStage(id: string): Promise<{ stage: Stage; office: string; planned: string; plannedIso: string }> {
   const project = await getProject(id)
   const quotes = await listQuotes(id)
   const pubs = await Promise.all(quotes.map((q) => getPublication(q.id)))
@@ -164,17 +166,39 @@ async function localStage(id: string): Promise<{ stage: Stage; office: string; p
     handoverFinal: reports.some((r) => r.templateKey === 'handover' && r.status === 'final'),
   })
   // A planned date matters only until the site is surveyed.
-  const planned = stage === 'lead' && office?.planned_date ? office.planned_date.split('-').reverse().slice(0, 2).join('.') : ''
-  return { stage, office: office && office.status !== 'active' ? OFFICE_STATUS_LABEL_HE[office.status] : '', planned }
+  const plannedIso = stage === 'lead' && office?.planned_date ? office.planned_date : ''
+  const planned = plannedIso ? plannedIso.split('-').reverse().slice(0, 2).join('.') : ''
+  return { stage, office: office && office.status !== 'active' ? OFFICE_STATUS_LABEL_HE[office.status] : '', planned, plannedIso }
 }
 
 async function refreshStageChips() {
+  const counts: Partial<Record<Stage, number>> = {}
+  const plannedDays: string[] = []
   for (const el of app.querySelectorAll<HTMLElement>('[data-stage-chip]')) {
-    const { stage, office, planned } = await localStage(el.dataset.stageChip!)
+    const { stage, office, planned, plannedIso } = await localStage(el.dataset.stageChip!)
+    if (!office) counts[stage] = (counts[stage] ?? 0) + 1
+    if (plannedIso) plannedDays.push(plannedIso)
     el.textContent = [STAGE_LABEL_HE[stage], planned && `📅 ${planned}`, office].filter(Boolean).join(' · ')
     el.className = `badge stage-chip stage-${stage}${office ? ' stage-office' : ''}`
     el.dataset.stage = stage
   }
+  renderToday(counts, plannedDays)
+}
+
+/** The top of the list: what is waiting for this surveyor, instead of a banner. */
+function renderToday(counts: Partial<Record<Stage, number>>, plannedDays: string[]) {
+  const box = document.getElementById('todayBox')
+  if (!box) return
+  const today = israelToday()
+  const upcoming = plannedDays.filter((d) => d >= today).sort()
+  const items: string[] = []
+  if (counts.lead) items.push(`<li><b>${counts.lead}</b> ממתינים לסקר${upcoming[0] ? ` · הקרוב ${escapeHtml(fmtDay(upcoming[0]))}${upcoming[0] === today ? ' (היום)' : ''}` : ''}</li>`)
+  if (counts.survey) items.push(`<li><b>${counts.survey}</b> נסקרו ומחכים להצעה</li>`)
+  if (counts.quote) items.push(`<li><b>${counts.quote}</b> הצעות שעוד לא נשלחו ללקוח</li>`)
+  if (counts.sent) items.push(`<li><b>${counts.sent}</b> נשלחו ומחכים לאישור הלקוח</li>`)
+  if (counts.accepted) items.push(`<li><b>${counts.accepted}</b> הלקוח אישר — לתאם התקנה</li>`)
+  if (counts.installation) items.push(`<li><b>${counts.installation}</b> בהתקנה</li>`)
+  box.innerHTML = items.length ? `<h2>מה מחכה לך</h2><ul>${items.join('')}</ul>` : '<h2>אין עבודות פתוחות</h2><p class="meta">סקר חדש — או סנכרון כדי לקבל עבודות מהמשרד.</p>'
 }
 
 async function refreshSyncChips() {
@@ -299,25 +323,20 @@ async function render() {
         </div>
       </header>
       <main class="shell">
-        <section class="hero-strip">
-          <h1>B.E.E · סקר אתר סולארי</h1>
-          <p>איסוף שטח לפי מודל הכוורת: Collect → Edit → Dispatch. הפלט נכנס ל־Wave 54 כטיוטה לאישור ברק — לא נשלח ללקוח.</p>
-          <div class="hive-pills">
-            <span class="hive-pill">collect.site-survey</span>
-            <span class="hive-pill">edit.normalize</span>
-            <span class="hive-pill">dispatch.draft · Law #2</span>
-          </div>
-        </section>
+        <section class="today" id="todayBox" aria-live="polite"></section>
         <button class="btn btn-primary btn-block" id="btnNew">+ סקר חדש</button>
         <div class="row">
-          <button class="btn btn-secondary" id="btnPricing">מחירון</button>
-          <button class="btn btn-secondary" id="btnBackup">גיבוי</button>
-          <button class="btn btn-secondary" id="btnRestore">שחזור מקובץ</button>
-        </div>
-        <div class="row">
           <button class="btn btn-secondary" id="btnSync">סנכרן לשרת</button>
-          <button class="btn btn-secondary" id="btnRestoreServer">שחזור מהשרת</button>
+          <button class="btn btn-secondary" id="btnPricing">מחירון והגדרות</button>
         </div>
+        <details class="tools">
+          <summary>גיבוי ושחזור</summary>
+          <div class="row">
+            <button class="btn btn-secondary" id="btnRestoreServer">שחזור מהשרת (טלפון חדש)</button>
+            <button class="btn btn-secondary" id="btnBackup">גיבוי לקובץ</button>
+            <button class="btn btn-secondary" id="btnRestore">שחזור מקובץ</button>
+          </div>
+        </details>
         <input class="search" id="search" placeholder="חיפוש פרויקט..." value="${escapeAttr(search)}" />
         <div class="project-list">
           ${
@@ -329,23 +348,28 @@ async function render() {
             <article class="project-item" style="animation-delay:${i * 40}ms" data-open="${escapeAttr(p.id)}">
               <h3>${escapeHtml(p.projectName || 'ללא שם')}</h3>
               <div class="meta">
-                <span>${escapeHtml(p.surveyDate || '')}</span>
+                <span>${escapeHtml(fmtDay(p.surveyDate))}</span>
                 <span>${escapeHtml(p.surveyor || '')}</span>
                 <span>${escapeHtml(p.address || '')}</span>
                 ${p.customerName ? `<span>👤 ${escapeHtml(p.customerName)}</span>` : ''}
                 ${p.customerPhone && normalizePhone(p.customerPhone) ? `<a class="tel" dir="ltr" href="tel:${escapeAttr(normalizePhone(p.customerPhone))}" data-stop>${escapeHtml(p.customerPhone)}</a>` : ''}
-                <span class="badge ${p.hiveReady ? 'badge-ok' : 'badge-warn'}">${p.hiveReady ? 'מוכן ל־54' : 'טיוטה'}</span>
+                <span class="badge ${p.hiveReady ? 'badge-ok' : 'badge-warn'}">${p.hiveReady ? 'סקר מלא' : 'סקר חסר'}</span>
                 <span class="badge stage-chip hidden" data-stage-chip="${escapeAttr(p.id)}"></span>
                 <span class="badge sync-chip hidden" data-sync-chip="${escapeAttr(p.id)}"></span>
               </div>
               <div class="item-actions">
-                <button class="btn btn-secondary" data-edit="${escapeAttr(p.id)}">עריכה</button>
-                <button class="btn btn-secondary" data-hive="${escapeAttr(p.id)}">ייצוא כוורת</button>
-                <button class="btn btn-secondary" data-pdf="${escapeAttr(p.id)}">PDF</button>
+                <button class="btn btn-secondary" data-edit="${escapeAttr(p.id)}">סקר</button>
                 <button class="btn btn-secondary" data-quote="${escapeAttr(p.id)}">הצעות מחיר</button>
                 <button class="btn btn-secondary" data-reports="${escapeAttr(p.id)}">דוחות שטח</button>
-                <button class="btn btn-danger" data-del="${escapeAttr(p.id)}">מחק</button>
+                <button class="btn btn-secondary" data-pdf="${escapeAttr(p.id)}">PDF סקר</button>
               </div>
+              <details class="more" data-stop>
+                <summary>עוד</summary>
+                <div class="item-actions">
+                  <button class="btn btn-secondary" data-hive="${escapeAttr(p.id)}">ייצוא לכוורת (JSON)</button>
+                  <button class="btn btn-danger" data-del="${escapeAttr(p.id)}">מחק סקר</button>
+                </div>
+              </details>
             </article>`,
                   )
                   .join('')
@@ -374,7 +398,7 @@ async function render() {
         toast('מושך סקרים מהשרת...')
         const r = await restoreFromServer()
         await render() // re-render first: it replaces the toast element
-        toast(r.restored ? `שוחזרו ${r.restored} סקרים · ${r.photos} תמונות · ${r.quotes} הצעות · ${r.reports} דוחות` : `אין סקרים חדשים בשרת${r.skipped ? ` (${r.skipped} כבר במכשיר)` : ''}`)
+        toast(r.restored ? `שוחזר מהשרת: ${countsHe({ surveys: r.restored, photos: r.photos, quotes: r.quotes, reports: r.reports })}` : `אין סקרים חדשים בשרת${r.skipped ? ` (${r.skipped} כבר במכשיר)` : ''}`)
       } catch (err) {
         toast(err instanceof SyncError ? err.message : 'השחזור נכשל')
       }

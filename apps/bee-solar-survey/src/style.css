@@ -1159,3 +1159,47 @@ textarea {
   background: #f3f4f6;
   color: #374151;
 }
+
+/* Home: what is waiting, instead of a banner */
+.today {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+
+.today h2 {
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.today ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.today b {
+  font-family: var(--display);
+  color: var(--honey-deep);
+}
+
+details.tools,
+details.more {
+  margin: 8px 0 12px;
+}
+
+details.tools > summary,
+details.more > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 4px 0;
+}
+
+details.more {
+  margin: 6px 0 0;
+}

@@ -26,6 +26,7 @@ import { markDirty } from './sync'
 import { assessCompleteness } from './schema'
 import { outcomeToast, shareOrDownload, shareOrDownloadJson } from './share'
 import type { SiteSurveyProject } from './types'
+import { fmtDate, fmtDateTime } from './dates'
 
 interface Ctx {
   toast: (msg: string) => void
@@ -71,7 +72,7 @@ function publishBlock(row: StoredQuote, pub: Publication | null, settingsIssue: 
   if (pub && !pub.revokedAt) {
     return `
       <div class="pub" data-pub="${v}">
-        <div class="pub-head">קישור ללקוח · פורסם ${escapeHtml(pub.publishedAt.replace('T', ' ').slice(0, 16))} <span class="meta" data-views="${v}"></span></div>
+        <div class="pub-head">קישור ללקוח · פורסם ${escapeHtml(fmtDateTime(pub.publishedAt))} <span class="meta" data-views="${v}"></span></div>
         <input class="pub-url" dir="ltr" readonly value="${escapeHtml(pub.url)}" aria-label="קישור ההצעה" />
         <div class="badge badge-ok hidden" data-accepted="${v}"></div>
         <div class="item-actions">
@@ -89,7 +90,7 @@ function publishBlock(row: StoredQuote, pub: Publication | null, settingsIssue: 
     <div class="pub">
       <button class="btn btn-primary" data-q-publish="${v}" ${reason ? 'aria-disabled="true"' : ''}>קישור ללקוח (אונליין)</button>
       ${reason ? `<div class="meta">${escapeHtml(reason)}</div>` : ''}
-      ${pub?.revokedAt ? `<div class="meta">הקישור הקודם בוטל ${escapeHtml(pub.revokedAt.slice(0, 10))}</div>` : ''}
+      ${pub?.revokedAt ? `<div class="meta">הקישור הקודם בוטל ${escapeHtml(fmtDate(pub.revokedAt))}</div>` : ''}
     </div>`
 }
 
@@ -99,7 +100,7 @@ function versionCard(row: StoredQuote, pub: Publication | null, settingsIssue: s
     <article class="quote-card" data-ver="${escapeAttr(String(row.version_no))}">
       <h3>גרסה ${escapeHtml(String(row.version_no))} · <bdi>${escapeHtml(q.quote_number)}</bdi></h3>
       <div class="meta">
-        <span>${escapeHtml(q.created_at.replace('T', ' ').slice(0, 16))}</span>
+        <span>${escapeHtml(fmtDateTime(q.created_at))}</span>
         <span>${bidiParts(quoteSummaryHe(q) + deltaText(q))}</span>
         <span class="badge ${q.needs_owner_input ? 'badge-warn' : 'badge-ok'}">${q.needs_owner_input ? 'מחירים לאימות' : 'מתומחר'}</span>
       </div>
@@ -327,7 +328,7 @@ function bindPublishing(h: HTMLElement, projectId: string, project: SiteSurveyPr
       if (!pub || pub.revokedAt) continue
       void quoteViews(pub.token, settings).then((st) => {
         const el = h.querySelector(`[data-views="${v}"]`)
-        if (el && st) el.textContent = st.views ? `· נפתח ${st.views} פעמים, לאחרונה ${(st.last_viewed_at ?? '').replace('T', ' ').slice(0, 16)}` : '· טרם נפתח'
+        if (el && st) el.textContent = st.views ? `· נפתח ${st.views} פעמים, לאחרונה ${fmtDateTime(st.last_viewed_at)}` : '· טרם נפתח'
         const acc = h.querySelector<HTMLElement>(`[data-accepted="${v}"]`)
         if (st?.accepted && !pub.acceptedAt) {
           // Remember it, so the survey list shows "הלקוח אישר" without the network.

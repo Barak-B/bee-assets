@@ -14,6 +14,7 @@ import { markDirty } from '../sync'
 import { blankRow, buildContext, defectsFromInspection, finalizeReport, newReport, reviseReport, template, validateReport, visibleSections } from './model'
 import { TEMPLATES, TEMPLATE_ORDER } from './templates'
 import type { ChecklistItemDef, ColumnDef, FieldDef, ItemResult, ReportInstance, SectionDef, TemplateKey } from './types'
+import { fmtDateTime } from '../dates'
 
 export interface ReportsDialogCtx {
   toast: (msg: string) => void
@@ -58,7 +59,7 @@ export async function openReportsDialog(projectId: string, ctx: ReportsDialogCtx
       <article class="quote-card" data-report="${escapeAttr(r.id)}">
         <h3>${escapeHtml(t.title_he)} · גרסה ${r.revision}</h3>
         <div class="meta">
-          <span>${escapeHtml(r.updatedAt.replace('T', ' ').slice(0, 16))}</span>
+          <span>${escapeHtml(fmtDateTime(r.updatedAt))}</span>
           <span class="badge ${r.status === 'final' ? 'badge-ok' : 'badge-warn'}">${r.status === 'final' ? 'נעול' : 'טיוטה'}</span>
           ${o ? `<span class="badge ${TONE_CLASS[o.tone]}">${escapeHtml(o.label_he)}</span>` : ''}
         </div>
@@ -241,7 +242,7 @@ function sectionHtml(s: SectionDef, r: ReportInstance, dis: string): string {
           <div><strong>${escapeHtml(g.label_he)}</strong>${g.required ? ' <span class="req">*</span>' : ''}</div>
           ${
             sg
-              ? `<img class="sig-img" src="${safeImageSrc(sg.dataUrl)}" alt="חתימה" /><div class="meta">${escapeHtml(sg.name)} · ${escapeHtml(sg.signedAt.replace('T', ' ').slice(0, 16))}</div>${dis ? '' : `<button type="button" class="btn btn-ghost btn-sm" data-sclear="${g.key}">נקה חתימה</button>`}`
+              ? `<img class="sig-img" src="${safeImageSrc(sg.dataUrl)}" alt="חתימה" /><div class="meta">${escapeHtml(sg.name)} · ${escapeHtml(fmtDateTime(sg.signedAt))}</div>${dis ? '' : `<button type="button" class="btn btn-ghost btn-sm" data-sclear="${g.key}">נקה חתימה</button>`}`
               : dis
                 ? '<div class="meta">לא נחתם</div>'
                 : `<button type="button" class="btn btn-secondary" data-sign="${g.key}" data-role="${escapeAttr(g.label_he)}">חתימה</button>`
@@ -281,7 +282,7 @@ function draw(ctx: ReportEditorCtx, keepScroll = false) {
     </header>
     <main class="shell report-editor">
       ${o ? `<div class="note ${o.tone === 'ok' ? 'note-ok' : 'note-warn'}" id="rpOutcome"><strong>${escapeHtml(o.label_he)}</strong></div>` : ''}
-      ${final ? `<div class="note note-ok">נעול ב-${escapeHtml((r.finalizedAt ?? '').replace('T', ' ').slice(0, 16))} · <bdi>${escapeHtml((r.contentHash ?? '').slice(0, 16))}</bdi>. שינוי = גרסה חדשה.</div>` : '<div class="meta" id="rpSaved"></div>'}
+      ${final ? `<div class="note note-ok">נעול ב-${escapeHtml(fmtDateTime(r.finalizedAt))} · <bdi>${escapeHtml((r.contentHash ?? '').slice(0, 16))}</bdi>. שינוי = גרסה חדשה.</div>` : '<div class="meta" id="rpSaved"></div>'}
       <div id="rpIssues"></div>
       ${visibleSections(t, r).map((s) => sectionHtml(s, r, dis)).join('')}
     </main>
