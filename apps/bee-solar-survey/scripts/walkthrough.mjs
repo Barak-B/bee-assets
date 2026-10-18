@@ -13,6 +13,7 @@
  *   office            marks contract, deposit, IEC, design, equipment
  *   Dani              syncs, sees "בהתקנה", opens a daily report
  *   office            sees the job with its report
+ *   customer          opens the link again: where the project stands
  *
  * The app only talks to https://app.barak-e.com (it refuses local addresses
  * on purpose), so every browser maps that origin onto the local server.
@@ -432,6 +433,16 @@ try {
     await office.waitForTimeout(800)
     await snap(office, 'office-drawer-end')
     findings.officeJob = (await api('GET', '/api/office/overview', ronit.key)).jobs[0]
+  })
+
+  await step('customer: opens the same link a few days later and sees where the project stands', async () => {
+    await customer.goto(link)
+    await waitText(customer, '#progress', 'איפה הפרויקט עומד')
+    findings.customerProgress = await customer.locator('#progress').innerText()
+    if (!/בהתקנה|התקנה/.test(await customer.locator('#progress li.now').innerText())) throw new Error('customer page not at installation')
+    for (const secret of ['7004512', 'R-118', 'PO-2231', 'רונית']) if ((await customer.content()).includes(secret)) throw new Error(`internal detail on the customer page: ${secret}`)
+    await customer.locator('#progress').scrollIntoViewIfNeeded()
+    await snap(customer, 'customer-progress')
   })
 } catch {
   failed = true

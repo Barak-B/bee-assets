@@ -183,7 +183,7 @@ async function writeIndex(env: Env, row: SurveyIndexRow): Promise<void> {
   await env.QUOTES.put(k.index(row.id), '', { customMetadata: encodeMeta({ ...row }) })
 }
 
-async function readIndex(env: Env, id: string): Promise<SurveyIndexRow | null> {
+export async function readIndex(env: Env, id: string): Promise<SurveyIndexRow | null> {
   const obj = await env.QUOTES.get(k.index(id))
   return obj?.customMetadata ? rowFromMeta(obj.customMetadata) : null
 }

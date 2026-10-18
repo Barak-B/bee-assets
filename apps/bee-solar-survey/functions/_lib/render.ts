@@ -3,6 +3,7 @@
  * no JavaScript, RTL Hebrew, self-hosted fonts from the same Pages project.
  */
 import type { PublicQuote, PublicQuoteLine, PublicRoi } from '../../../../packages/quote-core/src/public'
+import { CUSTOMER_LABEL_HE, CUSTOMER_NOW_HE, STAGES, type Stage } from '../../src/stage'
 import type { Acceptance } from './store'
 import { israelToday } from './http'
 
@@ -92,6 +93,14 @@ h3{font-size:15px;margin:14px 0 4px}
 .chart{width:100%;height:auto;display:block;font-size:9px;fill:var(--muted);font-family:Heebo,Arial,sans-serif}
 details{margin-top:10px}summary{cursor:pointer;color:var(--muted)}
 .ok{border-color:#9fd3b6;background:#f1faf4}
+.steps{list-style:none;margin:10px 0;padding:0;counter-reset:st}
+.steps li{position:relative;padding:7px 34px 7px 0;color:var(--muted)}
+.steps li::before{counter-increment:st;content:counter(st);position:absolute;right:0;top:6px;width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:.8rem;background:#fff}
+.steps li.done{color:inherit}
+.steps li.done::before{content:'✓';background:#1f6b3d;border-color:#1f6b3d;color:#fff}
+.steps li.now{color:inherit;font-weight:700}
+.steps li.now::before{border-color:var(--honey,#e3b23c);background:var(--honey,#e3b23c);color:#1b1b1b}
+.now-line{font-size:1.05rem}
 .banner{padding:10px 16px;font-weight:700;color:var(--ok)}
 form{display:grid;gap:12px;margin-top:10px}
 .fld{display:grid;gap:4px;font-weight:700;font-size:14px}
@@ -219,6 +228,35 @@ export interface RenderOpts {
   form?: { name?: string }
   /** Just approved (after the redirect) — say thank you. */
   justAccepted?: boolean
+  /** After the approval: where the project stands, in the customer's words. */
+  progress?: CustomerProgress | null
+}
+
+export interface CustomerProgress {
+  stage: Stage
+  /** The office put the job on hold. */
+  onHold: boolean
+  /** Stage → the day it was completed (YYYY-MM-DD), where known. */
+  doneOn: Partial<Record<Stage, string>>
+}
+
+/** The customer's part of the lifecycle: from the approval to service. */
+const CUSTOMER_STAGES = STAGES.slice(STAGES.indexOf('accepted'))
+
+function progressCard(p: CustomerProgress): string {
+  const at = CUSTOMER_STAGES.indexOf(p.stage)
+  const items = CUSTOMER_STAGES.map((s, i) => {
+    const state = i < at ? 'done' : i === at ? 'now' : 'todo'
+    const when = state === 'done' && p.doneOn[s] ? ` <span class="muted">· ${formatDate(p.doneOn[s]!)}</span>` : ''
+    return `<li class="${state}"${state === 'now' ? ' aria-current="step"' : ''}>${esc(CUSTOMER_LABEL_HE[s])}${when}</li>`
+  }).join('')
+  const now = p.onHold ? 'הפרויקט בהמתנה כרגע. ניצור קשר להמשך.' : (CUSTOMER_NOW_HE[p.stage] ?? '')
+  return `<section class="card" id="progress">
+    <h2>איפה הפרויקט עומד</h2>
+    ${now ? `<p class="now-line">${esc(now)}</p>` : ''}
+    <ol class="steps">${items}</ol>
+    <p class="muted">הדף מתעדכן לבד בכל שלב. לשאלות — השיבו להודעה שקיבלתם מאיתנו.</p>
+  </section>`
 }
 
 function formatDateTime(iso: string): string {
@@ -295,6 +333,7 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
 </header>
 <main class="wrap">
   ${opts.acceptance ? `<div class="card ok banner">ההצעה אושרה ב-${formatDateTime(opts.acceptance.accepted_at)} · <a href="#accept">פרטים</a></div>` : ''}
+  ${opts.acceptance && opts.progress ? progressCard(opts.progress) : ''}
   ${expired ? `<div class="card note">תוקף ההצעה הסתיים ב-${formatDate(q.valid_until)}. לעדכון ההצעה פנו אלינו.</div>` : ''}
 
   <section class="card">

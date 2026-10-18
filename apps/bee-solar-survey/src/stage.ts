@@ -78,6 +78,21 @@ export const CUSTOMER_LABEL_HE: Record<Stage, string> = {
   service: 'ניטור ותחזוקה',
 }
 
+/**
+ * What is happening now, for the customer: plain, no promised dates (the
+ * IEC's times are not ours to promise).
+ */
+export const CUSTOMER_NOW_HE: Partial<Record<Stage, string>> = {
+  accepted: 'קיבלנו את אישורך. ניצור קשר לחתימה על ההסכם ולתשלום המקדמה.',
+  permits: 'אנחנו מטפלים בבקשה לחברת החשמל ובתכנון ההנדסי. נעדכן כשתתקבל תשובה.',
+  procurement: 'הבקשה אושרה והציוד בהזמנה. נתאם איתך מועד התקנה.',
+  installation: 'שלב ההתקנה: הצוות מתואם איתך לגבי ימי העבודה.',
+  inspection: 'ההתקנה הסתיימה. בודק חשמל מוסמך יבדוק את המערכת.',
+  grid: 'ממתינים לחברת החשמל: בדיקה, התקנת מונה ואישור הפעלה.',
+  handover: 'המערכת מחוברת. נתאם איתך מסירה, הדרכה ותיק מתקן.',
+  service: 'המערכת פועלת ונמסרה. אנחנו כאן לשירות ולתחזוקה.',
+}
+
 export type MilestoneKey =
   | 'contract_signed'
   | 'deposit_paid'

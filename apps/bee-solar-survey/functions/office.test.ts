@@ -466,3 +466,36 @@ describe('submission file', () => {
     expect(tl).toEqual(expect.arrayContaining([expect.stringContaining('תיק הגשה — ✓ הגשה ב-digitalorders'), expect.stringContaining('מסמך התקבל: חשבון חשמל אחרון'), 'לא רלוונטי לעבודה: כבאות', '✓ הוגשה בקשה לחח״י · 03.10.2026 · מספר פנייה 7004512', 'מסלול הגשה: ביתי עד 15 kW']))
   })
 })
+
+describe('customer page after the approval', () => {
+  it('shows where the project stands in the customer’s words, follows the office, and keeps internal details out', async () => {
+    const e = env()
+    const { body: office } = await newKey(e, 'רונית', 'office')
+    await surveyPut(ctx(e, `/api/surveys/${ID}`, jsonInit('PUT', MASTER, surveyRecord()), { id: ID }))
+    const { pq } = await publicQuote()
+    const { token } = (await (await publishPost(ctx(e, '/api/quotes', jsonInit('POST', MASTER, { quote: pq, survey_id: ID })))).json()) as { token: string }
+    const page = async () => (await pageGet(ctx(e, `/q/${token}`, {}, { token }))).text()
+    const status = (body: unknown) => statusPut(ctx(e, `/api/office/status/${ID}`, jsonInit('PUT', office.key, body), { id: ID }))
+
+    expect(await page()).not.toContain('איפה הפרויקט עומד') // not before the approval
+    await accept(e, token, '1234', pq.reference)
+    let html = await page()
+    expect(html).toContain('איפה הפרויקט עומד')
+    expect(html).toContain('ניצור קשר לחתימה על ההסכם')
+    expect(html).toMatch(/<li class="now" aria-current="step">הסכם ומקדמה<\/li>/)
+
+    await status({ milestones: { contract_signed: { date: '2026-10-01' }, deposit_paid: { date: '2026-10-02', ref: 'R-118' } }, note: 'לקוח לחוץ' })
+    await submissionPut(ctx(e, `/api/office/submission/${ID}`, jsonInit('PUT', office.key, { steps: { 'pre.05.submit_portal': { date: '2026-10-03', ref: '7004512' } } }), { id: ID }))
+    html = await page()
+    expect(html).toMatch(/<li class="done">הסכם ומקדמה <span class="muted">· <bdi>02\/10\/2026<\/bdi><\/span><\/li>/)
+    expect(html).toMatch(/<li class="now" aria-current="step">בקשה לחברת החשמל ותכנון הנדסי<\/li>/)
+    expect(html).toContain('נעדכן כשתתקבל תשובה')
+    // Nothing internal: no note, no references, no names of the office.
+    for (const secret of ['לקוח לחוץ', 'R-118', '7004512', 'רונית']) expect(html).not.toContain(secret)
+
+    await status({ status: 'on_hold' })
+    expect(await page()).toContain('הפרויקט בהמתנה כרגע')
+    await status({ status: 'lost' })
+    expect(await page()).not.toContain('איפה הפרויקט עומד')
+  })
+})

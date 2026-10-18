@@ -27,7 +27,7 @@ import { listKeys, type Principal } from './auth'
 import type { Env } from './env'
 import { israelToday } from './http'
 import { getAcceptance, getViews, listQuoteLinks, type QuoteLinkRow } from './store'
-import { UUID_RE, clip, decodeMeta, encodeMeta, listSurveys, type SurveyIndexRow } from './surveys'
+import { UUID_RE, clip, decodeMeta, encodeMeta, listSurveys, readIndex, type SurveyIndexRow } from './surveys'
 
 export interface OfficeStatusRow {
   status: OfficeStatus
@@ -318,4 +318,11 @@ export async function buildOverview(env: Env): Promise<OfficeRow[]> {
   const reports = reportsBySurvey(reportObjs)
   const rows = await Promise.all(surveys.map((s) => officeRow(env, s, reports.get(s.id) ?? [], office.get(s.id) ?? null)))
   return rows.sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt))
+}
+
+/** One job, as the office sees it (the customer page reads its stage from here). */
+export async function jobFor(env: Env, surveyId: string): Promise<OfficeRow | null> {
+  const [row, reportObjs, office] = await Promise.all([readIndex(env, surveyId), listAll(env, `report-index/${surveyId}/`), getOfficeStatus(env, surveyId)])
+  if (!row) return null
+  return officeRow(env, row, reportsBySurvey(reportObjs).get(surveyId) ?? [], office)
 }
