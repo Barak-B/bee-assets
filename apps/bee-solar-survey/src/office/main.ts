@@ -9,7 +9,22 @@ import './office.css'
 import { formatIls } from '@bee/quote-core'
 import { normalizePhone } from '../customer'
 import { escapeAttr, escapeHtml } from '../html'
-import { OFFICE_STATUSES, OFFICE_STATUS_LABEL_HE, STAGES, STAGE_LABEL_HE, nextStepHe, type OfficeStatus, type Stage } from '../stage'
+import { israelToday } from '../dates'
+import {
+  MILESTONES,
+  OFFICE_STATUSES,
+  OFFICE_STATUS_LABEL_HE,
+  PLAN_STAGE,
+  STAGES,
+  STAGE_LABEL_HE,
+  nextStepHe,
+  skippedMilestones,
+  stageMilestones,
+  type MilestoneKey,
+  type OfficeStatus,
+  type Stage,
+} from '../stage'
+import type { OfficeUpdate } from './api'
 import { Api, ApiError, type KeyRow, type Me, type OfficeJob } from './api'
 import { attentionHe } from './attention'
 
@@ -200,7 +215,7 @@ function jobsView(): string {
     </section>
     <section class="o-pipe" aria-label="שלבים">
       <button class="o-step ${state.stage === 'any' ? 'on' : ''}" data-stage="any"><span>הכול</span><b>${active.length}</b></button>
-      ${STAGES.map((s) => `<button class="o-step stage-${s} ${state.stage === s ? 'on' : ''}" data-stage="${s}"><span>${STAGE_LABEL_HE[s]}</span><b>${byStage(s).length}</b></button>`).join('')}
+      ${STAGES.map((s) => `<button class="o-step stage-${s} ${state.stage === s ? 'on' : ''} ${byStage(s).length ? '' : 'zero'}" data-stage="${s}" title="${PLAN_STAGE[s]}"><span>${STAGE_LABEL_HE[s]}</span><b>${byStage(s).length}</b></button>`).join('')}
     </section>
     <section class="o-filters">
       <button class="btn btn-primary" id="oNewJob">+ עבודה חדשה</button>
@@ -218,7 +233,7 @@ function jobsView(): string {
       </table></div>`
         : `<div class="empty">${state.jobs.length ? 'אין עבודות שמתאימות לסינון.' : 'עדיין לא הגיעו סקרים מהשטח. הם מופיעים כאן אחרי הסנכרון הראשון מהטלפון.'}</div>`
     }
-    <p class="meta o-foot">עודכן ${escapeHtml(fmtDate(state.generatedAt, true))} · השלב נקבע לפי מה שקרה בפועל (הצעה, קישור, אישור, דוחות). המשרד מסמן רק מוקפא / לא רלוונטי / סגור.</p>`
+    <p class="meta o-foot">עודכן ${escapeHtml(fmtDate(state.generatedAt, true))} · השלב נקבע לפי מה שקרה בפועל: הצעה, קישור, אישור, דוחות, ואבני הדרך שהמשרד מסמן בפרטי העבודה (הסכם, חח״י, ציוד, בודק, מונה, מסירה).</p>`
 }
 
 /** Who surveys / surveyed it. For a job the office opened, the sender is the office — not a surveyor. */
@@ -230,7 +245,61 @@ function surveyorOf(j: OfficeJob): string {
 function nextLine(j: OfficeJob): string {
   const o = j.office
   if (j.stage === 'lead' && o?.assigned_to_id) return o.planned_date ? `סקר ב-${fmtDay(o.planned_date)} · ${o.assigned_to_name}` : `לקבוע מועד סקר עם ${o.assigned_to_name}`
-  return nextStepHe(j.stage)
+  return nextStepHe(j.stage, j.milestones ?? {})
+}
+
+const MS_STAGES = STAGES.filter((s) => stageMilestones(s).length)
+
+/** Where the job is on S01–S12, and the milestones the office marks. */
+function lifecyclePart(j: OfficeJob): string {
+  const at = STAGES.indexOf(j.stage)
+  const ms = j.milestones ?? {}
+  const skipped = skippedMilestones(j.stage, ms)
+  const today = israelToday()
+  const row = (key: MilestoneKey) => {
+    const d = MILESTONES.find((m) => m.key === key)!
+    const m = ms[key]
+    if (m?.auto) return `<div class="o-ms-row auto"><span>✓ ${escapeHtml(d.label_he)}</span><span class="meta">${escapeHtml(fmtDay(m.date))} · ${escapeHtml(m.auto)}</span></div>`
+    return `<div class="o-ms-row" data-ms="${d.key}">
+        <label class="o-ms-check"><input type="checkbox" data-ms-on ${m ? 'checked' : ''} /> ${escapeHtml(d.label_he)}</label>
+        <input type="date" data-ms-date max="${today}" value="${escapeAttr(m?.date ?? '')}" aria-label="${escapeAttr(`${d.label_he} — תאריך`)}" />
+        ${d.ref_he ? `<input data-ms-ref dir="ltr" maxlength="24" placeholder="${escapeAttr(d.ref_he)}" value="${escapeAttr(m?.ref ?? '')}" aria-label="${escapeAttr(d.ref_he)}" />` : ''}
+      </div>`
+  }
+  return `
+        <section>
+          <h3>מחזור חיים</h3>
+          <ol class="o-life">${STAGES.map((s, i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}" title="${PLAN_STAGE[s]}">${s === 'lead' ? 'ליד' : STAGE_LABEL_HE[s]}</li>`).join('')}</ol>
+          ${skipped.length ? `<div class="note note-warn">העבודה התקדמה בלי לסמן: ${escapeHtml(skipped.map((d) => d.label_he).join(', '))}</div>` : ''}
+          <div class="o-ms" id="oMs">
+            ${MS_STAGES.map(
+              (s) => `<details ${s === j.stage ? 'open' : ''}><summary>${STAGE_LABEL_HE[s]} <span class="meta">${stageMilestones(s).filter((d) => ms[d.key]).length}/${stageMilestones(s).length}</span></summary>
+              ${stageMilestones(s)
+                .map((d) => row(d.key))
+                .join('')}</details>`,
+            ).join('')}
+          </div>
+          <button class="btn btn-primary" id="oSaveMs">שמור אבני דרך</button>
+        </section>`
+}
+
+/** What changed in the milestone form, as an update (null clears). */
+function readMilestones(j: OfficeJob): { update: OfficeUpdate['milestones']; error?: string } {
+  const update: NonNullable<OfficeUpdate['milestones']> = {}
+  for (const el of document.querySelectorAll<HTMLElement>('#oMs [data-ms]')) {
+    const key = el.dataset.ms as MilestoneKey
+    const on = el.querySelector<HTMLInputElement>('[data-ms-on]')!.checked
+    const date = el.querySelector<HTMLInputElement>('[data-ms-date]')!.value
+    const ref = el.querySelector<HTMLInputElement>('[data-ms-ref]')?.value.trim() ?? ''
+    const prev = j.office?.milestones?.[key]
+    if (!on) {
+      if (prev) update[key] = null
+      continue
+    }
+    if (!date) return { update, error: `${MILESTONES.find((m) => m.key === key)!.label_he}: חסר תאריך` }
+    if (!prev || prev.date !== date || (prev.ref ?? '') !== ref) update[key] = { date, ref }
+  }
+  return { update }
 }
 
 function linkCell(j: OfficeJob): string {
@@ -291,11 +360,12 @@ function drawerView(): string {
             </label>
             <label>הערה<input id="oNote" maxlength="200" value="${escapeAttr(j.office?.note ?? '')}" /></label>
             <label>סוקר${surveyorSelect('oAssign', j.office?.assigned_to_id ?? '')}</label>
-            <label>מועד סקר<input id="oPlanned" type="date" value="${escapeAttr(j.office?.planned_date ?? '')}" /></label>
+            <label ${j.stage === 'lead' ? '' : 'hidden'}>מועד סקר<input id="oPlanned" type="date" value="${escapeAttr(j.office?.planned_date ?? '')}" /></label>
             <button class="btn btn-primary" id="oSave">שמור</button>
           </div>
           ${j.office ? `<div class="meta">עודכן ע״י ${escapeHtml(j.office.updated_by)} · ${escapeHtml(fmtDate(j.office.updated_at, true))}</div>` : ''}
         </section>
+        ${lifecyclePart(j)}
         <section>
           <h3>הצעות וקישורים</h3>
           ${j.latestQuote ? `<div>גרסה אחרונה: <bdi dir="ltr">${escapeHtml(j.latestQuote.quote_number)} v${j.latestQuote.version_no}</bdi> · ${ils(j.latestQuote.total_incl_vat_ils)} · ${escapeHtml(fmtDate(j.latestQuote.created_at))}</div>` : '<div class="meta">אין עדיין הצעה.</div>'}
@@ -416,6 +486,24 @@ const FIELD_HE: [string, string][] = [
 ]
 
 const photoUrls: string[] = []
+
+/**
+ * Save the office's row; with `reload`, refetch the job so the stage (derived
+ * on the server from milestones and reports) is the server's.
+ */
+async function saveOffice(id: string, u: OfficeUpdate, reload = false) {
+  try {
+    const { office } = await state.api!.updateOffice(id, u)
+    const job = state.jobs.find((j) => j.id === id)
+    if (job) job.office = office
+    if (reload) await load()
+    else render()
+    void loadDrawerDetails(id)
+    toast('נשמר')
+  } catch (err) {
+    toast(err instanceof ApiError ? err.message : 'השמירה נכשלה')
+  }
+}
 
 async function loadDrawerDetails(id: string) {
   if (!state.api) return
@@ -539,24 +627,28 @@ root.addEventListener('click', (e) => {
     render()
     return
   }
+  const msOn = t.closest<HTMLInputElement>('[data-ms-on]')
+  if (msOn?.checked) {
+    // Ticking a milestone means "today", unless a date is already there.
+    const date = msOn.closest('[data-ms]')!.querySelector<HTMLInputElement>('[data-ms-date]')!
+    if (!date.value) date.value = israelToday()
+    return
+  }
   if (t.closest('#oSave')) {
-    const id = state.selected!
     const status = (document.getElementById('oSetStatus') as HTMLSelectElement).value as OfficeStatus
     const note = (document.getElementById('oNote') as HTMLInputElement).value
     const assigned_to = (document.getElementById('oAssign') as HTMLSelectElement).value
     const planned_date = (document.getElementById('oPlanned') as HTMLInputElement).value
-    void (async () => {
-      try {
-        const { office } = await state.api!.updateOffice(id, { status, note, assigned_to, planned_date })
-        const job = state.jobs.find((j) => j.id === id)
-        if (job) job.office = office
-        render()
-        void loadDrawerDetails(id)
-        toast('נשמר')
-      } catch (err) {
-        toast(err instanceof ApiError ? err.message : 'השמירה נכשלה')
-      }
-    })()
+    void saveOffice(state.selected!, { status, note, assigned_to, planned_date })
+    return
+  }
+  if (t.closest('#oSaveMs')) {
+    const job = state.jobs.find((j) => j.id === state.selected)
+    if (!job) return
+    const { update, error } = readMilestones(job)
+    if (error) return toast(error)
+    if (!Object.keys(update ?? {}).length) return toast('אין שינוי')
+    void saveOffice(job.id, { milestones: update }, true)
     return
   }
   if (t.closest('#oCopyKey')) {

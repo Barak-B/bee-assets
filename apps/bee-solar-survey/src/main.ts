@@ -157,13 +157,17 @@ async function localStage(id: string): Promise<{ stage: Stage; office: string; p
   const pubs = await Promise.all(quotes.map((q) => getPublication(q.id)))
   const reports = await listReports(id)
   const office = await getOfficeStatus(id)
+  const finalAt = (key: string) => reports.find((r) => r.templateKey === key && r.status === 'final')?.finalizedAt ?? undefined
   const stage = deriveStage({
     surveyed: !!project?.hiveReady || (await countPhotos(id)) > 0,
     quoteVersions: quotes.length,
     liveLinks: pubs.filter((p) => p && !p.revokedAt).length,
     accepted: pubs.some((p) => !!p?.acceptedAt),
     installationReports: reports.filter((r) => isInstallationTemplate(r.templateKey)).length,
-    handoverFinal: reports.some((r) => r.templateKey === 'handover' && r.status === 'final'),
+    handoverFinal: !!finalAt('handover'),
+    handoverFinalAt: finalAt('handover'),
+    installationChecklistFinalAt: finalAt('installation_checklist'),
+    milestones: office?.milestones ?? {},
   })
   // A planned date matters only until the site is surveyed.
   const plannedIso = stage === 'lead' && office?.planned_date ? office.planned_date : ''
@@ -196,8 +200,13 @@ function renderToday(counts: Partial<Record<Stage, number>>, plannedDays: string
   if (counts.survey) items.push(`<li><b>${counts.survey}</b> נסקרו ומחכים להצעה</li>`)
   if (counts.quote) items.push(`<li><b>${counts.quote}</b> הצעות שעוד לא נשלחו ללקוח</li>`)
   if (counts.sent) items.push(`<li><b>${counts.sent}</b> נשלחו ומחכים לאישור הלקוח</li>`)
-  if (counts.accepted) items.push(`<li><b>${counts.accepted}</b> הלקוח אישר — לתאם התקנה</li>`)
+  if (counts.accepted) items.push(`<li><b>${counts.accepted}</b> הלקוח אישר — הסכם ומקדמה</li>`)
+  // After the contract the office drives the job; the phone shows where it is.
+  const later = (['permits', 'procurement'] as Stage[]).reduce((n, st) => n + (counts[st] ?? 0), 0)
+  if (later) items.push(`<li><b>${later}</b> בהכנה להתקנה (חח״י, תכנון, רכש)</li>`)
   if (counts.installation) items.push(`<li><b>${counts.installation}</b> בהתקנה</li>`)
+  const closing = (['inspection', 'grid', 'handover'] as Stage[]).reduce((n, st) => n + (counts[st] ?? 0), 0)
+  if (closing) items.push(`<li><b>${closing}</b> לקראת מסירה (בודק, מונה, מסירה)</li>`)
   box.innerHTML = items.length ? `<h2>מה מחכה לך</h2><ul>${items.join('')}</ul>` : '<h2>אין עבודות פתוחות</h2><p class="meta">סקר חדש — או סנכרון כדי לקבל עבודות מהמשרד.</p>'
 }
 

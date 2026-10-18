@@ -9,8 +9,10 @@
  *   Dani (phone)      sets up the price book and server, syncs, gets the job,
  *                     surveys it, builds a quote, publishes it, opens WhatsApp
  *   customer (phone)  opens the link, mistypes the ID digits, approves
- *   Dani              sees the approval, starts a daily report, syncs
- *   office            sees the job move along, opens it
+ *   Dani              sees the approval
+ *   office            marks contract, deposit, IEC, design, equipment
+ *   Dani              syncs, sees "בהתקנה", opens a daily report
+ *   office            sees the job with its report
  *
  * The app only talks to https://app.barak-e.com (it refuses local addresses
  * on purpose), so every browser maps that origin onto the local server.
@@ -21,7 +23,7 @@
  */
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -36,6 +38,8 @@ const PUBLIC = 'https://app.barak-e.com'
 const MASTER = `walk-${randomBytes(12).toString('hex')}`
 
 mkdirSync(OUT, { recursive: true })
+// A run's screenshots only: numbers shift when steps change.
+for (const f of readdirSync(OUT)) if (/^\d{2}-.*\.png$/.test(f)) rmSync(join(OUT, f))
 const findings = { steps: [], pageErrors: [], consoleErrors: [], httpErrors: [] }
 let shot = 0
 
@@ -320,12 +324,52 @@ try {
     await snap(customer, 'customer-approved', true)
   })
 
-  await step('Dani: sees the approval, starts a daily report, syncs', async () => {
+  await step('Dani: sees the approval', async () => {
     await phone.locator('.project-item', { hasText: 'משה אברהם' }).locator('[data-quote]').click()
     await waitText(phone, '[data-accepted="1"]', 'הלקוח אישר')
     await snap(phone, 'phone-quote-accepted')
     await phone.click('#qdClose')
     await waitText(phone, '[data-stage-chip]', 'הלקוח אישר')
+  })
+
+  // The office drives the job after the approval (S04–S07): contract, deposit, IEC, design, equipment.
+  const tick = async (key, ref) => {
+    const row = office.locator(`[data-ms="${key}"]`)
+    if (!(await row.isVisible())) await row.locator('xpath=ancestor::details').locator('summary').click()
+    await row.locator('[data-ms-on]').check()
+    if (ref) await row.locator('[data-ms-ref]').fill(ref)
+  }
+  const saveMs = async () => {
+    await office.click('#oSaveMs')
+    await waitText(office, '#toast', 'נשמר')
+  }
+  await step('office: contract and deposit, then the IEC and the design', async () => {
+    await office.click('#oRefresh')
+    await waitText(office, 'tr[data-job]', 'הלקוח אישר')
+    await office.locator('tr[data-job]', { hasText: 'משה אברהם' }).click()
+    await waitText(office, '.o-life li.now', 'הלקוח אישר')
+    await snap(office, 'office-drawer-accepted')
+    await tick('contract_signed')
+    await tick('deposit_paid', 'R-118')
+    await saveMs()
+    await waitText(office, '.o-life li.now', 'חח״י ותכנון')
+    await tick('iec_submitted', '7004512')
+    await saveMs()
+    await waitText(office, 'tr[data-job]', 'לקבל תשובה מחח״י')
+    await snap(office, 'office-drawer-permits')
+    await tick('iec_approved')
+    await tick('design_approved')
+    await tick('equipment_ordered', 'PO-2231')
+    await tick('equipment_delivered')
+    await saveMs()
+    await waitText(office, '.o-life li.now', 'בהתקנה')
+    await snap(office, 'office-drawer-ready-to-install', true)
+  })
+
+  await step('Dani: syncs, sees it is ready to install, opens a daily report', async () => {
+    await phone.click('#btnSync')
+    await waitText(phone, '[data-stage-chip]', 'בהתקנה')
+    await snap(phone, 'phone-list-ready-to-install')
     await phone.locator('.project-item', { hasText: 'משה אברהם' }).locator('[data-reports]').click()
     await phone.click('[data-r-new="daily_report"]')
     await phone.waitForSelector('#rpBack')
@@ -336,12 +380,13 @@ try {
     await snap(phone, 'phone-list-end')
   })
 
-  await step('office: the job moved along; open it', async () => {
+  await step('office: the job with its report; nothing skipped', async () => {
     await office.click('#oRefresh')
     await waitText(office, 'tr[data-job]', 'בהתקנה')
     await snap(office, 'office-list-end')
     await office.locator('tr[data-job]', { hasText: 'משה אברהם' }).click()
     await waitText(office, '#oSurvey', 'סוג גג')
+    if (await office.locator('.o-drawer .note-warn', { hasText: 'בלי לסמן' }).count()) throw new Error('milestones reported as skipped')
     await office.waitForTimeout(800)
     await snap(office, 'office-drawer-end')
     findings.officeJob = (await api('GET', '/api/office/overview', ronit.key)).jobs[0]

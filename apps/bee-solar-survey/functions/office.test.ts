@@ -243,6 +243,53 @@ describe('office overview', () => {
     const back = (await (await surveyPut(ctx(e, `/api/surveys/${ID}`, jsonInit('PUT', dani.key, surveyRecord('h2')), { id: ID }))).json()) as { office: { status: string } }
     expect(back.office).toMatchObject({ status: 'on_hold' })
   })
+
+  it('milestones from the office move the job through S04–S12, with checks, and reach the phone', async () => {
+    const e = env()
+    await surveyPut(ctx(e, `/api/surveys/${ID}`, jsonInit('PUT', MASTER, surveyRecord()), { id: ID }))
+    const { body: office } = await newKey(e, 'רונית', 'office')
+    const put = (body: unknown) => statusPut(ctx(e, `/api/office/status/${ID}`, jsonInit('PUT', office.key, body), { id: ID }))
+    const job = async () => ((await (await overviewGet(ctx(e, '/api/office/overview', { headers: bearer(office.key) }))).json()) as { jobs: Record<string, any>[] }).jobs[0]!
+    const err = async (body: unknown) => {
+      const r = await put(body)
+      expect(r.status).toBe(400)
+      return ((await r.json()) as { message_he: string }).message_he
+    }
+
+    expect(await err({ milestones: { signed: { date: '2026-10-01' } } })).toContain('לא מוכרת')
+    expect(await err({ milestones: { contract_signed: { date: '1.10.2026' } } })).toContain('תאריך לא תקין')
+    expect(await err({ milestones: { contract_signed: { date: '2099-01-01' } } })).toContain('עוד לא הגיע')
+    expect(await err({ milestones: { iec_submitted: { date: '2026-10-01', ref: 'פנייה 12' } } })).toContain('אסמכתא')
+    expect(await err({ milestones: [] })).toContain('מבנה')
+
+    // A paper contract and a deposit, no online approval: past S04.
+    expect((await put({ milestones: { contract_signed: { date: '2026-10-01' }, deposit_paid: { date: '2026-10-02', ref: 'R-118' } } })).status).toBe(200)
+    let j = await job()
+    expect(j.stage).toBe('permits')
+    expect(j.office.milestones).toEqual({ contract_signed: { date: '2026-10-01' }, deposit_paid: { date: '2026-10-02', ref: 'R-118' } })
+
+    // Only the keys sent change; the IEC answer implies the submission.
+    await put({ milestones: { iec_approved: { date: '2026-10-08' }, design_approved: { date: '2026-10-09' } } })
+    j = await job()
+    expect(j.stage).toBe('procurement')
+    expect(j.milestones.iec_submitted).toMatchObject({ date: '2026-10-08', auto: expect.any(String) })
+    expect(Object.keys(j.office.milestones).sort()).toEqual(['contract_signed', 'deposit_paid', 'design_approved', 'iec_approved'])
+
+    // null takes one back.
+    await put({ milestones: { design_approved: null } })
+    expect((await job()).stage).toBe('permits')
+
+    // The phone gets them with the office row and derives the same stage.
+    const listed = (await (await listGet(ctx(e, '/api/surveys', { headers: bearer(MASTER) }))).json()) as { surveys: { office: { milestones: object } }[] }
+    expect(Object.keys(listed.surveys[0]!.office.milestones)).toHaveLength(3)
+
+    // Every milestone with a reference, plus a full Hebrew note, still fits R2 metadata.
+    const every = Object.fromEntries(
+      ['contract_signed', 'deposit_paid', 'iec_submitted', 'iec_approved', 'design_approved', 'equipment_ordered', 'equipment_delivered', 'installation_done', 'inspector_passed', 'meter_installed', 'grid_approved', 'handover_signed', 'final_invoice', 'monitoring_active'].map((k) => [k, { date: '2026-10-01', ref: 'X'.repeat(24) }]),
+    )
+    expect((await put({ milestones: every, note: 'ש'.repeat(200) })).status).toBe(200)
+    expect((await job()).stage).toBe('service')
+  })
 })
 
 describe('new jobs from the office and assignment', () => {

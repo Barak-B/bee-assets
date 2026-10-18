@@ -2,6 +2,7 @@
  * "What needs a phone call today" — the office screen's to-do column. Pure, so
  * the thresholds are tested and easy to tune.
  */
+import { MILESTONES, MILESTONE_BY_KEY, nextMilestone, type MilestoneKey } from '../stage'
 import type { OfficeJob } from './api'
 
 const DAY = 86_400_000
@@ -15,8 +16,27 @@ export const ATTENTION_DAYS = {
   notOpened: 2,
   /** Opened, not approved. */
   notAccepted: 5,
-  /** Approved, no installation report yet. */
-  notStarted: 14,
+}
+
+/**
+ * After the approval: how long the next milestone may wait after the one
+ * before it (or after the approval) before someone should pick up the phone.
+ */
+export const MILESTONE_WAIT_DAYS: Record<MilestoneKey, number> = {
+  contract_signed: 7,
+  deposit_paid: 7,
+  iec_submitted: 7,
+  iec_approved: 30,
+  design_approved: 14,
+  equipment_ordered: 7,
+  equipment_delivered: 21,
+  installation_done: 14,
+  inspector_passed: 7,
+  meter_installed: 14,
+  grid_approved: 14,
+  handover_signed: 7,
+  final_invoice: 7,
+  monitoring_active: 7,
 }
 
 const age = (iso: string | null | undefined, now: Date) => (iso ? (now.getTime() - Date.parse(iso)) / DAY : 0)
@@ -51,12 +71,31 @@ export function attentionHe(job: OfficeJob, now = new Date()): string | null {
       const d = age(newest.last_viewed_at, now)
       return d >= ATTENTION_DAYS.notAccepted ? `נפתח ולא אושר ${Math.floor(d)} ימים — לבדוק מה עוצר` : null
     }
-    case 'accepted': {
-      const at = job.links.map((l) => l.accepted?.accepted_at ?? '').filter(Boolean).sort().pop()
-      const d = age(at, now)
-      return d >= ATTENTION_DAYS.notStarted ? `אושר לפני ${Math.floor(d)} ימים ועדיין לא התחילה התקנה` : null
-    }
-    default:
+    case 'lead':
+    case 'survey':
+    case 'quote':
+    case 'service':
       return null
+    default:
+      return milestoneWait(job, now)
   }
+}
+
+/** "הוגשה בקשה לחח״י לפני 34 ימים — לקבל תשובה מחח״י". */
+function milestoneWait(job: OfficeJob, now: Date): string | null {
+  const next = nextMilestone(job.stage, job.milestones ?? {})
+  if (!next) return null
+  // The latest thing that happened before it: a milestone, or the customer's approval.
+  let since = job.links.map((l) => l.accepted?.accepted_at ?? '').filter(Boolean).sort().pop() ?? ''
+  let what = 'הלקוח אישר'
+  for (const d of MILESTONES) {
+    const m = job.milestones?.[d.key]
+    if (m?.date && m.date >= since.slice(0, 10)) {
+      since = m.date
+      what = MILESTONE_BY_KEY[d.key].label_he
+    }
+  }
+  if (!since) return null
+  const d = Math.floor(age(since, now))
+  return d >= MILESTONE_WAIT_DAYS[next.key] ? `${what} לפני ${d} ימים — ${next.action_he}` : null
 }

@@ -5,11 +5,27 @@
  * page already wrote — nothing here is entered twice.
  *
  *   office/<surveyId>   tiny object; customMetadata = the office status row
- *                       (status, note, assigned surveyor, planned survey date)
+ *                       (status, note, assigned surveyor, planned survey date,
+ *                       lifecycle milestones as "cs=20261020,is=20261022~123")
  */
-import { OFFICE_STATUS_LABEL_HE, deriveStage, isInstallationTemplate, isOfficeStatus, type OfficeStatus, type Stage } from '../../src/stage'
+import {
+  MILESTONE_BY_KEY,
+  MILESTONE_REF_RE,
+  OFFICE_STATUS_LABEL_HE,
+  decodeMilestones,
+  deriveStage,
+  effectiveMilestones,
+  encodeMilestones,
+  isInstallationTemplate,
+  isMilestoneKey,
+  isOfficeStatus,
+  type Milestones,
+  type OfficeStatus,
+  type Stage,
+} from '../../src/stage'
 import { listKeys, type Principal } from './auth'
 import type { Env } from './env'
+import { israelToday } from './http'
 import { getAcceptance, getViews, listQuoteLinks, type QuoteLinkRow } from './store'
 import { UUID_RE, clip, decodeMeta, encodeMeta, listSurveys, type SurveyIndexRow } from './surveys'
 
@@ -23,9 +39,14 @@ export interface OfficeStatusRow {
   assigned_to_name: string
   /** Planned survey date, YYYY-MM-DD ('' = not set). */
   planned_date: string
+  /** Lifecycle milestones the office marked (contract, IEC, meter…). */
+  milestones: Milestones
 }
 
-export const EMPTY_OFFICE: Omit<OfficeStatusRow, 'updated_at' | 'updated_by'> = { status: 'active', note: '', assigned_to_id: '', assigned_to_name: '', planned_date: '' }
+export const EMPTY_OFFICE: Omit<OfficeStatusRow, 'updated_at' | 'updated_by'> = { status: 'active', note: '', assigned_to_id: '', assigned_to_name: '', planned_date: '', milestones: {} }
+
+/** R2 caps customMetadata at 2048 bytes (keys + values). */
+const META_LIMIT = 2000
 
 const officeKey = (id: string) => `office/${id}`
 
@@ -45,11 +66,19 @@ function rowFromMeta(raw: Record<string, string>): OfficeStatusRow | null {
     assigned_to_id: m.assigned_to_id ?? '',
     assigned_to_name: m.assigned_to_name ?? '',
     planned_date: m.planned_date ?? '',
+    milestones: decodeMilestones(m.ms),
   }
 }
 
+function metaOf(row: OfficeStatusRow): Record<string, string> {
+  const { milestones, ...rest } = row
+  return encodeMeta({ ...rest, ms: encodeMilestones(milestones) })
+}
+
+const metaBytes = (m: Record<string, string>) => Object.entries(m).reduce((n, [k, v]) => n + k.length + v.length, 0)
+
 export async function putOfficeStatus(env: Env, id: string, row: OfficeStatusRow): Promise<void> {
-  await env.QUOTES.put(officeKey(id), '', { customMetadata: encodeMeta({ ...row }) })
+  await env.QUOTES.put(officeKey(id), '', { customMetadata: metaOf(row) })
 }
 
 export interface OfficeUpdate {
@@ -59,7 +88,11 @@ export interface OfficeUpdate {
   assigned_to?: unknown
   /** YYYY-MM-DD, or '' to clear. */
   planned_date?: unknown
+  /** { <milestone>: { date: YYYY-MM-DD, ref? } | null }; only the keys sent change, null clears. */
+  milestones?: unknown
 }
+
+const isDay = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v))
 
 /**
  * A partial update merged into `prev` (only the fields present change), or a
@@ -74,7 +107,7 @@ export async function resolveOfficeUpdate(env: Env, prev: OfficeStatusRow | null
   // 200 code points: R2 metadata is capped at 2 KB and Hebrew URL-encodes to 6 bytes a letter.
   if (u.note !== undefined) next.note = clip(typeof u.note === 'string' ? u.note.trim() : '', 200)
   if (u.planned_date !== undefined) {
-    if (u.planned_date !== '' && (typeof u.planned_date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(u.planned_date) || Number.isNaN(Date.parse(u.planned_date)))) return { error: 'תאריך לא תקין (YYYY-MM-DD)' }
+    if (u.planned_date !== '' && !isDay(u.planned_date)) return { error: 'תאריך לא תקין (YYYY-MM-DD)' }
     next.planned_date = u.planned_date as string
   }
   if (u.assigned_to !== undefined) {
@@ -88,6 +121,27 @@ export async function resolveOfficeUpdate(env: Env, prev: OfficeStatusRow | null
       next.assigned_to_name = key.name
     }
   }
+  if (u.milestones !== undefined) {
+    if (!u.milestones || typeof u.milestones !== 'object' || Array.isArray(u.milestones)) return { error: 'אבני דרך: מבנה לא תקין' }
+    const ms: Milestones = { ...next.milestones }
+    const today = israelToday(now)
+    for (const [key, v] of Object.entries(u.milestones as Record<string, unknown>)) {
+      if (!isMilestoneKey(key)) return { error: `אבן דרך לא מוכרת: ${key}` }
+      const label = MILESTONE_BY_KEY[key].label_he
+      if (v === null) {
+        delete ms[key]
+        continue
+      }
+      const { date, ref = '' } = (v ?? {}) as { date?: unknown; ref?: unknown }
+      if (!isDay(date)) return { error: `${label}: תאריך לא תקין` }
+      // A milestone is something that happened.
+      if (date > today) return { error: `${label}: התאריך עוד לא הגיע` }
+      if (typeof ref !== 'string' || !MILESTONE_REF_RE.test(ref.trim())) return { error: `${label}: אסמכתא — ספרות ואותיות לועזיות בלבד, עד 24 תווים` }
+      ms[key] = { date, ...(ref.trim() ? { ref: ref.trim() } : {}) }
+    }
+    next.milestones = ms
+  }
+  if (metaBytes(metaOf(next)) > META_LIMIT) return { error: 'ההערה ארוכה מדי — קצרו אותה' }
   return { row: next }
 }
 
@@ -127,6 +181,8 @@ export interface LatestQuote {
 export interface OfficeRow extends SurveyIndexRow {
   stage: Stage
   office: OfficeStatusRow | null
+  /** The office's milestones plus what locked reports prove (those carry `auto`). */
+  milestones: Milestones
   latestQuote: LatestQuote | null
   links: OfficeLink[]
   reports: OfficeReport[]
@@ -214,21 +270,26 @@ function reportsBySurvey(objs: { key: string; meta: Record<string, string> }[]):
 /** One job, fully resolved. */
 export async function officeRow(env: Env, row: SurveyIndexRow, reports: OfficeReport[], office: OfficeStatusRow | null): Promise<OfficeRow> {
   const [quote, links] = await Promise.all([latestQuote(env, row.id), officeLinks(env, row.id)])
-  const stage = deriveStage({
+  const finalAt = (key: string) => reports.find((r) => r.templateKey === key && r.status === 'final')?.updatedAt
+  const facts = {
     surveyed: row.photoCount > 0 || row.readyForWave54,
     quoteVersions: quote?.version_no ?? 0,
     liveLinks: links.filter((l) => !l.revoked_at).length,
     accepted: links.some((l) => !!l.accepted),
     installationReports: reports.filter((r) => isInstallationTemplate(r.templateKey)).length,
-    handoverFinal: reports.some((r) => r.templateKey === 'handover' && r.status === 'final'),
-  })
+    handoverFinal: !!finalAt('handover'),
+    handoverFinalAt: finalAt('handover'),
+    installationChecklistFinalAt: finalAt('installation_checklist'),
+    milestones: office?.milestones ?? {},
+  }
+  const stage = deriveStage(facts)
   const times = [
     row.receivedAt,
     office?.updated_at ?? '',
     ...links.flatMap((l) => [l.published_at, l.last_viewed_at ?? '', l.accepted?.accepted_at ?? '', l.revoked_at ?? '']),
     ...reports.map((r) => r.updatedAt),
   ]
-  return { ...row, stage, office, latestQuote: quote, links, reports, lastActivityAt: times.filter(Boolean).sort().pop() ?? row.receivedAt }
+  return { ...row, stage, office, milestones: effectiveMilestones(facts), latestQuote: quote, links, reports, lastActivityAt: times.filter(Boolean).sort().pop() ?? row.receivedAt }
 }
 
 /** Every office status, by survey id (one list call). */

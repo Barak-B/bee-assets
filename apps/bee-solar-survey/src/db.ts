@@ -1,4 +1,5 @@
 import type { Catalog, PricingRules, QuoteVersion } from '@bee/quote-core'
+import type { Milestones } from './stage'
 import type { ReportInstance } from './reports/types'
 import type { SiteSurveyProject, SurveyPhoto } from './types'
 import { decidePhoto, decidePricing, decideProject, decideQuote, decideReport, type BackupData, type Decision, type ImportResult } from './backup'
@@ -340,6 +341,8 @@ export interface LocalOfficeStatus {
   assigned_to_name?: string
   /** Planned survey date, YYYY-MM-DD. */
   planned_date?: string
+  /** Lifecycle milestones the office marked (contract, IEC, meter…). */
+  milestones?: Milestones
 }
 
 async function metaGet<T>(key: string): Promise<T | null> {

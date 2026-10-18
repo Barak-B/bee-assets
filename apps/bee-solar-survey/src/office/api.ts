@@ -1,5 +1,5 @@
 /** Office screen ↔ the Pages Functions API on the same origin. */
-import type { OfficeStatus, Stage } from '../stage'
+import type { Milestone, MilestoneKey, Milestones, OfficeStatus, Stage } from '../stage'
 
 export interface Me {
   id: string
@@ -47,6 +47,8 @@ export interface OfficeJob {
   receivedBy: string
   stage: Stage
   office: OfficeRow | null
+  /** The office's milestones plus what locked reports prove (those carry `auto`). */
+  milestones: Milestones
   latestQuote: { version_no: number; quote_number: string; created_at: string; total_incl_vat_ils: number | null; dc_kwp: number | null; needs_owner_input: boolean } | null
   links: OfficeLink[]
   reports: OfficeReport[]
@@ -61,6 +63,7 @@ export interface OfficeRow {
   assigned_to_id: string
   assigned_to_name: string
   planned_date: string
+  milestones: Milestones
 }
 
 export interface OfficeUpdate {
@@ -68,6 +71,8 @@ export interface OfficeUpdate {
   note?: string
   assigned_to?: string
   planned_date?: string
+  /** Only the keys sent change; null clears one. */
+  milestones?: Partial<Record<MilestoneKey, Pick<Milestone, 'date' | 'ref'> | null>>
 }
 
 export interface NewJob {

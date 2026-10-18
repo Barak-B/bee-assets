@@ -412,8 +412,23 @@ test('office screen: log in, every job with its stage, filters, status and keys'
   await page.click('#oClose')
   await expect(page.locator('tbody tr[data-job]')).toHaveCount(1) // moved out of the active list
 
-  // A phone call: open a job, assign Dani, set the date.
+  // After the approval: the lifecycle and its milestones. Ticking one means today.
   await page.selectOption('#oStatus', 'active')
+  await page.locator('tr[data-job]', { hasText: 'מחסן לוי' }).click()
+  await expect(page.locator('.o-life li.now')).toHaveText('הלקוח אישר')
+  await expect(page.locator('.o-drawer')).toContainText('לחתום הסכם')
+  const today = await page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date()))
+  await page.locator('[data-ms="contract_signed"] [data-ms-on]').check()
+  await expect(page.locator('[data-ms="contract_signed"] [data-ms-date]')).toHaveValue(today)
+  await page.locator('[data-ms="deposit_paid"] [data-ms-on]').check()
+  await page.locator('[data-ms="deposit_paid"] [data-ms-date]').fill('2026-10-02')
+  await page.locator('[data-ms="deposit_paid"] [data-ms-ref]').fill('R-118')
+  await page.click('#oSaveMs')
+  await expect(page.locator('#toast')).toContainText('נשמר')
+  expect(statusBody).toEqual({ milestones: { contract_signed: { date: today, ref: '' }, deposit_paid: { date: '2026-10-02', ref: 'R-118' } } })
+  await page.click('#oClose')
+
+  // A phone call: open a job, assign Dani, set the date.
   await page.click('#oNewJob')
   await page.fill('#oJobForm [name="customerName"]', 'משה אברהם')
   await page.fill('#oJobForm [name="customerPhone"]', '054-1112233')

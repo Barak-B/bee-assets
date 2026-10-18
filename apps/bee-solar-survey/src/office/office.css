@@ -269,6 +269,10 @@ button.o-kpi {
   color: var(--muted);
 }
 
+.o-status label[hidden] {
+  display: none;
+}
+
 .o-photos {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -377,4 +381,93 @@ button.o-kpi {
 
 .o-filters .btn {
   white-space: nowrap;
+}
+
+.o-step.zero:not(.on) {
+  opacity: 0.55;
+}
+
+/* S01–S12: where the job is */
+.o-life {
+  list-style: none;
+  margin: 6px 0 10px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.o-life li {
+  font-size: 0.78rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.o-life li.done {
+  background: #e7f4ec;
+  border-color: #b9dcc6;
+  color: #1f6b3d;
+}
+
+.o-life li.done::before {
+  content: '✓ ';
+}
+
+.o-life li.now {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fffdf8;
+  font-weight: 700;
+}
+
+.o-ms details {
+  border: 1px solid var(--sand-deep);
+  border-radius: 10px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.o-ms summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.o-ms-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 6px 0;
+  border-top: 1px dashed var(--sand-deep);
+}
+
+.o-ms-row:first-of-type {
+  border-top: 0;
+}
+
+.o-ms-check {
+  flex: 1 1 160px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.o-ms-row input[type='date'],
+.o-ms-row input[data-ms-ref] {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font: inherit;
+  background: #fff;
+}
+
+.o-ms-row input[data-ms-ref] {
+  width: 9.5em;
+}
+
+.o-ms-row.auto {
+  justify-content: space-between;
+  color: #1f6b3d;
 }

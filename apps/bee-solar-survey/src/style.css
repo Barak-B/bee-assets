@@ -1145,12 +1145,17 @@ textarea {
 }
 
 .stage-chip.stage-accepted,
-.stage-chip.stage-installation {
+.stage-chip.stage-permits,
+.stage-chip.stage-procurement,
+.stage-chip.stage-installation,
+.stage-chip.stage-inspection,
+.stage-chip.stage-grid {
   background: #dcfce7;
   color: #14532d;
 }
 
-.stage-chip.stage-handover {
+.stage-chip.stage-handover,
+.stage-chip.stage-service {
   background: #ede9fe;
   color: #4c1d95;
 }
