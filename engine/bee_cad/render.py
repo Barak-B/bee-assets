@@ -197,6 +197,8 @@ def render_set(doc: Drawing, sheet_nos: list[str], out_dir: Path, stem: str, png
     from ezdxf.addons.drawing.properties import LayoutProperties
     from ezdxf.math import BoundingBox
 
+    from ezdxf import bbox as _bbox
+
     vdoc = _visual_copy(doc)
     msp = vdoc.modelspace()
     props = LayoutProperties.from_layout(msp)
@@ -205,15 +207,27 @@ def render_set(doc: Drawing, sheet_nos: list[str], out_dir: Path, stem: str, png
     pngs: dict[str, Path] = {}
     pdfs: dict[str, Path] = {}
     out_dir.mkdir(parents=True, exist_ok=True)
+    # which sheet does each entity belong to? (by the x of its extents centre) — so every page only
+    # carries its own entities; otherwise each PDF page embeds the whole set (≈5 MB per page)
+    pitch = A3_W + 30.0
+    sheet_of: dict[str, int] = {}
+    for e in msp:
+        try:
+            ext = _bbox.extents([e], fast=True)
+            cx = (ext.extmin.x + ext.extmax.x) / 2 if ext.has_data else 0.0
+        except Exception:
+            cx = 0.0
+        sheet_of[e.dxf.handle] = int(max(0.0, cx + 15.0) // pitch)
     if pdf:
         from ezdxf.addons.drawing.pymupdf import PyMuPdfBackend
 
-        backend = PyMuPdfBackend()
-        Frontend(RenderContext(vdoc), backend, config=cfg).draw_layout(msp, finalize=False, layout_properties=props)
         page = layout.Page(A3_W, A3_H, layout.Units.mm, margins=layout.Margins.all(0))
         (out_dir / "sheets").mkdir(exist_ok=True)
         for i, no in enumerate(sheet_nos):
-            x0 = (A3_W + 30.0) * i
+            backend = PyMuPdfBackend()
+            Frontend(RenderContext(vdoc), backend, config=cfg).draw_layout(
+                msp, finalize=False, layout_properties=props, filter_func=lambda e, i=i: sheet_of.get(e.dxf.handle, -1) == i)
+            x0 = pitch * i
             data = backend.get_pdf_bytes(page, settings=layout.Settings(fit_page=False, scale=1.0),
                                          render_box=BoundingBox([(x0, 0.0), (x0 + A3_W, A3_H)]))
             p = out_dir / "sheets" / f"{stem}_{no}.pdf"
@@ -226,20 +240,21 @@ def render_set(doc: Drawing, sheet_nos: list[str], out_dir: Path, stem: str, png
         import matplotlib.pyplot as plt
         from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
 
-        fig = plt.figure(figsize=(A3_W / 25.4, A3_H / 25.4), dpi=dpi)
-        ax = fig.add_axes([0, 0, 1, 1])
-        Frontend(RenderContext(vdoc), MatplotlibBackend(ax), config=cfg).draw_layout(msp, finalize=False, layout_properties=props)
-        ax.set_aspect("equal")
-        ax.axis("off")
-        fig.patch.set_facecolor("white")
         for i, no in enumerate(sheet_nos):
-            x0 = (A3_W + 30.0) * i
+            fig = plt.figure(figsize=(A3_W / 25.4, A3_H / 25.4), dpi=dpi)
+            ax = fig.add_axes([0, 0, 1, 1])
+            Frontend(RenderContext(vdoc), MatplotlibBackend(ax), config=cfg).draw_layout(
+                msp, finalize=False, layout_properties=props, filter_func=lambda e, i=i: sheet_of.get(e.dxf.handle, -1) == i)
+            ax.set_aspect("equal")
+            ax.axis("off")
+            fig.patch.set_facecolor("white")
+            x0 = pitch * i
             ax.set_xlim(x0 - 1.0, x0 + A3_W + 1.0)
             ax.set_ylim(-1.0, A3_H + 1.0)
             p = out_dir / f"{stem}_{no}.png"
             fig.savefig(p, dpi=dpi, facecolor="white")
             pngs[no] = p
-        plt.close(fig)
+            plt.close(fig)
     return pngs, pdfs
 
 
