@@ -28,6 +28,7 @@ import type { OfficeUpdate } from './api'
 import { Api, ApiError, type KeyRow, type Me, type OfficeJob, type TimelineEvent } from './api'
 import { attentionHe } from './attention'
 import { composerSlot, forgetComposerLogs, mountComposer } from './composer'
+import { forgetSubmissions, mountSubmission, submissionSlot } from './submissionPanel'
 
 const root = document.querySelector<HTMLDivElement>('#office')!
 const STORE = 'bee-office-key'
@@ -123,6 +124,7 @@ async function load() {
   render()
   try {
     forgetComposerLogs()
+    forgetSubmissions()
     const [r, people] = await Promise.all([state.api.overview(), state.api.surveyors().catch(() => ({ surveyors: [] }))])
     state.jobs = r.jobs
     state.surveyors = people.surveyors
@@ -185,6 +187,8 @@ function render() {
   const slot = document.getElementById('oMsg')
   const job = state.jobs.find((x) => x.id === state.selected)
   if (slot && job) mountComposer(slot, job, { api: state.api, me: state.me, toast, onLogged: () => void loadTimeline(job.id) })
+  const sub = document.getElementById('oSub')
+  if (sub && job) mountSubmission(sub, job, { api: state.api, toast, reload: async () => (await load(), void loadDrawerDetails(job.id)) })
   if (job) paintTimeline(job.id)
 }
 
@@ -409,6 +413,7 @@ function drawerView(): string {
           ${j.office ? `<div class="meta">עודכן ע״י ${escapeHtml(j.office.updated_by)} · ${escapeHtml(fmtDate(j.office.updated_at, true))}</div>` : ''}
         </section>
         ${lifecyclePart(j)}
+        ${submissionSlot(j)}
         ${composerSlot()}
         <section>
           <h3>יומן העבודה</h3>

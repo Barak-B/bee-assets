@@ -49,7 +49,11 @@ export function officeChanges(prev: OfficeStatusRow | null, next: OfficeStatusRo
 
 /** Append the office's changes to the job's event log. */
 export async function logOfficeChanges(env: Env, id: string, prev: OfficeStatusRow | null, next: OfficeStatusRow, by: string, now = new Date(), extra: { kind: EventKind; text_he: string }[] = []): Promise<void> {
-  const changes = [...extra, ...officeChanges(prev, next)]
+  await logEvents(env, id, [...extra, ...officeChanges(prev, next)], by, now)
+}
+
+/** Append lines to the job's event log, in the order given. */
+export async function logEvents(env: Env, id: string, changes: { kind: EventKind; text_he: string }[], by: string, now = new Date()): Promise<void> {
   const at = now.toISOString()
   await Promise.all(
     changes.map((c, i) => {

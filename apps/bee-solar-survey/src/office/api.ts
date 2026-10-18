@@ -1,5 +1,6 @@
 /** Office screen ↔ the Pages Functions API on the same origin. */
 import type { Milestone, MilestoneKey, Milestones, OfficeStatus, Stage } from '../stage'
+import type { SubmissionRecord } from '../submission'
 
 export interface Me {
   id: string
@@ -156,6 +157,8 @@ export class Api {
   surveyors = () => this.call<{ surveyors: { id: string; name: string; role: string }[] }>('/api/office/surveyors')
   keys = () => this.call<{ keys: KeyRow[] }>('/api/office/keys')
   createKey = (name: string, role: KeyRow['role']) => this.call<{ key: string; row: KeyRow }>('/api/office/keys', { method: 'POST', body: JSON.stringify({ name, role }) })
+  submission = (id: string) => this.call<{ submission: SubmissionRecord | null; suggested: { id: string; why_he: string } }>(`/api/office/submission/${encodeURIComponent(id)}`)
+  saveSubmission = (id: string, body: Record<string, unknown>) => this.call<{ submission: SubmissionRecord; office: OfficeRow | null }>(`/api/office/submission/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) })
   timeline = (id: string) => this.call<{ events: TimelineEvent[] }>(`/api/office/timeline/${encodeURIComponent(id)}`)
   messages = (id: string) => this.call<{ messages: MessageEntry[] }>(`/api/office/messages/${encodeURIComponent(id)}`)
   logMessage = (id: string, m: Omit<MessageEntry, 'at' | 'by'>) => this.call<{ message: MessageEntry }>(`/api/office/messages/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify(m) })

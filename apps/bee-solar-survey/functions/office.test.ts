@@ -21,6 +21,7 @@ import { onRequestGet as surveyGet } from './api/surveys/[id]'
 import { onRequestGet as healthGet } from './api/health'
 import { onRequestGet as messagesGet, onRequestPost as messagesPost } from './api/office/messages/[id]'
 import { onRequestGet as timelineGet } from './api/office/timeline/[id]'
+import { onRequestGet as submissionGet, onRequestPut as submissionPut } from './api/office/submission/[id]'
 import { onRequestGet as pageGet } from './q/[token]'
 
 const MASTER = 'test-publish-key-0123456789'
@@ -419,5 +420,49 @@ describe('job timeline', () => {
     expect(ev.at(-1)!.text_he).not.toContain('הודעה')
     // Surveyors don't read it.
     expect((await timelineGet(ctx(e, `/api/office/timeline/${id}`, { headers: bearer(dani.key) }, { id }))).status).toBe(403)
+  })
+})
+
+describe('submission file', () => {
+  it('suggests the track, checks every step and document, and a submitted step marks the milestone', async () => {
+    const e = env()
+    const { body: office } = await newKey(e, 'רונית', 'office')
+    await surveyPut(ctx(e, `/api/surveys/${ID}`, jsonInit('PUT', MASTER, surveyRecord()), { id: ID }))
+    const { q } = await publicQuote()
+    await quotePut(ctx(e, `/api/surveys/${ID}/quotes/1`, jsonInit('PUT', MASTER, { ...q, version_no: 1 }), { id: ID, version: '1' }))
+    const get = async () => (await (await submissionGet(ctx(e, `/api/office/submission/${ID}`, { headers: bearer(office.key) }, { id: ID }))).json()) as { submission: Record<string, any> | null; suggested: { id: string; why_he: string } }
+    const put = (body: unknown) => submissionPut(ctx(e, `/api/office/submission/${ID}`, jsonInit('PUT', office.key, body), { id: ID }))
+    const err = async (body: unknown) => {
+      const r = await put(body)
+      expect(r.status).toBe(400)
+      return ((await r.json()) as { message_he: string }).message_he
+    }
+
+    const first = await get()
+    expect(first.submission).toBeNull()
+    expect(first.suggested.id).toBe('commercial_15_100') // the test quote is a little over 15 kW
+    expect(first.suggested.why_he).toContain('kW')
+
+    expect(await err({ track: 'nope' })).toContain('מסלול')
+    expect(await err({ steps: { 'xx.01': { date: '2026-10-01' } } })).toContain('לא קיים')
+    expect(await err({ steps: { 'pre.05.submit_portal': { date: '2099-01-01' } } })).toContain('עוד לא הגיע')
+    expect(await err({ docs: { selfie: { date: '2026-10-01' } } })).toContain('לא מוכר')
+    expect(await err({ na: ['pre'] })).toContain('לא רלוונטי')
+
+    const r = await put({ steps: { 'pre.01.collect_inputs': { date: '2026-10-01' }, 'pre.05.submit_portal': { date: '2026-10-03', ref: '7004512' } }, docs: { electric_bill_last: { date: '2026-10-01' } }, na: ['fire'] })
+    expect(r.status).toBe(200)
+    const body = (await r.json()) as { submission: Record<string, any>; office: { milestones: Record<string, unknown> } }
+    expect(body.submission).toMatchObject({ track: 'commercial_15_100', na: ['fire'], updated_by: 'רונית' })
+    // The submission step is the IEC milestone: marked once, with the request number.
+    expect(body.office.milestones.iec_submitted).toEqual({ date: '2026-10-03', ref: '7004512' })
+    expect((await get()).submission!.steps['pre.05.submit_portal']).toEqual({ date: '2026-10-03', ref: '7004512' })
+
+    // Changing the track keeps what was ticked; a step of another track is refused.
+    await put({ track: 'residential_le15' })
+    expect((await get()).submission!.steps['pre.01.collect_inputs']).toBeTruthy()
+    expect(await err({ steps: { 'hd.01.identify_distributor': { date: '2026-10-01' } } })).toContain('לא קיים')
+
+    const tl = ((await (await timelineGet(ctx(e, `/api/office/timeline/${ID}`, { headers: bearer(office.key) }, { id: ID }))).json()) as { events: { text_he: string }[] }).events.map((x) => x.text_he)
+    expect(tl).toEqual(expect.arrayContaining([expect.stringContaining('תיק הגשה — ✓ הגשה ב-digitalorders'), expect.stringContaining('מסמך התקבל: חשבון חשמל אחרון'), 'לא רלוונטי לעבודה: כבאות', '✓ הוגשה בקשה לחח״י · 03.10.2026 · מספר פנייה 7004512', 'מסלול הגשה: ביתי עד 15 kW']))
   })
 })

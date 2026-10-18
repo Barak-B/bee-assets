@@ -180,6 +180,7 @@ export interface LatestQuote {
   needs_owner_input: boolean
   /** YYYY-MM-DD ('' when the quote has none). */
   valid_until: string
+  inverter_ac_kw: number | null
 }
 
 export interface OfficeRow extends SurveyIndexRow {
@@ -205,7 +206,8 @@ export async function listAll(env: Env, prefix: string): Promise<{ key: string; 
   return out
 }
 
-async function latestQuote(env: Env, id: string): Promise<LatestQuote | null> {
+/** The newest quote version of a job, summarised. */
+export async function latestQuoteOf(env: Env, id: string): Promise<LatestQuote | null> {
   const objs = await listAll(env, `surveys/${id}/quotes/`)
   const versions = objs.map((o) => Number(/\/v(\d+)\.json$/.exec(o.key)?.[1] ?? 0)).filter((n) => n > 0)
   if (!versions.length) return null
@@ -219,7 +221,7 @@ async function latestQuote(env: Env, id: string): Promise<LatestQuote | null> {
       terms?: { valid_until?: string | null }
       needs_owner_input?: boolean
       totals?: { total_incl_vat_ils?: number | null }
-      design?: { dc_kwp?: number | null }
+      design?: { dc_kwp?: number | null; inverter_ac_kw?: number | null }
     }
     return {
       version_no: v,
@@ -229,6 +231,7 @@ async function latestQuote(env: Env, id: string): Promise<LatestQuote | null> {
       dc_kwp: typeof q.design?.dc_kwp === 'number' ? q.design.dc_kwp : null,
       needs_owner_input: !!q.needs_owner_input,
       valid_until: typeof q.terms?.valid_until === 'string' ? q.terms.valid_until.slice(0, 10) : '',
+      inverter_ac_kw: typeof q.design?.inverter_ac_kw === 'number' ? q.design.inverter_ac_kw : null,
     }
   } catch {
     return null
@@ -275,7 +278,7 @@ export function reportsBySurvey(objs: { key: string; meta: Record<string, string
 
 /** One job, fully resolved. */
 export async function officeRow(env: Env, row: SurveyIndexRow, reports: OfficeReport[], office: OfficeStatusRow | null): Promise<OfficeRow> {
-  const [quote, links] = await Promise.all([latestQuote(env, row.id), officeLinks(env, row.id)])
+  const [quote, links] = await Promise.all([latestQuoteOf(env, row.id), officeLinks(env, row.id)])
   const finalAt = (key: string) => reports.find((r) => r.templateKey === key && r.status === 'final')?.updatedAt
   const facts = {
     surveyed: row.photoCount > 0 || row.readyForWave54,

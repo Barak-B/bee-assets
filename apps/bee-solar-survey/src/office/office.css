@@ -576,3 +576,70 @@ button.o-kpi {
 .o-tl-item .meta {
   display: inline;
 }
+
+/* Submission file */
+.o-sub-track {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.o-sub select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  background: #fff;
+}
+
+.o-sub-progress {
+  margin: 8px 0;
+}
+
+.o-sub-phase {
+  border: 1px solid var(--sand-deep);
+  border-radius: 10px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.o-sub-phase summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.o-sub-phase.na summary {
+  color: var(--muted);
+  font-weight: 400;
+  text-decoration: line-through;
+}
+
+.o-sub-phase h5 {
+  margin: 8px 0 2px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.o-sub-na {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.85rem;
+  margin: 6px 0;
+}
+
+.o-actor {
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.o-sub-missing ul {
+  margin: 4px 0;
+  padding-inline-start: 18px;
+  color: var(--warn, #b45309);
+  font-size: 0.85rem;
+}
