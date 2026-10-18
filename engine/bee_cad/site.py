@@ -62,9 +62,21 @@ class Route(BaseModel):
     points: list[tuple[float, float]] = Field(default_factory=list)
 
 
+class Clearances(BaseModel):
+    """Manufacturer's recommended clearances (Rochex/Afcon 261kWh O&M manual §5.2, single-row placement)."""
+
+    side_mm: float = 400          # cabinet side → wall / other equipment
+    between_mm: float = 100       # between cabinets in a row
+    rear_mm: float = 800          # behind (air outlet direction)
+    front_mm: float = 2500        # in front of the cabinet (door, maintenance)
+    source: str = "Rochex/Afcon 125kW-261kWh ESS O&M manual 20260410 §5.2"
+
+
 class SiteLayout(BaseModel):
     title: str = "פריסת תשתיות — מבט על, חזית וחתך"
     sheet_no: str = "E-02"
+    clearances: Optional[Clearances] = Field(default_factory=Clearances)
+    front_is_low_y: bool = True   # the cabinets' doors face the datum edge (y = 0)
     items: list[SiteItem] = Field(default_factory=list)
     trays: list[Tray] = Field(default_factory=list)
     routes: list[Route] = Field(default_factory=list)
@@ -76,6 +88,33 @@ class SiteLayout(BaseModel):
 
 
 ROUTE_LAYER = {"ac": "ac", "dc": "dc_pos", "pe": "pe", "comm": "comm", "fire": "dc_pos"}
+
+
+def site_checks(t: DrillTemplate, layout: SiteLayout) -> list[str]:
+    """Clearance checks against the manufacturer's recommendations: gaps between cabinets, items inside the
+    rear (air-outlet) zone or the front (maintenance) zone. The slab edge is not a wall, so side/front/rear
+    distances to the slab edge are reported as info only."""
+    out: list[str] = []
+    c = layout.clearances
+    if c is None or not t.units:
+        return out
+    us = sorted(t.units, key=lambda u: u.x_mm)
+    for a, b in zip(us, us[1:]):
+        gap = b.x_mm - (a.x_mm + a.width_mm)
+        if gap < c.between_mm - 1e-6:
+            out.append(f"מרווח {a.tag}–{b.tag} {gap:g} מ\"מ < {c.between_mm:g} (יצרן)")
+    for u in t.units:
+        rear0, rear1 = u.y_mm + u.depth_mm, u.y_mm + u.depth_mm + c.rear_mm
+        front0, front1 = u.y_mm - c.front_mm, u.y_mm
+        for it in layout.items:
+            if it.kind in ("existing",):
+                continue
+            ox = it.x_mm < u.x_mm + u.width_mm and u.x_mm < it.x_mm + it.w_mm
+            if ox and it.y_mm < rear1 and rear0 < it.y_mm + it.d_mm and it.z_mm < 2500:
+                out.append(f"{it.tag} בתוך אזור יציאת האוויר האחורי של {u.tag} (≥{c.rear_mm:g} מ\"מ, יצרן)")
+            if ox and it.y_mm < front1 and front0 < it.y_mm + it.d_mm:
+                out.append(f"{it.tag} בתוך אזור השירות הקדמי של {u.tag} (≥{c.front_mm:g} מ\"מ, יצרן)")
+    return out
 SCALES = (20.0, 25.0, 40.0, 50.0, 75.0, 100.0, 125.0, 150.0, 200.0)
 
 
@@ -334,6 +373,7 @@ class SiteRenderer:
         if not t.units:
             self.warnings.append("פריסת תשתיות: אין ארונות במודל (drill_template.units)")
             return self.warnings
+        self.warnings += site_checks(t, L)
         s = self.s
         W, D = s(t.slab.length_mm), s(t.slab.width_mm)
         hz = s(L.cabinet_height_mm + t.pedestal.height_mm + t.slab.thickness_mm)
@@ -350,6 +390,10 @@ class SiteRenderer:
         xr = ctx.x1 - 4.0
         y_after = self.draw_table(xr, ctx.y1 - 14.0)
         notes = list(L.notes) + [f"לאימות: {v}" for v in L.verify]
+        if L.clearances:
+            c = L.clearances
+            notes.insert(0, f"מרווחים מומלצים לפי יצרן הארון ({c.source}): ≥{c.side_mm:g} מהצד לקיר/ציוד, ≥{c.between_mm:g} בין ארונות, "
+                            f"≥{c.rear_mm:g} מאחור (יציאת אוויר), ≥{c.front_mm:g} מלפנים (דלת ושירות); גובה יסוד מומלץ 300–450 מעל הקרקע (§5.5.3).")
         nx, ny = xr, min(y_after - 10.0, ctx.y0 + TB_H + 5.0 * 3 + 70.0)
         ctx.text("הערות", (nx, ny), 2.4, "notes", TA.TOP_RIGHT, bold=True)
         ctx.mtext([f"{i + 1}. {n}" for i, n in enumerate(notes)], (nx, ny - 4.0), 1.6, "notes", width=108.0)

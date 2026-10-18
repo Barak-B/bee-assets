@@ -47,6 +47,25 @@ class Pedestal(BaseModel):
     count_per_unit: int = 2
     inset_mm: float = 0                  # beam centre from the cabinet side edge (Roche G009: beam centred under the edge)
     galvanised: bool = True
+    cross_members: bool = True           # welded cross profiles between the beams carry the base holes that miss the flanges
+
+
+class CabinetBase(BaseModel):
+    """Manufacturer's base-steel fixing pattern — the holes the cabinet is bolted through onto the beams.
+
+    Default: Rochex / Afcon 125kW-261kWh O&M manual (20260410) §5.5.5 + §5.7: base frame 1064×1405 under a
+    989×1465 body, 8 slotted holes Ø18×10 ("long waist"), M12 nut + Ø12 washer; hole columns 955 c/c with the
+    inner pair 220 in from the outer ones, rows 125 from the frame front and 1145 apart. Coordinates below are
+    relative to the cabinet BODY's front-left corner (frame is 37.5 wider each side, 30 shorter each end)."""
+
+    frame_w_mm: float = 1064
+    frame_d_mm: float = 1405
+    bolt: str = "M12"
+    slot: str = "Ø18×10 (חריץ ארוך)"
+    holes: list[tuple[float, float]] = Field(default_factory=lambda: [
+        (19.5, 155.0), (239.5, 155.0), (749.5, 155.0), (969.5, 155.0),
+        (19.5, 1300.0), (239.5, 1300.0), (749.5, 1300.0), (969.5, 1300.0)])
+    source: str = "Rochex/Afcon 125kW-261kWh ESS O&M manual 20260410 §5.5.5, §5.7"
 
 
 class Unit(BaseModel):
@@ -62,11 +81,13 @@ class Unit(BaseModel):
     anchor_offset_y_mm: float = 0         # extra Y shift of both rows (stagger against the neighbouring cabinet's beam)
     anchor_stagger_mm: float = 100        # the second bolt of each pair sits this much further from the beam end (diagonal pair)
     weight_t: Optional[float] = None
+    base: Optional[CabinetBase] = None    # manufacturer base-frame holes; None = use the template default
 
 
 class DrillTemplate(BaseModel):
     title: str = "שבלונת קידוח — תושבות Double-T ועיגון ארונות"
     sheet_no: str = "E-20"
+    cabinet_base: Optional[CabinetBase] = Field(default_factory=CabinetBase)   # None = no cabinet-fixing holes drawn
     slab: Slab = Field(default_factory=Slab)
     units: list[Unit] = Field(default_factory=list)
     pedestal: Pedestal = Field(default_factory=Pedestal)
@@ -74,6 +95,18 @@ class DrillTemplate(BaseModel):
     zones: list[dict] = Field(default_factory=list)    # extra rectangles: {"label", "x_mm", "y_mm", "w_mm", "d_mm"}
     notes: list[str] = Field(default_factory=list)
     verify: list[str] = Field(default_factory=list)
+
+    def base_holes(self, u: Unit) -> list[tuple[float, float]]:
+        """Absolute positions of the cabinet's base-frame fixing holes (bolted to the beam top flange)."""
+        base = u.base or self.cabinet_base
+        if base is None:
+            return []
+        return [(u.x_mm + hx, u.y_mm + hy) for hx, hy in base.holes]
+
+    def base_holes_on_beam(self, u: Unit) -> list[bool]:
+        """For each base hole: does it fall on a beam's top flange (|x - centre| ≤ flange/2)?"""
+        half = self.pedestal.width_mm / 2
+        return [any(abs(x - bx) <= half for bx in self.beam_centres(u)) for x, _ in self.base_holes(u)]
 
     def beam_centres(self, u: Unit) -> tuple[float, float]:
         """X of the two pedestal beams of a unit (absolute)."""
@@ -115,6 +148,11 @@ class TemplateChecks:
                 edge = min(x, y, s.length_mm - x, s.width_mm - y)
                 if edge < s.edge_min_mm:
                     self.problems.append(f"{u.tag}-{i}: מרחק משפה {edge:.0f} מ\"מ < מינימום {s.edge_min_mm:.0f}")
+        if not t.pedestal.cross_members:
+            for u in t.units:
+                off = [i + 1 for i, ok in enumerate(t.base_holes_on_beam(u)) if not ok]
+                if off:
+                    self.problems.append(f"{u.tag}: חורי בסיס הארון {off} אינם מעל אגף קורה — נדרש פרופיל רוחבי/פלטה מרותכת")
         for i, (ta, xa, ya) in enumerate(pts_all):
             for tb, xb, yb in pts_all[i + 1:]:
                 d = ((xa - xb) ** 2 + (ya - yb) ** 2) ** 0.5
@@ -206,6 +244,9 @@ class TemplateRenderer:
             for bx in (ux + s(t.pedestal.inset_mm), ux + uw - s(t.pedestal.inset_mm)):
                 ctx.msp.add_lwpolyline([(bx - pw / 2, y0b), (bx + pw / 2, y0b), (bx + pw / 2, y0b + pl), (bx - pw / 2, y0b + pl)],
                                        close=True, dxfattribs={"layer": LAYERS["panel_rail"].name})
+            if self.scale <= 25:
+                for hx, hy in t.base_holes(u):
+                    ctx.msp.add_circle((ox + s(hx), oy + s(hy)), 0.7, dxfattribs={"layer": LAYERS["panel_rail"].name})
             for i, (x, y) in enumerate(t.anchor_points(u), 1):
                 if self.scale <= 25:
                     self.anchor_mark(ox + s(x), oy + s(y))
@@ -269,6 +310,25 @@ class TemplateRenderer:
                 ctx.text(f"Ø{t.anchor.hole_dia_mm:g}  {i}", (ox + bx - pw / 2 - 1.5, oy + py + 2.0), 1.5, "dim", TA.BOTTOM_RIGHT)
             else:
                 ctx.text(f"{i}  Ø{t.anchor.hole_dia_mm:g}", (ox + bx + pw / 2 + 1.5, oy + py + 2.0), 1.5, "dim", TA.BOTTOM_LEFT)
+        base = u.base or t.cabinet_base
+        if base:
+            fw, fd = base.frame_w_mm / sc, base.frame_d_mm / sc
+            fx, fy = ox + (uw - fw) / 2, oy + (ud - fd) / 2
+            ctx.msp.add_lwpolyline([(fx, fy), (fx + fw, fy), (fx + fw, fy + fd), (fx, fy + fd)], close=True,
+                                   dxfattribs={"layer": LAYERS["existing"].name})
+            for j, (hx, hy) in enumerate(base.holes, 1):
+                cx, cy = ox + hx / sc, oy + hy / sc
+                r = 9.0 / sc
+                ctx.msp.add_lwpolyline([(cx - r, cy - r * 1.5), (cx + r, cy - r * 1.5), (cx + r, cy + r * 1.5), (cx - r, cy + r * 1.5)],
+                                       close=True, dxfattribs={"layer": LAYERS["panel_rail"].name})
+                ctx.text(f"B{j}", (cx, cy + r * 1.5 + 0.6), 1.3, "panel_text", TA.BOTTOM_CENTER)
+            bxs = sorted({hx for hx, _ in base.holes}) 
+            bys = sorted({hy for _, hy in base.holes})
+            for a_, b_ in zip(bxs, bxs[1:]):
+                self.dim_h(ox + a_ / sc, ox + b_ / sc, oy + ud, 14.0, sc)
+            for a_, b_ in zip([0.0] + bys + [u.depth_mm], ([0.0] + bys + [u.depth_mm])[1:]):
+                if b_ - a_ > 20:
+                    self.dim_v(ox + uw, oy + a_ / sc, oy + b_ / sc, 14.0, sc)
         xs = sorted({p[0] for p in pts})
         ys = sorted({p[1] for p in pts})
         for a, b in zip(xs, xs[1:]):
@@ -281,7 +341,15 @@ class TemplateRenderer:
         self.dim_h(ox, ox + uw, oy + ud, 7.0, sc)
         self.dim_v(ox + uw, oy, oy + ud, 7.0, sc)
         ctx.text(f"פרט ארון {u.model} — תבנית קידוח   1:{int(sc)}", (ox + uw / 2, oy + ud + 15.0), 2.4, "panel_text", TA.BOTTOM_CENTER, bold=True)
-        ctx.text(f"קורות {t.pedestal.kind} — {t.pedestal.profile}, גובה {t.pedestal.height_mm:g} מ\"מ", (ox + uw / 2, oy + ud + 19.0), 1.5, "panel_text", TA.BOTTOM_CENTER)
+        ctx.text(f"קורות {t.pedestal.kind} — {t.pedestal.profile}, גובה {t.pedestal.height_mm:g} מ\"מ", (ox + uw / 2, oy + ud + 23.0), 1.5, "panel_text", TA.BOTTOM_CENTER)
+        if base:
+            off = [f"B{i + 1}" for i, ok in enumerate(t.base_holes_on_beam(u)) if not ok]
+            lines = [f"B1–B{len(base.holes)}: חורי בסיס הארון {base.slot}, ברגי {base.bolt} לאגף הקורה"]
+            if off:
+                lines.append(f"{', '.join(off)} — על פרופיל רוחבי מרותך בין הקורות")
+            lines.append(f"מקור: {base.source}")
+            for k, line in enumerate(lines):
+                ctx.text(line, (ox, oy + ud + 26.0 + 2.6 * (len(lines) - 1 - k)), 1.3, "panel_text", TA.BOTTOM_LEFT)
 
     def draw_tables(self, x_right: float, y_top: float) -> None:
         ctx, t = self.ctx, self.t
@@ -332,6 +400,10 @@ class TemplateRenderer:
                  ("מומנט הידוק", f"{a.torque_nm:g} Nm" if a.torque_nm else "לפי יצרן"),
                  ("כמות", f"{sum(len(t.anchor_points(u)) for u in t.units)} עוגנים ({a.qty_per_unit} לארון × {len(t.units)})"),
                  ("מרחק שפה מינ'", f"{t.slab.edge_min_mm:g} מ\"מ"), ("מרווח מינ'", f"{a.spacing_min_mm:g} מ\"מ")]
+        if t.cabinet_base:
+            cb = t.cabinet_base
+            sched += [("חיבור ארון→קורה", f"{len(cb.holes)} × {cb.bolt} דרך חריצי {cb.slot}"),
+                      ("מסגרת בסיס", f"{cb.frame_w_mm:g}×{cb.frame_d_mm:g} מ\"מ (יצרן)")]
         w = 80.0
         h = rh * (len(sched) + 1)
         ctx.rect(x_right - w, y - h, w, h, "legend")
