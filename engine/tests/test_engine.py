@@ -262,8 +262,8 @@ def test_qa_checks(design: Design):
     from bee_cad.model import Cable, Circuit, Device, Group
     from bee_cad.qa import cable_ampacity, check_design, check_sheets
 
-    assert cable_ampacity("3X2.5", 1) == 24 and cable_ampacity("N2XY 5X10", 3) == 75 * 0.9
-    assert cable_ampacity("2x(4x150)NA2XY", 3) == 315 * 0.9 * 2 and cable_ampacity("גמיש", 1) is None
+    assert cable_ampacity("3X2.5", 1) == 27 and cable_ampacity("N2XY 5X10", 3) == 71          # B.52.2 / B.52.5, method C
+    assert cable_ampacity("2x(4x150)NA2XY", 3) == 290 * 2 and cable_ampacity("גמיש", 1) is None
     rep = check_design(design)
     assert not rep.errors and rep.score >= 95
     # break the model on purpose: socket without RCD on a 300 mA group, breaker above cable, feeder to nowhere

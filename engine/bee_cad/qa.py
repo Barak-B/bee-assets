@@ -28,15 +28,25 @@ from .model import Board, Circuit, Design
 
 MIN_TEXT_H = 1.2
 
-# IEC 60364-5-52 B.52.4 — Cu, two/three loaded conductors, method C (clipped direct), PVC and XLPE [A].
-# Screening values only. The project calculation (eplan CalcReport) wins when present.
-AMPACITY_CU_PVC = {1.5: 17.5, 2.5: 24, 4: 32, 6: 41, 10: 57, 16: 76, 25: 101, 35: 125, 50: 151, 70: 192, 95: 232,
-                   120: 269, 150: 309, 185: 353, 240: 415, 300: 477}
-AMPACITY_CU_XLPE = {1.5: 23, 2.5: 31, 4: 42, 6: 54, 10: 75, 16: 100, 25: 133, 35: 164, 50: 198, 70: 253, 95: 306,
-                    120: 354, 150: 407, 185: 464, 240: 546, 300: 628}
-AMPACITY_AL_XLPE = {16: 77, 25: 103, 35: 127, 50: 153, 70: 196, 95: 237, 120: 274, 150: 315, 185: 359, 240: 423, 300: 488}
-# three loaded conductors are ~0.9 of the two-conductor column in B.52.4; we apply that for 3P circuits
-THREE_PHASE_FACTOR = 0.9
+# IEC 60364-5-52 (ed. 3.0, 2009) current-carrying capacities, reference method C (clipped direct / on a wall),
+# ambient 30 °C, in amperes. Two-loaded-conductor tables B.52.2 (PVC 70 °C) / B.52.3 (XLPE 90 °C) for 1P circuits,
+# three-loaded-conductor tables B.52.4 (PVC) / B.52.5 (XLPE) for 3P circuits. Screening values only — the project
+# calculation (eplan CalcReport) with the real method, grouping and temperature factors wins when present.
+AMPACITY = {
+    ("cu", "pvc", 1): {1.5: 19.5, 2.5: 27, 4: 36, 6: 46, 10: 63, 16: 85, 25: 112, 35: 138, 50: 168, 70: 213, 95: 258, 120: 299,
+                       150: 344, 185: 392, 240: 461, 300: 530},
+    ("cu", "pvc", 3): {1.5: 17.5, 2.5: 24, 4: 32, 6: 41, 10: 57, 16: 76, 25: 96, 35: 119, 50: 144, 70: 184, 95: 223, 120: 259,
+                       150: 299, 185: 341, 240: 403, 300: 464},
+    ("cu", "xlpe", 1): {1.5: 24, 2.5: 33, 4: 45, 6: 58, 10: 80, 16: 107, 25: 138, 35: 171, 50: 209, 70: 269, 95: 328, 120: 382,
+                        150: 441, 185: 506, 240: 599, 300: 693},
+    ("cu", "xlpe", 3): {1.5: 23, 2.5: 30, 4: 40, 6: 52, 10: 71, 16: 96, 25: 119, 35: 147, 50: 179, 70: 229, 95: 278, 120: 322,
+                        150: 371, 185: 424, 240: 500, 300: 576},
+    # aluminium, XLPE, method C (B.52.3 / B.52.5 Al columns) — VERIFY against the standard before relying on them
+    ("al", "xlpe", 1): {16: 84, 25: 107, 35: 133, 50: 161, 70: 207, 95: 251, 120: 293, 150: 338, 185: 386, 240: 456, 300: 527},
+    ("al", "xlpe", 3): {16: 73, 25: 93, 35: 115, 50: 140, 70: 179, 95: 217, 120: 251, 150: 290, 185: 332, 240: 393, 300: 455},
+    ("al", "pvc", 3): {16: 59, 25: 73, 35: 90, 50: 110, 70: 140, 95: 170, 120: 197, 150: 227, 185: 259, 240: 305, 300: 351},
+    ("al", "pvc", 1): {16: 66, 25: 83, 35: 103, 50: 125, 70: 160, 95: 195, 120: 226, 150: 261, 185: 298, 240: 352, 300: 406},
+}
 
 SOURCE_WORDS = ("לפי", "מדף", "G0", "E-", "תקן", "IEC", "SI ", "ת\"י", "חוק החשמל", "Roche", "eplan", "יצרן", "ETA", "Hilti")
 ASSUMPTION_WORDS = ("הנחה", "הנחת", "משוער", "לאימות")
@@ -128,11 +138,12 @@ def cable_ampacity(designation: str, poles: int) -> Optional[float]:
     d = designation.upper()
     al = "NA2X" in d or " AL" in d or "NAYY" in d
     xlpe = "2X" in d or "XLPE" in d or "N2X" in d
-    table = AMPACITY_AL_XLPE if al else (AMPACITY_CU_XLPE if xlpe else AMPACITY_CU_PVC)
+    loaded = 3 if (poles >= 3 or cores >= 4) else 1
+    table = AMPACITY.get(("al" if al else "cu", "xlpe" if xlpe else "pvc", loaded), {})
     base = table.get(mm2)
     if base is None:
         return None
-    return base * (THREE_PHASE_FACTOR if poles >= 3 else 1.0) * parallel_count(designation)
+    return base * parallel_count(designation)
 
 
 def is_socket(c: Circuit) -> bool:
@@ -189,8 +200,9 @@ def check_circuit(rep: QAReport, b: Board, c: Circuit, where: str, protected: bo
     w = f"{where} / {c.tag}"
     d = c.device
     spare = "שמור" in c.load or "spare" in c.load.lower() or c.tag.upper().startswith("SP")
-    if c.cable is None and not spare:
-        rep.add("warn" if feeder else "error", "NO_CABLE", w, "אין כבל למעגל")
+    if c.cable is None:
+        if not spare:
+            rep.add("warn" if feeder else "error", "NO_CABLE", w, "אין כבל למעגל")
     else:
         amp = cable_ampacity(c.cable.designation, d.poles)
         if amp is None:
