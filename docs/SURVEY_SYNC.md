@@ -54,7 +54,7 @@
 
 ```
 surveys/<id>/survey.json                  הגרסה האחרונה
-surveys/<id>/history/<receivedAt>.json    כל גרסה שונה שהתקבלה (היסטוריה מלאה)
+surveys/<id>/history/<receivedAt>_<hash>.json    כל גרסה שונה שהתקבלה (היסטוריה מלאה)
 surveys/<id>/photos/<photoId>.<sha12>     תמונות
 surveys/<id>/quotes/v<N>.json             גרסאות הצעה
 surveys/<id>/reports/<reportId>.json      דוחות שטח

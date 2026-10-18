@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Ctx, Env } from './_lib/env'
 import { MemoryBucket } from './_lib/memoryBucket'
+import { putSurvey as putSurveyRecord } from './_lib/surveys'
 import { onRequestGet as listGet } from './api/surveys/index'
 import { onRequestGet as surveyGet, onRequestOptions as surveyOptions, onRequestPut as surveyPut } from './api/surveys/[id]'
 import { onRequestGet as photoGet, onRequestPut as photoPut } from './api/surveys/[id]/photos/[photo]'
@@ -67,11 +68,15 @@ describe('survey backup API', () => {
 
   it('keeps history only for distinct content and lists surveys for restore', async () => {
     const e = env()
+    // All in the same millisecond on a fast machine: distinct versions must still each be kept.
+    const same = new Date('2026-10-18T02:31:13.000Z')
+    await putSurveyRecord(e, ID, record({ contentHash: 'same-ms-a' }) as never, same)
+    await putSurveyRecord(e, ID, record({ contentHash: 'same-ms-b' }) as never, same)
     await putSurvey(e, record())
     await putSurvey(e, record())
     await putSurvey(e, record({ contentHash: 'h2' }))
     const bucket = e.QUOTES as MemoryBucket
-    expect([...bucket.store.keys()].filter((k) => k.includes('/history/'))).toHaveLength(2)
+    expect([...bucket.store.keys()].filter((k) => k.includes('/history/'))).toHaveLength(4)
 
     const res = await listGet(ctx(e, '/api/surveys', { headers: AUTH }))
     const { surveys } = (await res.json()) as { surveys: { id: string; projectName: string; readyForWave54: boolean; photoCount: number }[] }

@@ -3,7 +3,7 @@
  * without waiting for bee-live). Layout in R2:
  *
  *   surveys/<id>/survey.json                 latest record from the field app
- *   surveys/<id>/history/<receivedAt>.json   every distinct version received
+ *   surveys/<id>/history/<receivedAt>_<hash>.json   every distinct version received
  *   surveys/<id>/photos/<photoId>.<sha12>    photo bytes (content-addressed)
  *   surveys/<id>/quotes/v<N>.json            quote versions (immutable)
  *   surveys/<id>/reports/<reportId>.json     field reports (a final one never changes)
@@ -123,7 +123,10 @@ export async function putSurvey(env: Env, id: string, rec: SurveyRecord, now?: D
   const body = JSON.stringify(rec)
   if (changed) {
     await env.QUOTES.put(k.survey(id), body, { httpMetadata: { contentType: 'application/json' } })
-    await env.QUOTES.put(k.history(id, (now ?? new Date()).toISOString().replace(/[:.]/g, '-')), body, { httpMetadata: { contentType: 'application/json' } })
+    // Time first (sorts chronologically), then the content fingerprint: two distinct
+    // versions arriving in the same millisecond must not overwrite each other.
+    const at = `${(now ?? new Date()).toISOString().replace(/[:.]/g, '-')}_${rec.contentHash.replace(/[^0-9A-Za-z-]/g, '').slice(0, 16) || 'x'}`
+    await env.QUOTES.put(k.history(id, at), body, { httpMetadata: { contentType: 'application/json' } })
   }
   const missingPhotos: string[] = []
   for (const p of rec.photos) {
