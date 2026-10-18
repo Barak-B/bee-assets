@@ -146,10 +146,12 @@ export async function resolveOfficeUpdate(env: Env, prev: OfficeStatusRow | null
 }
 
 /** Merge a partial update into the job's office row and store it. */
-export async function updateOffice(env: Env, id: string, u: OfficeUpdate, by: Principal, now = new Date()): Promise<{ row: OfficeStatusRow } | { error: string }> {
-  const res = await resolveOfficeUpdate(env, await getOfficeStatus(env, id), u, by, now)
-  if ('row' in res) await putOfficeStatus(env, id, res.row)
-  return res
+export async function updateOffice(env: Env, id: string, u: OfficeUpdate, by: Principal, now = new Date()): Promise<{ row: OfficeStatusRow; prev: OfficeStatusRow | null } | { error: string }> {
+  const prev = await getOfficeStatus(env, id)
+  const res = await resolveOfficeUpdate(env, prev, u, by, now)
+  if (!('row' in res)) return res
+  await putOfficeStatus(env, id, res.row)
+  return { row: res.row, prev }
 }
 
 export interface OfficeLink extends QuoteLinkRow {
@@ -192,7 +194,7 @@ export interface OfficeRow extends SurveyIndexRow {
   lastActivityAt: string
 }
 
-async function listAll(env: Env, prefix: string): Promise<{ key: string; meta: Record<string, string> }[]> {
+export async function listAll(env: Env, prefix: string): Promise<{ key: string; meta: Record<string, string> }[]> {
   const out: { key: string; meta: Record<string, string> }[] = []
   let cursor: string | undefined
   do {
@@ -233,7 +235,7 @@ async function latestQuote(env: Env, id: string): Promise<LatestQuote | null> {
   }
 }
 
-async function officeLinks(env: Env, id: string): Promise<OfficeLink[]> {
+export async function officeLinks(env: Env, id: string): Promise<OfficeLink[]> {
   const links = await listQuoteLinks(env, id)
   return Promise.all(
     links.map(async (l) => {
@@ -248,7 +250,7 @@ async function officeLinks(env: Env, id: string): Promise<OfficeLink[]> {
   )
 }
 
-function reportsBySurvey(objs: { key: string; meta: Record<string, string> }[]): Map<string, OfficeReport[]> {
+export function reportsBySurvey(objs: { key: string; meta: Record<string, string> }[]): Map<string, OfficeReport[]> {
   const out = new Map<string, OfficeReport[]>()
   for (const o of objs) {
     const m = decodeMeta(o.meta)

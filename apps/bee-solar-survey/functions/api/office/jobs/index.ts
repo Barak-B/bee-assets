@@ -12,6 +12,7 @@ import { authenticate } from '../../../_lib/auth'
 import type { Handler } from '../../../_lib/env'
 import { json, preflight } from '../../../_lib/http'
 import { putOfficeStatus, resolveOfficeUpdate } from '../../../_lib/office'
+import { logOfficeChanges } from '../../../_lib/timeline'
 import { clip, putSurvey, type SurveyRecord } from '../../../_lib/surveys'
 
 export const onRequestOptions: Handler = async ({ request, env }) => preflight(request, env)
@@ -69,5 +70,6 @@ export const onRequestPost: Handler = async ({ request, env }) => {
   if ('error' in office) return json(request, env, { error: 'bad_field', message_he: office.error }, 400)
   await putSurvey(env, id, record, now, auth.principal.name)
   await putOfficeStatus(env, id, office.row)
+  await logOfficeChanges(env, id, null, office.row, auth.principal.name, now, [{ kind: 'office', text_he: 'העבודה נפתחה במשרד' }])
   return json(request, env, { ok: true, id, office: office.row }, 201)
 }

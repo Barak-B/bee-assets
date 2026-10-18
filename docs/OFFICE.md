@@ -93,6 +93,22 @@
 
 עבודה מוקפאת / לא רלוונטית / סגורה לא נספרת.
 
+## יומן העבודה
+
+בפרטי העבודה, אחרי "הודעה ללקוח". כל מה שקרה בעבודה, מהחדש לישן, מקובץ לפי יום, עם שעה (שעון ישראל) ומי עשה:
+
+| סוג | מאיפה |
+|---|---|
+| 🗂 משרד | נפתחה, שובץ / בוטל שיבוץ, מועד סקר, הערה, סטטוס |
+| 🏁 אבן דרך | סומנה / עודכנה / בוטלה, עם תאריך ואסמכתא |
+| 📋 סקר | הגיע לשרת, ועודכן (גרסה N), ומאיזה מפתח |
+| 💰 הצעה | כל גרסה וסכומה |
+| 🔗 👀 ✅ קישור | פורסם (ע״י), נפתח (כמה פעמים), אושר (ות״ז אומתה), בוטל |
+| 🛠 דוח | טיוטה / ננעל, ותוצאה |
+| 💬 הודעה | נפתחה ללקוח, באיזה ערוץ ואיזו תבנית |
+
+רוב היומן נקרא ממה שכבר שמור. מה שהמשרד משנה במקום (סטטוס, הערה, שיבוץ, מועד, אבני דרך) נרשם גם ביומן אירועים נפרד, שורה לכל שינוי, כי שורת המשרד שומרת רק את המצב האחרון. מוצגים 12 אירועים אחרונים, ו"הצג את כל N האירועים" מציג הכול.
+
 ## הודעה ללקוח
 
 בפרטי העבודה, אחרי "מחזור חיים". התבניות הן אלה של `docs/plan/templates/message-templates.json`: אותם מפתחות ואותו נוסח שהמנוע ישלח בהמשך דרך Meta, ולכן המעבר יהיה מיפוי ולא כתיבה מחדש.
@@ -156,6 +172,7 @@
 | `GET /api/office/overview` | משרד | כל העבודות: שורת סקר + לקוח + `stage` + `office` + `milestones` (כולל הנגזרות, עם `auto`) + `latestQuote` + `links` (צפיות, אישור) + `reports` + `lastActivityAt` |
 | `PUT /api/office/status/<surveyId>` | משרד | כל אחד מ-`{ status, note, assigned_to: <id מפתח>\|'', planned_date: YYYY-MM-DD\|'', milestones: { <אבן דרך>: { date, ref? } \| null } }`. משתנה רק מה שנשלח. `null` מבטל אבן דרך |
 | `POST /api/office/jobs` | משרד | עבודה חדשה: `{ customerName, customerPhone, address, customerEmail?, projectName?, note?, assigned_to?, planned_date? }` → `{ id, office }` |
+| `GET /api/office/timeline/<surveyId>` | משרד | יומן העבודה: `{ events: [{ at, kind, text_he, by, tone? }] }`, מהחדש לישן |
 | `GET /api/office/messages/<surveyId>` | משרד | הודעות שנפתחו ללקוח, מהחדשה לישנה |
 | `POST /api/office/messages/<surveyId>` | משרד | `{ template_key, channel: whatsapp\|sms\|email, to, subject?, body }`. רק רישום, לא שליחה |
 | `GET /api/office/surveyors` | משרד | מי אפשר לשבץ: מפתחות פעילים (שמות בלבד) |
@@ -175,6 +192,7 @@ office/<surveyId>                   סטטוס משרד, הערה, סוקר מש
 quote-links/<surveyId>/<token>      כל קישור שפורסם לסקר (נשאר אחרי ביטול, עם revoked_at)
 quotes/<token>/accept-fails.json    ניסיונות אישור עם ספרות שגויות
 messages/<surveyId>/<iso>_<rand>.json  הודעה שנפתחה ללקוח (אובייקט לכל הודעה, בלי דריסה)
+events/<surveyId>/<iso>_<n><rand>.json שינוי של המשרד בעבודה (שורה ליומן)
 ```
 
 ## בדיקות
@@ -187,6 +205,7 @@ messages/<surveyId>/<iso>_<rand>.json  הודעה שנפתחה ללקוח (או�
 | מחזור חיים: מיפוי ל-S01–S12, אבני דרך מזיזות שלב, ראיה מאוחרת, דוחות נעולים, שמירה דחוסה | `apps/bee-solar-survey/src/stage.test.ts` |
 | הודעות: רק תבניות ללקוח, כותרת ותווית לכל שדה, לפי שלב, מילוי מהעבודה, מה חסר, קישורי וואטסאפ / SMS / מייל | `apps/bee-solar-survey/src/messages.test.ts` |
 | יומן הודעות: הרשאות, ולידציה, מהחדשה לישנה | `apps/bee-solar-survey/functions/office.test.ts` |
+| יומן העבודה: כל סוגי האירועים, מי עשה, סדר, הרשאות | `apps/bee-solar-survey/functions/office.test.ts` |
 | אבני דרך בשרת: ולידציה, חוזה על הנייר, `null`, נגזרות, הכול נכנס ב-2KB, מגיע לטלפון | `apps/bee-solar-survey/functions/office.test.ts` |
 | עבודה חדשה: הרשאות, ולידציה, סוקר לא קיים לא משאיר כלום, `assigned_to_me`, שיבוץ מחדש | `apps/bee-solar-survey/functions/office.test.ts` |
 | כרטיס לקוח → חיפוש לפי טלפון → פרסום → וואטסאפ → "הלקוח אישר" ברשימה; מסך משרד: כניסה, סינון, דורשות טיפול, סטטוס, מפתחות | `apps/bee-solar-survey/e2e/smoke.spec.ts` |

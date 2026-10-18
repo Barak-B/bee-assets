@@ -106,6 +106,14 @@ export interface MessageEntry {
   body: string
 }
 
+export interface TimelineEvent {
+  at: string
+  kind: 'office' | 'milestone' | 'survey' | 'quote' | 'link' | 'view' | 'accepted' | 'report' | 'message'
+  text_he: string
+  by: string
+  tone?: 'ok' | 'warn'
+}
+
 export class ApiError extends Error {
   readonly status: number
   constructor(message: string, status: number) {
@@ -148,6 +156,7 @@ export class Api {
   surveyors = () => this.call<{ surveyors: { id: string; name: string; role: string }[] }>('/api/office/surveyors')
   keys = () => this.call<{ keys: KeyRow[] }>('/api/office/keys')
   createKey = (name: string, role: KeyRow['role']) => this.call<{ key: string; row: KeyRow }>('/api/office/keys', { method: 'POST', body: JSON.stringify({ name, role }) })
+  timeline = (id: string) => this.call<{ events: TimelineEvent[] }>(`/api/office/timeline/${encodeURIComponent(id)}`)
   messages = (id: string) => this.call<{ messages: MessageEntry[] }>(`/api/office/messages/${encodeURIComponent(id)}`)
   logMessage = (id: string, m: Omit<MessageEntry, 'at' | 'by'>) => this.call<{ message: MessageEntry }>(`/api/office/messages/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify(m) })
   revokeKey = (id: string) => this.call<{ row: KeyRow }>(`/api/office/keys/${encodeURIComponent(id)}`, { method: 'DELETE' })

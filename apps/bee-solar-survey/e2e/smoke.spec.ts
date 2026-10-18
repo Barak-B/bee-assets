@@ -357,6 +357,17 @@ test('office screen: log in, every job with its stage, filters, status and keys'
     return r.fulfill({ json: { messages } })
   })
   await page.context().route('https://wa.me/**', (r) => r.fulfill({ body: 'whatsapp' }))
+  await page.route('**/api/office/timeline/*', (r) =>
+    r.fulfill({
+      json: {
+        events: [
+          { at: iso(1), kind: 'view', text_he: 'הלקוח פתח את ההצעה', by: '' },
+          { at: iso(4), kind: 'link', text_he: 'קישור ללקוח פורסם (גרסה 1)', by: 'דני' },
+          { at: iso(5), kind: 'office', text_he: 'שובץ לסוקר: דני', by: 'רונית' },
+        ],
+      },
+    }),
+  )
   let newJob: Record<string, string> | null = null
   await page.route('**/api/office/surveyors', (r) => r.fulfill({ json: { surveyors: [{ id: 'k-dani', name: 'דני', role: 'surveyor' }] } }))
   await page.route('**/api/office/jobs', (r) => {
@@ -413,6 +424,12 @@ test('office screen: log in, every job with its stage, filters, status and keys'
   // Detail drawer → put the job on hold with a note.
   await cohen.click()
   await expect(page.locator('.o-drawer')).toContainText('יוסי כהן')
+
+  // What happened, newest first, grouped by day, with who did it.
+  await expect(page.locator('#oTimeline .o-tl-item')).toHaveCount(3)
+  await expect(page.locator('#oTimeline .o-tl-item').first()).toContainText('הלקוח פתח את ההצעה')
+  await expect(page.locator('#oTimeline')).toContainText('שובץ לסוקר: דני · רונית')
+  await expect(page.locator('#oTimeline .o-tl-day')).toHaveCount(3)
 
   // A message from the plan templates: filled from the job, the gaps block the send, WhatsApp opens it, the log keeps it.
   const msg = page.locator('#oMsg')

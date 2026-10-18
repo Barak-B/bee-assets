@@ -403,6 +403,15 @@ try {
     await office.locator('tr[data-job]', { hasText: 'משה אברהם' }).click()
     await waitText(office, '#oSurvey', 'סוג גג')
     if (await office.locator('.o-drawer .note-warn', { hasText: 'בלי לסמן' }).count()) throw new Error('milestones reported as skipped')
+    // The whole story in the timeline, newest first.
+    await office.locator('#oTimeline .o-tl-item').first().waitFor()
+    if (await office.locator('#oTlAll').count()) await office.click('#oTlAll')
+    findings.timeline = await office.locator('#oTimeline .o-tl-item').allInnerTexts()
+    const must = ['העבודה נפתחה במשרד', 'שובץ לסוקר: דני', 'הסקר הגיע לשרת', 'הצעת מחיר גרסה 1', 'קישור ללקוח פורסם', 'הלקוח פתח את ההצעה', 'משה אברהם אישר/ה', 'הסכם נחתם', 'מספר פנייה 7004512', 'הודעה ללקוח נפתחה בוואטסאפ', 'דוח יומי']
+    const missing = must.filter((m) => !findings.timeline.some((t) => t.includes(m)))
+    if (missing.length) throw new Error(`timeline is missing: ${missing.join(' | ')}`)
+    await office.locator('#oTimeline').scrollIntoViewIfNeeded()
+    await snap(office, 'office-timeline')
     await office.waitForTimeout(800)
     await snap(office, 'office-drawer-end')
     findings.officeJob = (await api('GET', '/api/office/overview', ronit.key)).jobs[0]

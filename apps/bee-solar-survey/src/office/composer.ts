@@ -103,7 +103,7 @@ export function forgetComposerLogs() {
   logs.clear()
 }
 
-export function mountComposer(el: HTMLElement, j: OfficeJob, deps: { api: Api; me: Me; toast: (s: string) => void }) {
+export function mountComposer(el: HTMLElement, j: OfficeJob, deps: { api: Api; me: Me; toast: (s: string) => void; onLogged?: () => void }) {
   if (!logs.has(j.id)) {
     logs.set(j.id, 'loading')
     deps.api.messages(j.id).then(
@@ -199,6 +199,7 @@ export function mountComposer(el: HTMLElement, j: OfficeJob, deps: { api: Api; m
         drafts.delete(j.id)
         if (el.isConnected) mountComposer(el, j, deps)
         deps.toast(`נפתח ב${CHANNEL_HE[ch]} · נרשם ביומן`)
+        deps.onLogged?.()
       },
       (err) => deps.toast(`נפתח ב${CHANNEL_HE[ch]}, אבל הרישום ביומן נכשל${err instanceof ApiError ? `: ${err.message}` : ''}`),
     )

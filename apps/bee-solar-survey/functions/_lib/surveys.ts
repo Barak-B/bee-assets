@@ -126,7 +126,7 @@ export async function putSurvey(env: Env, id: string, rec: SurveyRecord, now?: D
     // Time first (sorts chronologically), then the content fingerprint: two distinct
     // versions arriving in the same millisecond must not overwrite each other.
     const at = `${(now ?? new Date()).toISOString().replace(/[:.]/g, '-')}_${rec.contentHash.replace(/[^0-9A-Za-z-]/g, '').slice(0, 16) || 'x'}`
-    await env.QUOTES.put(k.history(id, at), body, { httpMetadata: { contentType: 'application/json' } })
+    await env.QUOTES.put(k.history(id, at), body, { httpMetadata: { contentType: 'application/json' }, customMetadata: encodeMeta({ by, at: (now ?? new Date()).toISOString() }) })
   }
   const missingPhotos: string[] = []
   for (const p of rec.photos) {

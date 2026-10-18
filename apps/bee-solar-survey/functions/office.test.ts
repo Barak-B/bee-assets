@@ -20,6 +20,8 @@ import { onRequestGet as surveyorsGet } from './api/office/surveyors'
 import { onRequestGet as surveyGet } from './api/surveys/[id]'
 import { onRequestGet as healthGet } from './api/health'
 import { onRequestGet as messagesGet, onRequestPost as messagesPost } from './api/office/messages/[id]'
+import { onRequestGet as timelineGet } from './api/office/timeline/[id]'
+import { onRequestGet as pageGet } from './q/[token]'
 
 const MASTER = 'test-publish-key-0123456789'
 const ID = '0f8fad5b-d9cb-469f-a165-70867728950e'
@@ -361,10 +363,61 @@ describe('messages to the customer', () => {
 
     const r = await post(office.key, msg)
     expect(r.status).toBe(201)
+    await new Promise((ok) => setTimeout(ok, 3)) // "newest first" needs two different milliseconds
     await post(office.key, { ...msg, template_key: 'quote_email_cover', channel: 'email', to: 'israel@example.com', subject: 'הצעת מחיר' })
     const got = await list()
     expect(got.map((m) => m.template_key)).toEqual(['quote_email_cover', 'quote_sent'])
     expect(got[1]).toMatchObject({ ...msg, by: 'רונית', subject: '' })
     expect(got[0]).toMatchObject({ channel: 'email', subject: 'הצעת מחיר' })
+  })
+})
+
+describe('job timeline', () => {
+  it('every event on one job, newest first, with who did it — office changes included', async () => {
+    const e = env()
+    const { body: office } = await newKey(e, 'רונית', 'office')
+    const { body: dani } = await newKey(e, 'דני', 'surveyor')
+    const opened = await jobsPost(ctx(e, '/api/office/jobs', jsonInit('POST', office.key, { customerName: 'משה אברהם', customerPhone: '054-1112233', address: 'הזית 7, גדרה', assigned_to: dani.row.id, planned_date: '2026-10-22' })))
+    const { id } = (await opened.json()) as { id: string }
+    const timeline = async () => ((await (await timelineGet(ctx(e, `/api/office/timeline/${id}`, { headers: bearer(office.key) }, { id }))).json()) as { events: { kind: string; text_he: string; by: string; at: string; tone?: string }[] }).events
+    const texts = async () => (await timeline()).map((ev) => ev.text_he)
+
+    expect(await texts()).toEqual(expect.arrayContaining(['העבודה נפתחה במשרד', 'שובץ לסוקר: דני', 'מועד סקר: 22.10.2026', 'הסקר הגיע לשרת']))
+    expect((await timeline()).find((ev) => ev.text_he === 'שובץ לסוקר: דני')!.by).toBe('רונית')
+
+    // The phone sends the survey, a quote, a link; the customer opens and approves.
+    const sr = await surveyPut(ctx(e, `/api/surveys/${id}`, jsonInit('PUT', dani.key, { ...surveyRecord('h2'), project: { ...surveyRecord().project, id } }), { id }))
+    const { q, pq } = await publicQuote()
+    expect(sr.status).toBe(200)
+    expect((await quotePut(ctx(e, `/api/surveys/${id}/quotes/1`, jsonInit('PUT', dani.key, { ...q, input: { ...q.input, projectId: id }, version_no: 1 }), { id, version: '1' }))).status).toBe(201)
+    const { token } = (await (await publishPost(ctx(e, '/api/quotes', jsonInit('POST', dani.key, { quote: pq, survey_id: id })))).json()) as { token: string }
+    await pageGet(ctx(e, `/q/${token}`, {}, { token }))
+    await accept(e, token, '1234', pq.reference)
+    await statusPut(ctx(e, `/api/office/status/${id}`, jsonInit('PUT', office.key, { milestones: { contract_signed: { date: '2026-10-01' } }, note: 'לקוח מהיר' }), { id }))
+    await statusPut(ctx(e, `/api/office/status/${id}`, jsonInit('PUT', office.key, { milestones: { contract_signed: null } }), { id }))
+    await messagesPost(ctx(e, `/api/office/messages/${id}`, jsonInit('POST', office.key, { template_key: 'quote_followup', channel: 'whatsapp', to: '054-1112233', body: 'שלום' }), { id }))
+
+    const ev = await timeline()
+    const t = ev.map((x) => x.text_he)
+    expect(t).toEqual(
+      expect.arrayContaining([
+        'הסקר עודכן (גרסה 2)',
+        expect.stringMatching(/^הצעת מחיר גרסה 1 · [\d,]+ ₪$/),
+        'קישור ללקוח פורסם (גרסה 1)',
+        'הלקוח פתח את ההצעה',
+        'ישראל ישראלי אישר/ה את ההצעה (גרסה 1)',
+        '✓ הסכם נחתם · 01.10.2026',
+        'הערה: לקוח מהיר',
+        'בוטל: הסכם נחתם',
+        'הודעה ללקוח נפתחה בוואטסאפ: מעקב אחרי ההצעה',
+      ]),
+    )
+    expect(ev.find((x) => x.kind === 'accepted')!.tone).toBe('ok')
+    expect(ev.find((x) => x.text_he === 'קישור ללקוח פורסם (גרסה 1)')!.by).toBe('דני')
+    // Newest first (actions in the same millisecond may come in either order).
+    expect([...ev].sort((a, b) => b.at.localeCompare(a.at))).toEqual(ev)
+    expect(ev.at(-1)!.text_he).not.toContain('הודעה')
+    // Surveyors don't read it.
+    expect((await timelineGet(ctx(e, `/api/office/timeline/${id}`, { headers: bearer(dani.key) }, { id }))).status).toBe(403)
   })
 })

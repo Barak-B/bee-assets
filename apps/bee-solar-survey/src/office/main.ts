@@ -25,7 +25,7 @@ import {
   type Stage,
 } from '../stage'
 import type { OfficeUpdate } from './api'
-import { Api, ApiError, type KeyRow, type Me, type OfficeJob } from './api'
+import { Api, ApiError, type KeyRow, type Me, type OfficeJob, type TimelineEvent } from './api'
 import { attentionHe } from './attention'
 import { composerSlot, forgetComposerLogs, mountComposer } from './composer'
 
@@ -184,7 +184,45 @@ function render() {
     <div class="toast" id="toast"></div>`
   const slot = document.getElementById('oMsg')
   const job = state.jobs.find((x) => x.id === state.selected)
-  if (slot && job) mountComposer(slot, job, { api: state.api, me: state.me, toast })
+  if (slot && job) mountComposer(slot, job, { api: state.api, me: state.me, toast, onLogged: () => void loadTimeline(job.id) })
+  if (job) paintTimeline(job.id)
+}
+
+// ── Timeline: what happened on the job, newest first ───────────────────
+
+const timelines = new Map<string, TimelineEvent[] | 'error'>()
+const KIND_ICON: Record<TimelineEvent['kind'], string> = { office: '🗂', milestone: '🏁', survey: '📋', quote: '💰', link: '🔗', view: '👀', accepted: '✅', report: '🛠', message: '💬' }
+const TIMELINE_SHOWN = 12
+
+async function loadTimeline(id: string) {
+  if (!state.api) return
+  try {
+    timelines.set(id, (await state.api.timeline(id)).events)
+  } catch {
+    timelines.set(id, 'error')
+  }
+  if (state.selected === id) paintTimeline(id)
+}
+
+function paintTimeline(id: string, all = false) {
+  const el = document.getElementById('oTimeline')
+  const t = timelines.get(id)
+  if (!el || t === undefined) return
+  if (t === 'error') return void (el.textContent = 'היומן לא נטען.')
+  if (!t.length) return void (el.textContent = 'אין עדיין אירועים.')
+  const day = (iso: string) => fmtDay(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(iso)))
+  const time = (iso: string) => new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso))
+  const shown = all ? t : t.slice(0, TIMELINE_SHOWN)
+  let last = ''
+  const rows = shown.map((e) => {
+    const d = day(e.at)
+    const head = d !== last ? `<li class="o-tl-day">${escapeHtml(d)}</li>` : ''
+    last = d
+    return `${head}<li class="o-tl-item ${e.tone ?? ''}" data-kind="${e.kind}"><span class="o-tl-time">${escapeHtml(time(e.at))}</span><span aria-hidden="true">${KIND_ICON[e.kind] ?? '•'}</span><span>${escapeHtml(e.text_he)}${e.by ? ` <span class="meta">· ${escapeHtml(e.by)}</span>` : ''}</span></li>`
+  })
+  el.className = ''
+  el.innerHTML = `<ol class="o-tl">${rows.join('')}</ol>${!all && t.length > TIMELINE_SHOWN ? `<button class="btn btn-secondary" id="oTlAll">הצג את כל ${t.length} האירועים</button>` : ''}`
+  document.getElementById('oTlAll')?.addEventListener('click', () => paintTimeline(id, true))
 }
 
 function loginView(): string {
@@ -373,6 +411,10 @@ function drawerView(): string {
         ${lifecyclePart(j)}
         ${composerSlot()}
         <section>
+          <h3>יומן העבודה</h3>
+          <div id="oTimeline" class="meta">טוען…</div>
+        </section>
+        <section>
           <h3>הצעות וקישורים</h3>
           ${j.latestQuote ? `<div>גרסה אחרונה: <bdi dir="ltr">${escapeHtml(j.latestQuote.quote_number)} v${j.latestQuote.version_no}</bdi> · ${ils(j.latestQuote.total_incl_vat_ils)} · ${escapeHtml(fmtDate(j.latestQuote.created_at))}</div>` : '<div class="meta">אין עדיין הצעה.</div>'}
           ${
@@ -513,6 +555,7 @@ async function saveOffice(id: string, u: OfficeUpdate, reload = false) {
 
 async function loadDrawerDetails(id: string) {
   if (!state.api) return
+  void loadTimeline(id)
   for (const u of photoUrls.splice(0)) URL.revokeObjectURL(u)
   try {
     const { survey } = await state.api.survey(id)

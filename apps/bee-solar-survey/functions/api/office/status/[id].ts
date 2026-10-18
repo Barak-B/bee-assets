@@ -9,6 +9,7 @@ import type { Handler } from '../../../_lib/env'
 import { json, param, preflight } from '../../../_lib/http'
 import { updateOffice, type OfficeUpdate } from '../../../_lib/office'
 import { UUID_RE, getSurvey } from '../../../_lib/surveys'
+import { logOfficeChanges } from '../../../_lib/timeline'
 
 export const onRequestOptions: Handler = async ({ request, env }) => preflight(request, env)
 
@@ -29,5 +30,6 @@ export const onRequestPut: Handler = async ({ request, env, params }) => {
   if (!(await getSurvey(env, id))) return json(request, env, { error: 'not_found' }, 404)
   const res = await updateOffice(env, id, body, auth.principal)
   if ('error' in res) return json(request, env, { error: 'bad_field', message_he: res.error }, 400)
+  await logOfficeChanges(env, id, res.prev, res.row, auth.principal.name)
   return json(request, env, { ok: true, office: res.row })
 }
