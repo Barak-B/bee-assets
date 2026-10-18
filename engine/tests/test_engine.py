@@ -325,3 +325,21 @@ def test_kal_gader_sld_groups():
     assert "SATEC PM135 *1" in texts and any(t.startswith("2x(4x150)NA2XY  → BESSP") for t in texts)
     inserts = [e.dxf.name for e in doc.modelspace().query("INSERT")]
     assert inserts.count("BEE_METER_PM") == 3 and inserts.count("BEE_MCCB_3P") == 4
+
+
+def test_earthing_sheet():
+    from bee_cad.audit import audit_sheet
+    from bee_cad.earthing import Earthing, ring_checks
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "kal_gader_bess.json"
+    des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
+    e = Earthing.model_validate(des.earthing)
+    rows = ring_checks(e, 5200, 2100)
+    assert all(ok for *_, ok in rows) and any(r[0].startswith("היקף") and r[2] == "13.4" for r in rows)
+    result = build(des, ("earthing",))
+    doc, warnings = result["E-06"]
+    assert warnings == []
+    rep = audit_sheet(doc, 0, "E-06")
+    assert rep.clean, (rep.summary(), rep.text_overlaps[:3], rep.text_line_collisions[:3])
+    texts = [x.dxf.text for x in doc.modelspace().query("TEXT")]
+    assert "35 Cu" in texts and any(t.startswith("1×70 Cu/PVC") for t in texts)

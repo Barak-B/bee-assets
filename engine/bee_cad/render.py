@@ -13,6 +13,7 @@ from typing import Iterable
 from ezdxf.document import Drawing
 
 from .cover import SheetEntry, draw_cover
+from .earthing import Earthing, draw_earthing
 from .model import Design
 from .mv import draw_mv, draw_mv_schedule
 from .panel import draw_panel
@@ -23,7 +24,7 @@ from .template import DrillTemplate, draw_template, scale_text
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("cover", "site", "mv", "sld", "panel", "drill")
+SHEET_KINDS = ("cover", "site", "mv", "sld", "earthing", "panel", "drill")
 
 
 def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[SheetEntry]:
@@ -49,12 +50,15 @@ def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[She
                     plan.append(SheetEntry("sld", g.sheet_no, g.title))
             else:
                 plan.append(SheetEntry("sld", design.title.sheet_no, design.title.sheet_title or "חד-קווי — לוחות חשמל"))
+        elif kind == "earthing" and design.earthing:
+            e = Earthing.model_validate(design.earthing)
+            plan.append(SheetEntry("earthing", e.sheet_no, e.title))
         elif kind == "panel":
             for b in design.boards:
                 plan.append(SheetEntry("panel", f"{prefix}-P{len(plan) + 1:02d}", f"מבנה לוח {b.id} — חזית וחתך", "לפי ציון"))
         elif kind == "drill" and design.drill_template:
             t = DrillTemplate.model_validate(design.drill_template)
-            plan.append(SheetEntry("drill", design.title.sheet_no, design.title.sheet_title or t.title, scale_text(t)))
+            plan.append(SheetEntry("drill", t.sheet_no, t.title, scale_text(t)))
     return plan
 
 
@@ -95,6 +99,8 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
             warnings = draw_site(ctx, design, SiteLayout.model_validate(design.site))
         elif e.kind == "sld":
             warnings = draw_sld(ctx, sld_subset(design, e.no) if design.sld_groups else design, design)
+        elif e.kind == "earthing":
+            warnings = draw_earthing(ctx, design, Earthing.model_validate(design.earthing))
         elif e.kind == "panel":
             warnings = draw_panel(ctx, design, next(board_iter))
         else:

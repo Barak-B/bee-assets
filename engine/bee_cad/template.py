@@ -66,6 +66,7 @@ class Unit(BaseModel):
 
 class DrillTemplate(BaseModel):
     title: str = "שבלונת קידוח — תושבות Double-T ועיגון ארונות"
+    sheet_no: str = "E-20"
     slab: Slab = Field(default_factory=Slab)
     units: list[Unit] = Field(default_factory=list)
     pedestal: Pedestal = Field(default_factory=Pedestal)
