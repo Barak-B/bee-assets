@@ -136,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("design")
     r.add_argument("--out", default="out")
     r.add_argument("--stem")
-    r.add_argument("--sheets", help="comma list of: cover,mv,sld,panel,drill (default: all)")
+    r.add_argument("--sheets", help="comma list of: cover,site,mv,sld,earthing,panel,drill (default: all)")
     r.add_argument("--mode", choices=["unicode", "shx"], default="unicode")
     r.add_argument("--png", action="store_true")
     r.add_argument("--pdf", action="store_true", help="one PDF per sheet + merged <stem>_SET.pdf")
