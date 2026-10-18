@@ -59,6 +59,7 @@ python -m pytest -q
 | `bee_cad/calc.py` | פענוח כינוי כבל, כושר הולכה, מפל מתח, אותיות IEC 81346 |
 | `bee_cad/checks.py` | כללי התכנון וההודעות בעברית |
 | `bee_cad/templates.py` | תבניות עבודה: תקציר → תכנון מלא |
+| `bee_cad/report.py` | דף חישובים E-C01: זרם תכנון, כושר הולכה, מפל מתח מעגל ומצטבר, זרם קצר מינימלי מול סף ניתוק, הנחות וממצאים |
 | `bee_cad/bom.py` | כתב כמויות → CSV שנפתח באקסל |
 | `bee_cad/render.py` | בניית המסמך, PNG תצוגה מקדימה (ezdxf → matplotlib, רקע לבן, bidi) |
 | `assets/fonts/shx/` | 100 גופני SHX עבריים מהמשרד (HEBREW, SIVAN, NARKIS, MIRYAM, ORON, TECHNO, …) |

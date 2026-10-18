@@ -322,3 +322,14 @@ def test_brief_to_design():
     assert not [x for x in check(d) if x.level in ("error", "warn")]
     with pytest.raises(BriefError):
         from_brief({"template": "house-pv", "supply": {"connection": "1X40A"}, "circuits": ["שקעים"]})
+
+
+def test_calc_sheet(design: Design):
+    from bee_cad.report import calc_rows
+
+    rows = calc_rows(design)
+    assert len(rows) == sum(len(b.all_circuits()) for b in design.boards)
+    q = next(r for r in rows if r.tag == "Q-INV")
+    assert round(q.ib, 1) == 21.7 and q.method == "C" and q.ok           # inverter current, not the 63 A breaker
+    result = build(design, ("sld", "panel", "calc"))
+    assert list(result)[-1] == "E-C01"

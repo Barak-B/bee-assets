@@ -15,12 +15,14 @@ from ezdxf.document import Drawing
 from .model import Design
 from .mv import draw_mv, draw_mv_schedule
 from .panel import draw_panel
+from .report import calc_rows, draw_calc, rows_per_sheet
 from .sheet import A3_H, A3_W, SheetContext, draw_frame, new_document
 from .sld import draw_sld
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("mv", "sld", "panel")
+SHEET_KINDS = ("mv", "sld", "panel", "calc")
+CALC_ROWS = 40          # rows that fit one calculation sheet (checked against the frame in draw_calc)
 
 
 def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = "unicode",
@@ -31,7 +33,10 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
     sheets = list(sheets)
     doc = new_document(mode) if one_file else None
     idx = 0
-    total = sum(2 * len(design.mv_boards) if s == "mv" else (1 if s == "sld" else len(design.boards)) for s in sheets)
+    rows = calc_rows(design) if "calc" in sheets and design.boards else []
+    calc_pages = [rows[i:i + CALC_ROWS] for i in range(0, len(rows), CALC_ROWS)]
+    per_kind = {"mv": 2 * len(design.mv_boards), "sld": 1, "panel": len(design.boards), "calc": len(calc_pages)}
+    total = sum(per_kind[s] for s in sheets)
     if not design.boards and "sld" in sheets:
         sheets.remove("sld")
         total -= 1
@@ -71,6 +76,19 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
                 draw_frame(ctx, tb)
                 warnings = draw_panel(ctx, design, b)
                 out[no] = (d, warnings)
+                idx += 1
+        elif kind == "calc" and calc_pages:
+            from .checks import check
+            findings = check(design.model_copy(deep=True))
+            for k, page in enumerate(calc_pages):
+                no = f"{design.title.sheet_no.split('-')[0]}-C{k + 1:02d}"
+                tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total, "sheet_no": no,
+                                                     "sheet_title": "דף חישובים — כבלים, מפל מתח וזרם קצר"})
+                d = doc or new_document(mode)
+                ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
+                draw_frame(ctx, tb)
+                warn = [] if len(page) <= rows_per_sheet(ctx) else [f"calc sheet {no}: {len(page)} rows overflow"]
+                out[no] = (d, warn + draw_calc(ctx, design, page, k == 0, findings))
                 idx += 1
     return out
 
