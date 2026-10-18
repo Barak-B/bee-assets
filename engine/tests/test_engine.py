@@ -249,4 +249,76 @@ def test_hebrew_load_errors(tmp_path: Path):
         load_design(p)
     msg = str(e.value)
     assert "שדה חובה חסר" in msg and "ערך לא מוכר" in msg and "צריך להיות מספר" in msg
-    assert "boards → 0 → id" in msg
+    assert "boards > 0 > id" in msg
+
+
+def test_cable_parsing_edge_cases():
+    from bee_cad.calc import ambient_factor, ampacity, iec_class, parse_cable
+
+    assert parse_cable("3x1,5").csa_mm2 == 1.5
+    assert parse_cable("H07RN-F 3G2.5").csa_mm2 == 2.5
+    al = parse_cable("NA2XY 4X50")
+    assert al.material == "Al" and ampacity(al, "C", 3) is None
+    assert parse_cable("5x16 al").material == "Al"
+    assert ampacity(parse_cable("N2XY 4X150"), "C", 3) is None          # outside the table → not silently OK
+    assert ambient_factor("PVC", 45) == 0.79 and ambient_factor("XLPE", 30) == 1.0
+    assert ampacity(parse_cable("3X2.5"), "B1", 2, ambient_c=45) == round(24 * 0.79, 1)
+    assert iec_class(Device(tag="F", kind="fuse")) == "FC" and iec_class(Device(tag="S", kind="spd")) == "FA"
+
+
+def test_short_circuit_checks(design: Design):
+    from bee_cad.checks import check
+    from bee_cad.model import Cable, Circuit, Group
+
+    d = design.model_copy(deep=True)
+    mdb = d.board("MDB")
+    mdb.supply.ik_ka = 10
+    mdb.incomer.icu_ka = 3
+    # 80 m of 1.5 mm² on a C16 with no RCD in front: the magnetic trip never sees 160 A
+    mdb.groups.append(Group(tag="PLAIN", circuits=[Circuit(tag="L9", device=Device(tag="L9", rating_a=16, curve="C"),
+                                                           phase="L1", load="תאורה — חצר",
+                                                           cable=Cable(designation="3X1.5", length_m=80))]))
+    f = {x.code: x for x in check(d)}
+    assert f["ICU_LOW"].level == "error" and "6kA" in f["ICU_LOW"].fix
+    assert f["DISCONNECT"].level == "error" and f["DISCONNECT"].where == "MDB / L9"
+    assert "IK_BOARD" in f and "בכבל ההזנה" in f["DU_HIGH"].message
+    # the same circuit behind a 30 mA RCD is protected → info only
+    d.board("MDB").groups[-1].device = Device(tag="RCD-P", kind="rcd", poles=2, rating_a=25, idn_ma=30)
+    assert next(x for x in check(d) if x.code == "DISCONNECT").level == "info"
+
+
+def test_sockets_need_30ma():
+    from bee_cad.checks import check
+    from bee_cad.model import Circuit, Group
+
+    b = Board(id="DB", title="x", groups=[
+        Group(tag="G1", circuits=[Circuit(tag="S1", device=Device(tag="S1", rating_a=16), phase="L1",
+                                          load="בית תקע — מחסן", cable={"designation": "3X2.5"})]),
+        Group(tag="G2", circuits=[Circuit(tag="S2", device=Device(tag="S2", kind="rcbo", rating_a=16, idn_ma=30),
+                                          phase="L2", load="Sockets — office", cable={"designation": "3X2.5"})])])
+    codes = [(x.code, x.where) for x in check(Design(boards=[b]))]
+    assert ("RCD_SOCKETS", "DB / S1") in codes and ("RCD_SOCKETS", "DB / S2") not in codes
+
+
+def test_brief_to_design():
+    import yaml
+    from bee_cad.checks import check
+    from bee_cad.templates import BriefError, from_brief
+
+    brief = yaml.safe_load((EXAMPLE.parent / "brief_house_pv.yaml").read_text(encoding="utf-8"))
+    d = from_brief(brief, today="2026-10-18")
+    mdb = d.board("MDB")
+    assert mdb.incomer.rating_a == 40 and mdb.supply.cable.designation == "N2XY 4X10"
+    q_inv = mdb.feeders[0]
+    assert q_inv.device.rating_a == 32 and q_inv.cable.designation == "5X4 Cu N2XY"   # 15 kW → 21.7 A × 1.25
+    ev = next(c for c in mdb.all_circuits() if "טעינה" in c.load)
+    assert ev.phase == "L1-3" and ev.device.rating_a == 32
+    assert next(g for g in mdb.groups if ev in g.circuits).device.rcd_type == "B"
+    yard = next(c for c in mdb.all_circuits() if c.load == "תאורה — חוץ")
+    assert yard.cable.designation == "3X4"                    # upsized for 35 m within the 3 % lighting limit
+    phases = [c.phase for c in mdb.all_circuits() if c.device.poles == 1]
+    assert max(phases.count(p) for p in ("L1", "L2", "L3")) - min(phases.count(p) for p in ("L1", "L2", "L3")) <= 1
+    assert d.board("BUB").supply.kind == "inverter"
+    assert not [x for x in check(d) if x.level in ("error", "warn")]
+    with pytest.raises(BriefError):
+        from_brief({"template": "house-pv", "supply": {"connection": "1X40A"}, "circuits": ["שקעים"]})

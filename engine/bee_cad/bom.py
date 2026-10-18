@@ -13,7 +13,7 @@ from .model import Design, Device
 
 KIND_HE = {
     "mcb": "מפסק זעיר", "mccb": "מפסק יצוק", "acb": "מפסק אוויר", "rcd": "מפסק פחת", "rcbo": "מפסק זעיר משולב פחת",
-    "switch": "מנתק", "fuse": "נתיך", "spd": "מגן ברקים", "meter": "מונה", "ct": "משנה זרם",
+    "switch": "מנתק", "fuse": "נתיך", "spd": "מגן מתח יתר", "meter": "מונה", "ct": "משנה זרם",
     "contactor": "מגען", "terminal": "מהדק",
 }
 

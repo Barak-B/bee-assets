@@ -29,10 +29,15 @@ _IZ: dict[tuple[str, str, int], tuple[float, ...]] = {
 }
 
 RHO_CU = 0.0225   # Ω·mm²/m, copper near operating temperature
+RHO_CU_20 = 0.0178                 # at 20 °C — maximum short-circuit (IEC 60909)
+RHO_CU_HOT = 1.5 * RHO_CU_20       # end of fault — minimum short-circuit (CENELEC TR 50480)
+X_CABLE = 0.08e-3                  # Ω/m per conductor, multicore LV cable
+C_MAX, C_MIN = 1.1, 0.95           # IEC 60909 voltage factors, LV
+TRIP_MULTIPLE = {"B": 5, "C": 10, "D": 20}   # upper edge of the magnetic band, IEC 60898-1
 U_PH = 230.0
 U_LL = 400.0
 
-_DESIG = re.compile(r"(\d+)\s*[xX×]\s*(\d+(?:\.\d+)?)")
+_DESIG = re.compile(r"(\d+)\s*[xX×gG]\s*(\d+(?:[.,]\d+)?)")
 
 
 @dataclass
@@ -40,39 +45,63 @@ class CableSpec:
     cores: int
     csa_mm2: float
     insulation: Insulation
+    material: Literal["Cu", "Al"] = "Cu"
 
 
 def parse_cable(designation: str) -> Optional[CableSpec]:
-    """'3X2.5' → 3 cores 2.5 mm² PVC; 'N2XY 4X10' / '5X6mm² Cu XLPE' → XLPE.
+    """'3X2.5' / '3x1,5' / 'H07RN-F 3G2.5' → PVC; 'N2XY 4X10' / '5X6mm² Cu XLPE' → XLPE; 'NA2XY' / 'Al' → aluminium.
     Returns None for MV / parallel single-core designations the table does not cover."""
     s = designation or ""
-    if "(" in s or re.search(r"\bAl\b", s):
+    if "(" in s:
         return None
     m = _DESIG.search(s)
     if not m:
         return None
     u = s.upper()
-    ins: Insulation = "XLPE" if any(k in u for k in ("N2X", "XLPE", "2XY")) else "PVC"
-    return CableSpec(int(m.group(1)), float(m.group(2)), ins)
+    ins: Insulation = "XLPE" if any(k in u for k in ("N2X", "NA2X", "XLPE", "2XY")) else "PVC"
+    al = bool(re.search(r"\bAL\b", u) or "NA2X" in u or "NAYY" in u)
+    return CableSpec(int(m.group(1)), float(m.group(2).replace(",", ".")), ins, "Al" if al else "Cu")
 
 
 def loaded_conductors(phase: str, poles: int) -> int:
     return 3 if phase == "L1-3" or poles >= 3 else 2
 
 
-def ampacity(spec: CableSpec, method: str, loaded: int) -> Optional[float]:
+# IEC 60364-5-52 Table B.52.14, ambient air temperature other than 30 °C
+_K_AMBIENT = {"PVC": {35: 0.94, 40: 0.87, 45: 0.79, 50: 0.71}, "XLPE": {35: 0.96, 40: 0.91, 45: 0.87, 50: 0.82}}
+METHODS = ("B1", "C")
+
+
+def ambient_factor(insulation: str, ambient_c: Optional[float]) -> float:
+    if not ambient_c or ambient_c <= 30:
+        return 1.0
+    steps = _K_AMBIENT[insulation]
+    for t in sorted(steps):
+        if ambient_c <= t:
+            return steps[t]
+    return steps[max(steps)]
+
+
+def ampacity(spec: CableSpec, method: str, loaded: int, ambient_c: Optional[float] = None) -> Optional[float]:
+    """Copper only; None where the table has no value (aluminium, size or method outside the table)."""
     table = _IZ.get((spec.insulation, method, loaded))
-    if table is None or spec.csa_mm2 not in _SIZES:
+    if table is None or spec.material != "Cu" or spec.csa_mm2 not in _SIZES:
         return None
-    return table[_SIZES.index(spec.csa_mm2)]
+    return round(table[_SIZES.index(spec.csa_mm2)] * ambient_factor(spec.insulation, ambient_c), 1)
 
 
-def design_current(c: Circuit) -> Optional[float]:
-    """Load current from load_kw (cos φ 1), else the protective device rating."""
+def design_current(c: Circuit, kw: Optional[float] = None) -> Optional[float]:
+    """Load current from load_kw (or the fed node's kW, e.g. the inverter) at cos φ 1, else the device rating."""
     three = c.phase == "L1-3" or c.device.poles >= 3
-    if c.load_kw:
-        return c.load_kw * 1000 / (math.sqrt(3) * U_LL if three else U_PH)
+    kw = c.load_kw or kw
+    if kw:
+        return kw * 1000 / (math.sqrt(3) * U_LL if three else U_PH)
     return c.device.rating_a
+
+
+def node_kw(rating: str) -> Optional[float]:
+    m = re.search(r"(\d+(?:\.\d+)?)\s*kW\b", rating or "")
+    return float(m.group(1)) if m else None
 
 
 def voltage_drop_pct(cable: Cable, current_a: float, three_phase: bool) -> Optional[float]:
@@ -85,10 +114,37 @@ def voltage_drop_pct(cable: Cable, current_a: float, three_phase: bool) -> Optio
     return 100 * 2 * current_a * r / U_PH
 
 
-# IEC 81346-2 class letters by device kind; breakers take QA as Ecodial tags them
+def source_impedance(ik_ka: float) -> float:
+    """Network impedance behind the origin from the declared 3-phase fault level."""
+    return C_MAX * U_LL / (math.sqrt(3) * ik_ka * 1000)
+
+
+def ik3_max_ka(zs: float, cables: list[Cable]) -> float:
+    r = sum(RHO_CU_20 * (c.length_m or 0) / s.csa_mm2 for c in cables if (s := parse_cable(c.designation)))
+    x = sum(X_CABLE * (c.length_m or 0) for c in cables)
+    z = math.hypot(zs + r, x) if r or x else zs
+    return C_MAX * U_LL / (math.sqrt(3) * z) / 1000
+
+
+def ik1_min_a(zs: float, cables: list[Cable]) -> Optional[float]:
+    """Phase–protective-conductor fault at the far end (TN): source loop + out and back in every cable."""
+    r = 0.0
+    x = 0.0
+    for c in cables:
+        s = parse_cable(c.designation)
+        if s is None or not c.length_m:
+            return None
+        r += 2 * RHO_CU_HOT * c.length_m / s.csa_mm2
+        x += 2 * X_CABLE * c.length_m
+    z = math.hypot(2 * zs + r, x)
+    return C_MIN * U_PH / z if z else None
+
+
+# IEC 81346-2:2019 class letters by device kind (FA overvoltage, FB fault current, FC overcurrent);
+# circuit-breakers take QA as Ecodial tags them. To be confirmed against the standard's table.
 IEC_CLASS: dict[str, str] = {
     "mcb": "QA", "mccb": "QA", "acb": "QA", "rcbo": "QA", "contactor": "QA", "switch": "QB",
-    "fuse": "FA", "rcd": "FB", "spd": "FC", "meter": "PG", "ct": "BE", "terminal": "XD",
+    "fuse": "FC", "rcd": "FB", "spd": "FA", "meter": "PG", "ct": "BE", "terminal": "XD",
 }
 
 

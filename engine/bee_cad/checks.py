@@ -11,13 +11,16 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 from typing import Literal, Optional
 
-from .calc import ampacity, design_current, loaded_conductors, parse_cable, voltage_drop_pct
+from .calc import (METHODS, TRIP_MULTIPLE, ampacity, design_current, ik1_min_a, ik3_max_ka, loaded_conductors,
+                   node_kw, parse_cable, source_impedance, voltage_drop_pct)
 from .model import Board, Circuit, Design
 
 Level = Literal["error", "warn", "info"]
 
-DU_LIMIT_PCT = 4.0          # IEC 60364-5-52 G.52.1, installations supplied from the LV network
-SOCKET_WORDS = ("שקע", "socket")
+# IEC 60364-5-52 G.52.1, installations supplied directly from a public LV network
+DU_LIMIT_LIGHTING_PCT = 3.0
+DU_LIMIT_PCT = 5.0
+SOCKET_WORDS = ("שקע", "בית תקע", "socket")
 SOURCE_NODES = ("inverter", "battery", "generator", "pv", "bess", "pcs", "ups", "grid")
 
 
@@ -31,17 +34,45 @@ class Finding:
 
     def line(self) -> str:
         mark = {"error": "שגיאה", "warn": "אזהרה", "info": "מידע"}[self.level]
-        tail = f" ← {self.fix}" if self.fix else ""
+        tail = f" | תיקון: {self.fix}" if self.fix else ""
         return f"[{mark}] {self.where}: {self.message}{tail}"
 
 
+def _is_socket(c: Circuit) -> bool:
+    name = c.load.lower()
+    return any(w in name for w in SOCKET_WORDS)
+
+
 def _method(c: Circuit) -> str:
-    if c.cable and c.cable.method in ("B1", "C"):
+    if c.cable and c.cable.method in METHODS:
         return c.cable.method
     return "B1" if c.kind == "final" else "C"
 
 
-def _check_circuit(b: Board, c: Circuit, out: list[Finding]) -> None:
+def _check_cable_capacity(where: str, cable, rating: Optional[float], method: str, loaded: int,
+                          out: list[Finding]) -> None:
+    spec = parse_cable(cable.designation)
+    if spec is None:
+        out.append(Finding("info", "CABLE_UNPARSED", where, f"לא זוהה חתך מהכינוי \"{cable.designation}\"",
+                           "לכתוב בתבנית 3X2.5 כדי שהמנוע יבדוק אותו"))
+        return
+    if not rating:
+        return
+    iz = ampacity(spec, method, loaded, cable.ambient_c)
+    if iz is None:
+        why = "כבל אלומיניום" if spec.material == "Al" else f"חתך {spec.csa_mm2:g} ממ\"ר או שיטה {method} מחוץ לטבלה"
+        out.append(Finding("warn", "CABLE_UNCHECKED", where, f"כושר ההולכה לא נבדק ({why})", "לבדוק ידנית"))
+        return
+    if rating > iz:
+        amb = f", {cable.ambient_c:g}°C" if cable.ambient_c else ""
+        smaller = _largest_below(iz)
+        fix = "להגדיל חתך כבל" + (f" או להקטין את המפסק ל-{smaller}A" if smaller else "")
+        out.append(Finding("error", "CABLE_OVERLOAD", where,
+                           f"מפסק {rating:g}A על כבל {spec.csa_mm2:g} ממ\"ר שמעביר {iz:g}A (שיטת התקנה {method}{amb})",
+                           fix))
+
+
+def _check_circuit(b: Board, c: Circuit, out: list[Finding], up_du: float = 0.0, kw: Optional[float] = None) -> None:
     where = f"{b.id} / {c.tag}"
     d = c.device
     three = c.phase == "L1-3"
@@ -54,39 +85,90 @@ def _check_circuit(b: Board, c: Circuit, out: list[Finding]) -> None:
         if c.kind == "final":
             out.append(Finding("warn", "NO_CABLE", where, "לא הוגדר כבל למעגל", "להוסיף חתך כבל"))
         return
-    spec = parse_cable(c.cable.designation)
-    if spec is None:
-        out.append(Finding("info", "CABLE_UNPARSED", where, f"לא זוהה חתך מהכינוי \"{c.cable.designation}\"",
-                           "לכתוב בתבנית 3X2.5 כדי שהמנוע יבדוק אותו"))
-        return
-    if d.rating_a:
-        method = _method(c)
-        iz = ampacity(spec, method, loaded_conductors(c.phase, d.poles))
-        if iz is not None and d.rating_a > iz:
-            out.append(Finding("error", "CABLE_OVERLOAD", where,
-                               f"מפסק {d.rating_a:g}A על כבל {spec.csa_mm2:g} ממ\"ר שמעביר {iz:g}A (שיטת התקנה {method})",
-                               f"להגדיל חתך כבל או להקטין את המפסק ל-{_largest_below(iz)}A"))
-    i = design_current(c)
+    _check_cable_capacity(where, c.cable, d.rating_a, _method(c), loaded_conductors(c.phase, d.poles), out)
+    i = design_current(c, kw)
     if i and c.cable.length_m:
         du = voltage_drop_pct(c.cable, i, three or d.poles >= 3)
         if du is not None:
             if c.cable.du_pct is None:
                 c.cable.du_pct = round(du, 2)
-                out.append(Finding("info", "DU_COMPUTED", where, f"מפל מתח מחושב {du:.2f}% ({i:.0f}A, {c.cable.length_m:g} מ')"))
-            if du > DU_LIMIT_PCT:
-                out.append(Finding("warn", "DU_HIGH", where, f"מפל מתח {du:.1f}% מעל {DU_LIMIT_PCT:g}%",
+            elif abs(c.cable.du_pct - du) > 0.3:
+                out.append(Finding("warn", "DU_MISMATCH", where,
+                                   f"בשרטוט מפל מתח {c.cable.du_pct:g}% אבל החישוב נותן {du:.2f}%", "לעדכן את הערך או למחוק אותו"))
+            out.append(Finding("info", "DU_COMPUTED", where, f"מפל מתח מחושב {du:.2f}% ({i:.0f}A, {c.cable.length_m:g} מ')"))
+            total = du + (up_du if c.kind == "final" else 0.0)
+            limit = DU_LIMIT_LIGHTING_PCT if "תאורה" in c.load else DU_LIMIT_PCT
+            if total > limit:
+                via = f" (כולל {up_du:.1f}% בכבל ההזנה)" if up_du and c.kind == "final" else ""
+                out.append(Finding("warn", "DU_HIGH", where, f"מפל מתח {total:.1f}% מעל {limit:g}%{via}",
                                    "להגדיל חתך כבל או לקצר את התוואי"))
 
 
 _STD_RATINGS = (6, 10, 13, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250)
 
 
-def _largest_below(iz: float) -> int:
+def _largest_below(iz: float) -> Optional[int]:
     ok = [r for r in _STD_RATINGS if r <= iz]
-    return ok[-1] if ok else _STD_RATINGS[0]
+    return ok[-1] if ok and iz <= 2 * _STD_RATINGS[-1] else None
+
+
+def _check_short_circuit(b: Board, out: list[Finding]) -> None:
+    """Breaking capacity against the maximum fault at the board; automatic disconnection (TN) at the far end."""
+    if b.supply.kind not in ("utility", "transformer"):
+        return
+    ik = b.supply.ik_ka
+    zs = source_impedance(ik) if ik else 0.0
+    up = [b.supply.cable] if b.supply.cable and b.supply.cable.length_m else []
+    if ik:
+        ikb = ik3_max_ka(zs, up)
+        out.append(Finding("info", "IK_BOARD", b.id, f"זרם קצר מקסימלי בפסי הלוח {ikb:.1f}kA"))
+        devices = [b.incomer, b.spd] + [g.device for g in b.groups] + [c.device for c in b.all_circuits()]
+        for d in devices:
+            if d and d.icu_ka and d.icu_ka < ikb and d.kind not in ("rcd", "spd"):
+                out.append(Finding("error", "ICU_LOW", f"{b.id} / {d.tag}",
+                                   f"כושר ניתוק {d.icu_ka:g}kA קטן מזרם הקצר בלוח ({ikb:.1f}kA)",
+                                   f"לבחור מפסק עם כושר ניתוק של {_ka_step(ikb)}kA לפחות"))
+    else:
+        out.append(Finding("info", "NO_IK", b.id, "לא הוזן זרם קצר בנקודת החיבור, ולכן כושר הניתוק לא נבדק",
+                           "להוסיף supply.ik_ka לפי נתוני חח\"י"))
+    if b.supply.earthing not in ("TN-C-S", "TN-S"):
+        return
+    behind_rcd = {c.tag for g in b.groups if g.device and g.device.kind in ("rcd", "rcbo") for c in g.circuits}
+    for c in b.all_circuits():
+        d = c.device
+        if c.kind != "final" or d.kind not in ("mcb", "rcbo") or not d.rating_a or not c.cable:
+            continue
+        mult = TRIP_MULTIPLE.get((d.curve or "C").upper()[:1])
+        i1 = ik1_min_a(zs, up + [c.cable])
+        if mult is None or i1 is None:
+            continue
+        if i1 < mult * d.rating_a:
+            note = "" if ik else " (בלי עכבת הרשת; במציאות הזרם נמוך יותר)"
+            protected = c.tag in behind_rcd or d.kind == "rcbo"
+            out.append(Finding("info" if protected else "error", "DISCONNECT", f"{b.id} / {c.tag}",
+                               f"זרם קצר מינימלי בקצה {i1:.0f}A קטן מ-{mult * d.rating_a:g}A שדרושים לניתוק מגנטי{note}",
+                               "הניתוק מובטח על ידי הפחת" if protected else
+                               "להגדיל חתך, לקצר את המעגל, לבחור עקומה B או להוסיף פחת"))
+
+
+def _ka_step(ka: float) -> int:
+    return next((s for s in (6, 10, 15, 25, 36, 50, 70) if s >= ka), 100)
+
+
+def _supply_du(b: Board) -> float:
+    cab = b.supply.cable
+    if not cab:
+        return 0.0
+    if cab.du_pct is None and cab.length_m and b.incomer and b.incomer.rating_a:
+        du = voltage_drop_pct(cab, b.incomer.rating_a, True)
+        if du is not None:
+            cab.du_pct = round(du, 2)
+    return cab.du_pct or 0.0
 
 
 def _check_board(design: Design, b: Board, out: list[Finding]) -> None:
+    _check_short_circuit(b, out)
+    up_du = _supply_du(b)
     tags = Counter(c.tag for c in b.all_circuits())
     for g in b.groups:
         if g.device:
@@ -111,28 +193,38 @@ def _check_board(design: Design, b: Board, out: list[Finding]) -> None:
             out.append(Finding("warn", "RCD_UNDERRATED", f"{b.id} / {gd.tag}",
                                f"מפסק הפחת {gd.rating_a:g}A קטן מהמעגל הגדול אחריו ({biggest:g}A)",
                                "להגדיל את מפסק הפחת או לוודא שהמפסק לפניו מגן עליו"))
-        if gd and gd.kind == "rcd" and (gd.idn_ma or 0) > 30 and any(
-                w in c.load for c in g.circuits for w in SOCKET_WORDS):
-            out.append(Finding("error", "RCD_SOCKETS", f"{b.id} / {gd.tag}",
-                               f"מעגלי שקעים מוגנים בפחת {gd.idn_ma}mA", "מעגלי שקעים דורשים פחת 30mA"))
+        group_30 = gd is not None and gd.kind in ("rcd", "rcbo") and (gd.idn_ma or 1000) <= 30
         for c in g.circuits:
-            _check_circuit(b, c, out)
+            own_30 = c.device.kind == "rcbo" and (c.device.idn_ma or 1000) <= 30
+            if _is_socket(c) and not (group_30 or own_30):
+                have = f"פחת {gd.idn_ma}mA" if gd and gd.kind in ("rcd", "rcbo") and gd.idn_ma else "בלי פחת"
+                out.append(Finding("error", "RCD_SOCKETS", f"{b.id} / {c.tag}",
+                                   f"מעגל שקעים {have}", "מעגלי שקעים דורשים פחת 30mA (או RCBO 30mA)"))
+            _check_circuit(b, c, out, up_du)
+    boards = {x.id: x for x in design.boards}
     for c in b.feeders:
-        _check_circuit(b, c, out)
         node = nodes.get(c.to_node or "")
-        is_source = node is not None and node.kind in SOURCE_NODES
+        fed = boards.get(c.to_board or "")
+        is_source = (node is not None and node.kind in SOURCE_NODES) or \
+            (fed is not None and fed.supply.kind in ("inverter", "generator"))
+        _check_circuit(b, c, out, kw=node_kw(node.rating) if node else None)
         if inc and c.device.rating_a and c.device.rating_a >= inc and not is_source:
             out.append(Finding("warn", "SELECTIVITY", f"{b.id} / {c.tag}",
-                               f"מפסק היציאה {c.device.rating_a:g}A לא קטן מהמפסק הראשי {inc:g}A — אין סלקטיביות",
+                               f"מפסק היציאה {c.device.rating_a:g}A לא קטן מהמפסק הראשי {inc:g}A, אין סלקטיביות",
                                "להקטין את מפסק היציאה או להגדיל את הראשי"))
-    for c in b.all_circuits():
-        if c.kind == "final" and inc and c.device.rating_a and c.device.rating_a >= inc:
-            out.append(Finding("warn", "SELECTIVITY", f"{b.id} / {c.tag}",
-                               f"מפסק {c.device.rating_a:g}A לא קטן מהמפסק הראשי {inc:g}A", "לבדוק סלקטיביות"))
+    for g in b.groups:
+        for c in g.circuits:
+            if inc and c.device.rating_a and c.device.rating_a >= inc:
+                out.append(Finding("warn", "SELECTIVITY", f"{b.id} / {c.tag}",
+                                   f"מפסק {c.device.rating_a:g}A לא קטן מהמפסק הראשי {inc:g}A", "לבדוק סלקטיביות"))
+    if b.supply.cable and b.incomer:
+        _check_cable_capacity(f"{b.id} / הזנה", b.supply.cable, b.incomer.rating_a,
+                              b.supply.cable.method if b.supply.cable.method in METHODS else "C", 3, out)
     load = {ph: sum(c.device.rating_a or 0 for c in b.all_circuits() if c.phase == ph and c.device.poles == 1)
             for ph in ("L1", "L2", "L3")}
     hi, lo = max(load.values()), min(load.values())
-    if hi and (hi - lo) / hi > 0.35:
+    biggest = max((c.device.rating_a or 0 for c in b.all_circuits() if c.device.poles == 1), default=0)
+    if hi and (hi - lo) / hi > 0.35 and hi - lo > biggest:
         pretty = ", ".join(f"{k} {v:g}A" for k, v in load.items())
         out.append(Finding("warn", "PHASE_BALANCE", b.id, f"חלוקת מופעים לא מאוזנת ({pretty})",
                            "להעביר מעגלים מהמופע העמוס"))
@@ -145,7 +237,7 @@ def check(design: Design, compute: bool = True) -> list[Finding]:
     for b in work.boards:
         _check_board(work, b, out)
     order = {"error": 0, "warn": 1, "info": 2}
-    out.sort(key=lambda f: order[f.level])
+    out.sort(key=lambda f: (order[f.level], f.where))
     return out
 
 

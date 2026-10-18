@@ -1,0 +1,39 @@
+# תקציר עבודה — בית צמוד קרקע עם PV ואגירה. מספיק למלא את זה; המנוע משלים את השאר.
+#   bee-cad new examples/brief_house_pv.yaml --out out/design.json --render out/
+template: house-pv
+client: דוגמה — משפחת כהן
+project: בית מגורים צמוד קרקע
+site: כתובת לאימות
+supply:
+  connection: 3X40A
+  cable_length_m: 18
+  ik_ka: 6            # זרם קצר בנקודת החיבור לפי חח"י; למחוק אם לא ידוע
+pv:
+  kwp: 15.6
+  modules: 26 × 600W — 3 מחרוזות
+  cable_length_m: 12
+  inverter: {model: GoodWe GW15K-ET, kw: 15, hybrid: true}
+battery: {kwh: 30.7, model: LFP 51.2V}
+circuits:
+  - שקעים — סלון
+  - שקעים — מטבח
+  - שקעים — חדר ילדים
+  - שקעים — חדר הורים
+  - {name: "שקעים — חדר רחצה", length_m: 22}
+  - מכונת כביסה
+  - תאורה — אגף יום
+  - תאורה — אגף לילה
+  - {name: "תאורה — חוץ", length_m: 35}
+  - תנור אפייה
+  - כיריים
+  - מדיח כלים
+  - דוד חשמל
+  - מזגן — סלון
+  - מזגן — חדר הורים
+  - {name: "עמדת טעינה לרכב חשמלי", length_m: 25}
+backup:
+  cable_length_m: 8
+  circuits:
+    - תאורה — חירום
+    - שקעים — ממ"ד
+    - מקרר

@@ -5,6 +5,7 @@
     bee-cad validate design.json
     bee-cad check design.json [--json]
     bee-cad bom design.json --out bom.csv
+    bee-cad new brief.yaml --out design.json [--render out/]
 """
 from __future__ import annotations
 
@@ -25,6 +26,10 @@ from .model import Design
 from .render import SHEET_KINDS, build, merge_pdfs, render_pdf, render_png, save_dxf
 
 
+EXIT_FILE = 3      # the input could not be read (argparse itself uses 2)
+EXIT_DESIGN = 4    # the design has errors
+
+
 class DesignFileError(Exception):
     """A design file that cannot be read; the message is Hebrew and names the field."""
 
@@ -41,7 +46,7 @@ _PYDANTIC_HE = {
 
 
 def _where(loc: tuple) -> str:
-    return " → ".join(str(p) for p in loc)
+    return " > ".join(str(p) for p in loc)
 
 
 def load_design(path: Path) -> Design:
@@ -79,7 +84,7 @@ def cmd_render(args: argparse.Namespace) -> int:
     errors = print_findings(design)
     if errors and args.strict:
         print("לא משרטט: יש שגיאות תכנון (הסר --strict כדי לשרטט בכל זאת)", file=sys.stderr)
-        return 2
+        return EXIT_DESIGN
     out = Path(args.out)
     stem = args.stem or Path(args.design).stem
     sheets = args.sheets.split(",") if args.sheets else list(SHEET_KINDS)
@@ -142,12 +147,38 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def cmd_check(args: argparse.Namespace) -> int:
-    design = load_design(Path(args.design))
     if args.json:
+        try:
+            design = load_design(Path(args.design))
+        except DesignFileError as e:
+            print(json.dumps({"file_error": str(e)}, ensure_ascii=False))
+            return EXIT_FILE
         findings = check(design)
         print(json.dumps(as_dicts(findings), ensure_ascii=False, indent=2))
-        return 1 if any(f.level == "error" for f in findings) else 0
-    return 1 if print_findings(design) else 0
+        return EXIT_DESIGN if any(f.level == "error" for f in findings) else 0
+    return EXIT_DESIGN if print_findings(load_design(Path(args.design))) else 0
+
+
+def cmd_new(args: argparse.Namespace) -> int:
+    from .templates import BriefError, from_brief
+
+    path = Path(args.brief)
+    try:
+        brief = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        design = from_brief(brief)
+    except FileNotFoundError:
+        raise DesignFileError(f"הקובץ לא נמצא: {path}") from None
+    except (yaml.YAMLError, BriefError) as e:
+        raise DesignFileError(f"תקציר {path.name}: {e}") from None
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(design.model_dump_json(indent=2, exclude_none=True), encoding="utf-8")
+    n = sum(len(b.all_circuits()) for b in design.boards)
+    print(f"DESIGN {out}  לוחות={len(design.boards)} מעגלים={n} רכיבים={len(design.nodes)}")
+    if args.render:
+        return cmd_render(argparse.Namespace(design=str(out), out=args.render, stem=None, sheets=None, mode="unicode",
+                                             png=True, pdf=True, dpi=110, archive=None, stage="design", strict=False))
+    return EXIT_DESIGN if print_findings(design) else 0
 
 
 def cmd_bom(args: argparse.Namespace) -> int:
@@ -186,6 +217,11 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("design")
     c.add_argument("--json", action="store_true", help="findings as JSON for the app")
     c.set_defaults(func=cmd_check)
+    n = sub.add_parser("new", help="job brief (YAML, a few lines) → full design JSON")
+    n.add_argument("brief")
+    n.add_argument("--out", default="design.json")
+    n.add_argument("--render", help="also draw DXF + PNG + PDF set into this folder")
+    n.set_defaults(func=cmd_new)
     m = sub.add_parser("bom", help="bill of materials → CSV")
     m.add_argument("design")
     m.add_argument("--out", default="bom.csv")
@@ -195,7 +231,7 @@ def main(argv: list[str] | None = None) -> int:
         return args.func(args)
     except DesignFileError as e:
         print(str(e), file=sys.stderr)
-        return 2
+        return EXIT_FILE
 
 
 if __name__ == "__main__":  # pragma: no cover

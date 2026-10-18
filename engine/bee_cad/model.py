@@ -73,7 +73,8 @@ class Cable(BaseModel):
     designation: str                     # e.g. "N2XY 4X10" / "3X2.5"
     length_m: Optional[float] = None
     du_pct: Optional[float] = None       # voltage drop, computed elsewhere
-    method: Optional[str] = None         # installation method (IEC 60364-5-52)
+    method: Optional[str] = None         # installation method (IEC 60364-5-52): B1 / C
+    ambient_c: Optional[float] = None    # air temperature along the route when above 30 °C (roof, outdoor)
 
 
 class Circuit(BaseModel):
@@ -109,6 +110,7 @@ class Supply(BaseModel):
     cable: Optional[Cable] = None
     earthing: Literal["TN-C-S", "TN-S", "TT", "IT", ""] = "TN-C-S"
     from_board: Optional[str] = None
+    ik_ka: Optional[float] = None         # prospective 3-phase short-circuit current at the origin (from IEC / the transformer)
 
 
 class Busbar(BaseModel):
