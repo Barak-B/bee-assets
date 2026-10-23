@@ -1,0 +1,21 @@
+# graphify-mcp.service — reference copy (scripts/serve-mcp.sh generates + installs this with real values)
+#
+# Serves the BEE graph over MCP Streamable HTTP, Tailscale-bound, Bearer-key protected.
+# Install path: /etc/systemd/system/graphify-mcp.service
+
+[Unit]
+Description=Graphify MCP server (BEE knowledge graph)
+After=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+User=barak
+# API key lives in /etc/graphify-mcp.key (chmod 600) — serve-mcp.sh injects it
+Environment=GRAPHIFY_API_KEY=<injected-by-serve-mcp.sh>
+Environment=GRAPHIFY_QUERY_LOG_DISABLE=1
+ExecStart=/usr/bin/python3 -m graphify.serve /opt/bee-ops/graphify-out/graph.json --transport http --host <TAILSCALE_IP> --port 8090
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

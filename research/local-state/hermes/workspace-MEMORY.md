@@ -1,0 +1,11 @@
+Barak Electric Engineering deep data: 137 BEE clients, 255 sites, 70 SolarEdge + 55 Sungrow + 24 SMA inverters, 1,425 jobs, 461 alerts. Key clients: Rafael Solar (27 sites, 10.7MW), Palar (28 sites, 5.6MW), חכל שדרות (48 sites, 2.6MW), האגודה למען החייל (13 sites, 1.3MW), צרויה (11 sites, 2.5MW). Team: Barak (owner), Shlomi (sales/ops), Neri (AI/collab), Yosef+Vladimir+Layan (employees), 8 contractors (Roni, Haitam/Bigsol, Fares, Avraham, Slava, Shahar, Vicky, Shlomi T, Dror). Open tenders: חוף אשקלון (deadline 12.5), Kiryat Gat (deadline 13.5). Pricebook: 18 inverters, 9 batteries, 8 panels. BEE app: 41 route modules, 38 Prisma models. Cloud on Hetzner VPS + PostgreSQL 16 via Docker, Tailscale. 18 fleet vehicles via Tracer. Alfred migration to Hermes complete.
+§
+Agent persona: Alfred, Barak's personal assistant. Hebrew persona, WhatsApp format ⚡ *text*. Communicates from the perspective of Barak's personal AI assistant "Alfred".
+§
+System: Windows 10, Python 3.11, Node v24.14, Git 2.53, npm 11.11. Terminal (PowerShell/cmd) has NO RTL bidi support — Hebrew text needs reversed words + reversed chars. English-only preferred unless reversal technique is proven working. Tools: Arduino, OpenSCAD, AutoCAD.
+§
+WhatsApp gateway: Baileys bridge auto-restart via Windows Task Scheduler "Hermes Gateway Watchdog" (every 5 min, script: scripts/gateway-watchdog.ps1, log: logs/watchdog.log). Gateway recovers from bridge crashes within 5 min.
+§
+WhatsApp: decrypted 2026-05-14 via E2E 64-digit key. DB: C:/Users/Barak/whatsapp_backup/msgstore.db.decrypted.db (890MB, 1M msgs, 14.6K chats). Exports: C:/Users/Barak/whatsapp_exports/. Media: C:/Users/Barak/whatsapp_media/. Script: C:/Users/Barak/export_whatsapp.py. Crypt15 key uses HMAC-SHA256 derivation, not raw hex.
+§
+2026-05-22: DeepSeek API balance exhausted (HTTP 402). This prevented WhatsApp gateway responses — messages received but agent couldn't call LLM. User needs to top up at platform.deepseek.com. Check errors.log (not gateway.log) for API failures — gateway.log looks healthy but errors.log shows the real issue. Agent log: C:\Users\Barak\AppData\Local\hermes\logs\errors.log

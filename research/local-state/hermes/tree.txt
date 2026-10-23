@@ -1,0 +1,26 @@
+Folder PATH listing for volume ??????? ????? ???
+Volume serial number is 7297-D5F4
+E:\BEE-HERMES
+|   meta-prompt.md
+|   
++---analysis
+|       analyze_chats.py
+|       bee_breakdown.json
+|       chats_summary.json
+|       deep_analysis.py
+|       themes.json
+|       timeline.json
+|       top_contacts.json
+|       yearly_top.json
+|       yearly_top.py
+|       
++---docs
+|       hermes-alfred-cooperation.html
+|       hermes-overview.html
+|       optimization-playbook.md
+|       topology.md
+|       
+\---scripts
+        install-hermes-services.ps1
+        rotate-bridge-log.ps1
+        

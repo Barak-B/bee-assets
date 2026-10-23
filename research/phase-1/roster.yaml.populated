@@ -1,0 +1,486 @@
+# roster.yaml — Phase 1 Action #4 (POPULATED)
+#
+# AUTO-GENERATED 2026-05-26 from:
+#   - C:\Users\Barak\.openclaw\workspace\team.json           (15 members: team + contractors)
+#   - E:\Desktop\OpenClawAgent\secrets\bee-ops-snapshot.db   (137 clients, 4 tenders, 2 users)
+#   - C:\Users\Barak\AppData\Local\hermes\memories\MEMORY.md (top-5 client capacity figures)
+#   - CLAUDE.md global memory                                (suppliers: Solar-Space/Deye/Eliran)
+#   - E:\bee-assets\research\phase-1\roster.yaml.template    (skeleton + wiring snippet)
+#
+# COVERAGE:
+#   - 6 employees (Barak/Shlomi/Neri have phone+email; Yosef/Vladimir/Layan name-only)
+#   - 9 contractors (all from team.json; phones TODO — Monday board candidate)
+#   - 5 suppliers (Prime + Solar-Space/Deye/Eliran from brand memory + יואב צרויה/בני פרץ as supplier-adjacent)
+#   - 10 key customers (top by capacity/site-count) + 4 customer-contact persons extracted from BEE notes
+#   - 3 tender contacts (real phone+email from active tenders)
+#   - 1 external inspector slot (Erez Cohen — no data yet)
+#
+# HOW TO APPLY:
+#   1. Diff against E:\bee-assets\research\phase-1\roster.yaml.template (to see what was filled)
+#   2. Verify the auto-filled fields are correct
+#   3. Copy to C:\Users\Barak\.openclaw\workspace\roster.yaml (already done by this script)
+#   4. Wire into alfred-identity.js — see alfred-identity-roster-patch.js
+#   5. Test:
+#        node alfred-identity.js resolve --phone +972509554483   # → self
+#        node alfred-identity.js resolve --phone +972557257516   # → Shlomi
+#        node alfred-identity.js resolve --name "רפאל"           # → Rafael Solar
+#
+# MAINTENANCE:
+#   - Update whenever team changes
+#   - Sync auto-discovered phones from Monday CRM here (Phase 2)
+#   - Auto-sync to KG :Person nodes (Phase 2)
+
+version: 1
+updated: 2026-05-26
+updated_by: phase-1-action-4-bot
+sources:
+  - team.json
+  - bee-ops-snapshot.db
+  - hermes/memories/MEMORY.md
+  - CLAUDE.md
+
+# ============================================================
+# SELF
+# ============================================================
+self:
+  id: barak
+  name_he: "ברק ברזל"
+  name_en: "Barak Barzel"
+  phone: "+972509554483"
+  phone_normalized: "972509554483"
+  jid: "972509554483@s.whatsapp.net"
+  email_primary: "barak-barzel@barak-e.com"
+  email_secondary: "barak@bee.co.il"   # TODO confirm whether this still routes
+  company: "ברק הנדסת חשמל (B.E.E)"
+  notes: "Self-chat JID. Alfred replies with ⚡ *...* signature."
+
+# ============================================================
+# INTERNAL TEAM (BEE employees + principals)
+# ============================================================
+employees:
+  - id: barak
+    name_he: "ברק ברזל"
+    name_en: "Barak Barzel"
+    role: principal
+    title: "Owner, Electrical Engineer"
+    phone: "+972509554483"
+    phone_normalized: "972509554483"
+    jid: "972509554483@s.whatsapp.net"
+    email: "barak-barzel@barak-e.com"
+    email_secondary: "barak@bee.co.il"   # TODO confirm primary
+    calendars: [personal, tasks-neri, tasks-shlomi-solar]
+    specialties: [solar, generator, hv, panel, inspection, monitoring]
+    licenses:
+      - electrical_contractor
+      - electrical_inspector   # רישיון בודק חשמל — TODO confirm class + expiry
+    notes: "Self-chat JID. Owner + chief engineer. Approves all writes."
+
+  - id: shlomi-shirazi
+    name_he: "שלומי שירזי"
+    name_en: "Shlomi Shirazi"
+    role: partner
+    title: "Sales + Operations (Solar)"
+    phone: "+972557257516"
+    phone_normalized: "972557257516"
+    jid: "972557257516@s.whatsapp.net"
+    email: "shlomi@barak-e.com"
+    calendars: [tasks-shlomi-solar]
+    specialties: [solar, sales, design, quotes, customer-relations]
+    notes: "Owns solar sales pipeline + customer-facing. חוק יסוד #2: 2-3 templates before write."
+
+  - id: neri-lederberg
+    name_he: "נרי לדרברג"
+    name_en: "Neri Lederberg"
+    role: partner
+    title: "AI Collaboration"
+    phone: "+972539241119"
+    phone_normalized: "972539241119"
+    jid: "972539241119@s.whatsapp.net"
+    email: "lederbergneri@gmail.com"
+    calendars: [tasks-neri]
+    specialties: [ai-integration, automation, dev]
+    whatsapp_group: "120363425994041413@g.us"   # עדכונים על עבודה על התשתיות שלנו
+    notes: "Co-author of Alfred + Hermes integrations. Owner of 'לוז, נרי וברק' calendar."
+
+  - id: yosef
+    name_he: "יוסף"
+    name_en: ""
+    role: employee
+    phone: ""              # TODO — not in team.json; ask Barak
+    phone_normalized: null
+    jid: null
+    email: ""              # TODO
+    specialties: []
+
+  - id: vladimir
+    name_he: "ולדימיר"
+    name_en: "Vladimir"
+    role: employee
+    phone: ""              # TODO
+    phone_normalized: null
+    jid: null
+    specialties: [electrical, install]
+
+  - id: layan
+    name_he: "ליאן"
+    name_en: "Layan"
+    role: employee
+    phone: ""              # TODO
+    phone_normalized: null
+    jid: null
+    notes: "team.json spells 'לאיין'. Confirm preferred spelling."
+
+# ============================================================
+# CONTRACTORS (sub-contractor partners)
+# Source: team.json members[6-15] (role=contractor)
+# Phones TODO — likely on Monday CRM contractors board (not yet scraped)
+# ============================================================
+contractors:
+  - id: roni
+    name_he: "רוני"
+    company: ""
+    phone: ""              # TODO
+    phone_normalized: null
+    jid: null
+    specialties: [electrical-install]
+
+  - id: haitam_bigsol
+    name_he: "הייתם"
+    name_en: "Haitam"
+    company: "ביגסול + ע.גבארין"
+    role: contractor_owner
+    phone: ""              # TODO
+    phone_normalized: null
+    jid: null
+    specialties: [solar, electrical-install, solar-install]
+    notes: "בעלים של 2 החברות: ביגסול + ע.גבארין. קבלן ביצוע מרכזי."
+    tags: [bigsol, owner]
+
+  - id: fares
+    name_he: "פארס"
+    phone: ""              # TODO
+    phone_normalized: null
+    jid: null
+    specialties: [cleaning]
+
+  - id: avraham
+    name_he: "אברהם"
+    phone: ""              # TODO
+    phone_normalized: null
+    specialties: []
+
+  - id: slava
+    name_he: "סלבה"
+    phone: ""              # TODO
+    phone_normalized: null
+    specialties: []
+
+  - id: shahar_cohen
+    name_he: "שחר כהן"
+    name_en: "Shahar Cohen"
+    phone: ""              # TODO
+    phone_normalized: null
+    specialties: []
+
+  - id: vicky
+    name_he: "ויקי"
+    phone: ""              # TODO
+    phone_normalized: null
+    specialties: []
+
+  - id: shlomi_turgeman
+    name_he: "שלומי תורג'מן"
+    name_en: "Shlomi Turgeman"
+    phone: ""              # TODO
+    phone_normalized: null
+    specialties: []
+    notes: "Distinct from Shlomi Shirazi (sales partner)."
+
+  - id: dror_eilat
+    name_he: "דרור"
+    name_en: "Dror"
+    location: "אילת"
+    phone: ""              # TODO
+    phone_normalized: null
+    specialties: [panel, hv, electrical-contractor]
+    notes: "קבלן חשמל מאילת."
+    tags: [eilat]
+
+# ============================================================
+# EXTERNAL INSPECTORS
+# ============================================================
+external_inspectors:
+  - id: erez_cohen
+    name_he: "ארז כהן"
+    name_en: "Erez Cohen"
+    role: licensed_electrical_inspector
+    phone: ""              # TODO
+    phone_normalized: null
+    license_number: ""     # TODO
+    authority: "המשרד לכלכלה / רשות החשמל"
+    common_sites: []
+
+# ============================================================
+# SUPPLIERS
+# Source: CLAUDE.md brand-assets memory (Solar-Space/Deye/Eliran)
+# Plus Prime Energy from template
+# ============================================================
+suppliers:
+  - id: prime_energy
+    name: "Prime Energy"
+    role: contractor_supplier
+    contact: ""            # TODO
+    payment_terms_days: 30 # TODO confirm
+    typical_items: [panels, inverters]
+    notes: "Active install partner — Kfar Yuval project group."
+
+  - id: solar_space
+    name: "Solar-Space"
+    role: component_supplier
+    contact: ""            # TODO
+    typical_items: [panels, racks, mounting]
+    notes: "Default component supplier (per brand memory)."
+
+  - id: deye
+    name: "Deye"
+    role: inverter_supplier
+    contact: ""            # TODO
+    typical_items: [inverters, hybrid-inverters, batteries]
+    notes: "Default inverter brand (per brand memory). Compete with SolarEdge / Sungrow / SMA in fleet."
+
+  - id: eliran
+    name: "Eliran"
+    role: component_supplier
+    contact: ""            # TODO
+    typical_items: []      # TODO confirm category
+    notes: "Default supplier (per brand memory)."
+
+# ============================================================
+# KEY CUSTOMERS
+# Source: bee-ops-snapshot.db — top by total_kwp + site_count.
+# Phone/email fields = null in BEE DB for ALL 137 clients.
+# Names of contact-persons EXTRACTED from notes field where present.
+# ============================================================
+key_customers:
+  - id: rafael_solar
+    name_he: "רפאל סולאר"
+    name_en: "Rafael Solar"
+    type: enterprise
+    bee_id: "cmoj5je150007vautbjx10et6"
+    sites_count: 27
+    total_capacity_kwp: 10711.1
+    total_capacity_mw: 10.7
+    portal_access: true
+    sla_tier: tier_1
+    primary_contact_name: "בני פרץ"
+    primary_contact_phone: ""   # TODO
+    notes: "Largest customer by capacity. Owns also: שי לי סולאר, שאר סולאר, אלין סולאר, קים סולאר, רנטקאר (איש קשר: בני פרץ)."
+
+  - id: palar
+    name_he: "פלאר"
+    name_en: "Palar"
+    type: enterprise
+    bee_id: "cmoj5jdm00006vautqt3ysggm"
+    sites_count: 28
+    total_capacity_kwp: 5593.3
+    total_capacity_mw: 5.6
+    portal_access: true
+    sla_tier: tier_1
+    primary_contact_name: "פליקס"
+    primary_contact_phone: ""   # TODO
+    notes: "Monday CRM also lists 'שותפות פלאר' as separate row — may need merge."
+
+  - id: hakal_sdrot
+    name_he: "חכל שדרות"
+    name_en: "Hakal Sderot"
+    type: enterprise
+    bee_id: "cmoj5jf1m000evauts1ro47c1"
+    sites_count: 48
+    total_capacity_kwp: 2615.3
+    total_capacity_mw: 2.6
+    portal_access: true
+    sla_tier: tier_1
+    primary_contact_name: ""    # TODO
+    primary_contact_phone: ""   # TODO
+    notes: "Highest site count. Monday CRM has dupe rows 'חכ\"ל שדרות' that need de-dup."
+
+  - id: tzruyah_chicken_veg
+    name_he: "צרויה גידולי עופות וירקות"
+    name_en: "Tzruyah Poultry & Vegetables"
+    type: enterprise
+    bee_id: "cmoj5jdfu0005vaut0x8lw1tu"
+    sites_count: 11
+    total_capacity_kwp: 2500
+    total_capacity_mw: 2.5
+    portal_access: true
+    sla_tier: tier_1
+    primary_contact_name: "יואב צרויה"
+    primary_contact_phone: ""   # TODO
+    notes: "Group: Tzruyah Poultry+Vegetables / Tzruyah Cultivation / Damsh Real Estate — all איש קשר: יואב צרויה."
+
+  - id: barkai
+    name_he: "ברקאי"
+    type: enterprise
+    bee_id: "cmoj5jfrs000fvautsapp7gfh"
+    sites_count: 15
+    total_capacity_kwp: 2275
+    total_capacity_mw: 2.3
+    sla_tier: tier_1
+    primary_contact_name: ""    # TODO
+    primary_contact_phone: ""   # TODO
+
+  - id: shai_li_solar
+    name_he: "שי לי סולאר"
+    type: enterprise
+    bee_id: "cmoj5jejb0009vautxle4l7qt"
+    sites_count: 6
+    total_capacity_kwp: 1380
+    total_capacity_mw: 1.4
+    sla_tier: tier_1
+    primary_contact_name: "בני פרץ"
+    notes: "Part of בני פרץ-managed cluster."
+
+  - id: david_peri
+    name_he: "דוד פרי"
+    name_en: "David Peri"
+    type: enterprise
+    bee_id: "cmoj5jg03000gvauttvpqw2vz"
+    sites_count: 6
+    total_capacity_kwp: 1333
+    total_capacity_mw: 1.3
+    sla_tier: tier_2
+    primary_contact_name: ""    # TODO
+
+  - id: shaar_solar
+    name_he: "שאר סולאר"
+    type: enterprise
+    bee_id: "cmoj5jeft0008vaut06mq3ezy"
+    sites_count: 6
+    total_capacity_kwp: 1281
+    total_capacity_mw: 1.3
+    sla_tier: tier_2
+    primary_contact_name: "בני פרץ"
+
+  - id: aguda_lemaan_hahayil
+    name_he: "האגודה למען החייל"
+    name_en: "Aguda Lemaan HaHayal"
+    type: nonprofit
+    bee_id: "cmoj5jeu5000dvaut7van8z2f"
+    sites_count: 13
+    total_capacity_kwp: 1266.1
+    total_capacity_mw: 1.3
+    portal_access: true
+    sla_tier: tier_2
+    primary_contact_name: ""    # TODO
+    primary_contact_phone: ""   # TODO
+
+  - id: alin_solar
+    name_he: "אלין סולאר"
+    type: enterprise
+    bee_id: "cmoj5jen5000avautm55oboqo"
+    sites_count: 9
+    total_capacity_kwp: 1238
+    total_capacity_mw: 1.2
+    sla_tier: tier_2
+    primary_contact_name: "בני פרץ"
+
+# ============================================================
+# CUSTOMER CONTACT PERSONS
+# Source: BEE Client.notes "איש קשר: ..." (10 records)
+# These are people who span multiple client entities.
+# ============================================================
+customer_contacts:
+  - id: beni_peretz
+    name_he: "בני פרץ"
+    name_en: "Beni Peretz"
+    role: customer_principal_or_agent
+    represents_customers:
+      - rafael_solar
+      - shai_li_solar
+      - shaar_solar
+      - alin_solar
+      - kim_solar
+      - rentcar
+    phone: ""           # TODO — primary channel for 6 customer accounts!
+    email: ""           # TODO
+    notes: "Key contact for the Rafael-Solar cluster — 6 client entities. HIGH-PRIORITY phone to capture."
+
+  - id: yoav_tzruyah
+    name_he: "יואב צרויה"
+    name_en: "Yoav Tzruyah"
+    role: customer_principal
+    represents_customers:
+      - tzruyah_chicken_veg
+      - tzruyah_cultivation
+      - damsh_realestate
+    phone: ""           # TODO
+    email: ""           # TODO
+    notes: "Owner/principal of the Tzruyah cluster. Also listed as separate Monday CRM 'אורי' contact in some boards."
+
+  - id: felix
+    name_he: "פליקס"
+    name_en: "Felix"
+    role: customer_principal_or_agent
+    represents_customers:
+      - palar
+    phone: ""           # TODO
+    email: ""           # TODO
+
+# ============================================================
+# TENDER CONTACTS (active tenders — confirmed phone/email)
+# Source: bee-ops-snapshot.db Tender.issuerContact
+# ============================================================
+tender_contacts:
+  - id: yaron_yuzeh
+    name_he: "ירון יוז'ה"
+    name_en: "Yaron Yuze"
+    role: external_project_manager
+    organization: "אסם הגליל"
+    phone: "+972533334119"
+    phone_normalized: "972533334119"
+    email: "yaronsun@gmail.com"
+    notes: "Sole point-of-contact for אסם הגליל RFP (גורן). Phase A = alternatives analysis."
+
+  - id: adi_yaad_energy
+    name_he: ""               # TODO confirm full name
+    name_en: "Adi"
+    role: tender_consultant
+    organization: "מועצה אזורית חוף אשקלון"
+    phone: ""                 # TODO — email only on file
+    email: "adi@yaad-energy.co.il"
+    notes: "Tender 11/2026 contact — Hof Ashkelon sports-field solar canopies (BOO)."
+
+  - id: shmuliky_qiryat_gat
+    name_he: ""               # TODO confirm full name (likely שמוליקי)
+    name_en: "Shmuliky"
+    role: municipal_tender_officer
+    organization: "עיריית קריית גת"
+    phone: "+97289172337"
+    phone_normalized: "97289172337"
+    email: "shmuliky@Qiryat-gat.muni.il"
+    notes: "Kiryat Gat municipal tender contact. (Landline — likely office switchboard.)"
+
+# ============================================================
+# AI / TECH COLLABORATORS
+# ============================================================
+ai_collaborators:
+  - id: bee_ai_watcher_reviewer
+    name: "bee-ai-watcher external reviewer"
+    role: "Idea/AI feed review (E:\\bee-ai-watcher\\scan.js)"
+    notes: "Currently not running. Reactivate as Hermes-side skill v17 14.D Action #16."
+
+# ============================================================
+# BEE APP LOGIN USERS (system, not human roster)
+# ============================================================
+system_users:
+  - id: admin
+    email: "admin@bee.local"
+    full_name: "מנהל מערכת"
+    role: admin
+    notes: "BEE app admin login (resolves to Barak)."
+
+  - id: tech
+    email: "tech@bee.local"
+    full_name: "טכנאי שטח"
+    role: technician
+    notes: "Generic technician login — used by field crew."

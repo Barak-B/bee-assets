@@ -1,0 +1,18 @@
+{
+  "name": "bee-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server bridging Alfred + Hermes agents to BEE Operations app (PostgreSQL-backed SaaS).",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test tools/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "node-fetch": "^3.3.2",
+    "dotenv": "^16.4.0"
+  },
+  "license": "BEE-internal"
+}

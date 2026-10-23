@@ -1,0 +1,4 @@
+po_number,supplier,description,sku,qty,unit,unit_price,ordered_at,expected_at,currency
+PO-2026-001,Prime Energy,Panel 550W Mono,PE-550,12,pcs,650.00,15/06/2026,22/06/2026,ILS
+PO-2026-001,Prime Energy,Inverter 10kW,PE-INV10,1,pcs,3850.00,15/06/2026,22/06/2026,ILS
+PO-2026-001,Prime Energy,Cable 6mm²,PE-C6,150,m,4.20,15/06/2026,22/06/2026,ILS

@@ -1,0 +1,1 @@
+No MCP servers configured in C:\Users\Barak\.openclaw\openclaw.json.

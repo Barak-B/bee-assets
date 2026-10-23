@@ -1,0 +1,5 @@
+Hermes Agent v0.13.0 (2026.5.7)
+Project: C:\Users\Barak\AppData\Local\hermes\hermes-agent
+Python: 3.11.9
+OpenAI SDK: 2.33.0
+Update available: 1685 commits behind — run 'hermes update'

@@ -1,0 +1,60 @@
+
+                                    Plugins                                    
+┌────────────────┬─────────────┬─────────┬──────────────────────────┬─────────┐
+│ Name           │ Status      │ Version │ Description              │ Source  │
+├────────────────┼─────────────┼─────────┼──────────────────────────┼─────────┤
+│ disk-cleanup   │ not enabled │ 2.0.0   │ Auto-track and clean up  │ bundled │
+│                │             │         │ ephemeral files (test    │         │
+│                │             │         │ scripts, temp outputs,   │         │
+│                │             │         │ cron logs) created       │         │
+│                │             │         │ during Hermes sessions.  │         │
+│                │             │         │ Runs via plugin hooks —  │         │
+│                │             │         │ no agent action          │         │
+│                │             │         │ required.                │         │
+│ google_meet    │ not enabled │ 0.2.0   │ Join a Google Meet call, │ bundled │
+│                │             │         │ transcribe live          │         │
+│                │             │         │ captions, speak in       │         │
+│                │             │         │ realtime, and follow up  │         │
+│                │             │         │ afterwards. v1           │         │
+│                │             │         │ transcribe-only is the   │         │
+│                │             │         │ default; v2 realtime     │         │
+│                │             │         │ duplex audio via OpenAI  │         │
+│                │             │         │ Realtime +               │         │
+│                │             │         │ BlackHole/PulseAudio     │         │
+│                │             │         │ ships with               │         │
+│                │             │         │ mode='realtime'; v3      │         │
+│                │             │         │ remote node host lets    │         │
+│                │             │         │ the bot run on a         │         │
+│                │             │         │ different machine than   │         │
+│                │             │         │ the gateway (gateway on  │         │
+│                │             │         │ Linux, Chrome+signed-in  │         │
+│                │             │         │ profile on the user's    │         │
+│                │             │         │ Mac).                    │         │
+│                │             │         │ Explicit-by-design: only │         │
+│                │             │         │ joins meet.google.com    │         │
+│                │             │         │ URLs passed in — no      │         │
+│                │             │         │ calendar scanning, no    │         │
+│                │             │         │ auto-dial.               │         │
+│ spotify        │ not enabled │ 1.0.0   │ Native Spotify           │ bundled │
+│                │             │         │ integration — 7 tools    │         │
+│                │             │         │ (playback, devices,      │         │
+│                │             │         │ queue, search,           │         │
+│                │             │         │ playlists, albums,       │         │
+│                │             │         │ library) using Spotify   │         │
+│                │             │         │ Web API + PKCE OAuth.    │         │
+│                │             │         │ Auth via `hermes auth    │         │
+│                │             │         │ spotify`. Tools gate on  │         │
+│                │             │         │ `providers.spotify` in   │         │
+│                │             │         │ ~/.hermes/auth.json.     │         │
+│ teams_pipeline │ not enabled │ 0.1.0   │ Microsoft Teams meeting  │ bundled │
+│                │             │         │ pipeline plugin with     │         │
+│                │             │         │ durable runtime state    │         │
+│                │             │         │ and operator CLI flows   │         │
+│                │             │         │ for Graph-backed         │         │
+│                │             │         │ transcript-first meeting │         │
+│                │             │         │ summaries.               │         │
+└────────────────┴─────────────┴─────────┴──────────────────────────┴─────────┘
+
+Interactive toggle: hermes plugins
+Enable/disable: hermes plugins enable/disable <name>
+Plugins are opt-in by default — only 'enabled' plugins load.
