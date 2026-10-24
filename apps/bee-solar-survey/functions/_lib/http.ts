@@ -1,0 +1,77 @@
+import type { Env } from './env'
+
+const SECURITY_HEADERS: Record<string, string> = {
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+  // Quotes are private documents behind an unguessable link — keep them out of search engines.
+  'x-robots-tag': 'noindex, nofollow',
+}
+
+export function corsHeaders(request: Request, env: Env): Record<string, string> {
+  const origin = request.headers.get('origin')
+  if (!origin) return {}
+  const allowed = new Set((env.ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean))
+  try {
+    if (origin === new URL(request.url).origin) allowed.add(origin)
+  } catch {
+    /* ignore */
+  }
+  if (!allowed.has(origin)) return {}
+  return {
+    'access-control-allow-origin': origin,
+    'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'access-control-allow-headers': 'authorization, content-type',
+    'access-control-max-age': '600',
+    vary: 'origin',
+  }
+}
+
+export function json(request: Request, env: Env, body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...SECURITY_HEADERS, ...corsHeaders(request, env) },
+  })
+}
+
+export function preflight(request: Request, env: Env): Response {
+  return new Response(null, { status: 204, headers: { ...SECURITY_HEADERS, ...corsHeaders(request, env) } })
+}
+
+export function html(body: string, status = 200): Response {
+  return new Response(body, {
+    status,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      // no-store: the page changes when the customer approves the quote.
+      'cache-control': 'no-store',
+      'content-security-policy':
+        "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+      ...SECURITY_HEADERS,
+    },
+  })
+}
+
+export function redirect(location: string, status = 303): Response {
+  return new Response(null, { status, headers: { location, 'cache-control': 'no-store', ...SECURITY_HEADERS } })
+}
+
+export function param(v: string | string[] | undefined): string {
+  return Array.isArray(v) ? (v[0] ?? '') : (v ?? '')
+}
+
+/**
+ * `?since=` normalised to the server's ISO form (…T00:00:00.000Z), so string
+ * comparison against stored timestamps is exact. Invalid → a 400 response.
+ */
+export function parseSince(request: Request, env: Env): { since?: string; error?: Response } {
+  const raw = new URL(request.url).searchParams.get('since')
+  if (!raw) return {}
+  const t = Date.parse(raw)
+  if (!Number.isFinite(t)) return { error: json(request, env, { error: 'bad_since', message_he: 'since חייב להיות תאריך ISO' }, 400) }
+  return { since: new Date(t).toISOString() }
+}
+
+/** Today's date in Israel (YYYY-MM-DD) — quote validity is a local-date matter, not UTC. */
+export function israelToday(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+}

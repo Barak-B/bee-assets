@@ -56,8 +56,17 @@ export interface SiteSurveyProject {
   lon?: number | null
   address: string
 
+  // Customer — who the quote is for (all optional: a survey can start before the customer is known)
+  customerName?: string
+  customerPhone?: string
+  customerEmail?: string
+  /** ת״ז / ח״פ. Never put on the customer page; its last 4 digits check the online approval. */
+  customerIdNumber?: string
+
   // Electrical (Tamir)
   mainBreaker: string
+  /** Supply phases as seen on site ('' = unknown). Not derivable from the amperage alone. */
+  phases?: '1' | '3' | ''
   panelSpace: PanelSpace
   solarBreaker: string
   meterNumber: string
@@ -79,6 +88,8 @@ export interface SiteSurveyProject {
   budgetIls: string
   inverterBrandPref: InverterBrand
   includeBattery: boolean
+  /** Private customers see savings incl. VAT; businesses before VAT (spec 12 §5.2). */
+  customerType?: 'private' | 'business'
 
   generalNotes: string
   customFields: CustomField[]

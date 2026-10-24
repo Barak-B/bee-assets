@@ -1,0 +1,19 @@
+# Cloudflare Pages project for the survey PWA + customer quote links.
+# Deploy: `npm run build && npx wrangler pages deploy` (see docs/QUOTES_ONLINE.md).
+name = "bee-solar-survey"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Every customer link is built from this origin. Must be https on the real
+# domain — the API refuses localhost / 127.0.0.1 / private addresses.
+PUBLIC_BASE_URL = "https://app.barak-e.com"
+
+# Published quotes (JSON + PDF + view counter). Create once:
+#   npx wrangler r2 bucket create bee-quotes
+[[r2_buckets]]
+binding = "QUOTES"
+bucket_name = "bee-quotes"
+
+# Secret, never committed:
+#   npx wrangler pages secret put PUBLISH_KEY --project-name bee-solar-survey
