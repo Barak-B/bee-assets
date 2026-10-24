@@ -23,6 +23,8 @@ import { onRequestGet as messagesGet, onRequestPost as messagesPost } from './ap
 import { onRequestGet as timelineGet } from './api/office/timeline/[id]'
 import { onRequestGet as companyGet } from './api/company'
 import { onRequestPut as companyPut } from './api/office/company'
+import { onRequestGet as pricingGet } from './api/pricing'
+import { onRequestGet as officePricingGet, onRequestPut as officePricingPut } from './api/office/pricing'
 import { onRequestGet as submissionGet, onRequestPut as submissionPut } from './api/office/submission/[id]'
 import { onRequestGet as pageGet } from './q/[token]'
 
@@ -527,5 +529,38 @@ describe('company profile', () => {
     await accept(e, token, '1234', pq.reference)
     html = await (await pageGet(ctx(e, `/q/${token}`, {}, { token }))).text()
     expect(html).toMatch(/לשאלות — התקשרו אלינו: <a href="tel:\+97281234567">/)
+  })
+})
+
+describe('company price book', () => {
+  it('admins load it once; every key reads it; the public never does', async () => {
+    const e = env()
+    const { body: office } = await newKey(e, 'רונית', 'office')
+    const { body: surveyor } = await newKey(e, 'תמיר', 'surveyor')
+    const read = async (key: string) => ((await (await pricingGet(ctx(e, '/api/pricing', { headers: bearer(key) }))).json()) as { pricing: { catalog: Catalog; updatedAt: string; updated_by: string } | null }).pricing
+    expect(await read(surveyor.key)).toBeNull()
+    expect((await pricingGet(ctx(e, '/api/pricing'))).status).toBe(401)
+
+    const catalog = structuredClone(seedCatalog)
+    catalog.products[0].is_active = false
+    const file = { app: 'bee-solar-survey', pricing: { catalog, rules: seedPricingRules, updatedAt: '2020-01-01T00:00:00.000Z' } }
+    const put = (key: string, body: unknown) => officePricingPut(ctx(e, '/api/office/pricing', jsonInit('PUT', key, body)))
+    expect((await put(office.key, file)).status).toBe(403)
+    expect((await put(MASTER, { app: 'bee-solar-survey', projects: [] })).status).toBe(400)
+    expect((await put(MASTER, { catalog: { ...catalog, products: [] }, rules: seedPricingRules })).status).toBe(400)
+    const before = new Date().toISOString()
+    const ok = await put(MASTER, file)
+    expect(ok.status).toBe(200)
+    const { summary } = (await ok.json()) as { summary: { products: number; active: number; updatedAt: string; updated_by: string } }
+    expect(summary).toMatchObject({ products: catalog.products.length, active: catalog.products.length - 1, updated_by: 'מנהל' })
+    // Stamped by the server, not the file: newer than every phone's copy.
+    expect(summary.updatedAt >= before).toBe(true)
+
+    const got = await read(surveyor.key)
+    expect(got?.catalog.products.length).toBe(catalog.products.length)
+    expect(got?.updatedAt).toBe(summary.updatedAt)
+    const officeView = (await (await officePricingGet(ctx(e, '/api/office/pricing', { headers: bearer(office.key) }))).json()) as Record<string, unknown>
+    expect(officeView).toEqual({ summary })
+    expect((await officePricingGet(ctx(e, '/api/office/pricing', { headers: bearer(surveyor.key) }))).status).toBe(403)
   })
 })

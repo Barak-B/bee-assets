@@ -1,7 +1,16 @@
 /** Office screen ↔ the Pages Functions API on the same origin. */
 import type { Milestone, MilestoneKey, Milestones, OfficeStatus, Stage } from '../stage'
 import type { CompanyProfile } from '../company'
+import type { StoredPricing } from '../db'
 import type { SubmissionRecord } from '../submission'
+
+/** What price book the phones get (never the prices themselves). */
+export interface PricingSummary {
+  updatedAt: string
+  updated_by: string
+  products: number
+  active: number
+}
 
 export interface Me {
   id: string
@@ -165,6 +174,8 @@ export class Api {
   saveSubmission = (id: string, body: Record<string, unknown>) => this.call<{ submission: SubmissionRecord; office: OfficeRow | null }>(`/api/office/submission/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) })
   company = () => this.call<{ company: CompanyProfile }>('/api/company')
   saveCompany = (c: CompanyProfile) => this.call<{ company: CompanyProfile }>('/api/office/company', { method: 'PUT', body: JSON.stringify(c) })
+  pricing = () => this.call<{ summary: PricingSummary | null }>('/api/office/pricing')
+  savePricing = (p: StoredPricing) => this.call<{ summary: PricingSummary }>('/api/office/pricing', { method: 'PUT', body: JSON.stringify({ catalog: p.catalog, rules: p.rules }) })
   timeline = (id: string) => this.call<{ events: TimelineEvent[] }>(`/api/office/timeline/${encodeURIComponent(id)}`)
   messages = (id: string) => this.call<{ messages: MessageEntry[] }>(`/api/office/messages/${encodeURIComponent(id)}`)
   logMessage = (id: string, m: Omit<MessageEntry, 'at' | 'by'>) => this.call<{ message: MessageEntry }>(`/api/office/messages/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify(m) })

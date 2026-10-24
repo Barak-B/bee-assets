@@ -72,7 +72,7 @@ export function parseBackup(raw: unknown): BackupData {
       Array.isArray(r.photos) &&
       (r.status === 'draft' || (r.status === 'final' && isStr(r.contentHash))),
   )
-  const pricing = isObj(raw.pricing) && isObj(raw.pricing.catalog) && isObj(raw.pricing.rules) ? (raw.pricing as unknown as StoredPricing) : null
+  const pricing = toStoredPricing(raw.pricing)
   if (!projects.length && !photos.length && !quotes.length && !reports.length && !pricing) throw new BackupError('קובץ הגיבוי ריק')
   return {
     projects: projects as SiteSurveyProject[],
@@ -105,8 +105,22 @@ export function decidePhoto(local: StoredPhoto | undefined, ownerTaken: boolean)
   return ownerTaken ? 'update' : 'skip'
 }
 
+/**
+ * A price book in any of the shapes it travels in: the `pricing` part of a
+ * backup, a whole backup or pricing-only file, or the server's copy. `null`
+ * when it is not one (no catalog with a product list, or no rules).
+ */
+export function toStoredPricing(raw: unknown): StoredPricing | null {
+  if (!isObj(raw)) return null
+  if (isObj(raw.pricing)) return toStoredPricing(raw.pricing)
+  if (!isObj(raw.catalog) || !Array.isArray(raw.catalog.products) || !isObj(raw.rules)) return null
+  return { catalog: raw.catalog as unknown as StoredPricing['catalog'], rules: raw.rules as unknown as StoredPricing['rules'], ...(isStr(raw.updatedAt) ? { updatedAt: raw.updatedAt } : {}) }
+}
+
+/** Take the incoming price book only when it is newer (an undated local one gives way to a dated one). */
 export function decidePricing(local: StoredPricing | null, incoming: StoredPricing | null): boolean {
   if (!incoming) return false
   if (!local) return true
-  return !!incoming.updatedAt && !!local.updatedAt && incoming.updatedAt > local.updatedAt
+  if (!incoming.updatedAt) return false
+  return !local.updatedAt || incoming.updatedAt > local.updatedAt
 }

@@ -386,6 +386,9 @@ function bind(ctx: Ctx) {
   $('pBack')?.addEventListener('click', leave)
   $('pCancel')?.addEventListener('click', leave)
 
+  // The form as rendered: saving it untouched (only the server and key typed in)
+  // must not stamp the price book as new, or the office's one would never replace it.
+  const rendered = state ? JSON.stringify(readForm(ctx, state)) : ''
   $('pSave')?.addEventListener('click', async () => {
     if (!state) return
     const { catalog, rules } = readForm(ctx, state)
@@ -396,15 +399,19 @@ function bind(ctx: Ctx) {
     const badUrl = !!pub.baseUrl && !isPublicBaseUrl(pub.baseUrl)
     if (badUrl) pub.baseUrl = ''
     await savePublishSettings(pub)
-    state = await persistPricing(catalog, rules)
+    const changed = JSON.stringify({ catalog, rules }) !== rendered
+    if (changed) state = await persistPricing(catalog, rules)
     const r = pricingReadiness(state.catalog, state.rules)
     render(ctx, state) // re-render first: it replaces the toast element
+    const saved = changed ? 'המחירון נשמר' : 'ההגדרות נשמרו'
     ctx.toast(
       badUrl
-        ? 'המחירון נשמר · כתובת האתר לא נשמרה — חייבת להיות https על דומיין ציבורי (לא 127.0.0.1 / localhost)'
-        : r.ready
-          ? 'המחירון נשמר · מוכן להצעות'
-          : `המחירון נשמר · חסרים ${r.missing.length} סעיפים`,
+        ? `${saved} · כתובת האתר לא נשמרה — חייבת להיות https על דומיין ציבורי (לא 127.0.0.1 / localhost)`
+        : !changed
+          ? saved
+          : r.ready
+            ? `${saved} · מוכן להצעות`
+            : `${saved} · חסרים ${r.missing.length} סעיפים`,
     )
   })
 

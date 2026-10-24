@@ -481,6 +481,43 @@ try {
     await customer.locator('footer').scrollIntoViewIfNeeded()
     await snap(customer, 'customer-footer')
   })
+
+  await step('admin: loads the company price book once; a new surveyor gets it on sync', async () => {
+    // Dani's backup carries his price book; the office sends only that part up.
+    await phone.goto(PUBLIC + '/')
+    await phone.click('details.tools summary')
+    const [dl] = await Promise.all([phone.waitForEvent('download'), phone.click('#btnBackup')])
+    const backup = (await import('node:fs')).readFileSync(await dl.path())
+    const admin = await (await context(browser, 'admin', { viewport: { width: 1366, height: 860 } })).newPage()
+    await admin.goto(`${PUBLIC}/office`)
+    await admin.fill('#oKey', MASTER)
+    await admin.click('#oLogin button')
+    await admin.click('[data-tab="keys"]')
+    await waitText(admin, '#oPricingState', 'עדיין לא נטען')
+    const [chooser] = await Promise.all([admin.waitForEvent('filechooser'), admin.click('label:has(#oPricingFile)')])
+    await chooser.setFiles({ name: 'bee-survey-backup.json', mimeType: 'application/json', buffer: backup })
+    await waitText(admin, '#oPricingState', 'מוצרים פעילים')
+    await admin.locator('#oPricingState').scrollIntoViewIfNeeded()
+    await snap(admin, 'office-price-book-loaded')
+
+    const noa = await api('POST', '/api/office/keys', MASTER, { name: 'נועה', role: 'surveyor' })
+    const phone2 = await (await context(browser, 'surveyor-2', { ...devices['Pixel 7'] })).newPage()
+    phone2.on('dialog', (d) => void d.accept())
+    await phone2.goto(PUBLIC + '/')
+    await phone2.click('#btnPricing')
+    await phone2.fill('#p_pubBase', PUBLIC)
+    await phone2.fill('#p_pubKey', noa.key)
+    await phone2.click('#pSave')
+    await waitText(phone2, '#toast', 'ההגדרות נשמרו')
+    await phone2.click('#pBack')
+    await phone2.click('#btnSync')
+    await waitText(phone2, '#toast', 'המחירון עודכן מהמשרד')
+    await phone2.click('#btnPricing')
+    // Dani's choices, not the defaults.
+    const got = { pay: await phone2.inputValue('#p_pay_0'), track: await phone2.inputValue('#p_roi_track'), excluded: await phone2.inputValue('#p_t_excluded') }
+    if (got.pay !== '30' || got.track !== 'net_metering' || !got.excluded.includes('חיזוק גג')) throw new Error(`price book not taken from the office: ${JSON.stringify(got)}`)
+    await snap(phone2, 'phone2-price-book-from-office')
+  })
 } catch {
   failed = true
 } finally {

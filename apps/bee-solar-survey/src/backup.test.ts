@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BackupError, decidePhoto, decidePricing, decideProject, decideQuote, decideReport, parseBackup } from './backup'
+import { BackupError, decidePhoto, decidePricing, decideProject, decideQuote, decideReport, parseBackup, toStoredPricing } from './backup'
 import type { StoredPhoto, StoredPricing, StoredQuote } from './db'
 import type { ReportInstance } from './reports/types'
 import { emptyProject } from './schema'
@@ -56,6 +56,15 @@ describe('backup file restore', () => {
     expect(decidePricing(pb('2026-01-01'), pb('2026-02-01'))).toBe(true)
     expect(decidePricing(pb('2026-01-01'), pb(undefined))).toBe(false)
     expect(decidePricing(pb('2026-01-01'), null)).toBe(false)
+    expect(decidePricing(pb(undefined), pb('2026-01-01'))).toBe(true)
+  })
+
+  it('reads a price book from a backup, a pricing-only file or a bare one', () => {
+    const bare = { catalog: { products: [] }, rules: {}, updatedAt: '2026-10-01T00:00:00.000Z' }
+    expect(toStoredPricing(bare)).toEqual(bare)
+    expect(toStoredPricing({ app: 'bee-solar-survey', pricing: bare })).toEqual(bare)
+    expect(toStoredPricing({ catalog: { products: [] }, rules: {} })).toEqual({ catalog: { products: [] }, rules: {} })
+    for (const bad of [null, 'x', [], {}, { catalog: {}, rules: {} }, { catalog: { products: [] } }, { pricing: { rules: {} } }]) expect(toStoredPricing(bad)).toBeNull()
   })
 })
 

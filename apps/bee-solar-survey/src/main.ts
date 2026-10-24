@@ -135,7 +135,7 @@ async function runSync(manual: boolean) {
       // New jobs from the office: show them now, then say so (re-render replaces the toast).
       if (screen === 'list') await render()
       toast(r.assigned.length === 1 ? `עבודה חדשה מהמשרד: ${r.assigned[0]}` : `${r.assigned.length} עבודות חדשות מהמשרד`)
-    }
+    } else if (r.pricing) toast('המחירון עודכן מהמשרד')
   } catch (err) {
     if (manual) toast(err instanceof SyncError ? err.message : 'הגיבוי נכשל')
   }

@@ -25,9 +25,11 @@ import {
   type Stage,
 } from '../stage'
 import type { OfficeUpdate } from './api'
-import { Api, ApiError, type KeyRow, type Me, type OfficeJob, type TimelineEvent } from './api'
+import { Api, ApiError, type KeyRow, type Me, type OfficeJob, type PricingSummary, type TimelineEvent } from './api'
 import { attentionHe } from './attention'
 import { calendarItems, shiftWeek, unscheduled, weekOf, type CalendarKind } from './calendar'
+import { toStoredPricing } from '../backup'
+import type { StoredPricing } from '../db'
 import { COMPANY_FIELDS, DEFAULT_COMPANY, type CompanyProfile } from '../company'
 import { composerSlot, forgetComposerLogs, mountComposer, setCompanyPhone } from './composer'
 import { forgetSubmissions, mountSubmission, submissionSlot } from './submissionPanel'
@@ -52,6 +54,8 @@ const state: {
   keys: KeyRow[]
   newKey: { key: string; row: KeyRow } | null
   company: CompanyProfile
+  /** The price book on the server; undefined until the settings tab loads it. */
+  pricing?: PricingSummary | null
   /** People a job can be assigned to (active personal keys). */
   surveyors: { id: string; name: string; role: string }[]
   /** The "new job" form is open in the side panel. */
@@ -139,7 +143,7 @@ async function load() {
     state.surveyors = people.surveyors
     state.generatedAt = r.generated_at
     state.error = ''
-    if (state.me?.role === 'admin' && state.tab === 'keys') state.keys = (await state.api.keys()).keys
+    if (state.me?.role === 'admin' && state.tab === 'keys') await loadSettings()
   } catch (err) {
     state.error = err instanceof ApiError ? err.message : 'הטעינה נכשלה'
     if (err instanceof ApiError && err.status === 401) logout()
@@ -582,7 +586,25 @@ function keysView(): string {
         ${COMPANY_FIELDS.map((f) => `<label>${escapeHtml(f.label_he)}<input name="${f.key}" maxlength="${f.max}" ${f.ltr ? 'dir="ltr"' : ''} value="${escapeAttr(state.company[f.key])}" /></label>`).join('')}
         <button class="btn btn-primary" type="submit">שמור פרטי חברה</button>
       </form>
+    </section>
+    <section class="o-card o-wide">
+      <h2>מחירון החברה</h2>
+      <p class="meta">מחירון אחד לכל הסוקרים: טוענים כאן קובץ מחירון (או גיבוי) שיוצא מהאפליקציה, וכל טלפון מקבל אותו בגיבוי הבא. טלפון שהמחירון בו חדש יותר שומר את שלו. המחירים לא מוצגים כאן ולא נחשפים ללקוחות.</p>
+      <p id="oPricingState">${
+        state.pricing === undefined
+          ? 'טוען…'
+          : state.pricing
+            ? `נטען ${escapeHtml(fmtDate(state.pricing.updatedAt, true))} ע״י ${escapeHtml(state.pricing.updated_by)} · ${state.pricing.active} מוצרים פעילים מתוך ${state.pricing.products}`
+            : '<b>עדיין לא נטען מחירון.</b> כל טלפון עובד עם המחירון שלו.'
+      }</p>
+      <label class="btn btn-primary">טען קובץ מחירון<input id="oPricingFile" type="file" accept=".json,application/json" hidden /></label>
     </section>`
+}
+
+async function loadSettings() {
+  const [k, p] = await Promise.all([state.api!.keys(), state.api!.pricing().catch(() => ({ summary: null }))])
+  state.keys = k.keys
+  state.pricing = p.summary
 }
 
 // ── Detail: survey fields and photos (loaded when the drawer opens) ────
@@ -717,7 +739,7 @@ root.addEventListener('click', (e) => {
     state.tab = tab.dataset.tab as typeof state.tab
     state.selected = null
     state.newKey = null
-    if (state.tab === 'keys') void state.api!.keys().then((r) => ((state.keys = r.keys), render()), (err) => toast(err.message))
+    if (state.tab === 'keys') void loadSettings().then(render, (err) => toast(err.message))
     render()
     return
   }
@@ -853,6 +875,30 @@ root.addEventListener('change', (e) => {
   if (t.id === 'oStatus') {
     state.status = t.value as StatusFilter
     render()
+  } else if (t.id === 'oPricingFile') {
+    const file = (t as unknown as HTMLInputElement).files?.[0]
+    if (!file) return
+    // Only the price book goes up: a whole backup (photos and all) is fine to pick.
+    void file
+      .text()
+      .then((text) => {
+        let p: StoredPricing | null = null
+        try {
+          p = toStoredPricing(JSON.parse(text))
+        } catch {
+          /* not JSON */
+        }
+        if (!p) throw new ApiError('בקובץ הזה אין מחירון. בחרו קובץ גיבוי או מחירון שיוצא מהאפליקציה.', 400)
+        return state.api!.savePricing(p)
+      })
+      .then(
+        (r) => {
+          state.pricing = r.summary
+          render()
+          toast(`המחירון נטען: ${r.summary.active} מוצרים. הטלפונים יקבלו אותו בגיבוי הבא.`)
+        },
+        (err) => toast(err instanceof ApiError ? err.message : 'טעינת המחירון נכשלה'),
+      )
   }
 })
 

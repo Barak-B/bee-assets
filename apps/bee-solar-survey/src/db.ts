@@ -232,10 +232,7 @@ export async function importBackup(data: BackupData): Promise<ImportResult> {
     if (decidePhoto(await get<StoredPhoto>('photos', ph.id), takenProjects.has(ph.projectId)) !== 'skip') tx.objectStore('photos').put(ph)
   }
   await txDone(tx)
-  if (decidePricing(await getPricing(), data.pricing)) {
-    await metaPut('pricing', data.pricing)
-    out.pricing = true
-  }
+  if (data.pricing) out.pricing = await adoptPricing(data.pricing)
   return out
 }
 
@@ -264,6 +261,13 @@ export async function savePricing(pricing: StoredPricing): Promise<void> {
   const tx = db.transaction('meta', 'readwrite')
   tx.objectStore('meta').put({ key: 'pricing', value: { ...pricing, updatedAt: new Date().toISOString() } })
   await txDone(tx)
+}
+
+/** Take a price book from a file or the office only when it is newer than this device's; keeps its date. */
+export async function adoptPricing(incoming: StoredPricing): Promise<boolean> {
+  if (!decidePricing(await getPricing(), incoming)) return false
+  await metaPut('pricing', incoming)
+  return true
 }
 
 export async function clearPricing(): Promise<void> {

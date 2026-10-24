@@ -9,12 +9,14 @@
  * never lists a photo it does not have, and a quote never arrives before its
  * survey. Nothing here sends anything to a customer (Law #2).
  */
+import { toStoredPricing } from './backup'
 import { normalizeCompany } from './company'
 import { canonicalJson, sha256Hex, type QuoteVersion } from '@bee/quote-core'
 import {
   getProject,
   getPublishSettings,
   getSyncState,
+  adoptPricing,
   importBackup,
   updateSyncState,
   listPhotos,
@@ -177,6 +179,8 @@ export interface SyncReport {
   errors: string[]
   /** Jobs the office assigned to this phone that arrived in this run. */
   assigned: string[]
+  /** The office's price book replaced this phone's in this run. */
+  pricing: boolean
 }
 
 async function syncOne(s: PublishSettings, project: SiteSurveyProject, report: SyncReport, deep: boolean): Promise<void> {
@@ -367,6 +371,12 @@ async function pullFromOffice(s: PublishSettings, report: SyncReport, force: boo
     .then((r) => r.json() as Promise<{ company?: unknown }>)
     .catch(() => null)
   if (co?.company) await saveCompanyProfile(normalizeCompany(co.company))
+  // The office's price book, when it is newer than this phone's. Best effort too.
+  const pr = await call(s, '/api/pricing', { signal: AbortSignal.timeout(10000) })
+    .then((r) => r.json() as Promise<{ pricing?: unknown }>)
+    .catch(() => null)
+  const pricing = toStoredPricing(pr?.pricing)
+  if (pricing?.updatedAt && (await adoptPricing(pricing))) report.pricing = true
   officePulledAt = now
 }
 
@@ -391,7 +401,7 @@ export function syncAll(only?: string[], opts: { deep?: boolean } = {}): Promise
     return running
   }
   running = (async () => {
-    const report: SyncReport = { synced: 0, skipped: 0, failed: 0, offline: false, photos: 0, quotes: 0, reports: 0, errors: [], assigned: [] }
+    const report: SyncReport = { synced: 0, skipped: 0, failed: 0, offline: false, photos: 0, quotes: 0, reports: 0, errors: [], assigned: [], pricing: false }
     const s = await getPublishSettings()
     const problem = settingsProblem(s)
     if (problem || !s) throw new SyncError(problem ?? 'לא הוגדר שרת')
