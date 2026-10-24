@@ -1,0 +1,192 @@
+{
+  "id": "7b2a6966-eef3-4bcb-b45f-8a11a1078e92",
+  "kind": "edit",
+  "loop": "edit.cad_render",
+  "status": "succeeded",
+  "trustTier": "L0",
+  "costTier": 1,
+  "source": "git",
+  "payload": {
+    "design": "examples/kal_gader_bess.json",
+    "sheets": [
+      "cover",
+      "notes",
+      "site",
+      "mv",
+      "sld",
+      "earthing",
+      "comm",
+      "panel",
+      "drill",
+      "schedules"
+    ]
+  },
+  "result": {
+    "sheets": [
+      "E-00",
+      "E-01",
+      "E-02",
+      "E-03",
+      "E-04",
+      "E-05",
+      "E-06",
+      "E-07",
+      "E-P09",
+      "E-P10",
+      "E-P11",
+      "E-P12",
+      "E-20",
+      "E-30",
+      "E-31"
+    ],
+    "outputs": {
+      "dxf": "out/kgfull/kal_gader.dxf",
+      "design_json": "examples/kal_gader_bess.json",
+      "png:E-00": "out/kgfull/kal_gader_E-00.png",
+      "png:E-01": "out/kgfull/kal_gader_E-01.png",
+      "png:E-02": "out/kgfull/kal_gader_E-02.png",
+      "png:E-03": "out/kgfull/kal_gader_E-03.png",
+      "png:E-04": "out/kgfull/kal_gader_E-04.png",
+      "png:E-05": "out/kgfull/kal_gader_E-05.png",
+      "png:E-06": "out/kgfull/kal_gader_E-06.png",
+      "png:E-07": "out/kgfull/kal_gader_E-07.png",
+      "png:E-P09": "out/kgfull/kal_gader_E-P09.png",
+      "png:E-P10": "out/kgfull/kal_gader_E-P10.png",
+      "png:E-P11": "out/kgfull/kal_gader_E-P11.png",
+      "png:E-P12": "out/kgfull/kal_gader_E-P12.png",
+      "png:E-20": "out/kgfull/kal_gader_E-20.png",
+      "png:E-30": "out/kgfull/kal_gader_E-30.png",
+      "png:E-31": "out/kgfull/kal_gader_E-31.png",
+      "pdf_sheet:E-00": "out/kgfull/sheets/kal_gader_E-00.pdf",
+      "pdf_sheet:E-01": "out/kgfull/sheets/kal_gader_E-01.pdf",
+      "pdf_sheet:E-02": "out/kgfull/sheets/kal_gader_E-02.pdf",
+      "pdf_sheet:E-03": "out/kgfull/sheets/kal_gader_E-03.pdf",
+      "pdf_sheet:E-04": "out/kgfull/sheets/kal_gader_E-04.pdf",
+      "pdf_sheet:E-05": "out/kgfull/sheets/kal_gader_E-05.pdf",
+      "pdf_sheet:E-06": "out/kgfull/sheets/kal_gader_E-06.pdf",
+      "pdf_sheet:E-07": "out/kgfull/sheets/kal_gader_E-07.pdf",
+      "pdf_sheet:E-P09": "out/kgfull/sheets/kal_gader_E-P09.pdf",
+      "pdf_sheet:E-P10": "out/kgfull/sheets/kal_gader_E-P10.pdf",
+      "pdf_sheet:E-P11": "out/kgfull/sheets/kal_gader_E-P11.pdf",
+      "pdf_sheet:E-P12": "out/kgfull/sheets/kal_gader_E-P12.pdf",
+      "pdf_sheet:E-20": "out/kgfull/sheets/kal_gader_E-20.pdf",
+      "pdf_sheet:E-30": "out/kgfull/sheets/kal_gader_E-30.pdf",
+      "pdf_sheet:E-31": "out/kgfull/sheets/kal_gader_E-31.pdf",
+      "pdf_set": "out/kgfull/kal_gader_SET.pdf",
+      "qa_json": "out/kgfull/kal_gader_qa.json",
+      "qa_md": "out/kgfull/kal_gader_qa.md"
+    },
+    "audit": {
+      "E-00": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-01": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-02": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-03": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-04": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-05": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-06": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-07": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-P09": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-P10": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-P11": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-P12": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-20": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-30": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      },
+      "E-31": {
+        "text_text": 0,
+        "text_line": 0,
+        "outside": 0
+      }
+    },
+    "warnings": {
+      "E-00": [],
+      "E-01": [],
+      "E-02": [],
+      "E-03": [],
+      "E-04": [],
+      "E-05": [],
+      "E-06": [],
+      "E-07": [],
+      "E-P09": [],
+      "E-P10": [],
+      "E-P11": [],
+      "E-P12": [],
+      "E-20": [],
+      "E-30": [],
+      "E-31": []
+    },
+    "clean": true,
+    "qa": {
+      "score": 91,
+      "errors": 0,
+      "warnings": 3,
+      "clean": true
+    },
+    "archive_folder": "out/arch/אפקון אגירה/כל גדר — BESS + PV/05 תכנון",
+    "drive_root": "עבודה/לקוחות חברות ומכרזים/אפקון אגירה/כל גדר — BESS + PV/05 תכנון"
+  },
+  "error": null,
+  "createdAt": "2026-10-18T09:33:43+00:00",
+  "startedAt": "2026-10-18T09:33:43+00:00",
+  "finishedAt": "2026-10-18T09:34:36+00:00",
+  "outbound": {
+    "channel": "none",
+    "destinationClass": "other",
+    "requiresHumanPick": false
+  }
+}
