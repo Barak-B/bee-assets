@@ -218,7 +218,7 @@ function show() {
       <td class="num">${fx(r.du_total, 2)}</td><td class="num">${r.du_limit}</td><td class="num">${fx(r.ik1, 0)}</td><td class="num">${fx(r.ia, 0)}</td></tr>`).join("") + "</tbody></table>";
   } else if (tab === "bom") {
     v.innerHTML = `<table><thead><tr><th>IEC 81346</th><th>פריט</th><th>מפרט</th><th>כמות</th><th>תגים</th></tr></thead><tbody>` +
-      last.bom.map(r => `<tr><td>${esc(r.iec)}</td><td>${esc(r.item)}</td><td>${esc(r.spec)}</td><td class="num">${r.qty}</td><td>${esc(r.tags.join(" "))}</td></tr>`).join("") +
+      last.bom.map(r => `<tr><td>${esc(r.iec)}</td><td>${esc(r.item)}</td><td>${esc(r.spec)}</td><td class="num">${r.qty} ${esc(r.unit)}</td><td>${esc(r.tags.join(" "))}</td></tr>`).join("") +
       "</tbody></table>";
   } else {
     v.innerHTML = `<div class="sheet">${last.sheets[tab]}</div>`;

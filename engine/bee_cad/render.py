@@ -107,8 +107,29 @@ def _visual_copy(doc: Drawing) -> Drawing:
             if t == "TEXT" and has_hebrew(e.dxf.text):
                 e.dxf.text = to_visual(e.dxf.text)
             elif t == "MTEXT" and has_hebrew(e.text):
-                e.text = "\\P".join(to_visual(p) for p in e.text.split("\\P"))
+                width = e.dxf.get("width", 0.0) or 0.0
+                chars = int(width / (CHAR_W * e.dxf.char_height)) if width else 0
+                e.text = "\\P".join(to_visual(ln) for p in e.text.split("\\P") for ln in _wrap(p, chars))
+                e.dxf.width = 0.0       # wrapped here; the backend must not wrap the reversed lines again
     return vdoc
+
+
+CHAR_W = 0.6            # mean glyph width / text height (Arial, mixed Hebrew/Latin), a little generous
+
+
+def _wrap(par: str, chars: int) -> list[str]:
+    """Break a logical-order paragraph into lines BEFORE the visual reorder: a backend that wraps the
+    reversed string would move the first words to the last line."""
+    if chars <= 0 or len(par) <= chars:
+        return [par]
+    lines, cur = [], ""
+    for word in par.split(" "):
+        if cur and len(cur) + 1 + len(word) > chars:
+            lines.append(cur)
+            cur = word
+        else:
+            cur = f"{cur} {word}" if cur else word
+    return lines + [cur]
 
 
 def render_png(doc: Drawing, path: Path, dpi: int = 110, sheet_index: int = 0, already_visual: bool = False) -> None:

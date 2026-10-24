@@ -15,10 +15,12 @@ from typing import Any, Optional
 
 from .calc import U_LL, CableSpec, ampacity, voltage_drop_pct
 from .checks import DU_LIMIT_LIGHTING_PCT, DU_LIMIT_PCT
-from .model import Board, Busbar, Cable, Circuit, Design, Device, Enclosure, Group, Node, Supply, TitleBlock
+from .model import (Board, Busbar, Cable, Circuit, Design, Device, Enclosure, Group, Node, PvArray, Supply,
+                    TitleBlock)
 from .panel import device_width_mm
 
-STD_RATINGS = (10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125)
+STD_RATINGS = (10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400)
+MCB_MAX_A = 125         # above this the template draws a moulded-case breaker (mccb)
 CSA = (1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120)
 MAX_PER_RCD = 7          # 1P circuits behind one 4P 40A 30mA RCD
 SPARE = 1.25             # enclosure spare capacity
@@ -144,13 +146,25 @@ def _enclosure(b: Board) -> Enclosure:
                      rows=rows, modules_per_row=18, mounting="flush", ip="IP40")
 
 
-def _connection_a(conn: str) -> int:
+def _connection(conn: str) -> tuple[int, int]:
+    """"3X40A" → (3, 40); "1X40A" → (1, 40)."""
     m = re.search(r"(\d+)\s*[xX×]\s*(\d+)", conn or "")
-    if not m:
-        raise BriefError(f"גודל חיבור לא מזוהה: \"{conn}\" (לכתוב למשל 3X40A)")
-    if m.group(1) != "3":
+    if not m or m.group(1) not in ("1", "3"):
+        raise BriefError(f"גודל חיבור לא מזוהה: \"{conn}\" (לכתוב למשל 3X40A או 1X40A)")
+    return int(m.group(1)), int(m.group(2))
+
+
+def _connection_a(conn: str) -> int:
+    phases, amps = _connection(conn)
+    if phases != 3:
         raise BriefError("התבנית תומכת כרגע בחיבור תלת-פאזי בלבד")
-    return int(m.group(2))
+    return amps
+
+
+def _breaker(tag: str, rating: int, poles: int, note: Optional[str] = None, lock: bool = True) -> Device:
+    if rating > MCB_MAX_A:
+        return Device(tag=tag, kind="mccb", poles=poles, rating_a=rating, lock=lock, note=note)
+    return Device(tag=tag, kind="mcb", poles=poles, rating_a=rating, curve="C", lock=lock, note=note)
 
 
 def house_pv(brief: dict[str, Any], today: Optional[str] = None) -> Design:
@@ -223,7 +237,122 @@ def house_pv(brief: dict[str, Any], today: Optional[str] = None) -> Design:
     return Design(title=title, boards=boards, nodes=nodes, notes=notes)
 
 
-TEMPLATES = {"house-pv": house_pv}
+def _pv_array(pv: dict[str, Any]) -> Optional[PvArray]:
+    """The structured DC side from the app (module + inverter limits + strings), or None for a text-only brief."""
+    if not pv.get("module") or not pv.get("strings"):
+        return None
+    try:
+        inv = {k: v for k, v in (pv.get("inverter") or {}).items() if k in PvArray.model_fields["inverter"].annotation.model_fields}
+        return PvArray(module=pv["module"], inverter=inv, strings=pv["strings"], modules_line=pv.get("modules_line", ""))
+    except Exception as e:  # pydantic: say which field, in Hebrew
+        raise BriefError(f"נתוני המחרוזות (pv) לא תקינים: {e}") from e
+
+
+def pv_connection(brief: dict[str, Any], today: Optional[str] = None) -> Design:
+    """A PV (and storage) system connected to an existing main board — the job the app's quote sells.
+
+    The existing circuits are not drawn. One inverter feeds Q-INV in the main board; several feed an AC
+    combiner board PVB through Q-PV. The DC strings from the quote's string plan are checked (bee_cad.pv).
+    """
+    sup = brief.get("supply") or {}
+    conn = str(sup.get("connection") or "3X40A").upper()
+    phases, main_a = _connection(conn)
+    three = phases == 3
+    pv = brief.get("pv") or {}
+    inv = pv.get("inverter") or {}
+    kw = float(inv.get("kw") or 0)
+    if not kw:
+        raise BriefError("חסר הספק הממיר (pv.inverter.kw)")
+    n = max(1, int(inv.get("count") or 1))
+    if not three and (n > 1 or kw > 10):
+        raise BriefError(f"חיבור חד-פאזי {conn}: עד ממיר אחד של 10 kW; לתכנן הגדלת חיבור לתלת-פאזי")
+    poles = 4 if three else 2
+    cores = 5 if three else 3
+    i_ac = float(inv.get("max_ac_a") or (kw * 1000 / (math.sqrt(3) * U_LL) if three else kw * 1000 / 230))
+    q = next_rating(1.25 * i_ac)
+    array = _pv_array(pv)
+
+    s_main = upsize_for_drop(size_cable(main_a, three, True, "C"), main_a, sup.get("cable_length_m"), three, DU_SUPPLY_PCT)
+    supply = Supply(kind="utility", meter=conn, earthing=sup.get("earthing", "TN-C-S"), ik_ka=sup.get("ik_ka"),
+                    voltage="400/230V" if three else "230V",
+                    cable=Cable(designation=sup.get("cable") or f"N2XY {cores - 1}X{_fmt(s_main)}",
+                                length_m=sup.get("cable_length_m"), method="C"))
+    mdb = Board(id="MDB", title="לוח ראשי קיים", supply=supply, existing=True,
+                incomer=_breaker("Q0", main_a, poles), busbar=Busbar(rating_a=next_rating(max(63, main_a)),
+                                                                     label="L1,L2,L3,N" if three else "L,N"),
+                spd=Device(tag="SPD", kind="spd", poles=poles, note="T2 Up<1.5kV"))
+    hybrid = bool(inv.get("hybrid", bool(brief.get("battery"))))
+    rcd_type = inv.get("rcd_type", "B")
+    strings_of = {}
+    if array:
+        from .pv import inverter_of
+        for st in array.strings:
+            strings_of.setdefault(inverter_of(array, st.mppt), []).append(st)
+
+    def inv_feeder(k: int, board: str) -> Circuit:
+        tag = "Q-INV" if n == 1 else f"Q-INV{k}"
+        length = (pv.get("inverter_cable_lengths_m") or [None] * n)[k - 1] if n > 1 else pv.get("cable_length_m")
+        s = upsize_for_drop(size_cable(q, three, True, "C"), q, length, three, DU_SUPPLY_PCT)
+        return Circuit(tag=tag, kind="feeder", to_node=f"INV{k}", device=_breaker(tag, q, poles, "מפסק ממיר"),
+                       cable=Cable(designation=f"N2XY {cores}X{_fmt(s)}", length_m=length, method="C"))
+
+    nodes: list[Node] = []
+    boards = [mdb]
+    notes = [f"לוח ראשי קיים: המעגלים הקיימים לא משורטטים. Q0 {main_a}A לפי גודל החיבור {conn}."]
+    if n == 1:
+        mdb.feeders.append(inv_feeder(1, "MDB"))
+    else:
+        q_pv = next_rating(1.25 * i_ac * n)
+        s_pv = upsize_for_drop(size_cable(q_pv, True, True, "C"), q_pv, pv.get("cable_length_m"), True, DU_SUPPLY_PCT)
+        mdb.feeders.append(Circuit(tag="Q-PV", kind="feeder", to_board="PVB", device=_breaker("Q-PV", q_pv, 4, "מפסק ראשי PV"),
+                                   cable=Cable(designation=f"N2XY 5X{_fmt(s_pv)}", length_m=pv.get("cable_length_m"),
+                                               method="C")))
+        pvb = Board(id="PVB", title="לוח AC סולארי PVB",
+                    supply=Supply(kind="board", label="מ-Q-PV בלוח הראשי", from_board="MDB", earthing=""),
+                    incomer=Device(tag="Q-PVB", kind="switch", poles=4, rating_a=q_pv),
+                    busbar=Busbar(rating_a=q_pv), spd=Device(tag="SPD-PV", kind="spd", poles=4, note="T2 Up<1.5kV"),
+                    feeders=[inv_feeder(k, "PVB") for k in range(1, n + 1)])
+        pvb.enclosure = _enclosure(pvb)
+        boards.append(pvb)
+        notes.append(f"Q-PV {q_pv}A לפי 1.25 × {n} ממירים × {i_ac:.1f}A.")
+    for k in range(1, n + 1):
+        own = strings_of.get(k, [])
+        by_len: dict[int, int] = {}
+        for st in own:
+            by_len[st.modules] = by_len.get(st.modules, 0) + st.count
+        sub = " + ".join(f"{c}×{m}" for m, c in sorted(by_len.items(), reverse=True)) + " פאנלים" if own else ""
+        nodes.append(Node(id=f"INV{k}", kind="inverter", label=("ממיר היברידי" if hybrid else "ממיר") + (f" {k}" if n > 1 else ""),
+                          sublabel=inv.get("model", ""), rating=f"{kw:g} kW · {'400V' if three else '230V'}",
+                          device=Device(tag=f"RCD-INV{k if n > 1 else ''}", kind="rcd", poles=poles,
+                                        rating_a=next_rating(q), idn_ma=300, rcd_type=rcd_type)))
+        if array or pv.get("modules") or pv.get("modules_line"):
+            mods = sum(st.count * st.modules for st in own) if own else None
+            nodes.append(Node(id=f"PV{k}", kind="pv", label="מערך PV" + (f" {k}" if n > 1 else ""),
+                              sublabel=sub or pv.get("modules_line") or pv.get("modules", ""),
+                              rating=f"{mods * array.module.wp / 1000:g} kWp" if mods and array else
+                              (f"{pv['kwp']:g} kWp" if pv.get("kwp") and n == 1 else "")))
+    bat = brief.get("battery")
+    if bat:
+        nodes.append(Node(id="BAT", kind="battery", label="מערכת אגירה", sublabel=bat.get("model", ""),
+                          rating=f"{bat['kwh']:g} kWh" if bat.get("kwh") else ""))
+    mdb.enclosure = _enclosure(mdb)
+    notes += [
+        f"מפסק לכל ממיר {q}A לפי 1.25 × זרם הממיר ({i_ac:.1f}A); כבלים לפי IEC 60364-5-52 שיטה C, מפל מתח עד {DU_SUPPLY_PCT:g}%.",
+        f"פחת 300mA Type {rcd_type} לכל ממיר, אלא אם יצרן הממיר מצהיר שאין זרם זליגה DC.",
+        "מנתק DC דו-קוטבי לכל כניסת MPPT, ליד הממיר; מגן מתח יתר DC בממיר או בתיבת מחרוזות.",
+        "הארקת מבנים ומסגרות: מוליך 16 ממ\"ר (10 ממ\"ר מותר כשמוגן מכנית).",
+        "שילוט: ״מפסק ראשי של מיתקן פוטו-וולטאי״ על המפסק הראשי של ה-PV, ושלט אזהרה על כל לוח עם מקור הזנה נוסף.",
+        "נוצר מתבנית pv-connection; כל הערכים לאישור מהנדס לפני הגשה.",
+    ]
+    title = TitleBlock(project=brief.get("project", ""), site=brief.get("site", ""), client=brief.get("client", ""),
+                       sheet_no=brief.get("sheet_no", "E-01"),
+                       sheet_title="חד-קווי — חיבור מערכת PV" + (" ואגירה" if bat else ""),
+                       date=today or date.today().isoformat(), status="לאישור")
+    title.revisions = [("A", title.date, "הגשה ראשונה")]
+    return Design(title=title, boards=boards, nodes=nodes, notes=notes, pv=array)
+
+
+TEMPLATES = {"house-pv": house_pv, "pv-connection": pv_connection}
 
 
 def from_brief(brief: dict[str, Any], today: Optional[str] = None) -> Design:

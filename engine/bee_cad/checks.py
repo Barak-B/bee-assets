@@ -13,7 +13,9 @@ from typing import Literal, Optional
 
 from .calc import (METHODS, TRIP_MULTIPLE, ampacity, design_current, ik1_min_a, ik3_max_ka, loaded_conductors,
                    node_kw, parse_cable, source_impedance, voltage_drop_pct)
-from .model import Board, Circuit, Design
+from .model import Board, Circuit, Design, PvArray
+from .pv import (DC_AC_MAX, DC_AC_MIN, FUSE_FROM_STRINGS, T_CELL_MAX_C, T_MIN_C, dc_ac, inverter_of, module_volts,
+                 string_window, strings_per_mppt_max)
 
 Level = Literal["error", "warn", "info"]
 
@@ -230,12 +232,66 @@ def _check_board(design: Design, b: Board, out: list[Finding]) -> None:
                            "להעביר מעגלים מהמופע העמוס"))
 
 
+def _check_pv(pv: PvArray, out: list[Finding]) -> None:
+    """DC side: string length window, MPPT current and inputs, DC/AC (rules in bee_cad.pv)."""
+    inv = pv.inverter
+    v = module_volts(pv.module)
+    short, long_ = string_window(pv)
+    per_mppt = strings_per_mppt_max(pv)
+    seen: dict[int, int] = {}
+    for s in pv.strings:
+        where = f"PV / INV{inverter_of(pv, s.mppt)} MPPT{s.mppt}" + (f" ({s.face})" if s.face else "")
+        seen[s.mppt] = seen.get(s.mppt, 0) + 1
+        voc = s.modules * v.voc_cold
+        if inv.vdc_max and voc > inv.vdc_max:
+            out.append(Finding("error", "PV_VOC_COLD", where,
+                               f"מחרוזת של {s.modules} פאנלים: Voc ב-{T_MIN_C:g}°C = {voc:.0f}V, מעל {inv.vdc_max:g}V של הממיר",
+                               f"לקצר את המחרוזת ל-{long_} פאנלים לכל היותר" if long_ else "לקצר את המחרוזת"))
+        elif inv.mppt_max and s.modules * v.vmp_cold > inv.mppt_max:
+            out.append(Finding("warn", "PV_VMP_HIGH", where,
+                               f"Vmp בקור = {s.modules * v.vmp_cold:.0f}V, מעל תחום ה-MPPT ({inv.mppt_max:g}V)",
+                               f"עד {long_} פאנלים במחרוזת" if long_ else "לקצר את המחרוזת"))
+        if inv.mppt_min and s.modules * v.vmp_hot < inv.mppt_min:
+            out.append(Finding("warn", "PV_VMP_LOW", where,
+                               f"Vmp בגג חם ({T_CELL_MAX_C:g}°C) = {s.modules * v.vmp_hot:.0f}V, מתחת ל-{inv.mppt_min:g}V: הממיר יאבד ייצור בקיץ",
+                               f"לפחות {short} פאנלים במחרוזת" if short else "להאריך את המחרוזת"))
+        if per_mppt is not None and s.count > per_mppt:
+            out.append(Finding("error", "PV_MPPT_CURRENT", where,
+                               f"{s.count} מחרוזות במקביל = {s.count * pv.module.imp:.1f}A; הכניסה מקבלת עד {per_mppt} מחרוזות"
+                               + (f" ({inv.imppt_max:g}A)" if inv.imppt_max else ""),
+                               "לפזר את המחרוזות על כניסות MPPT נוספות"))
+        elif s.count >= FUSE_FROM_STRINGS:
+            out.append(Finding("info", "PV_STRING_FUSE", where,
+                               f"{s.count} מחרוזות במקביל: נדרשים נתיכי מחרוזת gPV בשני הקטבים (או מאסף עם נתיכים)", ""))
+    for m, n in seen.items():
+        if n > 1:
+            out.append(Finding("warn", "PV_MPPT_REPEAT", f"PV / MPPT{m}", f"MPPT{m} מופיע {n} פעמים ברשימת המחרוזות",
+                               "לאחד לשורה אחת עם count"))
+    if inv.mppts and pv.strings:
+        top = max(s.mppt for s in pv.strings)
+        if top > inv.mppts * max(1, inv.count):
+            out.append(Finding("error", "PV_MPPT_COUNT", "PV",
+                               f"המחרוזות משתמשות ב-{top} כניסות MPPT, ול-{inv.count} ממירים יש {inv.mppts * max(1, inv.count)}",
+                               "להוסיף ממיר או לבחור ממיר עם יותר כניסות"))
+    r = dc_ac(pv)
+    if r is not None and pv.strings:
+        if r > DC_AC_MAX + 1e-9:
+            out.append(Finding("warn", "PV_DC_AC", "PV", f"יחס DC/AC {r:.2f}, מעל {DC_AC_MAX:g}: קיטום ייצור בצהריים",
+                               "להוסיף ממיר או להגדיל את ההספק שלו"))
+        elif r < DC_AC_MIN - 0.15:
+            out.append(Finding("warn", "PV_DC_AC", "PV", f"יחס DC/AC {r:.2f}: הממיר גדול מדי למערך", "לשקול ממיר קטן יותר"))
+        else:
+            out.append(Finding("info", "PV_DC_AC", "PV", f"{pv.kwp():.2f} kWp על {inv.count}×{inv.kw:g} kW, DC/AC {r:.2f}", ""))
+
+
 def check(design: Design, compute: bool = True) -> list[Finding]:
     """Run every rule. With ``compute`` the computed voltage drops are written into the model."""
     work = design if compute else design.model_copy(deep=True)
     out: list[Finding] = []
     for b in work.boards:
         _check_board(work, b, out)
+    if work.pv:
+        _check_pv(work.pv, out)
     order = {"error": 0, "warn": 1, "info": 2}
     out.sort(key=lambda f: (order[f.level], f.where))
     return out

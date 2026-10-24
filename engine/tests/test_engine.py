@@ -372,3 +372,88 @@ def test_studio_api():
             assert e.code == 422 and "תבנית" in json.loads(e.read())["error"]
     finally:
         httpd.shutdown()
+
+
+def test_pv_dc_checks_match_app_rules():
+    from bee_cad.checks import check
+    from bee_cad.model import Design, PvArray, PvInverterSpec, PvModule, PvString
+    from bee_cad.pv import string_window
+
+    module = PvModule(wp=620, voc=49.5, vmp=41.6, isc=15.9, imp=14.9)
+    inv = PvInverterSpec(kw=50, count=2, vdc_max=1100, mppt_min=200, mppt_max=1000, imppt_max=32, mppts=4)
+    pv = PvArray(module=module, inverter=inv, strings=[PvString(mppt=1, count=2, modules=18)])
+    assert string_window(pv) == (6, 20)               # same window as quote-engine string-sizing.ts
+    pv.strings = [PvString(mppt=1, count=3, modules=21), PvString(mppt=2, count=1, modules=5),
+                  PvString(mppt=9, count=1, modules=10)]
+    codes = {f.code: f for f in check(Design(pv=pv))}
+    assert codes["PV_VOC_COLD"].level == "error" and "20" in codes["PV_VOC_COLD"].fix
+    assert codes["PV_MPPT_CURRENT"].level == "error"
+    assert codes["PV_VMP_LOW"].level == "warn"
+    assert codes["PV_MPPT_COUNT"].level == "error"   # MPPT9 on 2 × 4 inputs
+
+
+def test_pv_connection_template():
+    import yaml
+
+    from bee_cad.bom import bom
+    from bee_cad.checks import check
+    from bee_cad.templates import BriefError, from_brief
+
+    brief = yaml.safe_load((EXAMPLE.parent / "brief_pv_commercial.yaml").read_text(encoding="utf-8"))
+    d = from_brief(brief, today="2026-10-25")
+    assert [b.id for b in d.boards] == ["MDB", "PVB"] and d.boards[0].existing
+    assert d.board("MDB").feeders[0].device.rating_a == 200 and d.board("MDB").feeders[0].device.kind == "mccb"
+    assert [c.tag for c in d.board("PVB").feeders] == ["Q-INV1", "Q-INV2"]
+    assert d.node("INV1").device.rcd_type == "B"
+    assert round(d.pv.kwp(), 2) == 128.96
+    f = check(d)
+    assert not [x for x in f if x.level != "info"], [x.line() for x in f]
+    rows = {(r.kind, r.spec): r for r in bom(d)}
+    assert rows[("pv_module", "620W Voc 49.5V Isc 15.9A")].qty == 208
+    assert rows[("dc_switch", "2P 1000V DC")].qty == 8
+    assert not any(r.kind == "mccb" and "250A" in r.spec for r in rows.values())   # existing Q0 is not bought
+    assert any(r.kind == "cable" and r.unit == "מ'" for r in rows.values())
+
+    one = {"template": "pv-connection", "supply": {"connection": "1X40A"},
+           "pv": {"inverter": {"kw": 8}, "cable_length_m": 15}}
+    d1 = from_brief(one)
+    assert d1.board("MDB").incomer.poles == 2 and d1.board("MDB").feeders[0].device.rating_a == 50
+    try:
+        from_brief({**one, "pv": {"inverter": {"kw": 15}}})
+        raise AssertionError("expected BriefError")
+    except BriefError as e:
+        assert "חד-פאזי" in str(e)
+
+
+def test_plans_endpoint_and_token(monkeypatch):
+    import base64
+    import json
+    import threading
+    import urllib.request
+    from http.server import ThreadingHTTPServer
+
+    import yaml
+
+    from bee_cad.server import Handler
+
+    brief = yaml.safe_load((EXAMPLE.parent / "brief_pv_commercial.yaml").read_text(encoding="utf-8"))
+    monkeypatch.setenv("BEE_CAD_TOKEN", "t0k")
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{httpd.server_address[1]}"
+    try:
+        assert json.loads(urllib.request.urlopen(base + "/api/health").read())["ok"]
+        body = json.dumps({"brief": brief}).encode()
+        try:
+            urllib.request.urlopen(urllib.request.Request(base + "/api/plans", body, method="POST"))
+            raise AssertionError("expected 401")
+        except urllib.error.HTTPError as e:
+            assert e.code == 401
+        req = urllib.request.Request(base + "/api/plans", body, method="POST", headers={"Authorization": "Bearer t0k"})
+        out = json.loads(urllib.request.urlopen(req).read())
+        assert out["summary"].startswith("בדיקות: 0 שגיאות")
+        assert base64.b64decode(out["files"]["pdf"]["base64"])[:4] == b"%PDF"
+        assert out["files"]["dxf"]["name"].endswith(".dxf")
+        assert any(r["kind"] == "dc_switch" for r in out["bom"])
+    finally:
+        httpd.shutdown()

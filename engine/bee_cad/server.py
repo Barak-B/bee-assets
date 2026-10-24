@@ -7,8 +7,10 @@ Standard library only (http.server); the page is one HTML file in bee_cad/web.
 """
 from __future__ import annotations
 
-import io
+import base64
+import hmac
 import json
+import os
 import tempfile
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,7 +26,7 @@ from .checks import as_dicts, check, summary
 from .model import Design
 from .render import A3_H, A3_W, _visual_copy, build, merge_pdfs, render_pdf, save_dxf
 from .report import calc_rows
-from .templates import BriefError, from_brief
+from .templates import TEMPLATES, BriefError, from_brief
 
 EXAMPLE_BRIEF = Path(__file__).resolve().parents[1] / "examples" / "brief_house_pv.yaml"
 
@@ -72,6 +74,17 @@ def analyse(body: dict[str, Any]) -> dict[str, Any]:
         "sheets": sheet_svgs(design) if body.get("sheets", True) else {},
         "design": json.loads(design.model_dump_json(exclude_none=True)),
     }
+
+
+def plans(body: dict[str, Any]) -> dict[str, Any]:
+    """Everything the app files under a project in one call: checks, BOM rows and the PDF set, DXF and BOM CSV."""
+    out = analyse({**body, "sheets": False})
+    out.pop("rows")
+    out["files"] = {}
+    for fmt in ("pdf", "dxf", "csv"):
+        data, ctype, name = export(body, fmt)
+        out["files"][fmt] = {"name": name, "type": ctype, "base64": base64.b64encode(data).decode("ascii")}
+    return out
 
 
 def export(body: dict[str, Any], fmt: str) -> tuple[bytes, str, str]:
@@ -125,9 +138,21 @@ class Handler(BaseHTTPRequestHandler):
     def _json(self, code: int, obj: Any) -> None:
         self._send(code, json.dumps(obj, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
 
+    def _authorized(self) -> bool:
+        """With BEE_CAD_TOKEN set (a service on the app's network), every /api call needs that bearer token."""
+        token = os.environ.get("BEE_CAD_TOKEN", "")
+        if not token:
+            return True
+        got = self.headers.get("Authorization", "")
+        return hmac.compare_digest(got.encode(), f"Bearer {token}".encode())
+
     def do_GET(self) -> None:
         url = urlparse(self.path)
-        if url.path in ("/", "/index.html"):
+        if url.path == "/api/health":
+            self._json(200, {"ok": True, "templates": sorted(TEMPLATES)})
+        elif url.path.startswith("/api/") and not self._authorized():
+            self._json(401, {"error": "נדרש אסימון"})
+        elif url.path in ("/", "/index.html"):
             html = resources.files("bee_cad").joinpath("web/index.html").read_bytes()
             self._send(200, html, "text/html; charset=utf-8")
         elif url.path == "/api/example":
@@ -137,10 +162,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         url = urlparse(self.path)
+        if not self._authorized():
+            self._json(401, {"error": "נדרש אסימון"})
+            return
         try:
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
             if url.path == "/api/design":
                 self._json(200, analyse(body))
+            elif url.path == "/api/plans":
+                self._json(200, plans(body))
             elif url.path == "/api/export":
                 fmt = parse_qs(url.query).get("fmt", ["pdf"])[0]
                 data, ctype, name = export(body, fmt)

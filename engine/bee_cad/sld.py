@@ -317,6 +317,8 @@ class SldRenderer:
                 s = sum((c.device.rating_a or 0) for c in b.all_circuits() if c.phase == ph and c.device.poles == 1)
                 vals.append(s)
             rows.append([ph] + [f"{v:g}" for v in vals] + [f"{sum(vals):g}"])
+        if all(r[-1] == "0" for r in rows):         # no 1P circuits drawn (e.g. a PV connection to an existing board)
+            return
         rh = 5.0
         h = rh * (len(rows) + 1)
         ctx.rect(x0, y, w, h, "legend")
