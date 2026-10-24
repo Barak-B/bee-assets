@@ -1,7 +1,8 @@
 /**
  * The company as customers see it: name, company number, license, address,
- * phone, email, site. Entered once by an admin on the office screen (never
- * guessed here); empty fields are simply not shown.
+ * phone, email, site. The defaults are what every B.E.E quote already prints
+ * in its footer (quotes 2609-*, 2026); an admin can change them on the office
+ * screen. Empty fields are simply not shown.
  */
 import { isValidEmail, isValidIsraeliId, normalizePhone } from './customer'
 
@@ -22,13 +23,13 @@ export interface CompanyProfile {
 
 export const DEFAULT_COMPANY: CompanyProfile = {
   brand: 'B.E.E',
-  name_he: 'ברק אלקטריק אנג׳ינירינג',
-  company_id: '',
+  name_he: 'ברק הנדסת חשמל בע״מ',
+  company_id: '515839090',
   license: '',
-  address: '',
-  phone: '',
-  email: '',
-  website: '',
+  address: 'אזה״ת טירה, כוכב יאיר',
+  phone: '050-955-4483',
+  email: 'barak-barzel@barak-e.com',
+  website: 'www.barak-e.com',
 }
 
 export const COMPANY_FIELDS: { key: keyof CompanyProfile; label_he: string; max: number; ltr?: boolean }[] = [
@@ -64,7 +65,7 @@ export function companyErrors(p: CompanyProfile): string[] {
   return out
 }
 
-/** "ברק אלקטריק אנג׳ינירינג · ח״פ 51-1234567-8 · 08-1234567" — what fits on a footer line. */
+/** "ברק הנדסת חשמל בע״מ · ח״פ 515839090 · 050-955-4483" — what fits on a footer line. */
 export function companyLine(p: CompanyProfile, opts: { phone?: boolean } = {}): string {
   return [p.name_he, p.company_id && `ח״פ ${p.company_id}`, p.license, opts.phone === false ? '' : p.phone].filter(Boolean).join(' · ')
 }

@@ -326,7 +326,7 @@ async function render() {
         <div class="brand">
           <div class="brand-mark">BEE</div>
           <div class="brand-text">
-            <strong>ברק אלקטריק אנג׳ינירינג</strong>
+            <strong>ברק הנדסת חשמל</strong>
             <span>Hive Collect · סקר אתר</span>
           </div>
         </div>
@@ -630,7 +630,7 @@ async function render() {
             <div class="field"><label>יעד kWp</label><input id="f_targetKwp" inputmode="decimal" value="${escapeAttr(editing.targetKwp)}" /></div>
             <div class="field"><label>תקציב ₪</label><input id="f_budget" inputmode="decimal" value="${escapeAttr(editing.budgetIls)}" /></div>
           </div>
-          <div class="field"><label>העדפת ממיר (צי B.E.E)</label><select id="f_inverterBrand">${options(['SolarEdge', 'KStar', 'ABB', 'Deye'], editing.inverterBrandPref)}</select></div>
+          <div class="field"><label>העדפת ממיר (צי B.E.E)</label><select id="f_inverterBrand">${options(['Deye', 'Sungrow', 'SolarEdge', 'KStar', 'ABB'], editing.inverterBrandPref)}</select></div>
           <label class="checkbox-row"><input type="checkbox" id="f_battery" ${editing.includeBattery ? 'checked' : ''}/> לכלול סוללה בתכנון</label>
           ${photoBlock('roof', true)}
           ${photoBlock('siteOverview')}

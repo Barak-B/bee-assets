@@ -507,14 +507,14 @@ describe('company profile', () => {
     const e = env()
     const { body: office } = await newKey(e, 'רונית', 'office')
     const read = async () => ((await (await companyGet(ctx(e, '/api/company'))).json()) as { company: Record<string, string> }).company
-    expect(await read()).toMatchObject({ brand: 'B.E.E', name_he: 'ברק אלקטריק אנג׳ינירינג', phone: '' })
+    expect(await read()).toMatchObject({ brand: 'B.E.E', name_he: 'ברק הנדסת חשמל בע״מ', company_id: '515839090', phone: '050-955-4483' })
 
     const put = (key: string, body: unknown) => companyPut(ctx(e, '/api/office/company', jsonInit('PUT', key, body)))
     expect((await put(office.key, { name_he: 'x' })).status).toBe(403)
-    const bad = await put(MASTER, { name_he: 'ברק אלקטריק אנג׳ינירינג', company_id: '123456789' })
+    const bad = await put(MASTER, { name_he: 'ברק הנדסת חשמל בע״מ', company_id: '123456789' })
     expect(bad.status).toBe(400)
     expect(((await bad.json()) as { message_he: string }).message_he).toContain('ח״פ')
-    expect((await put(MASTER, { name_he: 'ברק אלקטריק אנג׳ינירינג', company_id: '123456782', phone: '08-1234567', email: 'office@barak-e.com', address: 'גדרה' })).status).toBe(200)
+    expect((await put(MASTER, { name_he: 'ברק הנדסת חשמל בע״מ', company_id: '123456782', phone: '08-1234567', email: 'office@barak-e.com', address: 'גדרה' })).status).toBe(200)
     expect(await read()).toMatchObject({ company_id: '123456782', phone: '08-1234567' })
 
     await surveyPut(ctx(e, `/api/surveys/${ID}`, jsonInit('PUT', MASTER, surveyRecord()), { id: ID }))

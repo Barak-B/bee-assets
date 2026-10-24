@@ -50,7 +50,7 @@ export function createDoc(props: { title: string; subject: string }): jsPDF {
   doc.setProperties({
     title: props.title,
     subject: props.subject,
-    author: 'B.E.E — ברק אלקטריק אנג׳ינירינג',
+    author: 'B.E.E — ברק הנדסת חשמל בע״מ',
     creator: 'bee-solar-survey',
   })
   return doc

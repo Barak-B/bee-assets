@@ -65,5 +65,5 @@ export function customerWarnings(p: Pick<SiteSurveyProject, 'customerName' | 'cu
 /** Text for the WhatsApp message carrying the customer link. */
 export function quoteMessage(customerName: string | undefined, url: string, quoteNumber: string): string {
   const hello = customerName?.trim() ? `שלום ${customerName.trim()},` : 'שלום,'
-  return `${hello}\nמצורפת הצעת המחיר של B.E.E ברק אלקטריק (${quoteNumber}):\n${url}\nבדף אפשר לעיין, להוריד PDF ולאשר. לכל שאלה אנחנו כאן.`
+  return `${hello}\nמצורפת הצעת המחיר של B.E.E ברק הנדסת חשמל (${quoteNumber}):\n${url}\nבדף אפשר לעיין, להוריד PDF ולאשר. לכל שאלה אנחנו כאן.`
 }

@@ -10,7 +10,7 @@ import { getAcceptance, getQuote, recordView } from '../_lib/store'
 
 export const onRequestGet: Handler = async ({ request, env, params, waitUntil }) => {
   const token = param(params.token)
-  const notFound = () => html(renderMessagePage('ההצעה לא נמצאה', 'הקישור אינו תקף או שההצעה הוסרה. לפרטים פנו לברק אלקטריק אנג׳ינירינג.'), 404)
+  const notFound = () => html(renderMessagePage('ההצעה לא נמצאה', 'הקישור אינו תקף או שההצעה הוסרה. לפרטים פנו אלינו: B.E.E — ברק הנדסת חשמל בע״מ, 050-955-4483.'), 404)
   if (!QUOTE_TOKEN_RE.test(token)) return notFound()
   const rec = await getQuote(env, token)
   if (!rec) return notFound()

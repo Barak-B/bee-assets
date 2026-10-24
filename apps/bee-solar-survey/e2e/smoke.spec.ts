@@ -629,7 +629,7 @@ test('surveys back up to our server, queue while offline, and restore on a new p
   const KEY = 'field-key-123'
   const server = fakeSurveyServer(KEY)
   await page.route(`${BASE}/api/surveys**`, server.handler)
-  await page.context().route(`${BASE}/api/company`, (r) => r.fulfill({ json: { company: { brand: 'B.E.E', name_he: 'ברק אלקטריק אנג׳ינירינג', phone: '08-1234567' } } }))
+  await page.context().route(`${BASE}/api/company`, (r) => r.fulfill({ json: { company: { brand: 'B.E.E', name_he: 'ברק הנדסת חשמל בע״מ', phone: '08-1234567' } } }))
 
   // Offline in the field: the survey is kept and queued.
   server.state.down = true

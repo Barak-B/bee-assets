@@ -19,7 +19,7 @@ async function sha256Hex(buf: ArrayBuffer): Promise<string> {
 
 export const onRequestPost: Handler = async ({ request, env, params }) => {
   const token = param(params.token)
-  const notFound = () => html(renderMessagePage('ההצעה לא נמצאה', 'הקישור אינו תקף או שההצעה הוסרה. לפרטים פנו לברק אלקטריק אנג׳ינירינג.'), 404)
+  const notFound = () => html(renderMessagePage('ההצעה לא נמצאה', 'הקישור אינו תקף או שההצעה הוסרה. לפרטים פנו אלינו: B.E.E — ברק הנדסת חשמל בע״מ, 050-955-4483.'), 404)
   if (!QUOTE_TOKEN_RE.test(token)) return notFound()
 
   // The form lives on our own page; refuse cross-site posts. Sec-Fetch-Site is

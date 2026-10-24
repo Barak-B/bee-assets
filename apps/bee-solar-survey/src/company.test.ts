@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_COMPANY, companyErrors, companyLine, normalizeCompany } from './company'
 
 describe('company profile', () => {
-  it('starts from the known name and nothing invented', () => {
+  it('starts from what the company quotes print, and it is valid', () => {
     expect(normalizeCompany(null)).toEqual(DEFAULT_COMPANY)
-    expect(DEFAULT_COMPANY).toMatchObject({ company_id: '', phone: '', address: '' })
+    expect(DEFAULT_COMPANY).toMatchObject({ name_he: 'ברק הנדסת חשמל בע״מ', company_id: '515839090', phone: '050-955-4483' })
+    expect(companyErrors(DEFAULT_COMPANY)).toEqual([])
   })
 
   it('trims, clips and checks what is typed', () => {

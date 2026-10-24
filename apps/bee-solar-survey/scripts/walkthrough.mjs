@@ -191,8 +191,9 @@ try {
   const customer = await customerCtx.newPage()
   let link = ''
 
-  await step('admin: company details, once (made-up test values)', async () => {
-    await api('PUT', '/api/office/company', MASTER, { brand: 'B.E.E', name_he: 'ברק אלקטריק אנג׳ינירינג', company_id: '123456782', license: 'קבלן חשמל (בדיקה)', address: 'רחוב הבדיקה 1', phone: '08-1234567', email: 'office@example.com' })
+  await step('company details: the defaults are what B.E.E quotes print', async () => {
+    const { company } = await api('GET', '/api/company', MASTER)
+    if (company.company_id !== '515839090' || company.phone !== '050-955-4483') throw new Error(`company defaults: ${JSON.stringify(company)}`)
   })
 
   await step('office: log in and open a job for a phone call, assigned to Dani', async () => {
@@ -473,8 +474,8 @@ try {
     if (!/בהתקנה|התקנה/.test(await customer.locator('#progress li.now').innerText())) throw new Error('customer page not at installation')
     for (const secret of ['7004512', 'R-118', 'PO-2231', 'רונית']) if ((await customer.content()).includes(secret)) throw new Error(`internal detail on the customer page: ${secret}`)
     // Who we are, with a call link.
-    if (!(await customer.locator('#progress a[href="tel:+97281234567"]').count())) throw new Error('no call link on the progress card')
-    if (!(await customer.locator('footer').innerText()).includes('123456782')) throw new Error('company number missing from the footer')
+    if (!(await customer.locator('#progress a[href="tel:+972509554483"]').count())) throw new Error('no call link on the progress card')
+    if (!(await customer.locator('footer').innerText()).includes('515839090')) throw new Error('company number missing from the footer')
     await customer.locator('#progress').scrollIntoViewIfNeeded()
     await snap(customer, 'customer-progress')
     await customer.locator('footer').scrollIntoViewIfNeeded()

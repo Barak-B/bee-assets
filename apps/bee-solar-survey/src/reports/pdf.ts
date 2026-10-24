@@ -51,7 +51,7 @@ export async function buildReportPdf(r: ReportInstance): Promise<ReportPdfResult
       sub: `${r.context.projectName} · ${r.context.address}${r.context.quoteNumber ? ` · הצעה ${r.context.quoteNumber}` : ''}`,
     },
     {
-      right: draft ? 'טיוטה — לא נחתם סופית' : `נעול ${dt(r.finalizedAt)} · B.E.E ברק אלקטריק אנג׳ינירינג`,
+      right: draft ? 'טיוטה — לא נחתם סופית' : `נעול ${dt(r.finalizedAt)} · B.E.E ברק הנדסת חשמל בע״מ`,
       left: r.contentHash ? `${r.contentHash.slice(0, 16)}` : `${r.id.slice(0, 8)} · draft`,
     },
   )
