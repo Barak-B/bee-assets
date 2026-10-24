@@ -23,19 +23,26 @@
 - **בדיקות**: `scripts/validate.py` עבר, ו-37 בדיקות יחידה (`python -m unittest discover -s tests`) עברו מקומית. `claude plugin validate` על העותק המותקן: עבר עם אזהרות בלבד.
 - **מה כן נכתב מחוץ לפרויקט**: תיקיית אבחון זמנית (prompt, stdout, stderr, result.json) תחת temp של המערכת. לא להכניס אותה ל-git — היא עשויה להכיל קוד או תוכניות.
 
-סיכון שנותר: auto-update של ה-marketplace כבוי כברירת מחדל ל-marketplaces חיצוניים, ועדיף להשאיר כך ולעדכן ידנית אחרי קריאת ה-diff.
-
 ## מה הותקן בריפו
 
-`.claude/settings.json` מצהיר על ה-marketplace ומפעיל את הפלאגין ברמת פרויקט. כל מי שפותח את bee-assets ב-Claude Code במחשב שלו צריך להריץ **פעם אחת**:
+`.claude/settings.json` מצהיר על marketplace בשם `claudex-loop` ומפעיל את הפלאגין ברמת פרויקט. הפלאגין **נעוץ ל-commit שנבדק** (`53cddc42e39346fb8c6d5d612281a3b1add14e66`) דרך marketplace מסוג `settings` עם מקור `github` + `sha`. כך שינוי עתידי בריפו של המחבר לא נכנס לבד: מה שמותקן הוא בדיוק הקוד שנקרא כאן. (marketplace מסוג `github` מקבל רק branch או tag, ולריפו אין tags, ולכן לא היה אפשר לנעוץ אותו ישירות.)
+
+**עדכון גרסה:** לקרוא את ה-diff בין ה-SHA הנוכחי לחדש ב-upstream, להחליף את `sha` (ואת `version` אם השתנה) ב-`.claude/settings.json`, ולעדכן את הסעיף "מה נבדק" כאן. לא להפעיל auto-update.
+
+### התקנה במחשב מקומי (פעם אחת לכל מחשב)
+
+1. לפתוח סשן Claude Code בתיקיית bee-assets ולאשר את דיאלוג ה-trust. הסשן רושם את ה-marketplace מתוך `.claude/settings.json` (בלי trust הוא לא נרשם).
+2. להריץ:
 
 ```bash
 claude plugin install claudex-loop@claudex-loop --scope project
 ```
 
-(ההצהרה בריפו מדליקה את הפלאגין אבל לא מורידה אותו; הפקודה מורידה.)
+3. לוודא: `claude plugin list` מציג `claudex-loop@claudex-loop`, גרסה 2.1.0, `enabled`.
 
-התקנה אישית בכל פרויקט (במקום רק ב-bee-assets):
+נבדק על מחשב נקי (Claude Code 2.1.310): בלי שלב 1 ההתקנה נכשלת עם `Plugin "claudex-loop" not found in marketplace`; אחרי שלב 1 היא עוברת, וההתקנה נרשמת עם `gitCommitSha` של ה-commit הנעוץ והקבצים זהים ל-upstream.
+
+התקנה אישית בכל פרויקט (במקום רק ב-bee-assets). שימו לב: הדרך הזו **לא נעוצה** ועוקבת אחרי ה-branch הראשי של המחבר:
 
 ```text
 /plugin marketplace add chaseai-yt/claudex-loop
@@ -44,7 +51,17 @@ claude plugin install claudex-loop@claudex-loop --scope project
 
 ב-Codex: `cp -R skills/. ~/.agents/skills/` מתוך clone של הריפו (או ה-PowerShell המקביל מה-README).
 
-הערה: סשנים בענן (claude.ai/code) לא טוענים פלאגינים מ-`.claude/settings.json` של הריפו, ו-Codex CLI לא מותקן שם. הלופ המלא מיועד למחשב המקומי.
+הערה: בסשנים בענן (claude.ai/code) אין Codex CLI מחובר, ולכן הלופ המלא מיועד למחשב המקומי.
+
+## איך זה משתלב במוח (תרשים הכוורת) בלי לשרוף טוקנים
+
+הפלאגין הוא כלי **בקרת איכות** למשימות פיתוח של המוח, לא סוכן שרץ כל הזמן. עלות קבועה: רק תיאורי ה-skills (~357 טוקנים לסשן); גוף ה-skill נטען רק כשמפעילים אותו. העלות האמיתית היא כל קריאה ל-CLI של הספק השני (סשן מלא עם קריאת קוד), ולכן:
+
+- **ניתוב (`claudex-route`) כברירת מחדל**: מחליט איזה מודל/ספק מתאים למשימה בלי להריץ CLI חיצוני, אלא אם מבקשים ביצוע. זה החלק שמתאים ל"מלכה" שמחלקת משימות לסוכנים.
+- **סקירת תוכנית בלבד (`mode=review`)** לתוכניות עם סיכון: מנוע ה-CAD, הגשות לחח"י, מודל הנתונים, שינויים ב-CRM. עם `rounds=2` במקום ברירת המחדל 5.
+- **לופ מלא (בנייה + בדיקה צולבת)** רק לשינויים שקשה לבדוק ידנית ושטעות בהם יקרה. ברירות המחדל `MAX_FIX_ROUNDS=2` ו-`MAX_INSPECTION_ROUNDS=2` כבר חוסמות לולאות אינסופיות.
+- **לא להשתמש** למשימות שגרה של הכוורת (תיוג, סיכומים, עדכוני סטטוס, מסמכים קצרים): שם סקירה של מודל שני מכפילה עלות בלי תועלת.
+- מודל ומאמץ: לא לנעוץ מודל יקר כברירת מחדל. לתת `reviewer_model` / `*_effort` רק כשהמשימה מצדיקה.
 
 ## שימוש
 

@@ -2,8 +2,20 @@
   "extraKnownMarketplaces": {
     "claudex-loop": {
       "source": {
-        "source": "github",
-        "repo": "chaseai-yt/claudex-loop"
+        "source": "settings",
+        "name": "claudex-loop",
+        "owner": { "name": "Chase AI" },
+        "plugins": [
+          {
+            "name": "claudex-loop",
+            "version": "2.1.0",
+            "source": {
+              "source": "github",
+              "repo": "chaseai-yt/claudex-loop",
+              "sha": "53cddc42e39346fb8c6d5d612281a3b1add14e66"
+            }
+          }
+        ]
       }
     }
   },

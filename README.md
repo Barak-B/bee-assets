@@ -33,4 +33,4 @@ Public assets for email signatures and external use.
 
 ## Tooling
 
-- [`docs/CLAUDEX_LOOP.md`](docs/CLAUDEX_LOOP.md) — פלאגין **Claudex Loop** (תכנון ובדיקה צולבת Claude ↔ Codex): מה נבדק, איך מתקינים (`claude plugin install claudex-loop@claudex-loop --scope project`) ואיך משתמשים. ההגדרה ברמת הריפו: `.claude/settings.json`.
+- [`docs/CLAUDEX_LOOP.md`](docs/CLAUDEX_LOOP.md) — פלאגין **Claudex Loop** (תכנון ובדיקה צולבת Claude ↔ Codex): מה נבדק, איך מתקינים ואיך משתמשים במוח בלי לשרוף טוקנים. ההגדרה ברמת הריפו (נעוצה ל-commit שנבדק): `.claude/settings.json`.
