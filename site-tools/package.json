@@ -1,0 +1,15 @@
+{
+  "name": "@bee/site-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "נוסחאות המחשבונים לאתר barak-e.com: מודולי TypeScript טהורים עם בדיקות, מוכנים להעברה לאתר",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
