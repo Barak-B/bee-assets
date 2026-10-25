@@ -21,7 +21,7 @@ export interface EvInput {
   dailyKm: number;
   /** Hours the car is parked and plugged in. */
   hoursAvailable: number;
-  /** Vehicle consumption, kWh per 100 km. */
+  /** Vehicle consumption at the socket, kWh per 100 km (charging losses included, as in the site's home sim). */
   kWhPer100km?: number;
   /** Household load expected while charging, kW. */
   houseLoadKw?: number;
@@ -38,19 +38,18 @@ export interface EvResult {
   loadManagementAdvised: boolean;
 }
 
-const CHARGE_EFFICIENCY = 0.9;
 /** Keep a share of each phase's breaker free for the house. */
 const PHASE_MARGIN = 0.8;
 
 export function recommendCharger(input: EvInput): EvResult {
   const { connection, dailyKm, hoursAvailable } = input;
-  const per100 = input.kWhPer100km ?? 17;
+  const per100 = input.kWhPer100km ?? 18;
   const house = input.houseLoadKw ?? 3;
   if (!(dailyKm >= 0)) throw new RangeError("dailyKm must be non-negative");
   if (!(hoursAvailable > 0)) throw new RangeError("hoursAvailable must be positive");
 
   const dailyKWh = (dailyKm * per100) / 100;
-  const requiredKw = dailyKWh / CHARGE_EFFICIENCY / hoursAvailable;
+  const requiredKw = dailyKWh / hoursAvailable;
   const kva = connectionKva(connection);
   const availableKw = Math.max(0, kva - house);
 

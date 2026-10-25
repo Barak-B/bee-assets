@@ -4,7 +4,7 @@ import { recommendCharger } from "../src/ev";
 describe("EV charger", () => {
   it("typical commuter on 3x40A gets the smallest charger that covers the day", () => {
     const r = recommendCharger({ connection: { phases: 3, amps: 40 }, dailyKm: 60, hoursAvailable: 10 });
-    expect(r.dailyKWh).toBeCloseTo(10.2, 1);
+    expect(r.dailyKWh).toBeCloseTo(10.8, 1);
     expect(r.recommended?.kw).toBe(3.7);
     expect(r.shortfall).toBe(false);
   });
