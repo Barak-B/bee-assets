@@ -5,7 +5,7 @@
  * watermarked as a draft.
  */
 import { DEFAULT_COMPANY, companyLine, type CompanyProfile } from './company'
-import { ROOF_LABELS_HE, flagLabelHe, formatIls, pct, scheduleAmounts, type QuoteLine, type QuoteVersion } from '@bee/quote-core'
+import { ROOF_LABELS_HE, customerPriceSplit, flagLabelHe, formatIls, pct, scheduleAmounts, type QuoteLine, type QuoteVersion } from '@bee/quote-core'
 import { MUTED, WARN_RED, Writer, createDoc, safeFilename } from './pdfkit'
 import { formatNumber } from './rtl'
 import type { SiteSurveyProject } from './types'
@@ -160,30 +160,37 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
   }
 
   // ── Bill of quantities ──────────────────────────────────
-  w.section('כתב כמויות (תמצית)')
+  // The customer copy lists what they get, never what a piece of equipment
+  // costs: one system price, add-ons priced on their own lines (Barak, 2026-10-25).
+  const split = customerPriceSplit(quote)
+  w.section(customer ? 'מה כלול במערכת' : 'כתב כמויות (תמצית)')
   const groups = new Map<QuoteLine['kind'], QuoteLine[]>()
-  for (const l of quote.lines) groups.set(l.kind, [...(groups.get(l.kind) ?? []), l])
+  for (const l of quote.lines) {
+    if (customer && split.addonLines.includes(l)) continue
+    groups.set(l.kind, [...(groups.get(l.kind) ?? []), l])
+  }
   const rows: string[][] = []
   for (const [kind, list] of groups) {
-    rows.push([KIND_LABEL[kind], '', '', '', ''])
+    rows.push(customer ? [KIND_LABEL[kind], '', ''] : [KIND_LABEL[kind], '', '', '', ''])
     for (const l of list) {
-      rows.push([
-        `${l.name_he}${l.needs_owner_input ? ' *' : ''}`,
-        UNIT_LABEL[l.unit],
-        formatNumber(l.qty),
-        l.passthrough ? 'לפי חשבון' : money(l.unit_price_ils),
-        l.passthrough ? '—' : money(l.line_total_ils),
-      ])
+      const base = [`${l.name_he}${l.needs_owner_input ? ' *' : ''}`, UNIT_LABEL[l.unit], formatNumber(l.qty)]
+      rows.push(customer ? base : [...base, l.passthrough ? 'לפי חשבון' : money(l.unit_price_ils), l.passthrough ? '—' : money(l.line_total_ils)])
     }
   }
   w.table(
-    [
-      { label: 'פריט', width: 86 },
-      { label: 'יח׳', width: 18 },
-      { label: 'כמות', width: 18, align: 'left' },
-      { label: 'מחיר יח׳', width: 28, align: 'left' },
-      { label: 'סה״כ', width: 32, align: 'left' },
-    ],
+    customer
+      ? [
+          { label: 'פריט', width: 132 },
+          { label: 'יח׳', width: 22 },
+          { label: 'כמות', width: 28, align: 'left' },
+        ]
+      : [
+          { label: 'פריט', width: 86 },
+          { label: 'יח׳', width: 18 },
+          { label: 'כמות', width: 18, align: 'left' },
+          { label: 'מחיר יח׳', width: 28, align: 'left' },
+          { label: 'סה״כ', width: 32, align: 'left' },
+        ],
     rows,
     { fontSize: 8.5 },
   )
@@ -193,13 +200,21 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
   const linesSum = quote.lines.filter((l) => !l.passthrough && l.line_total_ils !== null).reduce((s, l) => s + (l.line_total_ils ?? 0), 0)
   const rounding = t.subtotal_excl_vat_ils === null ? 0 : Math.round((t.subtotal_excl_vat_ils - linesSum) * 100) / 100
   const priceRows: string[][] = [
-    ...(rounding ? [['סה״כ שורות', formatIls(Math.round(linesSum * 100) / 100, 2)], ['עיגול', formatIls(rounding, 2)]] : []),
+    ...(customer
+      ? [
+          ['מחיר המערכת, כולל ציוד, התקנה ושירותים', money(split.systemPrice)],
+          ...split.addonLines.map((l) => [`תוספת: ${l.name_he}${l.qty !== 1 ? ` (${formatNumber(l.qty)} ${UNIT_LABEL[l.unit]})` : ''}`, money(l.line_total_ils)]),
+        ]
+      : rounding
+        ? [['סה״כ שורות', formatIls(Math.round(linesSum * 100) / 100, 2)], ['עיגול', formatIls(rounding, 2)]]
+        : []),
     ['סה״כ לפני מע״מ', money(t.subtotal_excl_vat_ils)],
     [`מע״מ ${t.vat_rate === null ? '(לאימות *)' : pct(t.vat_rate)}`, money(t.vat_ils)],
     ['סה״כ כולל מע״מ', money(t.total_incl_vat_ils)],
   ]
   w.table([{ label: '', width: 120 }, { label: '₪', width: 62, align: 'left' }], priceRows, { fontSize: 10, highlightLast: true })
-  if (t.price_per_kwp_excl_vat_ils !== null) w.paragraph(`מחיר ל-kWp (לפני מע״מ): ${formatIls(t.price_per_kwp_excl_vat_ils)}`, 'normal', 9.5, MUTED)
+  const perKwp = customer ? split.pricePerKwp : t.price_per_kwp_excl_vat_ils
+  if (perKwp !== null) w.paragraph(`מחיר ל-kWp${customer && split.addonLines.length ? ' (מחיר המערכת, ללא תוספות)' : ''} לפני מע״מ: ${formatIls(perKwp)}`, 'normal', 9.5, MUTED)
   w.paragraph(
     t.passthrough_estimate_ils !== null
       ? `לא כולל אגרות חח״י — לפי חשבון בפועל (אומדן: ${formatIls(t.passthrough_estimate_ils)}).`
@@ -234,10 +249,12 @@ export async function buildQuotePdf(quote: QuoteVersion, project: SiteSurveyProj
   const ch = quote.changes
   if (ch && (ch.added.length || ch.removed.length || ch.changed.length)) {
     w.section(`מה השתנה מגרסה ${ch.from_version}`)
+    // Per-line ₪ would show what one item costs, so the customer copy keeps quantities and the total delta only.
+    const lineMoney = (v: string) => (customer ? '' : v)
     const diffRows: string[][] = [
-      ...ch.added.map((l) => [`נוסף: ${l.name_he}`, '—', formatNumber(l.qty), money(l.line_total_ils)]),
-      ...ch.removed.map((l) => [`הוסר: ${l.name_he}`, formatNumber(l.qty), '—', l.line_total_ils === null ? '—' : formatIls(-l.line_total_ils)]),
-      ...ch.changed.map((c) => [c.name_he, formatNumber(c.before.qty), formatNumber(c.after.qty), c.delta_ils === null ? 'לאימות *' : `${c.delta_ils > 0 ? '+' : ''}${formatIls(c.delta_ils)}`]),
+      ...ch.added.map((l) => [`נוסף: ${l.name_he}`, '—', formatNumber(l.qty), lineMoney(money(l.line_total_ils))]),
+      ...ch.removed.map((l) => [`הוסר: ${l.name_he}`, formatNumber(l.qty), '—', lineMoney(l.line_total_ils === null ? '—' : formatIls(-l.line_total_ils))]),
+      ...ch.changed.map((c) => [c.name_he, formatNumber(c.before.qty), formatNumber(c.after.qty), lineMoney(c.delta_ils === null ? 'לאימות *' : `${c.delta_ils > 0 ? '+' : ''}${formatIls(c.delta_ils)}`)]),
     ]
     const d2 = ch.total_delta_incl_vat_ils
     diffRows.push(['הפרש כולל מע״מ', '', '', d2 === null ? 'לאימות *' : `${d2 > 0 ? '+' : ''}${formatIls(d2)}`])

@@ -77,6 +77,12 @@ export interface Product {
   boq_section?: string
   tech?: ProductTech
   is_active?: boolean
+  /**
+   * An add-on the customer sees with its own price (e.g. a battery upgrade, an
+   * EV charger). Everything else is folded into one system price: the
+   * customer never sees what a single piece of equipment costs.
+   */
+  customer_addon?: boolean
 }
 
 export interface Catalog {
@@ -256,6 +262,8 @@ export interface QuoteLine {
   needs_owner_input: boolean
   flags: string[]
   boq_section?: string
+  /** Priced separately for the customer (Product.customer_addon). Absent = part of the system price. */
+  addon?: true
 }
 
 export interface QuoteDesign {

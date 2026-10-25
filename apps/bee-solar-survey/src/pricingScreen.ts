@@ -118,6 +118,7 @@ function productRow(p: Product): string {
         </select>
         <input data-cost="${escapeAttr(p.sku)}" inputmode="decimal" placeholder="עלות" value="${escapeAttr(numValue(p.unit_cost))}" aria-label="עלות ליחידה" />
       </div>
+      ${fee ? '' : `<label class="price-addon"><input type="checkbox" data-addon="${escapeAttr(p.sku)}" ${p.customer_addon ? 'checked' : ''} /> תוספת: מוצגת ללקוח במחיר נפרד</label>`}
     </div>`
 }
 
@@ -284,6 +285,11 @@ function readForm(ctx: Ctx, base: Pricing): { catalog: Catalog; rules: PricingRu
   rules.texts = texts
 
   for (const prod of catalog.products) {
+    const addonEl = ctx.app.querySelector<HTMLInputElement>(`[data-addon="${CSS.escape(prod.sku)}"]`)
+    if (addonEl) {
+      if (addonEl.checked) prod.customer_addon = true
+      else delete prod.customer_addon
+    }
     const costEl = ctx.app.querySelector<HTMLInputElement>(`[data-cost="${CSS.escape(prod.sku)}"]`)
     const curEl = ctx.app.querySelector<HTMLSelectElement>(`[data-cur="${CSS.escape(prod.sku)}"]`)
     const cost = readNum(costEl)

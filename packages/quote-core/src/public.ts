@@ -9,13 +9,16 @@ import { israelDate, round2, scheduleAmounts } from './money'
 import { TRACK_LABELS_HE } from './roi'
 import type { QuoteLine, QuoteTexts, QuoteVersion, RoiAssumption } from './types'
 
+/**
+ * What the customer gets — model, quantity, unit. No price: equipment price
+ * lists stay in the office, the customer sees one system price (Barak,
+ * 2026-10-25).
+ */
 export interface PublicQuoteLine {
   name_he: string
   description_he?: string
   unit: QuoteLine['unit']
   qty: number
-  unit_price_ils: number | null
-  line_total_ils: number | null
   passthrough: boolean
 }
 
@@ -23,11 +26,20 @@ export interface PublicQuoteSection {
   code: string
   title_he: string
   lines: PublicQuoteLine[]
-  total_ils: number
+}
+
+/** An add-on the office chose to price separately (Product.customer_addon). */
+export interface PublicQuoteAddon {
+  name_he: string
+  description_he?: string
+  unit: QuoteLine['unit']
+  qty: number
+  unit_price_ils: number
+  line_total_ils: number
 }
 
 export interface PublicQuote {
-  schema: 'bee.public-quote/1'
+  schema: 'bee.public-quote/2'
   quote_number: string
   version_no: number
   issued_at: string
@@ -44,15 +56,18 @@ export interface PublicQuote {
     annual_yield_kwh_estimate: number | null
   }
   sections: PublicQuoteSection[]
+  addons: PublicQuoteAddon[]
   totals: {
+    /** Everything except the add-ons, as one number (the final rounding lands here). */
+    system_price_excl_vat_ils: number | null
+    addons_total_excl_vat_ils: number
     subtotal_excl_vat_ils: number | null
     vat_rate: number | null
     vat_ils: number | null
     total_incl_vat_ils: number | null
+    /** System price ÷ kWp — add-ons are not in it. */
     price_per_kwp_excl_vat_ils: number | null
     passthrough_note_he: string
-    /** Subtotal minus the sum of the sections (the "round to N ₪" step); 0 when none. */
-    rounding_ils: number
   }
   payment_schedule: { label_he: string; pct: number | null; amount_ils: number | null }[]
   terms: { linkage: 'none' | 'fx'; validity_days: number | null; texts?: QuoteTexts }
@@ -87,6 +102,24 @@ export class NotPublishableError extends Error {
   }
 }
 
+/**
+ * The one price split every customer copy uses (page, PDF, Excel): add-on
+ * lines keep their own price, everything else is one system price, and the
+ * final rounding lands in the system price. ₪/kWp is on the system price.
+ */
+export function customerPriceSplit(q: QuoteVersion): {
+  addonLines: QuoteLine[]
+  addonsTotal: number
+  systemPrice: number | null
+  pricePerKwp: number | null
+} {
+  const addonLines = q.lines.filter((l) => l.addon && !l.passthrough)
+  const addonsTotal = round2(addonLines.reduce((s, l) => s + (l.line_total_ils ?? 0), 0))
+  const subtotal = q.totals.subtotal_excl_vat_ils
+  const systemPrice = subtotal === null ? null : round2(subtotal - addonsTotal)
+  return { addonLines, addonsTotal, systemPrice, pricePerKwp: systemPrice !== null && q.design.dc_kwp > 0 ? round2(systemPrice / q.design.dc_kwp) : null }
+}
+
 /** Why a quote must not go to a customer yet (empty = OK). */
 export function publishBlockers(q: QuoteVersion): string[] {
   const out: string[] = []
@@ -101,8 +134,10 @@ export function toPublicQuote(q: QuoteVersion, opts: { customerName?: string } =
   const blockers = publishBlockers(q)
   if (blockers.length) throw new NotPublishableError(blockers)
 
+  const { addonLines, addonsTotal, systemPrice, pricePerKwp } = customerPriceSplit(q)
   const bySection = new Map<string, QuoteLine[]>()
   for (const l of q.lines) {
+    if (addonLines.includes(l)) continue
     const code = l.boq_section ?? '08.08'
     bySection.set(code, [...(bySection.get(code) ?? []), l])
   }
@@ -116,18 +151,24 @@ export function toPublicQuote(q: QuoteVersion, opts: { customerName?: string } =
         ...(l.description_he ? { description_he: l.description_he } : {}),
         unit: l.unit,
         qty: l.qty,
-        unit_price_ils: l.passthrough ? null : l.unit_price_ils,
-        line_total_ils: l.passthrough ? null : l.line_total_ils,
         passthrough: l.passthrough,
       })),
-      total_ils: round2(lines.filter((l) => !l.passthrough).reduce((s, l) => s + (l.line_total_ils ?? 0), 0)),
     }))
+  // publishBlockers() guarantees every non-passthrough line is priced.
+  const addons: PublicQuoteAddon[] = addonLines.map((l) => ({
+    name_he: l.name_he,
+    ...(l.description_he ? { description_he: l.description_he } : {}),
+    unit: l.unit,
+    qty: l.qty,
+    unit_price_ils: l.unit_price_ils ?? 0,
+    line_total_ils: l.line_total_ils ?? 0,
+  }))
+  const subtotal = q.totals.subtotal_excl_vat_ils
 
   const total = q.totals.total_incl_vat_ils
-  const sectionsSum = round2(sections.reduce((s, x) => s + x.total_ils, 0))
   const amounts = scheduleAmounts(total, q.terms.payment_schedule.map((m) => m.pct))
   return {
-    schema: 'bee.public-quote/1',
+    schema: 'bee.public-quote/2',
     quote_number: q.quote_number,
     version_no: q.version_no,
     issued_at: israelDate(new Date(q.created_at)),
@@ -148,14 +189,16 @@ export function toPublicQuote(q: QuoteVersion, opts: { customerName?: string } =
       annual_yield_kwh_estimate: q.design.annual_yield_kwh_estimate,
     },
     sections,
+    addons,
     totals: {
-      subtotal_excl_vat_ils: q.totals.subtotal_excl_vat_ils,
+      system_price_excl_vat_ils: systemPrice,
+      addons_total_excl_vat_ils: addonsTotal,
+      subtotal_excl_vat_ils: subtotal,
       vat_rate: q.totals.vat_rate,
       vat_ils: q.totals.vat_ils,
       total_incl_vat_ils: total,
-      price_per_kwp_excl_vat_ils: q.totals.price_per_kwp_excl_vat_ils,
+      price_per_kwp_excl_vat_ils: pricePerKwp,
       passthrough_note_he: 'אגרות חברת החשמל — לפי חשבון בפועל, אינן כלולות במחיר.',
-      rounding_ils: q.totals.subtotal_excl_vat_ils === null ? 0 : round2(q.totals.subtotal_excl_vat_ils - sectionsSum),
     },
     payment_schedule: q.terms.payment_schedule.map((m, i) => ({
       label_he: m.label_he,
@@ -198,7 +241,7 @@ export function isPublicQuote(x: unknown): x is PublicQuote {
   const obj = (v: unknown) => !!v && typeof v === 'object' && !Array.isArray(v)
   // Everything the customer page dereferences must be there, or the link would crash for the customer.
   return (
-    o.schema === 'bee.public-quote/1' &&
+    o.schema === 'bee.public-quote/2' &&
     typeof o.quote_number === 'string' &&
     typeof o.version_no === 'number' &&
     typeof o.issued_at === 'string' &&
@@ -209,6 +252,7 @@ export function isPublicQuote(x: unknown): x is PublicQuote {
     obj(o.terms) &&
     Array.isArray(o.sections) &&
     (o.sections as unknown[]).every((s) => obj(s) && Array.isArray((s as { lines?: unknown }).lines)) &&
+    Array.isArray(o.addons) &&
     Array.isArray(o.payment_schedule)
   )
 }

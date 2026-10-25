@@ -22,6 +22,7 @@ export type { BuildQuoteOptions, SizingResult } from './engine'
 export { round2, roundToStep, pct, canonicalJson, sha256Hex, scheduleAmounts, ceilSafe, israelDate } from './money'
 export {
   toPublicQuote,
+  customerPriceSplit,
   publishBlockers,
   isPublicQuote,
   isPublicBaseUrl,
@@ -30,7 +31,7 @@ export {
   QUOTE_TOKEN_RE,
   NotPublishableError,
 } from './public'
-export type { PublicQuote, PublicQuoteLine, PublicQuoteSection, PublicRoi } from './public'
+export type { PublicQuote, PublicQuoteAddon, PublicQuoteLine, PublicQuoteSection, PublicRoi } from './public'
 export { formatIls, quoteSummaryHe, flagLabelHe } from './format'
 export { computeRoi, roiReadiness, orientationFactor, irrPct, SUGGESTED_ROI, EMPTY_ROI_RULES, TRACK_LABELS_HE, ROI_FIELD_LABELS_HE, MONTHLY_SHARE_IL } from './roi'
 import catalogJson from './seed/catalog.seed.json'

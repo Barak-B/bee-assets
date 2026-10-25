@@ -2,11 +2,13 @@
  * Bill of quantities workbook (docs/plan/templates/boq-xlsx-layout.md, lite):
  * `סיכום` + `פרמטרים` + one sheet per chapter 08.CC, RTL, live formulas with
  * cached results from the engine, two views:
- *  - customer: description / unit / qty / unit price / total / note (locked)
- *  - internal: + unit cost, cost total, profit ₪, profit %, SKU, qty source, verification
+ *  - customer: what is included (description / unit / qty) and one system
+ *    price; only add-ons carry their own price (locked). Equipment prices stay
+ *    in the office (Barak, 2026-10-25).
+ *  - internal: unit price / total / note + unit cost, cost total, profit ₪, profit %, SKU, qty source, verification
  * Works in Node (tests) and the browser (lazy-loaded).
  */
-import { BOQ_SECTIONS, boqSectionTitle, type QuoteLine, type QuoteVersion } from '@bee/quote-core'
+import { BOQ_SECTIONS, boqSectionTitle, customerPriceSplit, type QuoteLine, type QuoteVersion } from '@bee/quote-core'
 import type ExcelJSNs from 'exceljs'
 import type { SiteSurveyProject } from './types'
 
@@ -74,6 +76,7 @@ export async function buildBoqWorkbook(quote: QuoteVersion, project: SiteSurveyP
   wb.created = new Date(quote.created_at)
   wb.title = `כתב כמויות ${quote.quote_number} v${quote.version_no}`
   const internal = view === 'internal'
+  if (!internal) return fillCustomerWorkbook(wb, quote, project)
 
   // ── Chapters ──────────────────────────────────────────────
   const bySection = new Map<string, QuoteLine[]>()
@@ -280,6 +283,79 @@ export async function buildBoqWorkbook(quote: QuoteVersion, project: SiteSurveyP
     // Customer copy: locked against accidental edits (no password — not a security control).
     for (const ws of wb.worksheets) await ws.protect('', { selectLockedCells: true, selectUnlockedCells: true, formatColumns: true })
   }
+  return wb
+}
+
+/** The customer copy: one sheet, what is included, one system price, add-ons priced apart. */
+async function fillCustomerWorkbook(wb: Workbook, quote: QuoteVersion, project: SiteSurveyProject): Promise<Workbook> {
+  const t = quote.totals
+  const split = customerPriceSplit(quote)
+  const ws = wb.addWorksheet('הצעה', { properties: { tabColor: { argb: 'FFF0C14B' } } })
+  setupSheet(ws, quote, 0)
+  ws.columns = [{ width: 12 }, { width: 56 }, { width: 10 }, { width: 12 }, { width: 18 }]
+
+  ws.mergeCells('A1:E1')
+  ws.getCell('A1').value = `הצעת מחיר — ${project.projectName || quote.input.projectName}`
+  ws.getCell('A1').font = { name: 'Arial', size: 16, bold: true }
+  ws.getCell('A2').value = `אתר: ${quote.input.address}`
+  ws.getCell('A3').value = `הצעה ${quote.quote_number} · גרסה ${quote.version_no} · תאריך ${quote.created_at.slice(0, 10)}${quote.terms.valid_until ? ` · תוקף עד ${quote.terms.valid_until}` : ''}`
+  ws.getCell('A4').value = `מערכת: ${quote.design.dc_kwp} kWp DC · ${quote.design.module_count} מודולים · ${quote.design.inverter_count} ממיר/ים`
+
+  let r = 6
+  const put = (label: string, value: number | null, bold = false) => {
+    const row = ws.getRow(r)
+    row.getCell(2).value = label
+    row.getCell(2).font = { ...FONT, bold }
+    row.getCell(5).value = value === null ? 'לאימות' : value
+    row.getCell(5).numFmt = MONEY
+    row.getCell(5).font = { ...FONT, bold }
+    r++
+  }
+  headerRow(ws, ['', 'מחיר', '', '', '₪'], r++)
+  put('מחיר המערכת, כולל ציוד, התקנה ושירותים', split.systemPrice, true)
+  for (const l of split.addonLines) put(`תוספת: ${l.name_he}${l.qty !== 1 ? ` (${l.qty} ${UNIT_HE[l.unit]})` : ''}`, l.line_total_ils)
+  put('סה"כ לפני מע"מ', t.subtotal_excl_vat_ils, true)
+  put(t.vat_rate === null ? 'מע"מ' : `מע"מ (${Math.round(t.vat_rate * 1000) / 10}%)`, t.vat_ils)
+  put('סה"כ כולל מע"מ', t.total_incl_vat_ils, true)
+  if (split.pricePerKwp !== null) put(`מחיר ל-kWp לפני מע"מ${split.addonLines.length ? ' (ללא תוספות)' : ''}`, Math.round(split.pricePerKwp))
+
+  r++
+  headerRow(ws, ["מס' סעיף", 'מה כלול במערכת', "יח'", 'כמות', 'הערה'], r++)
+  const bySection = new Map<string, QuoteLine[]>()
+  for (const l of quote.lines) {
+    if (split.addonLines.includes(l)) continue
+    bySection.set(sectionOf(l), [...(bySection.get(sectionOf(l)) ?? []), l])
+  }
+  for (const s of BOQ_SECTIONS.filter((x) => bySection.has(x.code))) {
+    ws.getRow(r).getCell(2).value = `${s.code} · ${boqSectionTitle(s.code)}`
+    ws.getRow(r).getCell(2).font = { ...FONT, bold: true }
+    r++
+    bySection.get(s.code)!.forEach((l, i) => {
+      const row = ws.getRow(r)
+      row.getCell(1).value = `${s.code}.${String((i + 1) * 10).padStart(4, '0')}`
+      row.getCell(1).numFmt = '@'
+      row.getCell(2).value = l.description_he ? `${l.name_he} — ${l.description_he}` : l.name_he
+      row.getCell(2).alignment = { wrapText: true, horizontal: 'right', vertical: 'top' }
+      row.getCell(3).value = UNIT_HE[l.unit]
+      row.getCell(4).value = l.qty
+      row.getCell(4).numFmt = QTY
+      row.getCell(5).value = l.passthrough ? 'לפי חשבון, לא כלול' : ''
+      for (let c = 1; c <= 5; c++) row.getCell(c).border = { top: THIN, bottom: THIN, left: THIN, right: THIN }
+      r++
+    })
+  }
+
+  r++
+  for (const n of [
+    'אגרות חח"י — לפי חשבון בפועל, אינן כלולות בסה"כ.',
+    quote.terms.linkage === 'fx' ? 'המחיר צמוד לשער המט"ח ביום ההצעה.' : 'המחיר קבוע לתקופת התוקף.',
+  ]) {
+    ws.getCell(`B${r}`).value = n
+    ws.getCell(`B${r}`).font = { ...FONT, color: { argb: 'FF5C6670' } }
+    r++
+  }
+  // Locked against accidental edits (no password — not a security control).
+  await ws.protect('', { selectLockedCells: true, selectUnlockedCells: true, formatColumns: true })
   return wb
 }
 
