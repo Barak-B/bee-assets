@@ -131,8 +131,7 @@ table.items tr.sec{background:var(--sand);border-radius:8px}
 table.items td.name{flex:1 1 60%}
 table.items tr.line td.name{flex-basis:100%}
 table.items td.unit{display:none}
-table.items td.qty,table.items td.price{color:var(--muted);font-size:13px}
-table.items td.qty::after{content:' ×'}
+table.items td.qty{color:var(--muted);font-size:13px}
 table.items td.total{margin-inline-start:auto}
 .sm-only{display:inline}
 }
@@ -328,27 +327,31 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
   const s = q.system
   const t = q.totals
 
+  // What the customer gets: models and quantities only. Equipment prices stay
+  // in the office — one system price, add-ons priced on their own lines.
   const rows = q.sections
     .map((sec) => {
       const lines = sec.lines
         .map(
           (l) => `<tr class="line">
-            <td class="name">${esc(l.name_he)}${l.description_he ? `<div class="muted">${esc(l.description_he)}</div>` : ''}</td>
+            <td class="name">${esc(l.name_he)}${l.description_he ? `<div class="muted">${esc(l.description_he)}</div>` : ''}${l.passthrough ? '<div class="muted">לפי חשבון בפועל · לא כלול במחיר</div>' : ''}</td>
             <td class="unit">${esc(UNIT_HE[l.unit] ?? l.unit)}</td>
             <td class="n qty"><bdi>${num(l.qty, l.qty % 1 ? 2 : 0)}</bdi><span class="sm-only"> ${esc(UNIT_HE[l.unit] ?? l.unit)}</span></td>
-            <td class="n price">${l.passthrough ? 'לפי חשבון' : ils(l.unit_price_ils, 2)}</td>
-            <td class="n total">${l.passthrough ? 'לא כלול' : ils(l.line_total_ils, 2)}</td>
           </tr>`,
         )
         .join('')
-      return `<tr class="sec"><td class="name" colspan="4"><bdi>${esc(sec.code)}</bdi> · ${esc(sec.title_he)}</td><td class="n total">${ils(sec.total_ils, 2)}</td></tr>${lines}`
+      return `<tr class="sec"><td class="name" colspan="3"><bdi>${esc(sec.code)}</bdi> · ${esc(sec.title_he)}</td></tr>${lines}`
     })
     .join('')
-  // The page opens on the chapter totals; every line is one tap away (no script needed).
-  const chapterRows = q.sections
-    .map((sec) => `<tr class="sec"><td class="name" colspan="4"><bdi>${esc(sec.code)}</bdi> · ${esc(sec.title_he)}</td><td class="n total">${ils(sec.total_ils, 2)}</td></tr>`)
-    .join('')
   const lineCount = q.sections.reduce((n, sec) => n + sec.lines.length, 0)
+  const addonRows = q.addons
+    .map(
+      (a) => `<tr class="line">
+        <td class="name" colspan="4">${esc(a.name_he)} · <bdi>${num(a.qty, a.qty % 1 ? 2 : 0)}</bdi> ${esc(UNIT_HE[a.unit] ?? a.unit)}${a.qty !== 1 ? ` · ${ils(a.unit_price_ils, 2)} ליח׳` : ''}${a.description_he ? `<div class="muted">${esc(a.description_he)}</div>` : ''}</td>
+        <td class="n total">${ils(a.line_total_ils, 2)}</td>
+      </tr>`,
+    )
+    .join('')
 
   const vatLabel = t.vat_rate === null ? 'מע״מ' : `מע״מ (<bdi>${num(t.vat_rate * 100, t.vat_rate * 100 % 1 ? 1 : 0)}%</bdi>)`
 
@@ -388,24 +391,24 @@ export function renderQuotePage(q: PublicQuote, opts: RenderOpts): string {
   ${q.roi && Array.isArray(q.roi.monthly_kwh) && Array.isArray(q.roi.cumulative) && Array.isArray(q.roi.assumptions) ? roiCard(q.roi) : ''}
 
   <section class="card">
-    <h2>פירוט ומחיר</h2>
+    <h2>מחיר</h2>
     <table class="items chapters">
       <tbody>
-        ${chapterRows}
-        ${t.rounding_ils ? `<tr class="vat"><td class="name" colspan="4">עיגול</td><td class="n total">${ils(t.rounding_ils, 2)}</td></tr>` : ''}
+        <tr class="sec"><td class="name" colspan="4">מחיר המערכת, כולל ציוד, התקנה ושירותים${t.price_per_kwp_excl_vat_ils ? `<div class="muted">${ils(t.price_per_kwp_excl_vat_ils)} ל-kWp לפני מע״מ</div>` : ''}</td><td class="n total">${ils(t.system_price_excl_vat_ils, 2)}</td></tr>
+        ${addonRows ? `<tr class="vat"><td class="name" colspan="5">תוספות</td></tr>${addonRows}` : ''}
         <tr class="sum"><td class="name" colspan="4">סה״כ לפני מע״מ</td><td class="n total">${ils(t.subtotal_excl_vat_ils, 2)}</td></tr>
         <tr class="vat"><td class="name" colspan="4">${vatLabel}</td><td class="n total">${ils(t.vat_ils, 2)}</td></tr>
         <tr class="sum grand"><td class="name" colspan="4">סה״כ כולל מע״מ</td><td class="n total">${ils(t.total_incl_vat_ils, 2)}</td></tr>
       </tbody>
     </table>
     <details class="full">
-      <summary>פירוט מלא לפי פריטים (<bdi>${lineCount}</bdi> שורות)</summary>
+      <summary>מה כלול במערכת (<bdi>${lineCount}</bdi> פריטים)</summary>
       <table class="items">
-        <thead><tr><th>פריט</th><th>יח׳</th><th class="n">כמות</th><th class="n">מחיר יח׳</th><th class="n">סה״כ</th></tr></thead>
+        <thead><tr><th>פריט</th><th>יח׳</th><th class="n">כמות</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </details>
-    <p class="muted">${esc(t.passthrough_note_he)}${t.price_per_kwp_excl_vat_ils ? ` · מחיר ל-kWp לפני מע״מ: ${ils(t.price_per_kwp_excl_vat_ils)}` : ''}</p>
+    <p class="muted">${esc(t.passthrough_note_he)}</p>
   </section>
 
   ${

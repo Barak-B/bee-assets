@@ -67,12 +67,11 @@ describe('review fixes — quote engine', () => {
     expect(sum).toBeCloseTo(pq.totals.total_incl_vat_ils!, 2)
   })
 
-  it('sections + rounding = subtotal on the customer quote', async () => {
+  it('the final rounding lands in the system price, so system + add-ons = subtotal', async () => {
     const { catalog, rules } = priced(100)
     const pq = toPublicQuote(await buildQuote(input, catalog, rules))
-    const sections = pq.sections.reduce((s, x) => s + x.total_ils, 0)
-    expect(pq.totals.rounding_ils).not.toBe(0)
-    expect(sections + pq.totals.rounding_ils).toBeCloseTo(pq.totals.subtotal_excl_vat_ils!, 2)
+    expect(pq.totals.subtotal_excl_vat_ils! % 100).toBe(0)
+    expect(pq.totals.system_price_excl_vat_ils! + pq.totals.addons_total_excl_vat_ils).toBeCloseTo(pq.totals.subtotal_excl_vat_ils!, 2)
   })
 
   it('binary-float noise does not add a unit (50 m + 10% = 55 m)', async () => {

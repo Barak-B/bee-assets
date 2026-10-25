@@ -275,7 +275,7 @@ test('publish a priced quote → customer link on our domain, never 127.0.0.1', 
   expect((published!.quote as { project: { customer_name?: string } }).project.customer_name).toBe('ישראל כהן')
   expect(JSON.stringify(published!.quote)).not.toContain('123456782')
   const body = JSON.stringify(published)
-  expect(body).toContain('"schema":"bee.public-quote/1"')
+  expect(body).toContain('"schema":"bee.public-quote/2"')
   const roi = (published!.quote as { roi?: { savings_y1_ils: number; cumulative: unknown[]; monthly_kwh: number[] } }).roi
   expect(roi?.savings_y1_ils).toBeGreaterThan(0)
   expect(roi?.cumulative).toHaveLength(25)

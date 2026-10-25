@@ -73,21 +73,27 @@ describe('BOQ workbook', () => {
     expect(ws02.getRow(2).getCell(8).value).toBe("עלות יח' (₪)")
   })
 
-  it('customer view has no cost columns and is protected', async () => {
+  it('customer copy: one system price, no price for any single item, no costs', async () => {
     const { catalog, rules } = pricedBook()
     const { quote } = await buildQuoteDraft(project(), [], catalog, rules)
     const { bytes } = await buildBoqXlsx(quote, project(), 'customer')
     const wb = await readBack(bytes)
-    const ws = wb.getWorksheet('08.02')!
-    expect(ws.getRow(2).cellCount).toBe(7)
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['הצעה'])
+    const ws = wb.getWorksheet('הצעה')!
+    const numbers: number[] = []
+    ws.eachRow((row) => row.eachCell((c) => typeof c.value === 'number' && numbers.push(c.value)))
+    // Every money figure on the sheet is a total; no line price appears anywhere.
+    for (const l of quote.lines) if (l.unit_price_ils && l.unit_price_ils > 1) expect(numbers).not.toContain(l.unit_price_ils)
+    expect(numbers).toContain(quote.totals.total_incl_vat_ils)
+    expect(numbers).toContain(quote.totals.subtotal_excl_vat_ils)
     expect(boqFilename(quote, 'customer')).toBe(`BOQ_${quote.quote_number}_v1_customer.xlsx`)
   })
 
-  it('marks unpriced lines "לאימות" instead of writing zero totals', async () => {
+  it('marks an unpriced customer copy "לאימות" instead of writing zero totals', async () => {
     const { quote } = await buildQuoteDraft(project(), [])
     const { bytes } = await buildBoqXlsx(quote, project(), 'customer')
     const wb = await readBack(bytes)
-    expect(wb.getWorksheet('08.02')!.getCell('F3').value).toBe('לאימות')
+    expect(wb.getWorksheet('הצעה')!.getCell('E7').value).toBe('לאימות')
   })
 })
 

@@ -307,6 +307,7 @@ export function priceLines(drafts: DraftLine[], catalog: Catalog, rules: Pricing
       needs_owner_input: ownerInput,
       flags,
       boq_section: p.boq_section,
+      ...(p.customer_addon && !passthrough ? { addon: true as const } : {}),
     }
   })
 }
