@@ -24,6 +24,7 @@ import yaml
 from .bom import bom, write_csv
 from .checks import as_dicts, check, summary
 from .model import Design
+from .pv import dc_rows
 from .render import A3_H, A3_W, _visual_copy, build, merge_pdfs, render_pdf, save_dxf
 from .report import calc_rows
 from .templates import TEMPLATES, BriefError, from_brief
@@ -70,6 +71,8 @@ def analyse(body: dict[str, Any]) -> dict[str, Any]:
         "summary": summary(findings),
         "findings": as_dicts(findings),
         "rows": [asdict(r) for r in calc_rows(design)],
+        # one row per MPPT input: Voc at −3 °C, Vmp cold / hot (70 °C cell), current (bee_cad.pv)
+        "dc": [asdict(r) for r in dc_rows(design.pv)] if design.pv else [],
         "bom": [asdict(r) for r in bom(design)],
         "sheets": sheet_svgs(design) if body.get("sheets", True) else {},
         "design": json.loads(design.model_dump_json(exclude_none=True)),

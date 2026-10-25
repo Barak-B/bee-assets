@@ -455,5 +455,8 @@ def test_plans_endpoint_and_token(monkeypatch):
         assert base64.b64decode(out["files"]["pdf"]["base64"])[:4] == b"%PDF"
         assert out["files"]["dxf"]["name"].endswith(".dxf")
         assert any(r["kind"] == "dc_switch" for r in out["bom"])
+        dc = {r["mppt"]: r for r in out["dc"]}
+        assert dc[1]["inverter"] == 1 and dc[5]["inverter"] == 2
+        assert round(dc[1]["voc_cold"]) == round(18 * 49.5 * (1 + 0.0025 * 28))   # 953 V at −3 °C
     finally:
         httpd.shutdown()
