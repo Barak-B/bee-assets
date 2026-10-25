@@ -37,7 +37,7 @@ const GLOBES_HE: TariffSource = {
   date: "2026-10-19",
 };
 
-/** Small rooftops (up to 15 kW). Checked 25.10.2026; the 2027 track is a draft open for comments until 10.11.2026. */
+/** Small rooftops (inverter up to 15 kW AC; panels may go to 30 kWp DC). Checked 25.10.2026; the 2027 track is a draft open for comments until 10.11.2026. */
 export const ROOFTOP_TRACKS: { current: TariffTrack; draft2027: TariffTrack } = {
   current: {
     id: "2026",
@@ -63,12 +63,18 @@ export const ROOFTOP_TRACKS: { current: TariffTrack; draft2027: TariffTrack } = 
 };
 
 export interface RevenueInput {
+  /** Panel power, kWp DC. The tariff tier is set by the inverter's AC power (see sizing.ts). */
   kWp: number;
   /** Annual specific yield, kWh per kWp (PVGIS; e.g. Tel Aviv about 1,718 at 30° south). */
   specificYield: number;
   urban?: boolean;
   /** Annual module degradation, as a fraction. */
   degradation?: number;
+  /**
+   * Share of annual DC yield lost to inverter clipping at high DC/AC ratios. The site's hourly
+   * engine computes it from the hourly profile; this module takes it as an input (default 0).
+   */
+  clippingLoss?: number;
 }
 
 /** Total guaranteed-tariff income over the track's term, NIS, nominal. */
@@ -76,9 +82,12 @@ export function trackRevenue(track: TariffTrack, input: RevenueInput): number {
   const { kWp, specificYield } = input;
   if (!(kWp > 0) || !(specificYield > 0)) throw new RangeError("kWp and specificYield must be positive");
   const deg = input.degradation ?? 0.004;
+  const clip = input.clippingLoss ?? 0;
+  if (!(clip >= 0 && clip < 1)) throw new RangeError("clippingLoss must be in [0, 1)");
   const rate = track.rate + (input.urban ? track.urbanPremium : 0);
+  const firstYear = kWp * specificYield * (1 - clip);
   let total = 0;
-  for (let y = 0; y < track.years; y++) total += kWp * specificYield * (1 - deg) ** y * rate;
+  for (let y = 0; y < track.years; y++) total += firstYear * (1 - deg) ** y * rate;
   return total;
 }
 
@@ -97,7 +106,7 @@ export function costOfWaiting(input: RevenueInput): WaitCost {
     revenue2026,
     revenue2027,
     costOfWaiting: revenue2026 - revenue2027,
-    firstYearKWh: input.kWp * input.specificYield,
+    firstYearKWh: input.kWp * input.specificYield * (1 - (input.clippingLoss ?? 0)),
   };
 }
 

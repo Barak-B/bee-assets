@@ -21,7 +21,7 @@ export function connectionKva({ phases, amps }: Connection): number {
   return phases === 1 ? (V_PHASE * amps) / 1000 : (Math.sqrt(3) * V_LINE * amps) / 1000;
 }
 
-/** Largest PV system (kW AC) the connection allows without an upgrade. */
+/** Largest PV system the connection allows without an upgrade, inverter kW AC (panels may be larger, see sizing.ts). */
 export function maxPvKw(conn: Connection): number {
   return 0.9 * connectionKva(conn);
 }
@@ -54,6 +54,7 @@ export interface PvConnectionCheck {
   metering: "direct" | "ct";
 }
 
+/** `pvKw` is the inverter's AC power: 35כ2 and the 15 kW production-meter rule both count AC. */
 export function checkPvConnection(conn: Connection, pvKw: number): PvConnectionCheck {
   if (!(pvKw > 0)) throw new RangeError("pvKw must be positive");
   const kva = connectionKva(conn);
