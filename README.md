@@ -30,3 +30,7 @@ Public assets for email signatures and external use.
 ## Planning
 
 - [`docs/plan/00-master-plan.md`](docs/plan/00-master-plan.md) — תוכנית אב ל-B.E.E Engine (הצעות, כתבי כמויות, תוכניות, הגשה לחח"י, CRM מחזור חיים) + דוחות מחקר ב-`docs/plan/research/`.
+
+## Tooling
+
+- [`docs/CLAUDEX_LOOP.md`](docs/CLAUDEX_LOOP.md) — פלאגין **Claudex Loop** (תכנון ובדיקה צולבת Claude ↔ Codex): מה נבדק, איך מתקינים ואיך משתמשים במוח בלי לשרוף טוקנים. ההגדרה ברמת הריפו (נעוצה ל-commit שנבדק): `.claude/settings.json`.
