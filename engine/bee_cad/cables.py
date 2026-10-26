@@ -66,7 +66,8 @@ def cable_rows(design: Design) -> list[CableRow]:
         ik = ik3_max_ka(o.zs, o.cables) if o and o.ik_known else None
         if b.supply.cable and not b.existing:
             cab = b.supply.cable
-            rows.append(_ac_row(f"{b.id}:הזנה", f"מונה → {b.id}", cab, b.incomer,
+            src = "מונה" if b.supply.kind in ("utility", "transformer") else (b.supply.from_board or b.supply.label)
+            rows.append(_ac_row(f"{b.id}:הזנה", f"{src} → {b.id}", cab, b.incomer,
                                 b.incomer.rating_a if b.incomer else None, True, 3,
                                 cab.method if cab.method in METHOD_NAMES else "C", b.supply.ik_ka))
         for c in b.all_circuits():

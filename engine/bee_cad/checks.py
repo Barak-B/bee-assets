@@ -339,6 +339,8 @@ def check(design: Design, compute: bool = True) -> list[Finding]:
         _check_board(work, b, out, origins)
     if work.pv:
         _check_pv(work.pv, out)
+    from .il import check_il          # Israeli rules build on Finding; imported late to avoid a cycle
+    out.extend(check_il(work))
     order = {"error": 0, "warn": 1, "info": 2}
     out.sort(key=lambda f: (order[f.level], f.where))
     return out

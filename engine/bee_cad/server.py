@@ -22,6 +22,7 @@ from urllib.parse import parse_qs, quote, urlparse
 import yaml
 
 from .bom import bom, write_csv
+from .il import labels, submission
 from .cables import as_dicts as cable_dicts, cable_rows, write_cables_csv
 from .checks import as_dicts, check, summary
 from .model import Design
@@ -40,7 +41,7 @@ def sheet_svgs(design: Design) -> dict[str, str]:
     from ezdxf.addons.drawing.properties import LayoutProperties
     from ezdxf.math import BoundingBox
 
-    result = build(design, ("sld", "panel", "calc"))
+    result = build(design, ("sld", "panel", "calc", "earth", "schedule"))
     if not result:
         return {}
     doc = _visual_copy(next(iter(result.values()))[0])
@@ -76,6 +77,8 @@ def analyse(body: dict[str, Any]) -> dict[str, Any]:
         "dc": [asdict(r) for r in dc_rows(design.pv)] if design.pv else [],
         "bom": [asdict(r) for r in bom(design)],
         "cables": cable_dicts(cable_rows(design)),
+        "labels": [asdict(x) for x in labels(design)],
+        "submission": submission(),
         "sheets": sheet_svgs(design) if body.get("sheets", True) else {},
         "design": json.loads(design.model_dump_json(exclude_none=True)),
     }

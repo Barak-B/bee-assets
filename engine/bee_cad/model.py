@@ -269,6 +269,21 @@ class PvArray(BaseModel):
         return self.modules_total() * self.module.wp / 1000.0
 
 
+class GridConnection(BaseModel):
+    """The connection to the IEC network the Israeli rules are checked against (bee_cad.il)."""
+
+    phases: int = 3
+    amps: float = 40
+    inverter_kw: float = 0
+    inverter_count: int = 1
+    kwp: float = 0
+    export_limit_kw: Optional[float] = None   # export limiter setting, kW (None = none)
+    self_consumption: bool = False            # self-consumption track (no share-of-connection limit)
+    first_year: bool = False                  # first year of the connection: 50 % share instead of 70 %
+    battery_kwh: Optional[float] = None
+    battery_kw: Optional[float] = None
+
+
 class Design(BaseModel):
     """The whole project model."""
 
@@ -279,6 +294,7 @@ class Design(BaseModel):
     legend: bool = True
     notes: list[str] = Field(default_factory=list)
     pv: Optional[PvArray] = None          # DC side for the string checks (bee_cad.pv)
+    grid: Optional[GridConnection] = None # IEC connection for the Israeli rules (bee_cad.il)
 
     def board(self, board_id: str) -> Board:
         for b in self.boards:

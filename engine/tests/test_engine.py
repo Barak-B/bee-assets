@@ -358,7 +358,7 @@ def test_studio_api():
         assert "סטודיו" in urllib.request.urlopen(base + "/").read().decode("utf-8")
         req = urllib.request.Request(base + "/api/design", json.dumps({"brief": brief}).encode(), method="POST")
         out = json.loads(urllib.request.urlopen(req).read())
-        assert list(out["sheets"]) == ["E-01", "E-P02", "E-P03", "E-C01"]
+        assert list(out["sheets"]) == ["E-01", "E-P02", "E-P03", "E-C01", "E-G01", "E-S01"]
         assert all("<svg" in s[:200] for s in out["sheets"].values())
         req = urllib.request.Request(base + "/api/export?fmt=csv", json.dumps({"brief": brief}).encode(), method="POST")
         with urllib.request.urlopen(req) as res:
@@ -524,3 +524,42 @@ def test_pv_dc_cable_fuse_and_reverse_current():
     assert f["PV_REVERSE_CURRENT"].level == "error"
     f = run(strings=[{"mppt": 1, "count": 1, "modules": 10, "length_m": 80}], dc_cable_mm2=4)
     assert f["PV_DC_DROP"].level == "warn"
+
+
+def test_israeli_rules():
+    from bee_cad.checks import check
+    from bee_cad.il import connection_kva, labels, submission
+    from bee_cad.model import GridConnection, Node, Device
+
+    g = GridConnection(phases=3, amps=40, inverter_kw=25)
+    assert round(connection_kva(g), 1) == 27.6
+    codes = {f.code: f for f in check(Design(grid=g))}
+    assert codes["IL_CONNECTION_SHARE"].level == "warn" and "3X63A" in codes["IL_CONNECTION_SHARE"].fix
+    assert codes["IL_EXPORT_LIMIT"].level == "warn"
+    ok = {f.code for f in check(Design(grid=GridConnection(phases=3, amps=63, inverter_kw=25, export_limit_kw=15)))}
+    assert "IL_CONNECTION_SHARE" not in ok and "IL_EXPORT_LIMIT" not in ok
+    assert "IL_TRACK" in {f.code for f in check(Design(grid=GridConnection(amps=40, inverter_kw=10)))}
+    bat = {f.code: f for f in check(Design(grid=GridConnection(phases=1, amps=40, inverter_kw=5, battery_kw=6)))}
+    assert bat["IL_STORAGE_1P"].level == "error"
+    inv = Node(id="INV", kind="inverter", label="ממיר", device=Device(tag="RCD", kind="rcd", poles=4, rcd_type="A"))
+    assert "IL_RCD_TYPE" in {f.code for f in check(Design(grid=g, nodes=[inv]))}
+    assert labels(Design(grid=g)) and any(not s["produced"] for s in submission())
+
+
+def test_earthing_and_schedule_sheets():
+    import yaml
+
+    from bee_cad.render import build
+    from bee_cad.sheets_il import _bonding_items, pe_size
+    from bee_cad.templates import from_brief
+
+    assert pe_size("N2XY 4X95") == "PE 50 ממ\"ר Cu" and pe_size("5X25") == "PE 16 ממ\"ר Cu"
+    brief = yaml.safe_load((EXAMPLE.parent / "brief_pv_commercial.yaml").read_text(encoding="utf-8"))
+    d = from_brief(brief, "2026-10-26")
+    items = {w: c for w, c, _ in _bonding_items(d)}
+    assert items["מבנה נושא הפאנלים ומסגרות"] == "16 ממ\"ר Cu"            # 128.96 kWp > 15 kWp
+    assert any(w.startswith("גוף ממיר") for w in items)
+    sheets = build(d)
+    assert {"E-G01", "E-S01"} <= set(sheets)
+    house = Design.model_validate(json.loads(EXAMPLE.read_text(encoding="utf-8")))
+    assert not any(k.endswith("G01") for k in build(house))                # no PV, no earthing plan sheet

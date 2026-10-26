@@ -15,7 +15,7 @@ from typing import Any, Optional
 
 from .calc import U_LL, CableSpec, ampacity, voltage_drop_pct
 from .checks import DU_LIMIT_LIGHTING_PCT, DU_LIMIT_PCT
-from .model import (Board, Busbar, Cable, Circuit, Design, Device, Enclosure, Group, Node, PvArray, Supply,
+from .model import (Board, Busbar, Cable, Circuit, Design, Device, Enclosure, GridConnection, Group, Node, PvArray, Supply,
                     TitleBlock)
 from .panel import device_width_mm
 
@@ -204,7 +204,7 @@ def house_pv(brief: dict[str, Any], today: Optional[str] = None) -> Design:
         nodes.append(Node(id="INV", kind="inverter", label="ממיר היברידי" if hybrid else "ממיר",
                           sublabel=inv.get("model", ""), rating=f"{kw:g} kW · 400V",
                           device=Device(tag="RCD-INV", kind="rcd", poles=4, rating_a=next_rating(q), idn_ma=300,
-                                        rcd_type=inv.get("rcd_type", "A"))))
+                                        rcd_type=inv.get("rcd_type", "B"))))
         nodes.append(Node(id="PV", kind="pv", label="מערך PV", sublabel=pv.get("modules", ""),
                           rating=f"{pv['kwp']:g} kWp" if pv.get("kwp") else ""))
         notes.append(f"Q-INV {q}A לפי 1.25 × זרם הממיר ({i_ac:.1f}A); כבל {cable.designation} לפי IEC 60364-5-52 שיטה C.")
@@ -234,7 +234,15 @@ def house_pv(brief: dict[str, Any], today: Optional[str] = None) -> Design:
                        (" ולוח חיוני" if len(boards) > 1 else ""),
                        date=today or date.today().isoformat(), status="לאישור")
     title.revisions = [("A", title.date, "הגשה ראשונה")]
-    return Design(title=title, boards=boards, nodes=nodes, notes=notes)
+    grid = None
+    if pv:
+        inv = pv.get("inverter") or {}
+        bat = brief.get("battery") or {}
+        grid = GridConnection(phases=_connection(conn.upper())[0], amps=main_a, inverter_kw=float(inv.get("kw") or pv.get("kw")),
+                              inverter_count=1, kwp=float(pv.get("kwp") or 0), export_limit_kw=pv.get("export_limit_kw"),
+                              self_consumption=bool(pv.get("self_consumption")), first_year=bool(sup.get("first_year")),
+                              battery_kwh=bat.get("kwh"), battery_kw=bat.get("kw"))
+    return Design(title=title, boards=boards, nodes=nodes, notes=notes, grid=grid)
 
 
 def _pv_array(pv: dict[str, Any]) -> Optional[PvArray]:
@@ -351,7 +359,12 @@ def pv_connection(brief: dict[str, Any], today: Optional[str] = None) -> Design:
                        sheet_title="חד-קווי — חיבור מערכת PV" + (" ואגירה" if bat else ""),
                        date=today or date.today().isoformat(), status="לאישור")
     title.revisions = [("A", title.date, "הגשה ראשונה")]
-    return Design(title=title, boards=boards, nodes=nodes, notes=notes, pv=array)
+    grid = GridConnection(phases=phases, amps=main_a, inverter_kw=kw, inverter_count=n,
+                          kwp=array.kwp() if array else float(pv.get("kwp") or 0),
+                          export_limit_kw=pv.get("export_limit_kw"), self_consumption=bool(pv.get("self_consumption")),
+                          first_year=bool(sup.get("first_year")), battery_kwh=(bat or {}).get("kwh"),
+                          battery_kw=(bat or {}).get("kw"))
+    return Design(title=title, boards=boards, nodes=nodes, notes=notes, pv=array, grid=grid)
 
 
 TEMPLATES = {"house-pv": house_pv, "pv-connection": pv_connection}
