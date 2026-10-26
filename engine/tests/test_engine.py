@@ -260,7 +260,7 @@ def test_cable_parsing_edge_cases():
     al = parse_cable("NA2XY 4X50")
     assert al.material == "Al" and ampacity(al, "C", 3) is None
     assert parse_cable("5x16 al").material == "Al"
-    assert ampacity(parse_cable("N2XY 4X150"), "C", 3) is None          # outside the table → not silently OK
+    assert ampacity(parse_cable("N2XY 4X300"), "C", 3) is None          # outside the table → not silently OK
     assert ambient_factor("PVC", 45) == 0.79 and ambient_factor("XLPE", 30) == 1.0
     assert ampacity(parse_cable("3X2.5"), "B1", 2, ambient_c=45) == round(24 * 0.79, 1)
     assert iec_class(Device(tag="F", kind="fuse")) == "FC" and iec_class(Device(tag="S", kind="spd")) == "FA"
@@ -410,7 +410,8 @@ def test_pv_connection_template():
     assert not [x for x in f if x.level != "info"], [x.line() for x in f]
     rows = {(r.kind, r.spec): r for r in bom(d)}
     assert rows[("pv_module", "620W Voc 49.5V Isc 15.9A")].qty == 208
-    assert rows[("dc_switch", "2P 1000V DC")].qty == 8
+    assert sum(r.qty for r in rows.values() if r.kind == "dc_switch") == 8
+    assert rows[("dc_switch", "2P 1100V DC 40A DC-PV2")].qty == 4      # two strings: 2 × 1.25 × 15.9A
     assert not any(r.kind == "mccb" and "250A" in r.spec for r in rows.values())   # existing Q0 is not bought
     assert any(r.kind == "cable" and r.unit == "מ'" for r in rows.values())
 

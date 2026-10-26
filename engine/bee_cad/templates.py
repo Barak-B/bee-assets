@@ -15,7 +15,7 @@ from typing import Any, Optional
 
 from .calc import U_LL, CableSpec, ampacity, voltage_drop_pct
 from .checks import DU_LIMIT_LIGHTING_PCT, DU_LIMIT_PCT
-from .model import (Board, Busbar, Cable, Circuit, Design, Device, Enclosure, Group, Node, PvArray, Supply,
+from .model import (Board, Busbar, Cable, Circuit, Design, Device, Enclosure, Group, Node, PvArray, PvString, Supply,
                     TitleBlock)
 from .panel import device_width_mm
 
@@ -243,9 +243,24 @@ def _pv_array(pv: dict[str, Any]) -> Optional[PvArray]:
         return None
     try:
         inv = {k: v for k, v in (pv.get("inverter") or {}).items() if k in PvArray.model_fields["inverter"].annotation.model_fields}
-        return PvArray(module=pv["module"], inverter=inv, strings=pv["strings"], modules_line=pv.get("modules_line", ""))
+        array = PvArray(module=pv["module"], inverter=inv, strings=pv["strings"], modules_line=pv.get("modules_line", ""))
     except Exception as e:  # pydantic: say which field, in Hebrew
         raise BriefError(f"נתוני המחרוזות (pv) לא תקינים: {e}") from e
+    for st, raw in zip(array.strings, pv["strings"]):
+        if "cable_mm2" not in raw:
+            st.cable_mm2 = size_string_cable(array, st)
+    return array
+
+
+def size_string_cable(array: PvArray, st: PvString) -> float:
+    """Smallest PV cable that carries the string current (IEC 62548) and keeps the DC drop within 1 %."""
+    from .pv import DC_DU_INFO, PV_CABLE_IZ, dc_drop_pct, string_cable_required_a
+    need = string_cable_required_a(array.module, st.count)
+    for mm2 in (4.0, 6.0, 10.0):
+        du = dc_drop_pct(array.module, st.model_copy(update={"cable_mm2": mm2}))
+        if PV_CABLE_IZ[mm2] >= need and (du is None or du <= DC_DU_INFO):
+            return mm2
+    return 10.0
 
 
 def pv_connection(brief: dict[str, Any], today: Optional[str] = None) -> Design:
