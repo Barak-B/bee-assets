@@ -241,8 +241,16 @@ def house_pv(brief: dict[str, Any], today: Optional[str] = None) -> Design:
         grid = GridConnection(phases=_connection(conn.upper())[0], amps=main_a, inverter_kw=float(inv.get("kw") or pv.get("kw")),
                               inverter_count=1, kwp=float(pv.get("kwp") or 0), export_limit_kw=pv.get("export_limit_kw"),
                               self_consumption=bool(pv.get("self_consumption")), first_year=bool(sup.get("first_year")),
-                              battery_kwh=bat.get("kwh"), battery_kw=bat.get("kw"))
-    return Design(title=title, boards=boards, nodes=nodes, notes=notes, grid=grid, site=_site(brief))
+                              battery_kwh=bat.get("kwh"), battery_kw=bat.get("kw"),
+                              export_meter=pv.get("export_meter", ""), monitoring=pv.get("monitoring", ""))
+    return Design(title=title, boards=boards, nodes=nodes, notes=notes, grid=grid, site=_site(brief),
+                  installer=_installer(brief))
+
+
+def _installer(brief: dict[str, Any]):
+    from .model import Installer
+    raw = brief.get("installer")
+    return Installer.model_validate(raw) if isinstance(raw, dict) and any(raw.values()) else None
 
 
 def _site(brief: dict[str, Any]):
@@ -371,8 +379,10 @@ def pv_connection(brief: dict[str, Any], today: Optional[str] = None) -> Design:
                           kwp=array.kwp() if array else float(pv.get("kwp") or 0),
                           export_limit_kw=pv.get("export_limit_kw"), self_consumption=bool(pv.get("self_consumption")),
                           first_year=bool(sup.get("first_year")), battery_kwh=(bat or {}).get("kwh"),
-                          battery_kw=(bat or {}).get("kw"))
-    return Design(title=title, boards=boards, nodes=nodes, notes=notes, pv=array, grid=grid, site=_site(brief))
+                          battery_kw=(bat or {}).get("kw"), export_meter=pv.get("export_meter", ""),
+                          monitoring=pv.get("monitoring", ""))
+    return Design(title=title, boards=boards, nodes=nodes, notes=notes, pv=array, grid=grid, site=_site(brief),
+                  installer=_installer(brief))
 
 
 TEMPLATES = {"house-pv": house_pv, "pv-connection": pv_connection}

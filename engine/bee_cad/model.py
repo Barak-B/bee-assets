@@ -306,6 +306,18 @@ class GridConnection(BaseModel):
     first_year: bool = False                  # first year of the connection: 50 % share instead of 70 %
     battery_kwh: Optional[float] = None
     battery_kw: Optional[float] = None
+    export_meter: str = ""                    # meter / CT the limiter reads at the connection point
+    monitoring: str = ""                      # how the inverters report (Wi-Fi / LAN / cellular / logger)
+
+
+class Installer(BaseModel):
+    """The licensed electrician who signs the installer declaration (from the app's company profile)."""
+
+    name: str = ""
+    license_no: str = ""
+    license_type: str = ""                    # חשמלאי מוסמך / ראשי / הנדסאי / מהנדס
+    company: str = ""
+    phone: str = ""
 
 
 class Design(BaseModel):
@@ -320,6 +332,7 @@ class Design(BaseModel):
     pv: Optional[PvArray] = None          # DC side for the string checks (bee_cad.pv)
     grid: Optional[GridConnection] = None # IEC connection for the Israeli rules (bee_cad.il)
     site: Optional[SiteLayout] = None     # roofs and panels from the map quote (bee_cad.site)
+    installer: Optional[Installer] = None # who signs the declaration (bee_cad.control)
 
     def board(self, board_id: str) -> Board:
         for b in self.boards:

@@ -169,7 +169,9 @@ SUBMISSION = [
 
 
 def submission(d: Optional[Design] = None) -> list[dict]:
-    """The §32 list, with what this design produces (the site plan only when the map quote sent the roofs)."""
-    made = {"site": bool(d and d.site and d.site.roofs), "earthing": bool(d and (d.pv or d.grid)),
+    """The §32 list, with what this design produces (the site plan only when the map quote sent the roofs).
+    The declaration sheet is produced for signing; the signature itself is the installer's."""
+    il = bool(d and (d.pv or d.grid))
+    made = {"site": bool(d and d.site and d.site.roofs), "earthing": il, "control": il, "declaration": il,
             "tester": bool(d and d.boards)}
     return [{"id": k, "name": name, "produced": done or made.get(k, False)} for k, name, done in SUBMISSION]
