@@ -22,6 +22,7 @@ from urllib.parse import parse_qs, quote, urlparse
 import yaml
 
 from .bom import bom, write_csv
+from .control import grid_settings
 from .il import labels, submission
 from .tests_sheet import as_dicts as test_dicts, test_rows
 from .cables import as_dicts as cable_dicts, cable_rows, write_cables_csv
@@ -81,6 +82,7 @@ def analyse(body: dict[str, Any]) -> dict[str, Any]:
         "labels": [asdict(x) for x in labels(design)],
         "submission": submission(design),
         "tests": test_dicts(test_rows(design)),
+        "grid_settings": [asdict(x) for x in grid_settings(design)],
         "sheets": sheet_svgs(design) if body.get("sheets", True) else {},
         "design": json.loads(design.model_dump_json(exclude_none=True)),
     }

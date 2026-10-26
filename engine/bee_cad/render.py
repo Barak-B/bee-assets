@@ -21,7 +21,7 @@ from .sld import draw_sld
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("mv", "site", "sld", "panel", "calc", "earth", "schedule", "tests")
+SHEET_KINDS = ("mv", "site", "sld", "panel", "calc", "earth", "control", "schedule", "tests", "declaration")
 TEST_ROWS = 44          # rows per commissioning test sheet
 SCHED_ROWS = 34         # cable rows per schedule sheet, leaving room for the sign table on the last
 CALC_ROWS = 40          # rows that fit one calculation sheet (checked against the frame in draw_calc)
@@ -48,6 +48,7 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
     test_pages = [trows[i:i + TEST_ROWS] for i in range(0, len(trows), TEST_ROWS)]
     per_kind["tests"] = len(test_pages)
     per_kind["site"] = 1 if design.site and design.site.roofs else 0
+    per_kind["control"] = per_kind["declaration"] = 1 if il else 0
     total = sum(per_kind[s] for s in sheets)
     if not design.boards and "sld" in sheets:
         sheets.remove("sld")
@@ -121,6 +122,17 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
             ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
             draw_frame(ctx, tb)
             out[no] = (d, draw_earthing(ctx, design))
+            idx += 1
+        elif kind in ("control", "declaration") and il:
+            from .control import draw_control, draw_declaration
+            no = f"{design.title.sheet_no.split('-')[0]}-{'K' if kind == 'control' else 'D'}01"
+            title = "תוכנית פיקוד — מדידה, מגביל הזרמה ותקשורת" if kind == "control" else "הצהרת מתקין"
+            tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total, "sheet_no": no,
+                                                 "sheet_title": title, "scale": "ללא"})
+            d = doc or new_document(mode)
+            ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
+            draw_frame(ctx, tb)
+            out[no] = (d, (draw_control if kind == "control" else draw_declaration)(ctx, design))
             idx += 1
         elif kind == "schedule":
             for k, page in enumerate(sched_pages):

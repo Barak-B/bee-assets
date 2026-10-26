@@ -605,3 +605,25 @@ def test_site_layout_sheet():
     brief["site_layout"] = {"roofs": [{"outline": "x"}]}
     with pytest.raises(BriefError):
         from_brief(brief)
+
+
+def test_control_diagram_and_installer_declaration():
+    """§32 control diagram and installer declaration: drawn for every PV / grid design, listed as produced."""
+    import yaml
+    from bee_cad.control import declaration_fields, grid_settings
+    from bee_cad.il import submission
+    from bee_cad.render import build
+    from bee_cad.templates import from_brief
+    brief = yaml.safe_load((EXAMPLE.parent / "brief_pv_commercial.yaml").read_text(encoding="utf-8"))
+    brief["installer"] = {"name": "ישראל ישראלי", "license_no": "123456", "license_type": "חשמלאי ראשי"}
+    d = from_brief(brief)
+    sheets = build(d, sheets=("control", "declaration"))
+    assert list(sheets) == ["E-K01", "E-D01"] and sheets["E-D01"][1] == []
+    settings = {s.what: s.value for s in grid_settings(d)}
+    assert "15 kW" in settings["מגביל הזרמה לרשת"] and settings["ניתוק בהיעדר רשת (anti-islanding)"] == "≤ 0.2 שנ'"
+    fields = dict(declaration_fields(d))
+    assert fields["שם המתקין"] == "ישראל ישראלי" and fields["מגביל הזרמה"] == "15 kW"
+    made = {s["id"]: s["produced"] for s in submission(d)}
+    assert made["control"] and made["declaration"]
+    brief.pop("installer")
+    assert build(from_brief(brief), sheets=("declaration",))["E-D01"][1]     # unsigned: says who is missing
