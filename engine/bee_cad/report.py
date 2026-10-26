@@ -11,7 +11,7 @@ from typing import Optional
 
 from ezdxf.enums import TextEntityAlignment as TA
 
-from .calc import (TRIP_MULTIPLE, ampacity, design_current, ik1_min_a, ik3_max_ka, loaded_conductors, node_kw,
+from .calc import (TRIP_MULTIPLE, board_origins, ampacity, design_current, ik1_min_a, ik3_max_ka, loaded_conductors, node_kw,
                    parse_cable, source_impedance, voltage_drop_pct)
 from .checks import DU_LIMIT_LIGHTING_PCT, DU_LIMIT_PCT, Finding, _method, check
 from .model import Board, Circuit, Design
@@ -38,7 +38,7 @@ class CalcRow:
     ok: bool
 
 
-def _row(b: Board, c: Circuit, zs: float, up: list, up_du: float, kw: Optional[float]) -> CalcRow:
+def _row(b: Board, c: Circuit, zs: float, up: Optional[list], up_du: float, kw: Optional[float]) -> CalcRow:
     d = c.device
     three = c.phase == "L1-3" or d.poles >= 3
     method = _method(c)
@@ -47,10 +47,10 @@ def _row(b: Board, c: Circuit, zs: float, up: list, up_du: float, kw: Optional[f
     if c.cable:
         spec = parse_cable(c.cable.designation)
         if spec:
-            iz = ampacity(spec, method, loaded_conductors(c.phase, d.poles), c.cable.ambient_c)
+            iz = ampacity(spec, method, loaded_conductors(c.phase, d.poles), c.cable.ambient_c, c.cable.grouped)
         if ib and c.cable.length_m:
             du = voltage_drop_pct(c.cable, ib, three)
-        if c.kind == "final" and d.kind in ("mcb", "rcbo") and d.rating_a and b.supply.kind in ("utility", "transformer"):
+        if c.kind == "final" and d.kind in ("mcb", "rcbo") and d.rating_a and up is not None:
             mult = TRIP_MULTIPLE.get((d.curve or "C").upper()[:1])
             ik1 = ik1_min_a(zs, up + [c.cable])
             ia = mult * d.rating_a if mult else None
@@ -67,9 +67,10 @@ def calc_rows(design: Design) -> list[CalcRow]:
     check(work)                                   # fills the supply-cable drop the rows build on
     nodes = {n.id: n for n in work.nodes}
     rows: list[CalcRow] = []
+    origins = board_origins(work)
     for b in work.boards:
-        zs = source_impedance(b.supply.ik_ka) if b.supply.ik_ka else 0.0
-        up = [b.supply.cable] if b.supply.cable and b.supply.cable.length_m else []
+        o = origins.get(b.id)
+        zs, up = (o.zs, o.cables) if o else (0.0, None)
         up_du = (b.supply.cable.du_pct or 0.0) if b.supply.cable else 0.0
         for c in b.all_circuits():
             node = nodes.get(c.to_node or "")

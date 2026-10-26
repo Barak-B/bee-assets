@@ -22,6 +22,7 @@ from urllib.parse import parse_qs, quote, urlparse
 import yaml
 
 from .bom import bom, write_csv
+from .cables import as_dicts as cable_dicts, cable_rows, write_cables_csv
 from .checks import as_dicts, check, summary
 from .model import Design
 from .pv import dc_rows
@@ -74,6 +75,7 @@ def analyse(body: dict[str, Any]) -> dict[str, Any]:
         # one row per MPPT input: Voc at −3 °C, Vmp cold / hot (70 °C cell), current (bee_cad.pv)
         "dc": [asdict(r) for r in dc_rows(design.pv)] if design.pv else [],
         "bom": [asdict(r) for r in bom(design)],
+        "cables": cable_dicts(cable_rows(design)),
         "sheets": sheet_svgs(design) if body.get("sheets", True) else {},
         "design": json.loads(design.model_dump_json(exclude_none=True)),
     }
@@ -84,7 +86,7 @@ def plans(body: dict[str, Any]) -> dict[str, Any]:
     out = analyse({**body, "sheets": False})
     out.pop("rows")
     out["files"] = {}
-    for fmt in ("pdf", "dxf", "csv"):
+    for fmt in ("pdf", "dxf", "csv", "cables"):
         data, ctype, name = export(body, fmt)
         out["files"][fmt] = {"name": name, "type": ctype, "base64": base64.b64encode(data).decode("ascii")}
     return out
@@ -101,6 +103,11 @@ def export(body: dict[str, Any], fmt: str) -> tuple[bytes, str, str]:
             p = Path(tmp) / "bom.csv"
             write_csv(bom(design), p)
             return p.read_bytes(), "text/csv; charset=utf-8", f"{stem}_BOM.csv"
+    if fmt == "cables":
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "cables.csv"
+            write_cables_csv(cable_rows(design), p)
+            return p.read_bytes(), "text/csv; charset=utf-8", f"{stem}_CABLES.csv"
     result = build(design)
     doc = next(iter(result.values()))[0]
     with tempfile.TemporaryDirectory() as tmp:

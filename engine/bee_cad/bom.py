@@ -11,7 +11,7 @@ from pathlib import Path
 
 from .calc import iec_class
 from .model import Cable, Design, Device
-from .pv import FUSE_FROM_STRINGS
+from .pv import FUSE_FROM_STRINGS, string_fuse_a
 
 CABLE_RESERVE = 1.1       # cable length bought = route length + 10%
 
@@ -95,7 +95,14 @@ def bom(design: Design) -> list[BomLine]:
         for st in pv.strings:
             other("dc_switch", "QB", "מנתק DC", "2P 1000V DC", 1, f"MPPT{st.mppt}")
             if st.count >= FUSE_FROM_STRINGS:
-                other("fuse", "FC", "נתיך מחרוזת", "gPV 1000V DC", 2 * st.count, f"MPPT{st.mppt}")
+                fuse = string_fuse_a(m)
+                other("fuse", "FC", "נתיך מחרוזת", f"gPV {fuse}A 1000V DC" if fuse else "gPV 1000V DC", 2 * st.count,
+                      f"MPPT{st.mppt}")
+            other("connector", "XD", "זוג מחברים MC4", "1500V DC", 2 * st.count, f"MPPT{st.mppt}")
+            length = st.length_m or pv.dc_length_m
+            if length:
+                other("cable", "WD", "כבל סולארי", f"H1Z2Z2-K 1X{pv.dc_cable_mm2:g}",
+                      math.ceil(2 * length * st.count * CABLE_RESERVE), f"MPPT{st.mppt}", "מ'")
     return sorted(lines.values(), key=lambda x: (x.iec, x.item, x.spec))
 
 

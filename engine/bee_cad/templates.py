@@ -21,7 +21,7 @@ from .panel import device_width_mm
 
 STD_RATINGS = (10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400)
 MCB_MAX_A = 125         # above this the template draws a moulded-case breaker (mccb)
-CSA = (1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120)
+CSA = (1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240)
 MAX_PER_RCD = 7          # 1P circuits behind one 4P 40A 30mA RCD
 SPARE = 1.25             # enclosure spare capacity
 DU_SUPPLY_PCT = 1.0      # budget for meter → main board
@@ -243,7 +243,9 @@ def _pv_array(pv: dict[str, Any]) -> Optional[PvArray]:
         return None
     try:
         inv = {k: v for k, v in (pv.get("inverter") or {}).items() if k in PvArray.model_fields["inverter"].annotation.model_fields}
-        return PvArray(module=pv["module"], inverter=inv, strings=pv["strings"], modules_line=pv.get("modules_line", ""))
+        extra = {k: pv[k] for k in ("dc_cable_mm2", "dc_length_m") if pv.get(k) is not None}
+        return PvArray(module=pv["module"], inverter=inv, strings=pv["strings"], modules_line=pv.get("modules_line", ""),
+                       **extra)
     except Exception as e:  # pydantic: say which field, in Hebrew
         raise BriefError(f"נתוני המחרוזות (pv) לא תקינים: {e}") from e
 

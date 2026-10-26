@@ -21,6 +21,11 @@ T_CELL_MAX_C = 70.0       # hottest cell on a summer roof
 T_STC_C = 25.0
 DC_AC_MIN, DC_AC_TARGET, DC_AC_MAX = 1.0, 1.2, 1.35
 FUSE_FROM_STRINGS = 3     # string fuses from three parallel strings (IEC 60364-7-712)
+DC_DROP_PCT = 1.5         # string cable voltage drop at Imp, of the string Vmp (design target ~1 %)
+RHO_DC = 0.0225           # Ω·mm²/m, tinned copper at ~70 °C on a roof (≈ 0.0178 × 1.25)
+# EN 50618 Annex A (H1Z2Z2-K, 60 °C ambient, 120 °C conductor), single cable on a surface
+SOLAR_CABLE_IZ = {1.5: 30, 2.5: 39, 4: 52, 6: 67, 10: 93, 16: 125, 25: 167, 35: 207}
+GPV_FUSES = (10, 12, 15, 16, 20, 25, 30, 32, 35, 40)
 
 
 @dataclass
@@ -75,9 +80,39 @@ class DcRow:
     vmp_cold: float
     vmp_hot: float
     i_mppt: float
+    cable_mm2: float = 6.0
+    length_m: Optional[float] = None
+    du_pct: Optional[float] = None
+    fuse_a: Optional[int] = None
 
 
 def dc_rows(pv: PvArray) -> list[DcRow]:
     v = module_volts(pv.module)
-    return [DcRow(inverter_of(pv, s.mppt), s.mppt, s.face, s.count, s.modules, s.modules * v.voc_cold,
-                  s.modules * v.vmp_cold, s.modules * v.vmp_hot, s.count * pv.module.imp) for s in pv.strings]
+    rows = []
+    for s in pv.strings:
+        length = s.length_m or pv.dc_length_m
+        du = string_drop_pct(pv, s.modules, length)
+        rows.append(DcRow(inverter_of(pv, s.mppt), s.mppt, s.face, s.count, s.modules, s.modules * v.voc_cold,
+                          s.modules * v.vmp_cold, s.modules * v.vmp_hot, s.count * pv.module.imp, pv.dc_cable_mm2,
+                          length, round(du, 2) if du is not None else None,
+                          string_fuse_a(pv.module) if s.count >= FUSE_FROM_STRINGS else None))
+    return rows
+
+
+def string_fuse_a(m: PvModule) -> Optional[int]:
+    """gPV fuse per IEC 62548: 1.5 × Isc ≤ In ≤ 2.4 × Isc, and not above the module's maximum series fuse."""
+    top = min(2.4 * m.isc, m.max_fuse_a or 1e9)
+    return next((f for f in GPV_FUSES if 1.5 * m.isc <= f <= top), None)
+
+
+def string_cable_need_a(pv: PvArray, parallel: int) -> float:
+    """Current the string cable must carry: 1.25 × Isc, or the string fuse when strings are fused."""
+    if parallel >= FUSE_FROM_STRINGS:
+        return float(string_fuse_a(pv.module) or 1.5 * pv.module.isc)
+    return 1.25 * pv.module.isc
+
+
+def string_drop_pct(pv: PvArray, modules: int, length_m: Optional[float]) -> Optional[float]:
+    if not length_m:
+        return None
+    return 100 * 2 * length_m * pv.module.imp * RHO_DC / pv.dc_cable_mm2 / (modules * pv.module.vmp)

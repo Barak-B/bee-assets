@@ -11,11 +11,12 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 from typing import Literal, Optional
 
-from .calc import (METHODS, TRIP_MULTIPLE, ampacity, design_current, ik1_min_a, ik3_max_ka, loaded_conductors,
-                   node_kw, parse_cable, source_impedance, voltage_drop_pct)
+from .calc import (METHODS, Origin, board_origins, TRIP_MULTIPLE, ampacity, design_current, ik1_min_a, ik3_max_ka, let_through_i2t,
+                   loaded_conductors, min_csa_for, withstand_i2t, node_kw, parse_cable, source_impedance, voltage_drop_pct)
 from .model import Board, Circuit, Design, PvArray
-from .pv import (DC_AC_MAX, DC_AC_MIN, FUSE_FROM_STRINGS, T_CELL_MAX_C, T_MIN_C, dc_ac, inverter_of, module_volts,
-                 string_window, strings_per_mppt_max)
+from .pv import (DC_AC_MAX, DC_AC_MIN, DC_DROP_PCT, FUSE_FROM_STRINGS, SOLAR_CABLE_IZ, T_CELL_MAX_C, T_MIN_C, dc_ac,
+                 inverter_of, module_volts, string_cable_need_a, string_drop_pct, string_fuse_a, string_window,
+                 strings_per_mppt_max)
 
 Level = Literal["error", "warn", "info"]
 
@@ -60,13 +61,13 @@ def _check_cable_capacity(where: str, cable, rating: Optional[float], method: st
         return
     if not rating:
         return
-    iz = ampacity(spec, method, loaded, cable.ambient_c)
+    iz = ampacity(spec, method, loaded, cable.ambient_c, cable.grouped)
     if iz is None:
-        why = "כבל אלומיניום" if spec.material == "Al" else f"חתך {spec.csa_mm2:g} ממ\"ר או שיטה {method} מחוץ לטבלה"
+        why = f"חתך {spec.csa_mm2:g} ממ\"ר{' אלומיניום' if spec.material == 'Al' else ''} או שיטה {method} מחוץ לטבלה"
         out.append(Finding("warn", "CABLE_UNCHECKED", where, f"כושר ההולכה לא נבדק ({why})", "לבדוק ידנית"))
         return
     if rating > iz:
-        amb = f", {cable.ambient_c:g}°C" if cable.ambient_c else ""
+        amb = (f", {cable.ambient_c:g}°C" if cable.ambient_c else "") + (f", {cable.grouped} מעגלים יחד" if cable.grouped and cable.grouped > 1 else "")
         smaller = _largest_below(iz)
         fix = "להגדיל חתך כבל" + (f" או להקטין את המפסק ל-{smaller}A" if smaller else "")
         out.append(Finding("error", "CABLE_OVERLOAD", where,
@@ -114,13 +115,14 @@ def _largest_below(iz: float) -> Optional[int]:
     return ok[-1] if ok and iz <= 2 * _STD_RATINGS[-1] else None
 
 
-def _check_short_circuit(b: Board, out: list[Finding]) -> None:
-    """Breaking capacity against the maximum fault at the board; automatic disconnection (TN) at the far end."""
-    if b.supply.kind not in ("utility", "transformer"):
+def _check_short_circuit(b: Board, origin: Optional[Origin], out: list[Finding]) -> None:
+    """Breaking capacity against the maximum fault at the board; automatic disconnection (TN) at the far end.
+    Sub-boards inherit the fault level of the board above them through their feeder cable."""
+    if origin is None:
         return
-    ik = b.supply.ik_ka
-    zs = source_impedance(ik) if ik else 0.0
-    up = [b.supply.cable] if b.supply.cable and b.supply.cable.length_m else []
+    ik = origin.ik_known
+    zs = origin.zs
+    up = origin.cables
     if ik:
         ikb = ik3_max_ka(zs, up)
         out.append(Finding("info", "IK_BOARD", b.id, f"זרם קצר מקסימלי בפסי הלוח {ikb:.1f}kA"))
@@ -130,10 +132,15 @@ def _check_short_circuit(b: Board, out: list[Finding]) -> None:
                 out.append(Finding("error", "ICU_LOW", f"{b.id} / {d.tag}",
                                    f"כושר ניתוק {d.icu_ka:g}kA קטן מזרם הקצר בלוח ({ikb:.1f}kA)",
                                    f"לבחור מפסק עם כושר ניתוק של {_ka_step(ikb)}kA לפחות"))
-    else:
+        protected = [(c.tag, c.device, c.cable) for c in b.all_circuits() if c.cable]
+        if b.supply.cable and b.incomer and b.supply.kind in ("utility", "transformer"):
+            protected.append(("הזנה", b.incomer, b.supply.cable))
+        for tag, d, cab in protected:
+            _check_thermal(f"{b.id} / {tag}", d, cab, ikb, out)
+    elif b.supply.kind in ("utility", "transformer"):
         out.append(Finding("info", "NO_IK", b.id, "לא הוזן זרם קצר בנקודת החיבור, ולכן כושר הניתוק לא נבדק",
                            "להוסיף supply.ik_ka לפי נתוני חח\"י"))
-    if b.supply.earthing not in ("TN-C-S", "TN-S"):
+    if origin.earthing not in ("TN-C-S", "TN-S"):
         return
     behind_rcd = {c.tag for g in b.groups if g.device and g.device.kind in ("rcd", "rcbo") for c in g.circuits}
     for c in b.all_circuits():
@@ -153,6 +160,20 @@ def _check_short_circuit(b: Board, out: list[Finding]) -> None:
                                "להגדיל חתך, לקצר את המעגל, לבחור עקומה B או להוסיף פחת"))
 
 
+def _check_thermal(where: str, d, cable, ik_ka: float, out: list[Finding]) -> None:
+    """Adiabatic withstand of the cable for the energy its protective device lets through (IEC 60364-4-43)."""
+    spec = parse_cable(cable.designation)
+    i2t = let_through_i2t(d, ik_ka) if spec else None
+    if not spec or i2t is None:
+        return
+    if withstand_i2t(spec) < i2t:
+        need = min_csa_for(i2t, spec)
+        out.append(Finding("warn", "CABLE_THERMAL", where,
+                           f"כבל {spec.csa_mm2:g} ממ\"ר עומד ב-{withstand_i2t(spec) / 1e3:.0f} kA²s, והמפסק מעביר עד "
+                           f"{i2t / 1e3:.0f} kA²s בקצר של {ik_ka:.1f}kA",
+                           f"חתך {need:.1f} ממ\"ר לפחות, או מפסק מגביל אנרגיה (Class 3)"))
+
+
 def _ka_step(ka: float) -> int:
     return next((s for s in (6, 10, 15, 25, 36, 50, 70) if s >= ka), 100)
 
@@ -168,8 +189,8 @@ def _supply_du(b: Board) -> float:
     return cab.du_pct or 0.0
 
 
-def _check_board(design: Design, b: Board, out: list[Finding]) -> None:
-    _check_short_circuit(b, out)
+def _check_board(design: Design, b: Board, out: list[Finding], origins: Optional[dict[str, Origin]] = None) -> None:
+    _check_short_circuit(b, (origins if origins is not None else board_origins(design)).get(b.id), out)
     up_du = _supply_du(b)
     tags = Counter(c.tag for c in b.all_circuits())
     for g in b.groups:
@@ -261,8 +282,33 @@ def _check_pv(pv: PvArray, out: list[Finding]) -> None:
                                + (f" ({inv.imppt_max:g}A)" if inv.imppt_max else ""),
                                "לפזר את המחרוזות על כניסות MPPT נוספות"))
         elif s.count >= FUSE_FROM_STRINGS:
-            out.append(Finding("info", "PV_STRING_FUSE", where,
-                               f"{s.count} מחרוזות במקביל: נדרשים נתיכי מחרוזת gPV בשני הקטבים (או מאסף עם נתיכים)", ""))
+            fuse = string_fuse_a(pv.module)
+            if fuse is None:
+                out.append(Finding("error", "PV_FUSE_RANGE", where,
+                                   f"אין נתיך gPV בין 1.5×Isc ({1.5 * pv.module.isc:.1f}A) לבין "
+                                   f"{min(2.4 * pv.module.isc, pv.module.max_fuse_a or 1e9):.0f}A (מקסימום הפאנל)",
+                                   "עד שתי מחרוזות במקביל לכל כניסה, או פאנל עם נתיך מקסימלי גבוה יותר"))
+            else:
+                out.append(Finding("info", "PV_STRING_FUSE", where,
+                                   f"{s.count} מחרוזות במקביל: נתיכי gPV {fuse}A בשני הקטבים (או מאסף עם נתיכים)", ""))
+        elif s.count == 2 and pv.module.max_fuse_a and 1.25 * pv.module.isc > pv.module.max_fuse_a:
+            out.append(Finding("error", "PV_REVERSE_CURRENT", where,
+                               f"זרם חוזר {1.25 * pv.module.isc:.1f}A ממחרוזת מקבילה מעל {pv.module.max_fuse_a:g}A שהפאנל עומד בו",
+                               "להוסיף נתיכי מחרוזת או לחבר כל מחרוזת ל-MPPT נפרד"))
+        need = string_cable_need_a(pv, s.count)
+        iz = SOLAR_CABLE_IZ.get(pv.dc_cable_mm2)
+        if iz is not None and iz < need:
+            out.append(Finding("error", "PV_DC_CABLE", where,
+                               f"כבל סולארי {pv.dc_cable_mm2:g} ממ\"ר מעביר {iz}A ב-60°C, נדרש {need:.1f}A",
+                               "להגדיל את חתך כבל המחרוזת"))
+        du = string_drop_pct(pv, s.modules, s.length_m or pv.dc_length_m)
+        if du is not None:
+            if du > DC_DROP_PCT:
+                out.append(Finding("warn", "PV_DC_DROP", where,
+                                   f"מפל מתח בכבל המחרוזת {du:.2f}% (מעל {DC_DROP_PCT:g}%): הפסד אנרגיה קבוע",
+                                   "כבל 6 או 10 ממ\"ר, או ממיר קרוב יותר למערך"))
+            else:
+                out.append(Finding("info", "PV_DC_DROP", where, f"מפל מתח בכבל המחרוזת {du:.2f}%", ""))
     for m, n in seen.items():
         if n > 1:
             out.append(Finding("warn", "PV_MPPT_REPEAT", f"PV / MPPT{m}", f"MPPT{m} מופיע {n} פעמים ברשימת המחרוזות",
@@ -288,8 +334,9 @@ def check(design: Design, compute: bool = True) -> list[Finding]:
     """Run every rule. With ``compute`` the computed voltage drops are written into the model."""
     work = design if compute else design.model_copy(deep=True)
     out: list[Finding] = []
+    origins = board_origins(work)
     for b in work.boards:
-        _check_board(work, b, out)
+        _check_board(work, b, out, origins)
     if work.pv:
         _check_pv(work.pv, out)
     order = {"error": 0, "warn": 1, "info": 2}

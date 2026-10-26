@@ -258,9 +258,9 @@ def test_cable_parsing_edge_cases():
     assert parse_cable("3x1,5").csa_mm2 == 1.5
     assert parse_cable("H07RN-F 3G2.5").csa_mm2 == 2.5
     al = parse_cable("NA2XY 4X50")
-    assert al.material == "Al" and ampacity(al, "C", 3) is None
+    assert al.material == "Al" and ampacity(al, "C", 3) == round(179 * 0.78, 1)
     assert parse_cable("5x16 al").material == "Al"
-    assert ampacity(parse_cable("N2XY 4X150"), "C", 3) is None          # outside the table → not silently OK
+    assert ampacity(parse_cable("N2XY 4X300"), "C", 3) is None          # outside the table → not silently OK
     assert ambient_factor("PVC", 45) == 0.79 and ambient_factor("XLPE", 30) == 1.0
     assert ampacity(parse_cable("3X2.5"), "B1", 2, ambient_c=45) == round(24 * 0.79, 1)
     assert iec_class(Device(tag="F", kind="fuse")) == "FC" and iec_class(Device(tag="S", kind="spd")) == "FA"
@@ -458,5 +458,69 @@ def test_plans_endpoint_and_token(monkeypatch):
         dc = {r["mppt"]: r for r in out["dc"]}
         assert dc[1]["inverter"] == 1 and dc[5]["inverter"] == 2
         assert round(dc[1]["voc_cold"]) == round(18 * 49.5 * (1 + 0.0025 * 28))   # 953 V at −3 °C
+        cables = base64.b64decode(out["files"]["cables"]["base64"]).decode("utf-8-sig")
+        assert cables.startswith("מזהה,תוואי") and "H1Z2Z2-K 1X6" in cables
+        assert {r["kind"] for r in out["cables"]} == {"AC", "DC"}
     finally:
         httpd.shutdown()
+
+
+def test_derating_methods_and_aluminium():
+    from bee_cad.calc import ampacity, group_factor, parse_cable
+
+    cu = parse_cable("N2XY 5X16")
+    assert ampacity(cu, "C", 3) == 96
+    assert ampacity(cu, "E", 3) == 100                      # free air / perforated tray
+    assert ampacity(cu, "D1", 3) == 75                      # duct in the ground, 20 °C soil
+    assert ampacity(cu, "D1", 3, ambient_c=30) == round(75 * 0.93, 1)
+    assert ampacity(cu, "C", 3, grouped=3) == round(96 * 0.70, 1)
+    assert group_factor("E", 3) == 0.82 and group_factor("C", 1) == 1.0
+    assert ampacity(parse_cable("N2XY 4X240"), "C", 3) == 500
+    assert ampacity(parse_cable("NA2XY 4X10"), "C", 3) is None   # aluminium below 16 mm² is not in the estimate
+
+
+def test_thermal_withstand_and_sub_board_fault_level():
+    import yaml
+
+    from bee_cad.calc import let_through_i2t, withstand_i2t, parse_cable
+    from bee_cad.checks import check
+    from bee_cad.model import Device
+    from bee_cad.templates import from_brief
+
+    mcb = Device(tag="M1", kind="mcb", poles=1, rating_a=16, curve="C")
+    assert let_through_i2t(mcb, 3.0) == 15e3 and let_through_i2t(mcb, 10.0) == 70e3
+    assert withstand_i2t(parse_cable("3X1.5")) < 35e3 < withstand_i2t(parse_cable("3X2.5"))
+
+    brief = yaml.safe_load((EXAMPLE.parent / "brief_pv_commercial.yaml").read_text(encoding="utf-8"))
+    brief["supply"]["ik_ka"] = 10
+    findings = check(from_brief(brief, "2026-10-26"))
+    ik = {f.where: f.message for f in findings if f.code == "IK_BOARD"}
+    assert set(ik) == {"MDB", "PVB"}                              # the PV board inherits the fault level via its feeder
+    assert float(ik["PVB"].split()[-1][:-2]) < float(ik["MDB"].split()[-1][:-2])
+
+
+def test_pv_dc_cable_fuse_and_reverse_current():
+    from bee_cad.checks import check
+    from bee_cad.model import PvArray
+    from bee_cad.pv import string_fuse_a
+
+    def run(**over):
+        pv = PvArray.model_validate({
+            "module": {"wp": 620, "voc": 49.5, "vmp": 41.6, "isc": over.pop("isc", 15.9), "imp": 14.9,
+                       "max_fuse_a": over.pop("max_fuse", 30)},
+            "inverter": {"kw": 50, "count": 1, "vdc_max": 1100, "mppt_min": 200, "mppt_max": 1000, "imppt_max": 60, "mppts": 4},
+            "strings": over.pop("strings"), **over})
+        return {f.code: f for f in check(Design(pv=pv))}
+
+    assert string_fuse_a(PvArray.model_validate({"module": {"wp": 620, "voc": 49.5, "vmp": 41.6, "isc": 15.9, "imp": 14.9},
+                                                 "inverter": {"kw": 10}}).module) == 25
+    f = run(strings=[{"mppt": 1, "count": 3, "modules": 18}], dc_cable_mm2=2.5)
+    assert "25A" in f["PV_STRING_FUSE"].message and "PV_DC_CABLE" not in f      # 2.5 mm² carries 39 A ≥ the 25 A fuse
+    f = run(strings=[{"mppt": 1, "count": 3, "modules": 18}], dc_cable_mm2=1.5, isc=22, max_fuse=40)
+    assert f["PV_DC_CABLE"].level == "error"                      # 35 A fuse on a 30 A cable
+    f = run(strings=[{"mppt": 1, "count": 3, "modules": 18}], max_fuse=20)
+    assert f["PV_FUSE_RANGE"].level == "error"                    # 1.5 × Isc = 23.9 A > 20 A module limit
+    f = run(strings=[{"mppt": 1, "count": 2, "modules": 18}], max_fuse=15)
+    assert f["PV_REVERSE_CURRENT"].level == "error"
+    f = run(strings=[{"mppt": 1, "count": 1, "modules": 10, "length_m": 80}], dc_cable_mm2=4)
+    assert f["PV_DC_DROP"].level == "warn"
