@@ -21,7 +21,8 @@ from .sld import draw_sld
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("mv", "sld", "panel", "calc", "earth", "schedule")
+SHEET_KINDS = ("mv", "sld", "panel", "calc", "earth", "schedule", "tests")
+TEST_ROWS = 44          # rows per commissioning test sheet
 SCHED_ROWS = 34         # cable rows per schedule sheet, leaving room for the sign table on the last
 CALC_ROWS = 40          # rows that fit one calculation sheet (checked against the frame in draw_calc)
 
@@ -42,6 +43,10 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
     sched_pages = [sched[i:i + SCHED_ROWS] for i in range(0, len(sched), SCHED_ROWS)] or ([[]] if il else [])
     per_kind = {"mv": 2 * len(design.mv_boards), "sld": 1, "panel": len(design.boards), "calc": len(calc_pages),
                 "earth": 1 if il else 0, "schedule": len(sched_pages) if "schedule" in sheets else 0}
+    from .tests_sheet import draw_tests, test_rows
+    trows = test_rows(design) if "tests" in sheets and design.boards else []
+    test_pages = [trows[i:i + TEST_ROWS] for i in range(0, len(trows), TEST_ROWS)]
+    per_kind["tests"] = len(test_pages)
     total = sum(per_kind[s] for s in sheets)
     if not design.boards and "sld" in sheets:
         sheets.remove("sld")
@@ -114,6 +119,16 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
                 ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
                 draw_frame(ctx, tb)
                 out[no] = (d, draw_schedules(ctx, design, page, il and k == len(sched_pages) - 1))
+                idx += 1
+        elif kind == "tests":
+            for k, page in enumerate(test_pages):
+                no = f"{design.title.sheet_no.split('-')[0]}-T{k + 1:02d}"
+                tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total, "sheet_no": no,
+                                                     "sheet_title": "טופס בדיקות מסירה", "scale": "ללא"})
+                d = doc or new_document(mode)
+                ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
+                draw_frame(ctx, tb)
+                out[no] = (d, draw_tests(ctx, page, k == len(test_pages) - 1))
                 idx += 1
     return out
 

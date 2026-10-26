@@ -240,6 +240,20 @@ def _check_board(design: Design, b: Board, out: list[Finding], origins: Optional
             if inc and c.device.rating_a and c.device.rating_a >= inc:
                 out.append(Finding("warn", "SELECTIVITY", f"{b.id} / {c.tag}",
                                    f"מפסק {c.device.rating_a:g}A לא קטן מהמפסק הראשי {inc:g}A", "לבדוק סלקטיביות"))
+    if b.supply.kind == "utility" and b.incomer and b.incomer.rating_a and not b.existing:
+        from .load import board_demand
+        phases = 1 if (b.supply.meter or "").startswith("1") else 3
+        dm = board_demand(b, phases)
+        if dm:
+            msg = (f"עומס מותקן {dm.installed_kw:g} kW, ביקוש מרבי משוער {dm.demand_kw:g} kW (Ks {dm.ks:g}) ≈ {dm.current_a:g}A "
+                   f"לעומת מפסק ראשי {b.incomer.rating_a:g}A")
+            if dm.current_a > b.incomer.rating_a:
+                out.append(Finding("warn", "LOAD_DEMAND", b.id, msg,
+                                   f"להגדיל חיבור ל-{dm.suggested}" if dm.suggested else "לבדוק חיבור מתח גבוה"))
+            else:
+                near = dm.current_a > 0.9 * b.incomer.rating_a
+                out.append(Finding("info", "LOAD_DEMAND", b.id, msg + (" — קרוב לגבול; לשקול ניהול עומסים לעמדת הטעינה"
+                                                                     if near else "")))
     if b.supply.cable and b.incomer:
         _check_cable_capacity(f"{b.id} / הזנה", b.supply.cable, b.incomer.rating_a,
                               b.supply.cable.method if b.supply.cable.method in METHODS else "C", 3, out)

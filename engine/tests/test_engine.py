@@ -358,7 +358,7 @@ def test_studio_api():
         assert "סטודיו" in urllib.request.urlopen(base + "/").read().decode("utf-8")
         req = urllib.request.Request(base + "/api/design", json.dumps({"brief": brief}).encode(), method="POST")
         out = json.loads(urllib.request.urlopen(req).read())
-        assert list(out["sheets"]) == ["E-01", "E-P02", "E-P03", "E-C01", "E-G01", "E-S01"]
+        assert list(out["sheets"]) == ["E-01", "E-P02", "E-P03", "E-C01", "E-G01", "E-S01", "E-T01", "E-T02"]
         assert all("<svg" in s[:200] for s in out["sheets"].values())
         req = urllib.request.Request(base + "/api/export?fmt=csv", json.dumps({"brief": brief}).encode(), method="POST")
         with urllib.request.urlopen(req) as res:
@@ -563,3 +563,23 @@ def test_earthing_and_schedule_sheets():
     assert {"E-G01", "E-S01"} <= set(sheets)
     house = Design.model_validate(json.loads(EXAMPLE.read_text(encoding="utf-8")))
     assert not any(k.endswith("G01") for k in build(house))                # no PV, no earthing plan sheet
+
+
+def test_demand_and_commissioning_sheet():
+    import yaml
+
+    from bee_cad.checks import check
+    from bee_cad.load import board_demand
+    from bee_cad.render import build
+    from bee_cad.templates import from_brief
+    from bee_cad.tests_sheet import test_rows
+
+    house = from_brief(yaml.safe_load((EXAMPLE.parent / "brief_house_pv.yaml").read_text(encoding="utf-8")), "2026-10-26")
+    dm = board_demand(house.boards[0])
+    assert dm.demand_kw < dm.installed_kw and dm.suggested
+    assert any(f.code == "LOAD_DEMAND" and "קרוב לגבול" in f.message for f in check(house))
+    pv = from_brief(yaml.safe_load((EXAMPLE.parent / "brief_pv_commercial.yaml").read_text(encoding="utf-8")), "2026-10-26")
+    rows = test_rows(pv)
+    assert sum(r.group == "DC" and r.test.startswith("קוטביות") for r in rows) == 8
+    assert any(r.group == "RCD" and "Type B" in r.test for r in rows)
+    assert "E-T01" in build(pv)
