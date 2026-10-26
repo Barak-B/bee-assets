@@ -13,6 +13,7 @@ from typing import Literal, Optional
 
 from .calc import (METHODS, TRIP_MULTIPLE, ampacity, design_current, ik1_min_a, ik3_max_ka, let_through_i2t,
                    loaded_conductors, node_kw, parse_cable, source_impedance, voltage_drop_pct, withstand_i2t)
+from .grid import LV_PERMIT_MAX_KW, connection_kva, licence_for, parse_connection, pv_ac_kw, utility_board
 from .model import Board, Circuit, Design, PvArray, PvString
 from .pv import (DC_AC_MAX, DC_AC_MIN, DC_DU_INFO, DC_DU_WARN, FUSE_HI, FUSE_LO, PV_CABLE_IZ, T_CELL_MAX_C, T_MIN_C,
                  dc_ac, dc_drop_pct, fuse_rating, fuses_needed, inverter_of, isc_max, module_volts,
@@ -270,7 +271,7 @@ def _check_pv(pv: PvArray, out: list[Finding]) -> None:
         voc = s.modules * v.voc_cold
         if inv.vdc_max and voc > inv.vdc_max:
             out.append(Finding("error", "PV_VOC_COLD", where,
-                               f"מחרוזת של {s.modules} פאנלים: Voc ב-{T_MIN_C:g}°C = {voc:.0f}V, מעל {inv.vdc_max:g}V של הממיר",
+                               f"מחרוזת של {s.modules} פאנלים: Voc בטמפרטורה {T_MIN_C:g}°C = {voc:.0f}V, מעל {inv.vdc_max:g}V של הממיר",
                                f"לקצר את המחרוזת ל-{long_} פאנלים לכל היותר" if long_ else "לקצר את המחרוזת"))
         elif inv.mppt_max and s.modules * v.vmp_cold > inv.mppt_max:
             out.append(Finding("warn", "PV_VMP_HIGH", where,
@@ -338,6 +339,87 @@ def _check_string_cable(pv: PvArray, s: PvString, where: str, out: list[Finding]
             out.append(Finding("info", "PV_DC_DU", where, f"מפל מתח DC {du:.2f}%, מעל {DC_DU_INFO:g}% המומלץ", ""))
 
 
+def _check_connection(design: Design, out: list[Finding]) -> None:
+    """The connection: capacity against the PV AC power, the export cap, the LV permit limit and the licence."""
+    b = utility_board(design)
+    conn = parse_connection(b.supply.meter) if b else None
+    if b is None or conn is None:
+        return
+    phases, amps = conn
+    kva = connection_kva(phases, amps)
+    ac = pv_ac_kw(design)
+    label = b.supply.meter.upper()
+    if ac:
+        if ac > kva + 1e-6:
+            need = next((a for a in (25, 40, 63, 80, 100, 125, 160, 200, 250, 400, 630)
+                         if connection_kva(3, a) >= ac), None)
+            out.append(Finding("error", "CONNECTION", b.id,
+                               f"הספק הממירים {ac:g} kW גדול מקיבולת החיבור {label} ({kva:.1f} kVA)",
+                               f"להגדיל חיבור ל-3X{need}A לפחות" if need else "חיבור מתח גבוה"))
+        else:
+            out.append(Finding("info", "CONNECTION", b.id, f"הספק הממירים {ac:g} kW מתוך {kva:.1f} kVA של חיבור {label}"))
+        if ac > LV_PERMIT_MAX_KW:
+            out.append(Finding("warn", "CONNECTION_MV", b.id,
+                               f"{ac:g} kW מעל {LV_PERMIT_MAX_KW:g} kW: חיבור ורישוי במתח גבוה", "לתכנן חיבור מתח גבוה"))
+        cap = b.supply.export_limit_kw
+        if cap is not None and ac > cap:
+            what = "אפס הזרמה" if cap == 0 else f"הזרמה עד {cap:g} kW"
+            out.append(Finding("info", "EXPORT_LIMIT", b.id,
+                               f"הצעת החיבור מגבילה ל{what}: נדרש בקר הגבלת הזרמה עם משני זרם בנקודת החיבור", ""))
+    out.append(Finding("info", "LICENCE", b.id,
+                       f"חיבור {label}: העבודה דורשת רישיון {licence_for(amps)} לפחות (לאמת מול תקנות הרישוי)"))
+
+
+def _check_rcd_types(design: Design, out: list[Finding]) -> None:
+    """RCD type for inverters (IEC 60364-7-712 531.3) and EV chargers (IEC 60364-7-722 531.3.101)."""
+    for n in design.nodes:
+        if n.kind == "inverter" and n.device and n.device.kind in ("rcd", "rcbo") and (n.device.rcd_type or "").upper() == "AC":
+            out.append(Finding("error", "RCD_TYPE", n.id, "פחת Type AC לממיר: לא מזהה זרמי זליגה DC או פועמים",
+                               "Type B, או Type A כשהיצרן מצהיר שהממיר לא מזרים זרם DC לרשת"))
+    for b in design.boards:
+        for g in b.groups:
+            for c in g.circuits:
+                rtype = ((c.device.rcd_type if c.device.kind == "rcbo" else None) or
+                         (g.device.rcd_type if g.device else None) or "").upper()
+                if any(w in c.load for w in ("טעינ", "רכב חשמלי", "EV")) and rtype in ("AC", ""):
+                    out.append(Finding("error", "RCD_TYPE", f"{b.id} / {c.tag}",
+                                       f"עמדת טעינה עם פחת {'Type AC' if rtype else 'ללא סוג'}",
+                                       "Type B, או Type A כשבעמדה הגנת 6mA DC (RDC-DD)"))
+
+
+def _check_island(design: Design, out: list[Finding]) -> None:
+    """A board fed by the inverter's backup output: the inverter delivers ~1.5–2·In on a fault, too little for the
+    magnetic trip, so automatic disconnection rests on 30 mA RCDs."""
+    pv = design.pv
+    for b in design.boards:
+        if b.supply.kind != "inverter":
+            continue
+        i_fault = pv.inverter.i_fault_a if pv and pv.inverter.i_fault_a else None
+        for g in b.groups:
+            behind = g.device is not None and g.device.kind in ("rcd", "rcbo") and (g.device.idn_ma or 1000) <= 30
+            for c in g.circuits:
+                own = c.device.kind == "rcbo" and (c.device.idn_ma or 1000) <= 30
+                mult = TRIP_MULTIPLE.get((c.device.curve or "C").upper()[:1])
+                if behind or own:
+                    continue
+                if i_fault and mult and c.device.rating_a and i_fault >= mult * c.device.rating_a:
+                    continue
+                out.append(Finding("error", "ISLAND_DISCONNECT", f"{b.id} / {c.tag}",
+                                   "בעבודה במצב אי זרם הקצר של הממיר לא מספיק לניתוק מגנטי, והמעגל לא מוגן בפחת 30mA",
+                                   "להעביר את המעגל אחרי פחת 30mA או RCBO"))
+
+
+def _check_dc_spd(pv: PvArray, out: list[Finding]) -> None:
+    if pv.inverter.dc_spd_internal or not pv.strings:
+        return
+    v = module_volts(pv.module)
+    ucpv = max(s.modules * v.voc_cold for s in pv.strings)
+    kind = "Type 1+2" if pv.lps else "Type 2"
+    out.append(Finding("info", "PV_DC_SPD", "PV",
+                       f"מגן מתח יתר DC {kind} לכל כניסת MPPT, Ucpv ≥ {ucpv:.0f}V (Voc בטמפרטורה {T_MIN_C:g}°C)"
+                       + (" — יש מערכת הגנה מפני ברקים" if pv.lps else ""), ""))
+
+
 def check(design: Design, compute: bool = True) -> list[Finding]:
     """Run every rule. With ``compute`` the computed voltage drops are written into the model."""
     work = design if compute else design.model_copy(deep=True)
@@ -346,6 +428,10 @@ def check(design: Design, compute: bool = True) -> list[Finding]:
         _check_board(work, b, out)
     if work.pv:
         _check_pv(work.pv, out)
+        _check_dc_spd(work.pv, out)
+    _check_connection(work, out)
+    _check_rcd_types(work, out)
+    _check_island(work, out)
     order = {"error": 0, "warn": 1, "info": 2}
     out.sort(key=lambda f: (order[f.level], f.where))
     return out

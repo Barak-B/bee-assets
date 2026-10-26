@@ -113,6 +113,7 @@ class Supply(BaseModel):
     earthing: Literal["TN-C-S", "TN-S", "TT", "IT", ""] = "TN-C-S"
     from_board: Optional[str] = None
     ik_ka: Optional[float] = None         # prospective 3-phase short-circuit current at the origin (from IEC / the transformer)
+    export_limit_kw: Optional[float] = None   # export cap from the connection offer ("הגבלת הזרמה"); 0 = zero export
 
 
 class Busbar(BaseModel):
@@ -243,6 +244,8 @@ class PvInverterSpec(BaseModel):
     imppt_max: Optional[float] = None     # max input current per MPPT
     mppts: Optional[int] = None           # MPPT inputs per unit
     strings_per_mppt: Optional[int] = None
+    dc_spd_internal: bool = False         # type 2 DC surge protection built into the inverter (datasheet)
+    i_fault_a: Optional[float] = None     # AC fault current the inverter delivers in backup / island mode
 
 
 class PvString(BaseModel):
@@ -261,6 +264,7 @@ class PvArray(BaseModel):
     inverter: PvInverterSpec
     strings: list[PvString] = Field(default_factory=list)
     modules_line: str = ""
+    lps: bool = False                     # the building has an external lightning protection system → DC SPD type 1
 
     def modules_total(self) -> int:
         return sum(s.count * s.modules for s in self.strings)

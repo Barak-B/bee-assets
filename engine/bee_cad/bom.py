@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .calc import iec_class
 from .model import Cable, Design, Device
+from .grid import pv_ac_kw, utility_board
 from .pv import fuse_rating, fuses_needed, isc_max, module_volts
 
 CABLE_RESERVE = 1.1       # cable length bought = route length + 10%
@@ -108,10 +109,18 @@ def bom(design: Design) -> list[BomLine]:
                 rating = fuse_rating(m)
                 other("fuse", "FC", "נתיך מחרוזת", f"gPV {rating:g}A 1000V DC" if rating else "gPV 1000V DC",
                       2 * st.count, f"MPPT{st.mppt}")
+            if not inv.dc_spd_internal:
+                ucpv = math.ceil(st.modules * voc / 50) * 50
+                other("spd_dc", "FA", "מגן מתח יתר DC", f"{'T1+T2' if pv.lps else 'T2'} Ucpv {max(ucpv, 600)}V",
+                      1, f"MPPT{st.mppt}")
             if st.cable_m:
                 # plus and minus for every parallel string
                 other("cable", "WD", "כבל סולארי", f"H1Z2Z2-K 1X{st.cable_mm2:g}",
                       _metres(2 * st.count * st.cable_m * CABLE_RESERVE), f"MPPT{st.mppt}", "מ'")
+    ub = utility_board(design)
+    ac = pv_ac_kw(design)
+    if ub and ub.supply.export_limit_kw is not None and ac and ac > ub.supply.export_limit_kw:
+        other("export_limiter", "KF", "בקר הגבלת הזרמה", "מונה חכם + 3 משני זרם בנקודת החיבור", 1, ub.id)
     return sorted(lines.values(), key=lambda x: (x.iec, x.item, x.spec))
 
 
