@@ -191,7 +191,8 @@ async function run() {
 function drawTabs() {
   const nav = $("#tabs"), dl = $(".dl", nav);
   nav.querySelectorAll("button.t").forEach(b => b.remove());
-  const items = [["findings", "ממצאים"], ...Object.keys(last.sheets).map(k => [k, k]), ["calc", "טבלת חישובים"], ["bom", "כתב כמויות"]];
+  const items = [["findings", "ממצאים"], ...Object.keys(last.sheets).map(k => [k, k]), ["calc", "טבלת חישובים"], ["cables", "טבלת כבלים"], ["bom", "כתב כמויות"],
+    ...(last.labels && last.labels.length ? [["labels", "שילוט ותיק מתקן"]] : [])];
   if (!items.some(i => i[0] === tab)) tab = "findings";
   for (const [k, label] of items) {
     const b = document.createElement("button");
@@ -219,6 +220,19 @@ function show() {
   } else if (tab === "bom") {
     v.innerHTML = `<table><thead><tr><th>IEC 81346</th><th>פריט</th><th>מפרט</th><th>כמות</th><th>תגים</th></tr></thead><tbody>` +
       last.bom.map(r => `<tr><td>${esc(r.iec)}</td><td>${esc(r.item)}</td><td>${esc(r.spec)}</td><td class="num">${r.qty} ${esc(r.unit)}</td><td>${esc(r.tags.join(" "))}</td></tr>`).join("") +
+      "</tbody></table>";
+  } else if (tab === "cables") {
+    v.innerHTML = `<table><thead><tr><th>מזהה</th><th>תוואי</th><th>כבל</th><th>שיטה</th><th>אורך [מ']</th><th>מקדם</th><th>Ib [A]</th>
+      <th>In [A]</th><th>Iz [A]</th><th>ΔU %</th><th>Ik [kA]</th><th>עמידות בקצר</th></tr></thead><tbody>` +
+      last.cables.map(r => `<tr class="${r.ok ? "" : "bad"}"><td>${esc(r.ref)}</td><td>${esc(r.route)}</td><td>${esc(r.designation)}</td>
+      <td>${esc(r.method)}</td><td class="num">${fx(r.length_m, 0)}</td><td class="num">${fx(r.k_total, 2)}</td><td class="num">${fx(r.ib_a)}</td>
+      <td class="num">${fx(r.in_a, 0)}</td><td class="num">${fx(r.iz_a)}</td><td class="num">${fx(r.du_pct, 2)}</td><td class="num">${fx(r.ik_ka)}</td>
+      <td>${r.thermal_ok === null ? "–" : r.thermal_ok ? "כן" : "לא"}</td></tr>`).join("") + "</tbody></table>";
+  } else if (tab === "labels") {
+    v.innerHTML = `<table><thead><tr><th>מיקום</th><th>נוסח השלט</th><th>כמות</th></tr></thead><tbody>` +
+      last.labels.map(r => `<tr><td>${esc(r.where)}</td><td>${esc(r.text)}</td><td class="num">${r.qty}</td></tr>`).join("") +
+      `</tbody></table><h3 style="margin:16px 0 6px">מסמכים לתיק המתקן</h3><table><tbody>` +
+      last.submission.map(r => `<tr class="${r.produced ? "" : "bad"}"><td>${esc(r.name)}</td><td>${r.produced ? "מופק" : "חסר — להכין"}</td></tr>`).join("") +
       "</tbody></table>";
   } else {
     v.innerHTML = `<div class="sheet">${last.sheets[tab]}</div>`;

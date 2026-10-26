@@ -15,13 +15,13 @@ from typing import Any, Optional
 
 from .calc import U_LL, CableSpec, ampacity, voltage_drop_pct
 from .checks import DU_LIMIT_LIGHTING_PCT, DU_LIMIT_PCT
-from .model import (Board, Busbar, Cable, Circuit, Design, Device, Enclosure, Group, Node, PvArray, Supply,
+from .model import (Board, Busbar, Cable, Circuit, Design, Device, Enclosure, GridConnection, Group, Node, PvArray, Supply,
                     TitleBlock)
 from .panel import device_width_mm
 
 STD_RATINGS = (10, 16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400)
 MCB_MAX_A = 125         # above this the template draws a moulded-case breaker (mccb)
-CSA = (1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120)
+CSA = (1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240)
 MAX_PER_RCD = 7          # 1P circuits behind one 4P 40A 30mA RCD
 SPARE = 1.25             # enclosure spare capacity
 DU_SUPPLY_PCT = 1.0      # budget for meter → main board
@@ -204,7 +204,7 @@ def house_pv(brief: dict[str, Any], today: Optional[str] = None) -> Design:
         nodes.append(Node(id="INV", kind="inverter", label="ממיר היברידי" if hybrid else "ממיר",
                           sublabel=inv.get("model", ""), rating=f"{kw:g} kW · 400V",
                           device=Device(tag="RCD-INV", kind="rcd", poles=4, rating_a=next_rating(q), idn_ma=300,
-                                        rcd_type=inv.get("rcd_type", "A"))))
+                                        rcd_type=inv.get("rcd_type", "B"))))
         nodes.append(Node(id="PV", kind="pv", label="מערך PV", sublabel=pv.get("modules", ""),
                           rating=f"{pv['kwp']:g} kWp" if pv.get("kwp") else ""))
         notes.append(f"Q-INV {q}A לפי 1.25 × זרם הממיר ({i_ac:.1f}A); כבל {cable.designation} לפי IEC 60364-5-52 שיטה C.")
@@ -234,7 +234,23 @@ def house_pv(brief: dict[str, Any], today: Optional[str] = None) -> Design:
                        (" ולוח חיוני" if len(boards) > 1 else ""),
                        date=today or date.today().isoformat(), status="לאישור")
     title.revisions = [("A", title.date, "הגשה ראשונה")]
-    return Design(title=title, boards=boards, nodes=nodes, notes=notes)
+    grid = None
+    if pv:
+        inv = pv.get("inverter") or {}
+        bat = brief.get("battery") or {}
+        grid = GridConnection(phases=_connection(conn.upper())[0], amps=main_a, inverter_kw=float(inv.get("kw") or pv.get("kw")),
+                              inverter_count=1, kwp=float(pv.get("kwp") or 0), export_limit_kw=pv.get("export_limit_kw"),
+                              self_consumption=bool(pv.get("self_consumption")), first_year=bool(sup.get("first_year")),
+                              battery_kwh=bat.get("kwh"), battery_kw=bat.get("kw"))
+    return Design(title=title, boards=boards, nodes=nodes, notes=notes, grid=grid, site=_site(brief))
+
+
+def _site(brief: dict[str, Any]):
+    from .site import site_from_brief
+    try:
+        return site_from_brief(brief.get("site_layout"))
+    except Exception as e:  # pydantic: say which field, in Hebrew
+        raise BriefError(f"תוכנית ההעמדה (site_layout) לא תקינה: {e}") from e
 
 
 def _pv_array(pv: dict[str, Any]) -> Optional[PvArray]:
@@ -243,7 +259,9 @@ def _pv_array(pv: dict[str, Any]) -> Optional[PvArray]:
         return None
     try:
         inv = {k: v for k, v in (pv.get("inverter") or {}).items() if k in PvArray.model_fields["inverter"].annotation.model_fields}
-        return PvArray(module=pv["module"], inverter=inv, strings=pv["strings"], modules_line=pv.get("modules_line", ""))
+        extra = {k: pv[k] for k in ("dc_cable_mm2", "dc_length_m") if pv.get(k) is not None}
+        return PvArray(module=pv["module"], inverter=inv, strings=pv["strings"], modules_line=pv.get("modules_line", ""),
+                       **extra)
     except Exception as e:  # pydantic: say which field, in Hebrew
         raise BriefError(f"נתוני המחרוזות (pv) לא תקינים: {e}") from e
 
@@ -349,7 +367,12 @@ def pv_connection(brief: dict[str, Any], today: Optional[str] = None) -> Design:
                        sheet_title="חד-קווי — חיבור מערכת PV" + (" ואגירה" if bat else ""),
                        date=today or date.today().isoformat(), status="לאישור")
     title.revisions = [("A", title.date, "הגשה ראשונה")]
-    return Design(title=title, boards=boards, nodes=nodes, notes=notes, pv=array)
+    grid = GridConnection(phases=phases, amps=main_a, inverter_kw=kw, inverter_count=n,
+                          kwp=array.kwp() if array else float(pv.get("kwp") or 0),
+                          export_limit_kw=pv.get("export_limit_kw"), self_consumption=bool(pv.get("self_consumption")),
+                          first_year=bool(sup.get("first_year")), battery_kwh=(bat or {}).get("kwh"),
+                          battery_kw=(bat or {}).get("kw"))
+    return Design(title=title, boards=boards, nodes=nodes, notes=notes, pv=array, grid=grid, site=_site(brief))
 
 
 TEMPLATES = {"house-pv": house_pv, "pv-connection": pv_connection}

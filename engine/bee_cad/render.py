@@ -21,7 +21,9 @@ from .sld import draw_sld
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("mv", "sld", "panel", "calc")
+SHEET_KINDS = ("mv", "site", "sld", "panel", "calc", "earth", "schedule", "tests")
+TEST_ROWS = 44          # rows per commissioning test sheet
+SCHED_ROWS = 34         # cable rows per schedule sheet, leaving room for the sign table on the last
 CALC_ROWS = 40          # rows that fit one calculation sheet (checked against the frame in draw_calc)
 
 
@@ -35,7 +37,17 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
     idx = 0
     rows = calc_rows(design) if "calc" in sheets and design.boards else []
     calc_pages = [rows[i:i + CALC_ROWS] for i in range(0, len(rows), CALC_ROWS)]
-    per_kind = {"mv": 2 * len(design.mv_boards), "sld": 1, "panel": len(design.boards), "calc": len(calc_pages)}
+    from .sheets_il import draw_earthing, draw_schedules, schedule_rows
+    il = bool(design.pv or design.grid)
+    sched = schedule_rows(design) if "schedule" in sheets and design.boards else []
+    sched_pages = [sched[i:i + SCHED_ROWS] for i in range(0, len(sched), SCHED_ROWS)] or ([[]] if il else [])
+    per_kind = {"mv": 2 * len(design.mv_boards), "sld": 1, "panel": len(design.boards), "calc": len(calc_pages),
+                "earth": 1 if il else 0, "schedule": len(sched_pages) if "schedule" in sheets else 0}
+    from .tests_sheet import draw_tests, test_rows
+    trows = test_rows(design) if "tests" in sheets and design.boards else []
+    test_pages = [trows[i:i + TEST_ROWS] for i in range(0, len(trows), TEST_ROWS)]
+    per_kind["tests"] = len(test_pages)
+    per_kind["site"] = 1 if design.site and design.site.roofs else 0
     total = sum(per_kind[s] for s in sheets)
     if not design.boards and "sld" in sheets:
         sheets.remove("sld")
@@ -89,6 +101,46 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
                 draw_frame(ctx, tb)
                 warn = [] if len(page) <= rows_per_sheet(ctx) else [f"calc sheet {no}: {len(page)} rows overflow"]
                 out[no] = (d, warn + draw_calc(ctx, design, page, k == 0, findings))
+                idx += 1
+        elif kind == "site" and per_kind["site"]:
+            from .site import draw_site, site_scale
+            no = f"{design.title.sheet_no.split('-')[0]}-A01"
+            d = doc or new_document(mode)
+            ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
+            tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total, "sheet_no": no,
+                                                 "sheet_title": "תוכנית העמדה — גגות ופאנלים",
+                                                 "scale": f"1:{site_scale(ctx, design)}"})
+            draw_frame(ctx, tb)
+            out[no] = (d, draw_site(ctx, design)[0])
+            idx += 1
+        elif kind == "earth" and il:
+            no = f"{design.title.sheet_no.split('-')[0]}-G01"
+            tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total, "sheet_no": no,
+                                                 "sheet_title": "תוכנית הארקה והשוואת פוטנציאלים", "scale": "ללא"})
+            d = doc or new_document(mode)
+            ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
+            draw_frame(ctx, tb)
+            out[no] = (d, draw_earthing(ctx, design))
+            idx += 1
+        elif kind == "schedule":
+            for k, page in enumerate(sched_pages):
+                no = f"{design.title.sheet_no.split('-')[0]}-S{k + 1:02d}"
+                tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total, "sheet_no": no,
+                                                     "sheet_title": "טבלת כבלים, שילוט ומסמכים", "scale": "ללא"})
+                d = doc or new_document(mode)
+                ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
+                draw_frame(ctx, tb)
+                out[no] = (d, draw_schedules(ctx, design, page, il and k == len(sched_pages) - 1))
+                idx += 1
+        elif kind == "tests":
+            for k, page in enumerate(test_pages):
+                no = f"{design.title.sheet_no.split('-')[0]}-T{k + 1:02d}"
+                tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": total, "sheet_no": no,
+                                                     "sheet_title": "טופס בדיקות מסירה", "scale": "ללא"})
+                d = doc or new_document(mode)
+                ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
+                draw_frame(ctx, tb)
+                out[no] = (d, draw_tests(ctx, page, k == len(test_pages) - 1))
                 idx += 1
     return out
 

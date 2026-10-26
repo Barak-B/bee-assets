@@ -73,8 +73,9 @@ class Cable(BaseModel):
     designation: str                     # e.g. "N2XY 4X10" / "3X2.5"
     length_m: Optional[float] = None
     du_pct: Optional[float] = None       # voltage drop, computed elsewhere
-    method: Optional[str] = None         # installation method (IEC 60364-5-52): B1 / C
-    ambient_c: Optional[float] = None    # air temperature along the route when above 30 °C (roof, outdoor)
+    method: Optional[str] = None         # installation method (IEC 60364-5-52): B1 / C / E / D1
+    ambient_c: Optional[float] = None    # air along the route when above 30 °C (roof, outdoor); soil for D1
+    grouped: Optional[int] = None        # circuits run together with this one (bunched, or on one tray for E)
 
 
 class Circuit(BaseModel):
@@ -228,6 +229,7 @@ class PvModule(BaseModel):
     imp: float
     beta_voc_pct: float = -0.25           # %/°C, Voc
     gamma_pmax_pct: float = -0.29         # %/°C, Pmax (stand-in for Vmp when hot)
+    max_fuse_a: Optional[float] = None    # datasheet "maximum series fuse rating"
 
 
 class PvInverterSpec(BaseModel):
@@ -247,6 +249,7 @@ class PvString(BaseModel):
     count: int = 1                        # parallel strings on this MPPT
     modules: int                          # modules in series per string
     face: str = ""
+    length_m: Optional[float] = None      # one-way string cable run to the inverter, when it differs from the array's
 
 
 class PvArray(BaseModel):
@@ -256,12 +259,53 @@ class PvArray(BaseModel):
     inverter: PvInverterSpec
     strings: list[PvString] = Field(default_factory=list)
     modules_line: str = ""
+    dc_cable_mm2: float = 6.0             # string cable (H1Z2Z2-K, EN 50618)
+    dc_length_m: Optional[float] = None   # typical one-way string run, roof to inverter
 
     def modules_total(self) -> int:
         return sum(s.count * s.modules for s in self.strings)
 
     def kwp(self) -> float:
         return self.modules_total() * self.module.wp / 1000.0
+
+
+class RoofLayout(BaseModel):
+    """One roof of the map quote in local metres (x east, y north)."""
+
+    name: str = ""
+    outline: list[tuple[float, float]]
+    panels: list[list[tuple[float, float]]] = Field(default_factory=list)   # four corners each
+    obstacles: list[list[tuple[float, float]]] = Field(default_factory=list)
+    count: int = 0                         # panels when the corners are not sent
+    kwp: Optional[float] = None
+    azimuth: Optional[float] = None        # 180 = facing south
+    tilt: Optional[float] = None
+
+
+class SiteMark(BaseModel):
+    label: str                             # "INV1", "MDB"
+    x: float
+    y: float
+
+
+class SiteLayout(BaseModel):
+    roofs: list[RoofLayout] = Field(default_factory=list)
+    marks: list[SiteMark] = Field(default_factory=list)
+
+
+class GridConnection(BaseModel):
+    """The connection to the IEC network the Israeli rules are checked against (bee_cad.il)."""
+
+    phases: int = 3
+    amps: float = 40
+    inverter_kw: float = 0
+    inverter_count: int = 1
+    kwp: float = 0
+    export_limit_kw: Optional[float] = None   # export limiter setting, kW (None = none)
+    self_consumption: bool = False            # self-consumption track (no share-of-connection limit)
+    first_year: bool = False                  # first year of the connection: 50 % share instead of 70 %
+    battery_kwh: Optional[float] = None
+    battery_kw: Optional[float] = None
 
 
 class Design(BaseModel):
@@ -274,6 +318,8 @@ class Design(BaseModel):
     legend: bool = True
     notes: list[str] = Field(default_factory=list)
     pv: Optional[PvArray] = None          # DC side for the string checks (bee_cad.pv)
+    grid: Optional[GridConnection] = None # IEC connection for the Israeli rules (bee_cad.il)
+    site: Optional[SiteLayout] = None     # roofs and panels from the map quote (bee_cad.site)
 
     def board(self, board_id: str) -> Board:
         for b in self.boards:
