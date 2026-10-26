@@ -576,7 +576,7 @@ async function render() {
             <div class="field"><label>שם הסוקר</label><input id="f_surveyor" list="surveyorsList" value="${escapeAttr(editing.surveyor)}" /><datalist id="surveyorsList">${surveyors.map((s) => `<option value="${escapeAttr(s)}"></option>`).join('')}</datalist></div>
           </div>
           <div class="field"><label>כתובת <span class="req">*</span></label><input id="f_address" value="${escapeAttr(editing.address)}" /></div>
-          <div class="field"><label>GPS</label><div class="gps-row"><input id="f_gps" dir="ltr" inputmode="decimal" value="${escapeAttr(editing.gps)}" placeholder="31.77, 35.21" /><button type="button" class="btn btn-secondary" id="btnGps">GPS</button></div></div>
+          <div class="field"><label>GPS</label><div class="gps-row"><input id="f_gps" dir="ltr" value="${escapeAttr(editing.gps)}" placeholder="31.77, 35.21" /><button type="button" class="btn btn-secondary" id="btnGps">GPS</button></div></div>
         </section>
 
         <section class="section">
