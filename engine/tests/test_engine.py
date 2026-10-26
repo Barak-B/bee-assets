@@ -544,6 +544,7 @@ def test_israeli_rules():
     inv = Node(id="INV", kind="inverter", label="ממיר", device=Device(tag="RCD", kind="rcd", poles=4, rcd_type="A"))
     assert "IL_RCD_TYPE" in {f.code for f in check(Design(grid=g, nodes=[inv]))}
     assert labels(Design(grid=g)) and any(not s["produced"] for s in submission())
+    assert next(s for s in submission(Design(grid=g)) if s["id"] == "earthing")["produced"]
 
 
 def test_earthing_and_schedule_sheets():
@@ -583,3 +584,22 @@ def test_demand_and_commissioning_sheet():
     assert sum(r.group == "DC" and r.test.startswith("קוטביות") for r in rows) == 8
     assert any(r.group == "RCD" and "Type B" in r.test for r in rows)
     assert "E-T01" in build(pv)
+
+
+def test_site_layout_sheet():
+    import yaml
+
+    from bee_cad.render import build
+    from bee_cad.site import pick_scale
+    from bee_cad.templates import BriefError, from_brief
+
+    assert pick_scale(42, 21, 300, 200) == 200 and pick_scale(4, 3, 300, 200) == 50
+    brief = yaml.safe_load((EXAMPLE.parent / "brief_pv_commercial.yaml").read_text(encoding="utf-8"))
+    brief["site_layout"] = json.loads((EXAMPLE.parent / "site_layout_barn.json").read_text(encoding="utf-8"))
+    d = from_brief(brief, "2026-10-26")
+    assert len(d.site.roofs) == 2 and len(d.site.roofs[0].panels) == 144
+    sheets = build(d)
+    assert list(sheets)[0] == "E-A01"
+    brief["site_layout"] = {"roofs": [{"outline": "x"}]}
+    with pytest.raises(BriefError):
+        from_brief(brief)

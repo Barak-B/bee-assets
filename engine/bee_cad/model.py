@@ -269,6 +269,30 @@ class PvArray(BaseModel):
         return self.modules_total() * self.module.wp / 1000.0
 
 
+class RoofLayout(BaseModel):
+    """One roof of the map quote in local metres (x east, y north)."""
+
+    name: str = ""
+    outline: list[tuple[float, float]]
+    panels: list[list[tuple[float, float]]] = Field(default_factory=list)   # four corners each
+    obstacles: list[list[tuple[float, float]]] = Field(default_factory=list)
+    count: int = 0                         # panels when the corners are not sent
+    kwp: Optional[float] = None
+    azimuth: Optional[float] = None        # 180 = facing south
+    tilt: Optional[float] = None
+
+
+class SiteMark(BaseModel):
+    label: str                             # "INV1", "MDB"
+    x: float
+    y: float
+
+
+class SiteLayout(BaseModel):
+    roofs: list[RoofLayout] = Field(default_factory=list)
+    marks: list[SiteMark] = Field(default_factory=list)
+
+
 class GridConnection(BaseModel):
     """The connection to the IEC network the Israeli rules are checked against (bee_cad.il)."""
 
@@ -295,6 +319,7 @@ class Design(BaseModel):
     notes: list[str] = Field(default_factory=list)
     pv: Optional[PvArray] = None          # DC side for the string checks (bee_cad.pv)
     grid: Optional[GridConnection] = None # IEC connection for the Israeli rules (bee_cad.il)
+    site: Optional[SiteLayout] = None     # roofs and panels from the map quote (bee_cad.site)
 
     def board(self, board_id: str) -> Board:
         for b in self.boards:

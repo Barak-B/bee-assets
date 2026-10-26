@@ -242,7 +242,15 @@ def house_pv(brief: dict[str, Any], today: Optional[str] = None) -> Design:
                               inverter_count=1, kwp=float(pv.get("kwp") or 0), export_limit_kw=pv.get("export_limit_kw"),
                               self_consumption=bool(pv.get("self_consumption")), first_year=bool(sup.get("first_year")),
                               battery_kwh=bat.get("kwh"), battery_kw=bat.get("kw"))
-    return Design(title=title, boards=boards, nodes=nodes, notes=notes, grid=grid)
+    return Design(title=title, boards=boards, nodes=nodes, notes=notes, grid=grid, site=_site(brief))
+
+
+def _site(brief: dict[str, Any]):
+    from .site import site_from_brief
+    try:
+        return site_from_brief(brief.get("site_layout"))
+    except Exception as e:  # pydantic: say which field, in Hebrew
+        raise BriefError(f"תוכנית ההעמדה (site_layout) לא תקינה: {e}") from e
 
 
 def _pv_array(pv: dict[str, Any]) -> Optional[PvArray]:
@@ -364,7 +372,7 @@ def pv_connection(brief: dict[str, Any], today: Optional[str] = None) -> Design:
                           export_limit_kw=pv.get("export_limit_kw"), self_consumption=bool(pv.get("self_consumption")),
                           first_year=bool(sup.get("first_year")), battery_kwh=(bat or {}).get("kwh"),
                           battery_kw=(bat or {}).get("kw"))
-    return Design(title=title, boards=boards, nodes=nodes, notes=notes, pv=array, grid=grid)
+    return Design(title=title, boards=boards, nodes=nodes, notes=notes, pv=array, grid=grid, site=_site(brief))
 
 
 TEMPLATES = {"house-pv": house_pv, "pv-connection": pv_connection}

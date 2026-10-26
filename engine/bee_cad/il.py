@@ -163,9 +163,13 @@ SUBMISSION = [
     ("site", "תוכנית העמדה (מיקום המערך, הממירים והלוחות)", False),
     ("earthing", "תוכנית הארקה והשוואת פוטנציאלים", False),
     ("control", "תוכנית פיקוד (מגביל הזרמה, מונה דו-כיווני)", False),
-    ("tester", "טופס בודק (נספח 2) והצהרת מתקין (נספח 4)", False),
+    ("tester", "טופס בדיקות מסירה (לצד נספח 2 של הבודק)", False),
+    ("declaration", "הצהרת מתקין (נספח 4)", False),
 ]
 
 
-def submission() -> list[dict]:
-    return [{"id": k, "name": name, "produced": done} for k, name, done in SUBMISSION]
+def submission(d: Optional[Design] = None) -> list[dict]:
+    """The §32 list, with what this design produces (the site plan only when the map quote sent the roofs)."""
+    made = {"site": bool(d and d.site and d.site.roofs), "earthing": bool(d and (d.pv or d.grid)),
+            "tester": bool(d and d.boards)}
+    return [{"id": k, "name": name, "produced": done or made.get(k, False)} for k, name, done in SUBMISSION]

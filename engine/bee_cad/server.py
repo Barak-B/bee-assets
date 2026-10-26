@@ -79,7 +79,7 @@ def analyse(body: dict[str, Any]) -> dict[str, Any]:
         "bom": [asdict(r) for r in bom(design)],
         "cables": cable_dicts(cable_rows(design)),
         "labels": [asdict(x) for x in labels(design)],
-        "submission": submission(),
+        "submission": submission(design),
         "tests": test_dicts(test_rows(design)),
         "sheets": sheet_svgs(design) if body.get("sheets", True) else {},
         "design": json.loads(design.model_dump_json(exclude_none=True)),

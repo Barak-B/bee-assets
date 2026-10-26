@@ -11,7 +11,7 @@ from typing import Optional
 from ezdxf.enums import TextEntityAlignment as TA
 
 from .cables import cable_rows
-from .il import SUBMISSION, labels
+from .il import labels, submission
 from .model import Design
 from .sheet import TB_H, SheetContext
 
@@ -152,6 +152,6 @@ def draw_schedules(ctx: SheetContext, design: Design, rows: list[list[str]], wit
     if sign:
         _table(ctx, "רשימת שילוט (נוסח לאימות מול נספח 3 להנחיות)", [("מיקום", 22.0), ("נוסח", 60.0), ("כמות", 8.0)],
                sign, x_right, y, half)
-    sub = [[name, "מופק" if done else "חסר — להכין"] for _, name, done in SUBMISSION]
+    sub = [[x["name"], "מופק בסט" if x["produced"] else "חסר — להכין"] for x in submission(design)]
     _table(ctx, "מסמכים לתיק המתקן (הנחיות PV §32)", [("מסמך", 60.0), ("מצב", 20.0)], sub, x_right - half - 8.0, y, half)
     return []
