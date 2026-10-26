@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סטודיו תכנון B.E.E</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #ffffff; --ink: #1d2330; --muted: #677085; --line: #dfe3ea;
+    --accent: #c8102e; --accent-soft: #fdecef; --ok: #1f7a4d; --ok-soft: #e7f5ee;
+    --warn: #9a6200; --warn-soft: #fff4dd; --err: #b42318; --err-soft: #fdeceb;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 "Segoe UI", Arial, sans-serif; color: var(--ink); background: var(--bg); }
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 17px; margin: 0; }
+  header .status { margin-inline-start: auto; color: var(--muted); font-size: 13px; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+  .b-err { background: var(--err-soft); color: var(--err); } .b-warn { background: var(--warn-soft); color: var(--warn); }
+  .b-ok { background: var(--ok-soft); color: var(--ok); } .b-info { background: #eef1f6; color: var(--muted); }
+  main { display: grid; grid-template-columns: 400px 1fr; gap: 16px; padding: 16px; height: calc(100vh - 52px); }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; height: auto; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  form.card { overflow-y: auto; padding: 4px 16px 16px; }
+  fieldset { border: none; border-bottom: 1px solid var(--line); margin: 0; padding: 12px 0; }
+  legend { font-weight: 700; font-size: 13px; color: var(--accent); padding: 0; margin-bottom: 6px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 6px 0 2px; }
+  input, select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; background: #fff; }
+  input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .check { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--ink); }
+  .check input { width: auto; }
+  .circ { display: grid; grid-template-columns: 1fr 64px 28px; gap: 6px; margin-bottom: 6px; }
+  button { font: inherit; cursor: pointer; border-radius: 6px; border: 1px solid var(--line); background: #fff; padding: 6px 10px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.x { padding: 0; color: var(--muted); }
+  .preview { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); align-items: center; }
+  .tabs button { border: none; background: none; padding: 6px 12px; border-radius: 6px; color: var(--muted); }
+  .tabs button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .tabs .dl { margin-inline-start: auto; display: flex; gap: 6px; }
+  .view { overflow: auto; padding: 12px; min-height: 0; }
+  .sheet { background: #fff; border: 1px solid var(--line); }
+  .sheet svg { width: 100%; height: auto; display: block; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: right; white-space: nowrap; }
+  th { position: sticky; top: 0; background: #f9fafb; color: var(--muted); font-weight: 600; }
+  td.num { text-align: left; font-variant-numeric: tabular-nums; direction: ltr; }
+  tr.bad td { background: var(--err-soft); }
+  .finding { display: grid; grid-template-columns: 70px 120px 1fr; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+  .finding .fix { color: var(--muted); font-size: 12.5px; }
+  .empty { color: var(--muted); padding: 40px; text-align: center; }
+  .error { background: var(--err-soft); color: var(--err); padding: 10px 12px; border-radius: 8px; margin: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>סטודיו תכנון B.E.E</h1>
+  <span class="badge b-info">בית + PV</span>
+  <span class="status" id="status">טוען דוגמה…</span>
+</header>
+<main>
+  <form class="card" id="f" autocomplete="off">
+    <fieldset>
+      <legend>פרויקט</legend>
+      <label>לקוח</label><input name="client">
+      <label>פרויקט</label><input name="project">
+      <label>אתר</label><input name="site">
+    </fieldset>
+    <fieldset>
+      <legend>חיבור חח"י</legend>
+      <div class="row2">
+        <div><label>גודל חיבור</label>
+          <select name="connection"><option>3X25A</option><option>3X40A</option><option>3X63A</option><option>3X80A</option><option>3X100A</option></select></div>
+        <div><label>אורך כבל הזנה [מ']</label><input name="supply_len" type="number" min="0" step="0.5"></div>
+      </div>
+      <label>זרם קצר בנקודת החיבור [kA] (לפי חח"י, אם ידוע)</label><input name="ik" type="number" min="0" step="0.5">
+    </fieldset>
+    <fieldset>
+      <legend>מערכת PV ואגירה</legend>
+      <div class="row2">
+        <div><label>ממיר — דגם</label><input name="inv_model"></div>
+        <div><label>הספק ממיר [kW]</label><input name="inv_kw" type="number" min="0" step="0.1"></div>
+        <div><label>הספק מערך [kWp]</label><input name="kwp" type="number" min="0" step="0.1"></div>
+        <div><label>אורך כבל לממיר [מ']</label><input name="pv_len" type="number" min="0" step="0.5"></div>
+      </div>
+      <label>פנלים ומחרוזות</label><input name="modules">
+      <div class="row2">
+        <div><label>אגירה [kWh] (ריק = בלי)</label><input name="bat_kwh" type="number" min="0" step="0.1"></div>
+        <div><label>דגם מצבר</label><input name="bat_model"></div>
+      </div>
+      <label class="check"><input type="checkbox" name="hybrid"> ממיר היברידי עם יציאת גיבוי</label>
+    </fieldset>
+    <fieldset>
+      <legend>מעגלים בלוח הראשי</legend>
+      <div id="circuits"></div>
+      <button type="button" data-add="circuits">+ מעגל</button>
+    </fieldset>
+    <fieldset>
+      <legend>לוח חיוני (גיבוי)</legend>
+      <div id="backup"></div>
+      <button type="button" data-add="backup">+ מעגל</button>
+    </fieldset>
+    <datalist id="names">
+      <option>שקעים — סלון</option><option>שקעים — מטבח</option><option>שקעים — חדר שינה</option><option>שקעים — חדר רחצה</option>
+      <option>תאורה — אגף יום</option><option>תאורה — אגף לילה</option><option>תאורה — חוץ</option><option>מזגן — סלון</option>
+      <option>מזגן — חדר שינה</option><option>תנור אפייה</option><option>כיריים</option><option>מדיח כלים</option><option>מכונת כביסה</option>
+      <option>מייבש כביסה</option><option>דוד חשמל</option><option>מקרר</option><option>עמדת טעינה לרכב חשמלי</option><option>שקעים — ממ"ד</option>
+    </datalist>
+  </form>
+  <section class="card preview">
+    <nav class="tabs" id="tabs">
+      <span class="dl">
+        <button type="button" data-dl="pdf" class="primary">PDF סט</button>
+        <button type="button" data-dl="dxf">DXF</button>
+        <button type="button" data-dl="csv">כתב כמויות CSV</button>
+        <button type="button" data-dl="json">JSON</button>
+      </span>
+    </nav>
+    <div class="view" id="view"><div class="empty">ממלאים את התקציר מימין, והשרטוטים מתעדכנים כאן.</div></div>
+  </section>
+</main>
+<script>
+const f = document.getElementById("f");
+const $ = (s, el = document) => el.querySelector(s);
+let last = null, tab = "findings", timer = null, seq = 0;
+
+function circuitRow(list, c = {}) {
+  const d = document.createElement("div");
+  d.className = "circ";
+  d.innerHTML = `<input list="names" placeholder="שם המעגל" class="n"><input type="number" min="0" step="0.5" placeholder="אורך" class="l" title="אורך [מ']"><button type="button" class="x" title="הסר">✕</button>`;
+  $(".n", d).value = c.name || (typeof c === "string" ? c : "");
+  $(".l", d).value = c.length_m ?? "";
+  $(".x", d).onclick = () => { d.remove(); schedule(); };
+  document.getElementById(list).appendChild(d);
+}
+document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => { circuitRow(b.dataset.add); schedule(); });
+
+function num(v) { return v === "" ? undefined : Number(v); }
+function rows(list) {
+  return [...document.querySelectorAll(`#${list} .circ`)].map(d => {
+    const name = $(".n", d).value.trim(), l = num($(".l", d).value);
+    return name ? (l ? { name, length_m: l } : name) : null;
+  }).filter(Boolean);
+}
+function brief() {
+  const v = n => f.elements[n].value;
+  const b = {
+    template: "house-pv", client: v("client"), project: v("project"), site: v("site"),
+    supply: { connection: v("connection"), cable_length_m: num(v("supply_len")), ik_ka: num(v("ik")) },
+    circuits: rows("circuits"),
+  };
+  if (num(v("inv_kw"))) {
+    b.pv = { kwp: num(v("kwp")), modules: v("modules"), cable_length_m: num(v("pv_len")),
+             inverter: { model: v("inv_model"), kw: num(v("inv_kw")), hybrid: f.elements.hybrid.checked } };
+  }
+  if (num(v("bat_kwh"))) b.battery = { kwh: num(v("bat_kwh")), model: v("bat_model") };
+  const bu = rows("backup");
+  if (bu.length) b.backup = { circuits: bu };
+  return b;
+}
+function fill(b) {
+  const set = (n, x) => { if (x !== undefined && x !== null) f.elements[n].value = x; };
+  set("client", b.client); set("project", b.project); set("site", b.site);
+  set("connection", b.supply?.connection); set("supply_len", b.supply?.cable_length_m); set("ik", b.supply?.ik_ka);
+  const inv = b.pv?.inverter || {};
+  set("inv_model", inv.model); set("inv_kw", inv.kw); set("kwp", b.pv?.kwp); set("pv_len", b.pv?.cable_length_m);
+  set("modules", b.pv?.modules); set("bat_kwh", b.battery?.kwh); set("bat_model", b.battery?.model);
+  f.elements.hybrid.checked = !!inv.hybrid;
+  (b.circuits || []).forEach(c => circuitRow("circuits", c));
+  (b.backup?.circuits || []).forEach(c => circuitRow("backup", c));
+}
+
+function schedule() { clearTimeout(timer); timer = setTimeout(run, 500); $("#status").textContent = "מחשב…"; }
+f.addEventListener("input", schedule);
+
+async function run() {
+  const my = ++seq;
+  const res = await fetch("/api/design", { method: "POST", body: JSON.stringify({ brief: brief() }) });
+  const data = await res.json();
+  if (my !== seq) return;
+  if (!res.ok) { $("#status").textContent = "שגיאה בתקציר"; $("#view").innerHTML = `<div class="error">${esc(data.error)}</div>`; return; }
+  last = data;
+  const n = c => data.findings.filter(x => x.level === c).length;
+  const e = n("error"), w = n("warn");
+  $("#status").innerHTML = `<span class="badge ${e ? "b-err" : w ? "b-warn" : "b-ok"}">${e ? e + " שגיאות" : w ? w + " אזהרות" : "תקין"}</span> ${esc(data.summary)}`;
+  drawTabs(); show();
+}
+
+function drawTabs() {
+  const nav = $("#tabs"), dl = $(".dl", nav);
+  nav.querySelectorAll("button.t").forEach(b => b.remove());
+  const items = [["findings", "ממצאים"], ...Object.keys(last.sheets).map(k => [k, k]), ["calc", "טבלת חישובים"], ["bom", "כתב כמויות"]];
+  if (!items.some(i => i[0] === tab)) tab = "findings";
+  for (const [k, label] of items) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "t" + (k === tab ? " on" : ""); b.textContent = label;
+    b.onclick = () => { tab = k; drawTabs(); show(); };
+    nav.insertBefore(b, dl);
+  }
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function fx(v, d = 1) { return v === null || v === undefined ? "–" : Number(v).toFixed(d); }
+
+function show() {
+  const v = $("#view");
+  if (tab === "findings") {
+    const label = { error: ["שגיאה", "b-err"], warn: ["אזהרה", "b-warn"], info: ["מידע", "b-info"] };
+    v.innerHTML = last.findings.length ? last.findings.map(x => `<div class="finding"><span><span class="badge ${label[x.level][1]}">${label[x.level][0]}</span></span>
+      <b>${esc(x.where)}</b><div>${esc(x.message)}${x.fix ? `<div class="fix">תיקון: ${esc(x.fix)}</div>` : ""}</div></div>`).join("")
+      : `<div class="empty">אין ממצאים.</div>`;
+  } else if (tab === "calc") {
+    v.innerHTML = `<table><thead><tr><th>לוח</th><th>תג</th><th>צרכן</th><th>הגנה</th><th>כבל</th><th>שיטה</th><th>Ib [A]</th><th>Iz [A]</th>
+      <th>ΔU מעגל %</th><th>ΔU מצטבר %</th><th>גבול %</th><th>Ik1 min [A]</th><th>Ia [A]</th></tr></thead><tbody>` +
+      last.rows.map(r => `<tr class="${r.ok ? "" : "bad"}"><td>${esc(r.board)}</td><td>${esc(r.tag)}</td><td>${esc(r.load)}</td><td>${esc(r.device)}</td>
+      <td>${esc(r.cable)}</td><td>${esc(r.method)}</td><td class="num">${fx(r.ib)}</td><td class="num">${fx(r.iz)}</td><td class="num">${fx(r.du, 2)}</td>
+      <td class="num">${fx(r.du_total, 2)}</td><td class="num">${r.du_limit}</td><td class="num">${fx(r.ik1, 0)}</td><td class="num">${fx(r.ia, 0)}</td></tr>`).join("") + "</tbody></table>";
+  } else if (tab === "bom") {
+    v.innerHTML = `<table><thead><tr><th>IEC 81346</th><th>פריט</th><th>מפרט</th><th>כמות</th><th>תגים</th></tr></thead><tbody>` +
+      last.bom.map(r => `<tr><td>${esc(r.iec)}</td><td>${esc(r.item)}</td><td>${esc(r.spec)}</td><td class="num">${r.qty} ${esc(r.unit)}</td><td>${esc(r.tags.join(" "))}</td></tr>`).join("") +
+      "</tbody></table>";
+  } else {
+    v.innerHTML = `<div class="sheet">${last.sheets[tab]}</div>`;
+  }
+}
+
+document.querySelectorAll("[data-dl]").forEach(b => b.onclick = async () => {
+  const res = await fetch(`/api/export?fmt=${b.dataset.dl}`, { method: "POST", body: JSON.stringify({ brief: brief() }) });
+  if (!res.ok) { alert((await res.json()).error); return; }
+  const cd = res.headers.get("Content-Disposition") || "";
+  const star = /filename\*=UTF-8''([^;]+)/.exec(cd), plain = /filename="([^"]+)"/.exec(cd);
+  const name = star ? decodeURIComponent(star[1]) : plain?.[1] || "design";
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await res.blob()), download: name });
+  a.click();
+});
+
+fetch("/api/example").then(r => r.json()).then(b => { fill(b); run(); });
+</script>
+</body>
+</html>

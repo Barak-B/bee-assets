@@ -73,7 +73,8 @@ class Cable(BaseModel):
     designation: str                     # e.g. "N2XY 4X10" / "3X2.5"
     length_m: Optional[float] = None
     du_pct: Optional[float] = None       # voltage drop, computed elsewhere
-    method: Optional[str] = None         # installation method (IEC 60364-5-52)
+    method: Optional[str] = None         # installation method (IEC 60364-5-52): B1 / C
+    ambient_c: Optional[float] = None    # air temperature along the route when above 30 °C (roof, outdoor)
 
 
 class Circuit(BaseModel):
@@ -109,6 +110,7 @@ class Supply(BaseModel):
     cable: Optional[Cable] = None
     earthing: Literal["TN-C-S", "TN-S", "TT", "IT", ""] = "TN-C-S"
     from_board: Optional[str] = None
+    ik_ka: Optional[float] = None         # prospective 3-phase short-circuit current at the origin (from IEC / the transformer)
 
 
 class Busbar(BaseModel):
@@ -130,6 +132,7 @@ class Board(BaseModel):
     ct: Optional[str] = None              # "3×CT" note on the incomer
     enclosure: Optional["Enclosure"] = None
     notes: list[str] = Field(default_factory=list)
+    existing: bool = False                # board already installed: its incomer, enclosure and supply cable are not bought
 
     def all_circuits(self) -> list[Circuit]:
         out: list[Circuit] = []
@@ -215,6 +218,52 @@ class TitleBlock(BaseModel):
     revisions: list[tuple[str, str, str]] = Field(default_factory=list)  # (rev, date, text)
 
 
+class PvModule(BaseModel):
+    """Datasheet values of one PV module (STC), as the app's string sizing passes them."""
+
+    wp: float
+    voc: float
+    vmp: float
+    isc: float
+    imp: float
+    beta_voc_pct: float = -0.25           # %/°C, Voc
+    gamma_pmax_pct: float = -0.29         # %/°C, Pmax (stand-in for Vmp when hot)
+
+
+class PvInverterSpec(BaseModel):
+    kw: float
+    count: int = 1
+    model: str = ""
+    vdc_max: Optional[float] = None       # max DC input voltage
+    mppt_min: Optional[float] = None
+    mppt_max: Optional[float] = None
+    imppt_max: Optional[float] = None     # max input current per MPPT
+    mppts: Optional[int] = None           # MPPT inputs per unit
+    strings_per_mppt: Optional[int] = None
+
+
+class PvString(BaseModel):
+    mppt: int                             # numbered 1..n across the whole site (inverter k has mppts·(k-1)+1 …)
+    count: int = 1                        # parallel strings on this MPPT
+    modules: int                          # modules in series per string
+    face: str = ""
+
+
+class PvArray(BaseModel):
+    """The DC side: modules, strings per MPPT and the inverter limits they are checked against."""
+
+    module: PvModule
+    inverter: PvInverterSpec
+    strings: list[PvString] = Field(default_factory=list)
+    modules_line: str = ""
+
+    def modules_total(self) -> int:
+        return sum(s.count * s.modules for s in self.strings)
+
+    def kwp(self) -> float:
+        return self.modules_total() * self.module.wp / 1000.0
+
+
 class Design(BaseModel):
     """The whole project model."""
 
@@ -224,6 +273,7 @@ class Design(BaseModel):
     nodes: list[Node] = Field(default_factory=list)
     legend: bool = True
     notes: list[str] = Field(default_factory=list)
+    pv: Optional[PvArray] = None          # DC side for the string checks (bee_cad.pv)
 
     def board(self, board_id: str) -> Board:
         for b in self.boards:

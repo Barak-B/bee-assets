@@ -19,6 +19,7 @@ from .symbols import device_block_name
 
 PITCH = 9.0             # x pitch between final circuits
 GROUP_GAP = 7.0         # gap between groups
+LABEL_W = 18.0          # room the device labels need right of a group / SPD line
 BOARD_GAP = 28.0        # gap between boards
 SUB_DROP = 24.0         # busbar → sub-bus (RCD) drop
 CIRC_LEN = 26.0         # sub-bus → arrow length of a final circuit
@@ -69,10 +70,10 @@ class SldRenderer:
     def board_width(self, b: Board) -> float:
         w = 0.0
         for g in b.groups:
-            w += self.group_width(g.circuits) + GROUP_GAP
+            w += max(self.group_width(g.circuits), LABEL_W) + GROUP_GAP
         w += len(b.feeders) * (PITCH + 4.0)
         if b.spd:
-            w += 14.0
+            w += LABEL_W
         return max(w + 14.0, 60.0)
 
     # ------------------------------------------------------------------ drawing
@@ -153,7 +154,7 @@ class SldRenderer:
             ctx.insert("BEE_SPD", (x, y_bus - 3.0 - SYM_H))
             ctx.insert("BEE_EARTH", (x, y_bus - 3.0 - SYM_H - 2.0))
             self.device_labels(b.spd, x, y_bus - 3.0, side="right", h=1.5)
-            x += 14.0
+            x += LABEL_W
 
         # groups
         y_bottom = y_bus - 4.0 - SYM_H - 18.0
@@ -186,7 +187,7 @@ class SldRenderer:
                 ctx.msp.add_lwpolyline([(gx0 - 2.0, yn), (gx0 + gw - PITCH + 2.0, yn)],
                                        dxfattribs={"layer": LAYERS["n"].name, "const_width": 0.6})
                 ctx.text(f"פס N — {g.device.tag}", (gx0 - 2.0, yn - 1.2), 1.5, "sld_text", TA.TOP_LEFT)
-            x = gx0 + gw + GROUP_GAP
+            x = gx0 + max(gw, LABEL_W) + GROUP_GAP
 
         # feeders (from the main busbar)
         for f in b.feeders:
@@ -316,6 +317,8 @@ class SldRenderer:
                 s = sum((c.device.rating_a or 0) for c in b.all_circuits() if c.phase == ph and c.device.poles == 1)
                 vals.append(s)
             rows.append([ph] + [f"{v:g}" for v in vals] + [f"{sum(vals):g}"])
+        if all(r[-1] == "0" for r in rows):         # no 1P circuits drawn (e.g. a PV connection to an existing board)
+            return
         rh = 5.0
         h = rh * (len(rows) + 1)
         ctx.rect(x0, y, w, h, "legend")
