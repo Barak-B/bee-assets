@@ -589,6 +589,7 @@ def test_demand_and_commissioning_sheet():
 def test_site_layout_sheet():
     import yaml
 
+    from bee_cad.checks import check
     from bee_cad.render import build
     from bee_cad.site import pick_scale
     from bee_cad.templates import BriefError, from_brief
@@ -600,6 +601,7 @@ def test_site_layout_sheet():
     assert len(d.site.roofs) == 2 and len(d.site.roofs[0].panels) == 144
     sheets = build(d)
     assert list(sheets)[0] == "E-A01"
+    assert any(f.code == "SITE_PANELS" for f in check(d))          # 272 on the roofs, 208 in the strings
     brief["site_layout"] = {"roofs": [{"outline": "x"}]}
     with pytest.raises(BriefError):
         from_brief(brief)

@@ -355,6 +355,13 @@ def check(design: Design, compute: bool = True) -> list[Finding]:
         _check_pv(work.pv, out)
     from .il import check_il          # Israeli rules build on Finding; imported late to avoid a cycle
     out.extend(check_il(work))
+    if work.site and work.pv and work.site.roofs:
+        on_roofs = sum(len(r.panels) or r.count for r in work.site.roofs)
+        strung = work.pv.modules_total()
+        if on_roofs and strung and on_roofs != strung:
+            out.append(Finding("warn", "SITE_PANELS", "תוכנית העמדה",
+                               f"על הגגות {on_roofs} פאנלים, ובמחרוזות {strung}",
+                               "לעדכן את תוכנית המחרוזות או את פריסת הגגות במפת ההצעה"))
     order = {"error": 0, "warn": 1, "info": 2}
     out.sort(key=lambda f: (order[f.level], f.where))
     return out
