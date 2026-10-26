@@ -11,7 +11,8 @@ from pathlib import Path
 
 from .calc import iec_class
 from .model import Cable, Design, Device
-from .pv import FUSE_FROM_STRINGS
+from .grid import pv_ac_kw, utility_board
+from .pv import fuse_rating, fuses_needed, isc_max, module_volts
 
 CABLE_RESERVE = 1.1       # cable length bought = route length + 10%
 
@@ -33,6 +34,11 @@ class BomLine:
     tags: list[str] = field(default_factory=list)
     unit: str = "יח'"
     kind: str = ""          # device kind / "cable" / "enclosure" / "pv_module" / "inverter" / "dc_switch" / "fuse"
+
+
+def _metres(x: float) -> int:
+    """Whole metres up, without float noise turning 121.00000000000001 into 122."""
+    return math.ceil(round(x, 6))
 
 
 def _spec(d: Device) -> str:
@@ -68,7 +74,7 @@ def bom(design: Design) -> list[BomLine]:
         if c is None or not c.length_m:
             return
         # +10% for routing and terminations, whole metres
-        other("cable", "WD", "כבל", c.designation, math.ceil(c.length_m * CABLE_RESERVE), where, "מ'")
+        other("cable", "WD", "כבל", c.designation, _metres(c.length_m * CABLE_RESERVE), where, "מ'")
 
     for b in design.boards:
         if not b.existing:
@@ -92,10 +98,29 @@ def bom(design: Design) -> list[BomLine]:
         m, inv = pv.module, pv.inverter
         other("pv_module", "GA", "פאנל סולארי", f"{m.wp:g}W Voc {m.voc:g}V Isc {m.isc:g}A", pv.modules_total(), "PV")
         other("inverter", "TB", "ממיר", inv.model if "kw" in inv.model.lower() else " ".join(filter(None, [inv.model, f"{inv.kw:g} kW"])), max(1, inv.count), "INV")
+        v_dc = inv.vdc_max or 1000
+        voc = module_volts(m).voc_cold
         for st in pv.strings:
-            other("dc_switch", "QB", "מנתק DC", "2P 1000V DC", 1, f"MPPT{st.mppt}")
-            if st.count >= FUSE_FROM_STRINGS:
-                other("fuse", "FC", "נתיך מחרוזת", "gPV 1000V DC", 2 * st.count, f"MPPT{st.mppt}")
+            # DC-PV2 load-break switch: U ≥ Voc at the cold extreme (at least the inverter's max DC), I ≥ Isc_max of the input
+            i_sw = next((r for r in (16, 25, 32, 40, 50, 63, 80, 100, 125) if r >= isc_max(m) * st.count), 125)
+            other("dc_switch", "QB", "מנתק DC", f"2P {max(v_dc, st.modules * voc):.0f}V DC {i_sw}A DC-PV2", 1,
+                  f"MPPT{st.mppt}")
+            if fuses_needed(m, st.count):
+                rating = fuse_rating(m)
+                other("fuse", "FC", "נתיך מחרוזת", f"gPV {rating:g}A 1000V DC" if rating else "gPV 1000V DC",
+                      2 * st.count, f"MPPT{st.mppt}")
+            if not inv.dc_spd_internal:
+                ucpv = math.ceil(st.modules * voc / 50) * 50
+                other("spd_dc", "FA", "מגן מתח יתר DC", f"{'T1+T2' if pv.lps else 'T2'} Ucpv {max(ucpv, 600)}V",
+                      1, f"MPPT{st.mppt}")
+            if st.cable_m:
+                # plus and minus for every parallel string
+                other("cable", "WD", "כבל סולארי", f"H1Z2Z2-K 1X{st.cable_mm2:g}",
+                      _metres(2 * st.count * st.cable_m * CABLE_RESERVE), f"MPPT{st.mppt}", "מ'")
+    ub = utility_board(design)
+    ac = pv_ac_kw(design)
+    if ub and ub.supply.export_limit_kw is not None and ac and ac > ub.supply.export_limit_kw:
+        other("export_limiter", "KF", "בקר הגבלת הזרמה", "מונה חכם + 3 משני זרם בנקודת החיבור", 1, ub.id)
     return sorted(lines.values(), key=lambda x: (x.iec, x.item, x.spec))
 
 

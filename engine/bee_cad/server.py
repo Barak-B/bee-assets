@@ -29,7 +29,8 @@ from .render import A3_H, A3_W, _visual_copy, build, merge_pdfs, render_pdf, sav
 from .report import calc_rows
 from .templates import TEMPLATES, BriefError, from_brief
 
-EXAMPLE_BRIEF = Path(__file__).resolve().parents[1] / "examples" / "brief_house_pv.yaml"
+EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
+EXAMPLE_BRIEFS = {"house-pv": EXAMPLES / "brief_house_pv.yaml", "pv-connection": EXAMPLES / "brief_pv_commercial.yaml"}
 
 
 def sheet_svgs(design: Design) -> dict[str, str]:
@@ -159,7 +160,12 @@ class Handler(BaseHTTPRequestHandler):
             html = resources.files("bee_cad").joinpath("web/index.html").read_bytes()
             self._send(200, html, "text/html; charset=utf-8")
         elif url.path == "/api/example":
-            self._json(200, yaml.safe_load(EXAMPLE_BRIEF.read_text(encoding="utf-8")))
+            name = parse_qs(url.query).get("template", ["house-pv"])[0]
+            path = EXAMPLE_BRIEFS.get(name)
+            if path is None:
+                self._json(404, {"error": f"אין דוגמה לתבנית {name}"})
+            else:
+                self._json(200, yaml.safe_load(path.read_text(encoding="utf-8")))
         else:
             self._json(404, {"error": "לא נמצא"})
 

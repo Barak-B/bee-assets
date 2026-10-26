@@ -10,15 +10,15 @@ supply:
 pv:
   cable_length_m: 30
   inverter_cable_lengths_m: [6, 8]
-  module: {wp: 620, voc: 49.5, vmp: 41.6, isc: 15.9, imp: 14.9, beta_voc_pct: -0.25, gamma_pmax_pct: -0.29}
+  module: {wp: 620, voc: 49.5, vmp: 41.6, isc: 15.9, imp: 14.9, beta_voc_pct: -0.25, gamma_pmax_pct: -0.29, fuse_max_a: 30}
   inverter: {kw: 50, count: 2, model: "50 kW, 4 MPPT", vdc_max: 1100, mppt_min: 200, mppt_max: 1000, imppt_max: 32, mppts: 4}
   strings:
-    - {mppt: 1, face: גג דרום, count: 2, modules: 18}
-    - {mppt: 2, face: גג דרום, count: 2, modules: 18}
-    - {mppt: 3, face: גג דרום, count: 2, modules: 18}
-    - {mppt: 4, face: גג דרום, count: 2, modules: 18}
-    - {mppt: 5, face: גג צפון, count: 1, modules: 16}
-    - {mppt: 6, face: גג צפון, count: 1, modules: 16}
-    - {mppt: 7, face: גג צפון, count: 1, modules: 16}
-    - {mppt: 8, face: גג צפון, count: 1, modules: 16}
+    - {mppt: 1, face: גג דרום, count: 2, modules: 18, cable_m: 35}
+    - {mppt: 2, face: גג דרום, count: 2, modules: 18, cable_m: 35}
+    - {mppt: 3, face: גג דרום, count: 2, modules: 18, cable_m: 35}
+    - {mppt: 4, face: גג דרום, count: 2, modules: 18, cable_m: 35}
+    - {mppt: 5, face: גג צפון, count: 1, modules: 16, cable_m: 55}
+    - {mppt: 6, face: גג צפון, count: 1, modules: 16, cable_m: 55}
+    - {mppt: 7, face: גג צפון, count: 1, modules: 16, cable_m: 55}
+    - {mppt: 8, face: גג צפון, count: 1, modules: 16, cable_m: 55}
   modules_line: "208 × 620W — 12 מחרוזות"

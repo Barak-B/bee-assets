@@ -15,7 +15,7 @@ from typing import Any, Optional
 
 from .calc import U_LL, CableSpec, ampacity, voltage_drop_pct
 from .checks import DU_LIMIT_LIGHTING_PCT, DU_LIMIT_PCT
-from .model import (Board, Busbar, Cable, Circuit, Design, Device, Enclosure, Group, Node, PvArray, Supply,
+from .model import (Board, Busbar, Cable, Circuit, Design, Device, Enclosure, Group, Node, PvArray, PvString, Supply,
                     TitleBlock)
 from .panel import device_width_mm
 
@@ -243,9 +243,25 @@ def _pv_array(pv: dict[str, Any]) -> Optional[PvArray]:
         return None
     try:
         inv = {k: v for k, v in (pv.get("inverter") or {}).items() if k in PvArray.model_fields["inverter"].annotation.model_fields}
-        return PvArray(module=pv["module"], inverter=inv, strings=pv["strings"], modules_line=pv.get("modules_line", ""))
+        array = PvArray(module=pv["module"], inverter=inv, strings=pv["strings"], modules_line=pv.get("modules_line", ""),
+                        lps=bool(pv.get("lps", False)))
     except Exception as e:  # pydantic: say which field, in Hebrew
         raise BriefError(f"נתוני המחרוזות (pv) לא תקינים: {e}") from e
+    for st, raw in zip(array.strings, pv["strings"]):
+        if "cable_mm2" not in raw:
+            st.cable_mm2 = size_string_cable(array, st)
+    return array
+
+
+def size_string_cable(array: PvArray, st: PvString) -> float:
+    """Smallest PV cable that carries the string current (IEC 62548) and keeps the DC drop within 1 %."""
+    from .pv import DC_DU_INFO, PV_CABLE_IZ, dc_drop_pct, string_cable_required_a
+    need = string_cable_required_a(array.module, st.count)
+    for mm2 in (4.0, 6.0, 10.0):
+        du = dc_drop_pct(array.module, st.model_copy(update={"cable_mm2": mm2}))
+        if PV_CABLE_IZ[mm2] >= need and (du is None or du <= DC_DU_INFO):
+            return mm2
+    return 10.0
 
 
 def pv_connection(brief: dict[str, Any], today: Optional[str] = None) -> Design:
@@ -274,7 +290,7 @@ def pv_connection(brief: dict[str, Any], today: Optional[str] = None) -> Design:
 
     s_main = upsize_for_drop(size_cable(main_a, three, True, "C"), main_a, sup.get("cable_length_m"), three, DU_SUPPLY_PCT)
     supply = Supply(kind="utility", meter=conn, earthing=sup.get("earthing", "TN-C-S"), ik_ka=sup.get("ik_ka"),
-                    voltage="400/230V" if three else "230V",
+                    voltage="400/230V" if three else "230V", export_limit_kw=sup.get("export_limit_kw"),
                     cable=Cable(designation=sup.get("cable") or f"N2XY {cores - 1}X{_fmt(s_main)}",
                                 length_m=sup.get("cable_length_m"), method="C"))
     mdb = Board(id="MDB", title="לוח ראשי קיים", supply=supply, existing=True,
@@ -282,7 +298,8 @@ def pv_connection(brief: dict[str, Any], today: Optional[str] = None) -> Design:
                                                                      label="L1,L2,L3,N" if three else "L,N"),
                 spd=Device(tag="SPD", kind="spd", poles=poles, note="T2 Up<1.5kV"))
     hybrid = bool(inv.get("hybrid", bool(brief.get("battery"))))
-    rcd_type = inv.get("rcd_type", "B")
+    # Type B unless the manufacturer declares no DC fault current into the AC side (IEC 60364-7-712 531.3.101)
+    rcd_type = inv.get("rcd_type") or ("A" if inv.get("no_dc_fault_current") else "B")
     strings_of = {}
     if array:
         from .pv import inverter_of

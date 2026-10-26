@@ -73,8 +73,9 @@ class Cable(BaseModel):
     designation: str                     # e.g. "N2XY 4X10" / "3X2.5"
     length_m: Optional[float] = None
     du_pct: Optional[float] = None       # voltage drop, computed elsewhere
-    method: Optional[str] = None         # installation method (IEC 60364-5-52): B1 / C
-    ambient_c: Optional[float] = None    # air temperature along the route when above 30 °C (roof, outdoor)
+    method: Optional[str] = None         # installation method (IEC 60364-5-52): B1 / C / E (tray, free air) / D1 (duct in ground)
+    ambient_c: Optional[float] = None    # air temperature along the route when above 30 °C (roof, outdoor); ground for D1
+    grouped: Optional[int] = None        # circuits run together with this one (incl. itself) — grouping factor
 
 
 class Circuit(BaseModel):
@@ -86,6 +87,7 @@ class Circuit(BaseModel):
     cable: Optional[Cable] = None
     load: str = ""                        # Hebrew description of the consumer
     load_kw: Optional[float] = None
+    cos_phi: float = 1.0                  # power factor of the load, for the voltage drop
     kind: Literal["final", "feeder"] = "final"
     rcd: Optional[Device] = None          # second device in series (e.g. RCD-INV after Q-INV)
     to_board: Optional[str] = None        # feeder target board id
@@ -111,6 +113,7 @@ class Supply(BaseModel):
     earthing: Literal["TN-C-S", "TN-S", "TT", "IT", ""] = "TN-C-S"
     from_board: Optional[str] = None
     ik_ka: Optional[float] = None         # prospective 3-phase short-circuit current at the origin (from IEC / the transformer)
+    export_limit_kw: Optional[float] = None   # export cap from the connection offer ("הגבלת הזרמה"); 0 = zero export
 
 
 class Busbar(BaseModel):
@@ -228,6 +231,7 @@ class PvModule(BaseModel):
     imp: float
     beta_voc_pct: float = -0.25           # %/°C, Voc
     gamma_pmax_pct: float = -0.29         # %/°C, Pmax (stand-in for Vmp when hot)
+    fuse_max_a: Optional[float] = None    # maximum series fuse rating (= reverse current rating I_MOD_REVERSE)
 
 
 class PvInverterSpec(BaseModel):
@@ -240,6 +244,8 @@ class PvInverterSpec(BaseModel):
     imppt_max: Optional[float] = None     # max input current per MPPT
     mppts: Optional[int] = None           # MPPT inputs per unit
     strings_per_mppt: Optional[int] = None
+    dc_spd_internal: bool = False         # type 2 DC surge protection built into the inverter (datasheet)
+    i_fault_a: Optional[float] = None     # AC fault current the inverter delivers in backup / island mode
 
 
 class PvString(BaseModel):
@@ -247,6 +253,8 @@ class PvString(BaseModel):
     count: int = 1                        # parallel strings on this MPPT
     modules: int                          # modules in series per string
     face: str = ""
+    cable_mm2: float = 4.0                # string cable (H1Z2Z2-K, EN 50618)
+    cable_m: Optional[float] = None       # route length string → inverter (one way)
 
 
 class PvArray(BaseModel):
@@ -256,6 +264,7 @@ class PvArray(BaseModel):
     inverter: PvInverterSpec
     strings: list[PvString] = Field(default_factory=list)
     modules_line: str = ""
+    lps: bool = False                     # the building has an external lightning protection system → DC SPD type 1
 
     def modules_total(self) -> int:
         return sum(s.count * s.modules for s in self.strings)
