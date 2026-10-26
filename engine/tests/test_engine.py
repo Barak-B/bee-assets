@@ -343,9 +343,9 @@ def test_studio_api():
 
     import yaml
 
-    from bee_cad.server import EXAMPLE_BRIEF, Handler, analyse
+    from bee_cad.server import EXAMPLE_BRIEFS, Handler, analyse
 
-    brief = yaml.safe_load(EXAMPLE_BRIEF.read_text(encoding="utf-8"))
+    brief = yaml.safe_load(EXAMPLE_BRIEFS["house-pv"].read_text(encoding="utf-8"))
     data = analyse({"brief": brief, "sheets": False})
     assert data["summary"].startswith("בדיקות: 0 שגיאות, 0 אזהרות")
     assert any(r["tag"] == "Q-INV" and r["method"] == "C" for r in data["rows"])

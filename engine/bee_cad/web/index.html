@@ -13,28 +13,38 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; font: 14px/1.5 "Segoe UI", Arial, sans-serif; color: var(--ink); background: var(--bg); }
-  header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   header h1 { font-size: 17px; margin: 0; }
   header .status { margin-inline-start: auto; color: var(--muted); font-size: 13px; }
+  .modes { display: flex; gap: 4px; background: var(--bg); padding: 3px; border-radius: 8px; }
+  .modes button { border: none; background: none; padding: 4px 12px; border-radius: 6px; color: var(--muted); }
+  .modes button.on { background: var(--panel); color: var(--accent); font-weight: 600; box-shadow: 0 1px 2px #0001; }
   .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
   .b-err { background: var(--err-soft); color: var(--err); } .b-warn { background: var(--warn-soft); color: var(--warn); }
   .b-ok { background: var(--ok-soft); color: var(--ok); } .b-info { background: #eef1f6; color: var(--muted); }
-  main { display: grid; grid-template-columns: 400px 1fr; gap: 16px; padding: 16px; height: calc(100vh - 52px); }
+  main { display: grid; grid-template-columns: 420px 1fr; gap: 16px; padding: 16px; height: calc(100vh - 52px); }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; height: auto; } }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
   form.card { overflow-y: auto; padding: 4px 16px 16px; }
   fieldset { border: none; border-bottom: 1px solid var(--line); margin: 0; padding: 12px 0; }
   legend { font-weight: 700; font-size: 13px; color: var(--accent); padding: 0; margin-bottom: 6px; }
+  .hint { font-size: 12px; color: var(--muted); margin: 2px 0 6px; }
   label { display: block; font-size: 12px; color: var(--muted); margin: 6px 0 2px; }
   input, select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; background: #fff; }
   input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .check { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--ink); }
   .check input { width: auto; }
   .circ { display: grid; grid-template-columns: 1fr 64px 28px; gap: 6px; margin-bottom: 6px; }
+  .str { display: grid; grid-template-columns: 44px 1fr 44px 50px 54px 62px 24px; gap: 4px; margin-bottom: 4px; }
+  .str input, .str select { padding: 5px 4px; }
+  .str-head { font-size: 11px; color: var(--muted); }
   button { font: inherit; cursor: pointer; border-radius: 6px; border: 1px solid var(--line); background: #fff; padding: 6px 10px; }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   button.x { padding: 0; color: var(--muted); }
+  button.fix { margin-top: 6px; border-color: var(--ok); color: var(--ok); font-size: 12.5px; padding: 3px 10px; }
   .preview { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
   .tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); align-items: center; }
   .tabs button { border: none; background: none; padding: 6px 12px; border-radius: 6px; color: var(--muted); }
@@ -48,16 +58,23 @@
   th { position: sticky; top: 0; background: #f9fafb; color: var(--muted); font-weight: 600; }
   td.num { text-align: left; font-variant-numeric: tabular-nums; direction: ltr; }
   tr.bad td { background: var(--err-soft); }
-  .finding { display: grid; grid-template-columns: 70px 120px 1fr; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); }
-  .finding .fix { color: var(--muted); font-size: 12.5px; }
+  .group-h { font-weight: 700; margin: 14px 4px 4px; }
+  .finding { display: grid; grid-template-columns: 70px 150px 1fr; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+  .finding .why { color: var(--ink); font-size: 12.5px; margin-top: 2px; opacity: .8; }
+  .finding .fixt { color: var(--muted); font-size: 12.5px; }
+  details.info summary { cursor: pointer; color: var(--muted); margin: 14px 4px 4px; }
   .empty { color: var(--muted); padding: 40px; text-align: center; }
   .error { background: var(--err-soft); color: var(--err); padding: 10px 12px; border-radius: 8px; margin: 12px; }
+  .hide { display: none !important; }
 </style>
 </head>
 <body>
 <header>
   <h1>סטודיו תכנון B.E.E</h1>
-  <span class="badge b-info">בית + PV</span>
+  <div class="modes" id="modes">
+    <button type="button" data-mode="house-pv">בית + PV</button>
+    <button type="button" data-mode="pv-connection">חיבור PV (מסחרי)</button>
+  </div>
   <span class="status" id="status">טוען דוגמה…</span>
 </header>
 <main>
@@ -72,12 +89,20 @@
       <legend>חיבור חח"י</legend>
       <div class="row2">
         <div><label>גודל חיבור</label>
-          <select name="connection"><option>3X25A</option><option>3X40A</option><option>3X63A</option><option>3X80A</option><option>3X100A</option></select></div>
+          <select name="connection">
+            <option>1X40A</option><option>3X25A</option><option>3X40A</option><option>3X63A</option><option>3X80A</option>
+            <option>3X100A</option><option>3X125A</option><option>3X160A</option><option>3X200A</option><option>3X250A</option>
+            <option>3X400A</option><option>3X630A</option></select></div>
         <div><label>אורך כבל הזנה [מ']</label><input name="supply_len" type="number" min="0" step="0.5"></div>
       </div>
-      <label>זרם קצר בנקודת החיבור [kA] (לפי חח"י, אם ידוע)</label><input name="ik" type="number" min="0" step="0.5">
+      <div class="row2">
+        <div><label>זרם קצר בחיבור [kA]</label><input name="ik" type="number" min="0" step="0.5" placeholder="לפי חח&quot;י"></div>
+        <div class="m-pvc"><label>הגבלת הזרמה [kW]</label><input name="export" type="number" min="0" step="1" placeholder="ריק = בלי"></div>
+      </div>
     </fieldset>
-    <fieldset>
+
+    <!-- house-pv -->
+    <fieldset class="m-house">
       <legend>מערכת PV ואגירה</legend>
       <div class="row2">
         <div><label>ממיר — דגם</label><input name="inv_model"></div>
@@ -92,15 +117,65 @@
       </div>
       <label class="check"><input type="checkbox" name="hybrid"> ממיר היברידי עם יציאת גיבוי</label>
     </fieldset>
-    <fieldset>
+    <fieldset class="m-house">
       <legend>מעגלים בלוח הראשי</legend>
       <div id="circuits"></div>
       <button type="button" data-add="circuits">+ מעגל</button>
     </fieldset>
-    <fieldset>
+    <fieldset class="m-house">
       <legend>לוח חיוני (גיבוי)</legend>
       <div id="backup"></div>
       <button type="button" data-add="backup">+ מעגל</button>
+    </fieldset>
+
+    <!-- pv-connection -->
+    <fieldset class="m-pvc">
+      <legend>ממירים</legend>
+      <div class="row3">
+        <div><label>דגם</label><input name="p_model"></div>
+        <div><label>הספק [kW]</label><input name="p_kw" type="number" min="0" step="0.1"></div>
+        <div><label>כמות</label><input name="p_count" type="number" min="1" step="1"></div>
+      </div>
+      <div class="row4">
+        <div><label>DC מרבי [V]</label><input name="p_vdc" type="number" min="0"></div>
+        <div><label>MPPT מ-[V]</label><input name="p_mmin" type="number" min="0"></div>
+        <div><label>MPPT עד [V]</label><input name="p_mmax" type="number" min="0"></div>
+        <div><label>זרם MPPT [A]</label><input name="p_imppt" type="number" min="0" step="0.1"></div>
+      </div>
+      <div class="row2">
+        <div><label>כניסות MPPT לממיר</label><input name="p_mppts" type="number" min="1" step="1"></div>
+        <div><label>אורך כבל AC [מ']</label><input name="p_len" type="number" min="0" step="0.5"></div>
+      </div>
+      <label class="check"><input type="checkbox" name="p_nodc"> היצרן מצהיר: אין זרם תקלה DC (פחת Type A)</label>
+      <label class="check"><input type="checkbox" name="p_spd"> מגן מתח יתר DC מובנה בממיר</label>
+      <label class="check"><input type="checkbox" name="p_lps"> בבניין יש מערכת הגנה מפני ברקים</label>
+    </fieldset>
+    <fieldset class="m-pvc">
+      <legend>פאנל (מגיליון הנתונים)</legend>
+      <div class="row4">
+        <div><label>Wp</label><input name="m_wp" type="number" min="0"></div>
+        <div><label>Voc [V]</label><input name="m_voc" type="number" min="0" step="0.01"></div>
+        <div><label>Vmp [V]</label><input name="m_vmp" type="number" min="0" step="0.01"></div>
+        <div><label>נתיך מרבי [A]</label><input name="m_fuse" type="number" min="0" step="1"></div>
+        <div><label>Isc [A]</label><input name="m_isc" type="number" min="0" step="0.01"></div>
+        <div><label>Imp [A]</label><input name="m_imp" type="number" min="0" step="0.01"></div>
+        <div><label>β Voc [%/°C]</label><input name="m_beta" type="number" step="0.01"></div>
+        <div><label>γ Pmax [%/°C]</label><input name="m_gamma" type="number" step="0.01"></div>
+      </div>
+    </fieldset>
+    <fieldset class="m-pvc">
+      <legend>מחרוזות</legend>
+      <div class="hint">שורה לכל כניסת MPPT. כבל "אוטו" = המנוע בוחר 4/6/10 ממ"ר לפי הזרם ומפל מתח עד 1%.</div>
+      <div class="str str-head"><span>MPPT</span><span>חזית</span><span>מחרוזות</span><span>פאנלים</span><span>אורך [מ']</span><span>כבל</span><span></span></div>
+      <div id="strings"></div>
+      <button type="button" id="add-str">+ כניסה</button>
+    </fieldset>
+    <fieldset class="m-pvc">
+      <legend>אגירה</legend>
+      <div class="row2">
+        <div><label>אגירה [kWh] (ריק = בלי)</label><input name="pb_kwh" type="number" min="0" step="0.1"></div>
+        <div><label>דגם</label><input name="pb_model"></div>
+      </div>
     </fieldset>
     <datalist id="names">
       <option>שקעים — סלון</option><option>שקעים — מטבח</option><option>שקעים — חדר שינה</option><option>שקעים — חדר רחצה</option>
@@ -124,7 +199,15 @@
 <script>
 const f = document.getElementById("f");
 const $ = (s, el = document) => el.querySelector(s);
-let last = null, tab = "findings", timer = null, seq = 0;
+let mode = "house-pv", last = null, tab = "findings", timer = null, seq = 0, extra = {};
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll("[data-mode]").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
+  document.querySelectorAll(".m-house").forEach(el => el.classList.toggle("hide", m !== "house-pv"));
+  document.querySelectorAll(".m-pvc").forEach(el => el.classList.toggle("hide", m !== "pv-connection"));
+}
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => load(b.dataset.mode));
 
 function circuitRow(list, c = {}) {
   const d = document.createElement("div");
@@ -137,39 +220,107 @@ function circuitRow(list, c = {}) {
 }
 document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => { circuitRow(b.dataset.add); schedule(); });
 
-function num(v) { return v === "" ? undefined : Number(v); }
+function stringRow(s = {}) {
+  const d = document.createElement("div");
+  d.className = "str";
+  const n = document.querySelectorAll("#strings .str").length + 1;
+  d.innerHTML = `<input type="number" min="1" class="mp"><input class="fa" placeholder="גג דרום"><input type="number" min="1" class="ct">
+    <input type="number" min="1" class="md"><input type="number" min="0" step="0.5" class="ln">
+    <select class="cs"><option value="">אוטו</option><option>4</option><option>6</option><option>10</option><option>16</option></select>
+    <button type="button" class="x" title="הסר">✕</button>`;
+  $(".mp", d).value = s.mppt ?? n; $(".fa", d).value = s.face ?? ""; $(".ct", d).value = s.count ?? 1;
+  $(".md", d).value = s.modules ?? ""; $(".ln", d).value = s.cable_m ?? ""; $(".cs", d).value = s.cable_mm2 ? String(s.cable_mm2) : "";
+  $(".x", d).onclick = () => { d.remove(); schedule(); };
+  document.getElementById("strings").appendChild(d);
+}
+$("#add-str").onclick = () => { stringRow(); schedule(); };
+
+function num(v) { return v === "" || v === undefined ? undefined : Number(v); }
 function rows(list) {
   return [...document.querySelectorAll(`#${list} .circ`)].map(d => {
     const name = $(".n", d).value.trim(), l = num($(".l", d).value);
     return name ? (l ? { name, length_m: l } : name) : null;
   }).filter(Boolean);
 }
+function strings() {
+  return [...document.querySelectorAll("#strings .str")].map(d => {
+    const s = { mppt: num($(".mp", d).value), face: $(".fa", d).value, count: num($(".ct", d).value) || 1,
+                modules: num($(".md", d).value), cable_m: num($(".ln", d).value), cable_mm2: num($(".cs", d).value) };
+    return s.mppt && s.modules ? s : null;
+  }).filter(Boolean);
+}
+const clean = o => JSON.parse(JSON.stringify(o));     // drops undefined
+
 function brief() {
   const v = n => f.elements[n].value;
-  const b = {
-    template: "house-pv", client: v("client"), project: v("project"), site: v("site"),
-    supply: { connection: v("connection"), cable_length_m: num(v("supply_len")), ik_ka: num(v("ik")) },
-    circuits: rows("circuits"),
-  };
-  if (num(v("inv_kw"))) {
-    b.pv = { kwp: num(v("kwp")), modules: v("modules"), cable_length_m: num(v("pv_len")),
-             inverter: { model: v("inv_model"), kw: num(v("inv_kw")), hybrid: f.elements.hybrid.checked } };
+  const b = { ...extra, template: mode, client: v("client"), project: v("project"), site: v("site"),
+    supply: { connection: v("connection"), cable_length_m: num(v("supply_len")), ik_ka: num(v("ik")) } };
+  if (mode === "house-pv") {
+    b.circuits = rows("circuits");
+    if (num(v("inv_kw"))) {
+      b.pv = { kwp: num(v("kwp")), modules: v("modules"), cable_length_m: num(v("pv_len")),
+               inverter: { model: v("inv_model"), kw: num(v("inv_kw")), hybrid: f.elements.hybrid.checked } };
+    }
+    if (num(v("bat_kwh"))) b.battery = { kwh: num(v("bat_kwh")), model: v("bat_model") };
+    const bu = rows("backup");
+    if (bu.length) b.backup = { circuits: bu };
+  } else {
+    b.supply.export_limit_kw = num(v("export"));
+    b.pv = { ...(extra.pv || {}), cable_length_m: num(v("p_len")), lps: f.elements.p_lps.checked,
+      module: { wp: num(v("m_wp")), voc: num(v("m_voc")), vmp: num(v("m_vmp")), isc: num(v("m_isc")), imp: num(v("m_imp")),
+                beta_voc_pct: num(v("m_beta")), gamma_pmax_pct: num(v("m_gamma")), fuse_max_a: num(v("m_fuse")) },
+      inverter: { model: v("p_model"), kw: num(v("p_kw")), count: num(v("p_count")) || 1, vdc_max: num(v("p_vdc")),
+                  mppt_min: num(v("p_mmin")), mppt_max: num(v("p_mmax")), imppt_max: num(v("p_imppt")), mppts: num(v("p_mppts")),
+                  no_dc_fault_current: f.elements.p_nodc.checked, dc_spd_internal: f.elements.p_spd.checked },
+      strings: strings() };
+    if (num(v("pb_kwh"))) b.battery = { kwh: num(v("pb_kwh")), model: v("pb_model") }; else delete b.battery;
   }
-  if (num(v("bat_kwh"))) b.battery = { kwh: num(v("bat_kwh")), model: v("bat_model") };
-  const bu = rows("backup");
-  if (bu.length) b.backup = { circuits: bu };
-  return b;
+  return clean(b);
 }
+
 function fill(b) {
+  f.reset();
+  ["circuits", "backup", "strings"].forEach(id => document.getElementById(id).innerHTML = "");
   const set = (n, x) => { if (x !== undefined && x !== null) f.elements[n].value = x; };
-  set("client", b.client); set("project", b.project); set("site", b.site);
-  set("connection", b.supply?.connection); set("supply_len", b.supply?.cable_length_m); set("ik", b.supply?.ik_ka);
-  const inv = b.pv?.inverter || {};
-  set("inv_model", inv.model); set("inv_kw", inv.kw); set("kwp", b.pv?.kwp); set("pv_len", b.pv?.cable_length_m);
-  set("modules", b.pv?.modules); set("bat_kwh", b.battery?.kwh); set("bat_model", b.battery?.model);
-  f.elements.hybrid.checked = !!inv.hybrid;
-  (b.circuits || []).forEach(c => circuitRow("circuits", c));
-  (b.backup?.circuits || []).forEach(c => circuitRow("backup", c));
+  const { client, project, site, supply, circuits, backup, pv, battery, template, ...rest } = b;
+  extra = rest;                                        // keys the form does not edit travel through unchanged
+  set("client", client); set("project", project); set("site", site);
+  set("connection", supply?.connection); set("supply_len", supply?.cable_length_m); set("ik", supply?.ik_ka);
+  if (mode === "house-pv") {
+    const inv = pv?.inverter || {};
+    set("inv_model", inv.model); set("inv_kw", inv.kw); set("kwp", pv?.kwp); set("pv_len", pv?.cable_length_m);
+    set("modules", pv?.modules); set("bat_kwh", battery?.kwh); set("bat_model", battery?.model);
+    f.elements.hybrid.checked = !!inv.hybrid;
+    (circuits || []).forEach(c => circuitRow("circuits", c));
+    (backup?.circuits || []).forEach(c => circuitRow("backup", c));
+  } else {
+    const inv = pv?.inverter || {}, m = pv?.module || {};
+    set("export", supply?.export_limit_kw);
+    set("p_model", inv.model); set("p_kw", inv.kw); set("p_count", inv.count); set("p_vdc", inv.vdc_max);
+    set("p_mmin", inv.mppt_min); set("p_mmax", inv.mppt_max); set("p_imppt", inv.imppt_max); set("p_mppts", inv.mppts);
+    set("p_len", pv?.cable_length_m);
+    f.elements.p_nodc.checked = !!inv.no_dc_fault_current; f.elements.p_spd.checked = !!inv.dc_spd_internal;
+    f.elements.p_lps.checked = !!pv?.lps;
+    set("m_wp", m.wp); set("m_voc", m.voc); set("m_vmp", m.vmp); set("m_isc", m.isc); set("m_imp", m.imp);
+    set("m_beta", m.beta_voc_pct); set("m_gamma", m.gamma_pmax_pct); set("m_fuse", m.fuse_max_a);
+    (pv?.strings || []).forEach(s => stringRow(s));
+    set("pb_kwh", battery?.kwh); set("pb_model", battery?.model);
+    if (extra.pv) extra.pv = { modules_line: pv.modules_line, inverter_cable_lengths_m: pv.inverter_cable_lengths_m };
+  }
+}
+
+// One-click fix: {"path": "supply.connection" | "pv.strings[mppt=5].cable_mm2", "value": …} on the brief
+function applyPatch(b, patch) {
+  let obj = b;
+  const parts = patch.path.split(".");
+  for (let i = 0; i < parts.length - 1; i++) {
+    const m = /^(\w+)\[(\w+)=([^\]]+)\]$/.exec(parts[i]);
+    if (m) obj = (obj[m[1]] || []).find(x => String(x[m[2]]) === m[3]);
+    else obj = obj[parts[i]] ??= {};
+    if (!obj) return false;
+  }
+  obj[parts.at(-1)] = patch.value;
+  return true;
 }
 
 function schedule() { clearTimeout(timer); timer = setTimeout(run, 500); $("#status").textContent = "מחשב…"; }
@@ -191,7 +342,9 @@ async function run() {
 function drawTabs() {
   const nav = $("#tabs"), dl = $(".dl", nav);
   nav.querySelectorAll("button.t").forEach(b => b.remove());
-  const items = [["findings", "ממצאים"], ...Object.keys(last.sheets).map(k => [k, k]), ["calc", "טבלת חישובים"], ["bom", "כתב כמויות"]];
+  const items = [["findings", "ממצאים"], ...Object.keys(last.sheets).map(k => [k, k]), ["calc", "טבלת חישובים"]];
+  if (last.dc.length) items.push(["dc", "מחרוזות DC"]);
+  items.push(["bom", "כתב כמויות"]);
   if (!items.some(i => i[0] === tab)) tab = "findings";
   for (const [k, label] of items) {
     const b = document.createElement("button");
@@ -203,19 +356,41 @@ function drawTabs() {
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 function fx(v, d = 1) { return v === null || v === undefined ? "–" : Number(v).toFixed(d); }
 
+function findingHtml(x, i) {
+  const label = { error: ["שגיאה", "b-err"], warn: ["אזהרה", "b-warn"], info: ["מידע", "b-info"] };
+  return `<div class="finding"><span><span class="badge ${label[x.level][1]}">${label[x.level][0]}</span></span>
+    <b>${esc(x.where)}</b><div>${esc(x.message)}${x.why ? `<div class="why">${esc(x.why)}</div>` : ""}
+    ${x.fix ? `<div class="fixt">מה לעשות: ${esc(x.fix)}</div>` : ""}
+    ${x.patch ? `<button type="button" class="fix" data-fix="${i}">✓ תקן אוטומטית</button>` : ""}</div></div>`;
+}
+
 function show() {
   const v = $("#view");
   if (tab === "findings") {
-    const label = { error: ["שגיאה", "b-err"], warn: ["אזהרה", "b-warn"], info: ["מידע", "b-info"] };
-    v.innerHTML = last.findings.length ? last.findings.map(x => `<div class="finding"><span><span class="badge ${label[x.level][1]}">${label[x.level][0]}</span></span>
-      <b>${esc(x.where)}</b><div>${esc(x.message)}${x.fix ? `<div class="fix">תיקון: ${esc(x.fix)}</div>` : ""}</div></div>`).join("")
-      : `<div class="empty">אין ממצאים.</div>`;
+    const all = last.findings.map((x, i) => [x, i]);
+    const serious = all.filter(([x]) => x.level !== "info"), info = all.filter(([x]) => x.level === "info");
+    v.innerHTML = (serious.length ? `<div class="group-h">לטיפול (${serious.length})</div>` + serious.map(([x, i]) => findingHtml(x, i)).join("")
+      : `<div class="empty">✓ אין שגיאות ואין אזהרות. התכנון מוכן לבדיקת מהנדס.</div>`) +
+      (info.length ? `<details class="info"${serious.length ? "" : " open"}><summary>מידע וחישובים (${info.length})</summary>` +
+        info.map(([x, i]) => findingHtml(x, i)).join("") + "</details>" : "");
+    v.querySelectorAll("[data-fix]").forEach(b => b.onclick = () => {
+      const br = brief();
+      if (applyPatch(br, last.findings[Number(b.dataset.fix)].patch)) { fill(br); run(); }
+    });
   } else if (tab === "calc") {
     v.innerHTML = `<table><thead><tr><th>לוח</th><th>תג</th><th>צרכן</th><th>הגנה</th><th>כבל</th><th>שיטה</th><th>Ib [A]</th><th>Iz [A]</th>
-      <th>ΔU מעגל %</th><th>ΔU מצטבר %</th><th>גבול %</th><th>Ik1 min [A]</th><th>Ia [A]</th></tr></thead><tbody>` +
-      last.rows.map(r => `<tr class="${r.ok ? "" : "bad"}"><td>${esc(r.board)}</td><td>${esc(r.tag)}</td><td>${esc(r.load)}</td><td>${esc(r.device)}</td>
+      <th>ΔU מעגל %</th><th>ΔU מצטבר %</th><th>גבול %</th><th>Ik1 min [A]</th><th>Ia [A]</th><th>I²t</th></tr></thead><tbody>` +
+      last.rows.map(r => `<tr class="${r.ok && r.i2t_ok !== false ? "" : "bad"}"><td>${esc(r.board)}</td><td>${esc(r.tag)}</td><td>${esc(r.load)}</td><td>${esc(r.device)}</td>
       <td>${esc(r.cable)}</td><td>${esc(r.method)}</td><td class="num">${fx(r.ib)}</td><td class="num">${fx(r.iz)}</td><td class="num">${fx(r.du, 2)}</td>
-      <td class="num">${fx(r.du_total, 2)}</td><td class="num">${r.du_limit}</td><td class="num">${fx(r.ik1, 0)}</td><td class="num">${fx(r.ia, 0)}</td></tr>`).join("") + "</tbody></table>";
+      <td class="num">${fx(r.du_total, 2)}</td><td class="num">${r.du_limit}</td><td class="num">${fx(r.ik1, 0)}</td><td class="num">${fx(r.ia, 0)}</td>
+      <td>${r.i2t_ok === null ? "–" : r.i2t_ok ? "✓" : "✗"}</td></tr>`).join("") + "</tbody></table>";
+  } else if (tab === "dc") {
+    v.innerHTML = `<table><thead><tr><th>ממיר</th><th>MPPT</th><th>חזית</th><th>מחרוזות</th><th>פאנלים</th><th>Voc קר [V]</th><th>Vmp קר [V]</th>
+      <th>Vmp חם [V]</th><th>I MPPT [A]</th><th>נתיך gPV</th><th>כבל [ממ"ר]</th><th>Iz / נדרש [A]</th><th>ΔU DC %</th></tr></thead><tbody>` +
+      last.dc.map(r => `<tr class="${r.cable_iz !== null && r.cable_iz < r.cable_req_a ? "bad" : ""}"><td>${r.inverter}</td><td>${r.mppt}</td><td>${esc(r.face)}</td>
+      <td class="num">${r.strings}</td><td class="num">${r.modules}</td><td class="num">${fx(r.voc_cold, 0)}</td><td class="num">${fx(r.vmp_cold, 0)}</td>
+      <td class="num">${fx(r.vmp_hot, 0)}</td><td class="num">${fx(r.i_mppt)}</td><td>${r.fuse_a ? r.fuse_a + "A" : "–"}</td><td class="num">${r.cable_mm2}</td>
+      <td class="num">${r.cable_iz ?? "–"} / ${fx(r.cable_req_a)}</td><td class="num">${fx(r.du_pct, 2)}</td></tr>`).join("") + "</tbody></table>";
   } else if (tab === "bom") {
     v.innerHTML = `<table><thead><tr><th>IEC 81346</th><th>פריט</th><th>מפרט</th><th>כמות</th><th>תגים</th></tr></thead><tbody>` +
       last.bom.map(r => `<tr><td>${esc(r.iec)}</td><td>${esc(r.item)}</td><td>${esc(r.spec)}</td><td class="num">${r.qty} ${esc(r.unit)}</td><td>${esc(r.tags.join(" "))}</td></tr>`).join("") +
@@ -235,7 +410,12 @@ document.querySelectorAll("[data-dl]").forEach(b => b.onclick = async () => {
   a.click();
 });
 
-fetch("/api/example").then(r => r.json()).then(b => { fill(b); run(); });
+function load(m) {
+  setMode(m);
+  $("#status").textContent = "טוען דוגמה…";
+  fetch(`/api/example?template=${m}`).then(r => r.json()).then(b => { fill(b); run(); });
+}
+load("house-pv");
 </script>
 </body>
 </html>
