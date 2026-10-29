@@ -23,15 +23,31 @@
 
     * { box-sizing: border-box; }
 
+    html {
+      direction: rtl;
+    }
+
     body {
       margin: 0;
-      font-family: "Assistant", sans-serif;
+      font-family: "Assistant", "Segoe UI", Tahoma, sans-serif;
       color: var(--ink);
       background:
         radial-gradient(ellipse 80% 50% at 100% 0%, rgba(196, 92, 38, 0.08), transparent 50%),
         radial-gradient(ellipse 60% 40% at 0% 100%, rgba(26, 95, 158, 0.07), transparent 45%),
         linear-gradient(180deg, #ebe6de 0%, var(--paper) 28%, #f3efe8 100%);
       line-height: 1.65;
+      text-align: start;
+    }
+
+    /* בידוד איים LTR בתוך עברית — מונע היפוך כיוון */
+    .ltr,
+    [dir="ltr"] {
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+
+    bdi {
+      unicode-bidi: isolate;
     }
 
     .wrap {
@@ -49,8 +65,7 @@
 
     .kicker {
       font-size: 0.85rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      letter-spacing: 0.02em;
       color: var(--accent);
       font-weight: 700;
       margin: 0 0 0.5rem;
@@ -154,6 +169,7 @@
       padding: 1.1rem 1.25rem;
       overflow-x: auto;
       direction: ltr;
+      unicode-bidi: isolate;
       text-align: left;
       line-height: 1.55;
       white-space: pre;
@@ -190,12 +206,20 @@
       font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
       font-size: 0.86em;
       direction: ltr;
-      unicode-bidi: embed;
+      unicode-bidi: isolate;
     }
 
     .hash {
       word-break: break-all;
       font-size: 0.82rem;
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+
+    .en {
+      direction: ltr;
+      unicode-bidi: isolate;
+      display: inline;
     }
 
     .badge {
@@ -306,17 +330,20 @@
 <body>
   <div class="wrap">
     <header class="hero">
-      <p class="kicker">חקירת מאגר · Inventory Report</p>
-      <h1>B.E.E Public Assets</h1>
+      <p class="kicker">חקירת מאגר · <span class="en" dir="ltr">Inventory Report</span></p>
+      <h1><span class="en" dir="ltr">B.E.E Public Assets</span></h1>
       <p class="lede">
-        דוח מפורט של כל תוכן התיקייה הנוכחית (<span class="mono">/workspace</span> · ענף
-        <span class="mono">main</span>), כולל מטא־דאטה של קבצים, מבנה Git, ותמונת מצב של ענפים מרוחקים במאגר.
+        דוח מפורט של כל תוכן התיקייה הנוכחית
+        (<span class="mono" dir="ltr">/workspace</span>
+        · ענף <span class="mono" dir="ltr">main</span>),
+        כולל מטא־דאטה של קבצים, מבנה <span class="en" dir="ltr">Git</span>,
+        ותמונת מצב של ענפים מרוחקים במאגר.
       </p>
       <div class="meta-bar">
-        <span><strong>תאריך סריקה:</strong> 2026-07-11 11:44 UTC</span>
-        <span><strong>מאגר:</strong> <span class="mono">Barak-B/bee-assets</span></span>
-        <span><strong>HEAD:</strong> <span class="mono">1cd12fb</span></span>
-        <span><strong>נפח כולל:</strong> ~11 MB</span>
+        <span><strong>תאריך סריקה:</strong> <span class="en" dir="ltr">2026-07-11 11:44 UTC</span></span>
+        <span><strong>מאגר:</strong> <span class="mono" dir="ltr">Barak-B/bee-assets</span></span>
+        <span><strong>HEAD:</strong> <span class="mono" dir="ltr">1cd12fb</span></span>
+        <span><strong>נפח כולל:</strong> <span class="en" dir="ltr">~11 MB</span></span>
       </div>
     </header>
 
@@ -325,10 +352,10 @@
       <ol>
         <li><a href="#summary">סיכום מנהלים</a></li>
         <li><a href="#tree">עץ קבצים</a></li>
-        <li><a href="#readme">README.md</a></li>
-        <li><a href="#assets">נכסי החתימה (GIF)</a></li>
+        <li><a href="#readme"><span class="mono" dir="ltr">README.md</span></a></li>
+        <li><a href="#assets">נכסי החתימה (<span class="en" dir="ltr">GIF</span>)</a></li>
         <li><a href="#preview">תצוגה מקדימה</a></li>
-        <li><a href="#git">מידע Git</a></li>
+        <li><a href="#git">מידע <span class="en" dir="ltr">Git</span></a></li>
         <li><a href="#branches">ענפים מרוחקים</a></li>
         <li><a href="#conclusion">מסקנות</a></li>
       </ol>
@@ -337,34 +364,37 @@
     <section id="summary">
       <h2>1. סיכום מנהלים</h2>
       <p>
-        המאגר <span class="mono">bee-assets</span> בענף <span class="mono">main</span> הוא
-        <strong>מאגר נכסים ציבוריים</strong> של מותג <strong>B.E.E.</strong> —
-        לוגו/כרטיס חתימה למייל ולשימוש חיצוני. התוכן על <span class="mono">main</span> מינימלי וממוקד:
+        המאגר <span class="mono" dir="ltr">bee-assets</span> בענף
+        <span class="mono" dir="ltr">main</span> הוא
+        <strong>מאגר נכסים ציבוריים</strong> של מותג
+        <strong class="en" dir="ltr">B.E.E.</strong> —
+        לוגו/כרטיס חתימה למייל ולשימוש חיצוני. התוכן על
+        <span class="mono" dir="ltr">main</span> מינימלי וממוקד:
       </p>
       <div class="stat-row">
-        <div class="stat"><div class="num">3</div><div class="lbl">קבצים בענף main</div></div>
-        <div class="stat"><div class="num">~4.8 MB</div><div class="lbl">גודל קבצי נכסים</div></div>
-        <div class="stat"><div class="num">1200×480</div><div class="lbl">רזולוציית הלוגואים</div></div>
-        <div class="stat"><div class="num">110</div><div class="lbl">פריימים בכל GIF</div></div>
-        <div class="stat"><div class="num">2</div><div class="lbl">ענפים מרוחקים נוספים</div></div>
-        <div class="stat"><div class="num">224</div><div class="lbl">קבצים בענף המחקר</div></div>
+        <div class="stat"><div class="num" dir="ltr">3</div><div class="lbl">קבצים בענף <span class="mono" dir="ltr">main</span></div></div>
+        <div class="stat"><div class="num" dir="ltr">~4.8 MB</div><div class="lbl">גודל קבצי נכסים</div></div>
+        <div class="stat"><div class="num" dir="ltr">1200×480</div><div class="lbl">רזולוציית הלוגואים</div></div>
+        <div class="stat"><div class="num" dir="ltr">110</div><div class="lbl">פריימים בכל <span class="en" dir="ltr">GIF</span></div></div>
+        <div class="stat"><div class="num" dir="ltr">2</div><div class="lbl">ענפים מרוחקים נוספים</div></div>
+        <div class="stat"><div class="num" dir="ltr">224</div><div class="lbl">קבצים בענף המחקר</div></div>
       </div>
       <p>
         <span class="badge ok">מטרה</span>
-        נכסים ציבוריים לחתימות אימייל ושימוש חיצוני — לפי README.
+        נכסים ציבוריים לחתימות אימייל ושימוש חיצוני — לפי <span class="en" dir="ltr">README</span>.
       </p>
       <p>
         <span class="badge info">הקשר עסקי</span>
-        B.E.E. הוא מותג/עסק של Barak Barzel בתחום אנרגיה סולארית וחשמל בישראל
+        <span class="en" dir="ltr">B.E.E.</span> הוא מותג/עסק של Barak Barzel בתחום אנרגיה סולארית וחשמל בישראל
         (מה שנלמד מענף המחקר במאגר). הסלוגן על הלוגו:
-        <em>Innovating matter · Generating power</em>.
+        <em class="en" dir="ltr">Innovating matter · Generating power</em>.
       </p>
     </section>
 
     <section id="tree">
-      <h2>2. עץ קבצים (ענף main — checkout נוכחי)</h2>
-      <p>מבנה התיקייה לאחר סריקה מלאה (ללא <span class="mono">.git</span>):</p>
-      <div class="tree" role="img" aria-label="עץ קבצים"><span class="dir">/workspace/</span>
+      <h2>2. עץ קבצים (ענף <span class="mono" dir="ltr">main</span> — checkout נוכחי)</h2>
+      <p>מבנה התיקייה לאחר סריקה מלאה (ללא <span class="mono" dir="ltr">.git</span>):</p>
+      <div class="tree" dir="ltr" role="img" aria-label="עץ קבצים"><span class="dir">/workspace/</span>
 ├── <span class="file">README.md</span>                          <span class="size">75 B</span>
 ├── <span class="bin">bee-signature-card-dark.gif</span>   <span class="size">2.66 MB</span>
 └── <span class="bin">bee-signature-card-light.gif</span>  <span class="size">2.15 MB</span></div>
@@ -380,46 +410,48 @@
         </thead>
         <tbody>
           <tr>
-            <td><span class="mono">README.md</span></td>
-            <td>Markdown / טקסט</td>
+            <td><span class="mono" dir="ltr">README.md</span></td>
+            <td><span class="en" dir="ltr">Markdown</span> / טקסט</td>
             <td>75 בתים</td>
             <td>תיאור קצר של המאגר</td>
           </tr>
           <tr>
-            <td><span class="mono">bee-signature-card-dark.gif</span></td>
-            <td>GIF89a מונפש</td>
-            <td>2,786,724 בתים (2.66 MB)</td>
+            <td><span class="mono" dir="ltr">bee-signature-card-dark.gif</span></td>
+            <td><span class="en" dir="ltr">GIF89a</span> מונפש</td>
+            <td dir="ltr">2,786,724 בתים (2.66 MB)</td>
             <td>כרטיס חתימה — גרסת רקע כהה</td>
           </tr>
           <tr>
-            <td><span class="mono">bee-signature-card-light.gif</span></td>
-            <td>GIF89a מונפש</td>
-            <td>2,256,998 בתים (2.15 MB)</td>
+            <td><span class="mono" dir="ltr">bee-signature-card-light.gif</span></td>
+            <td><span class="en" dir="ltr">GIF89a</span> מונפש</td>
+            <td dir="ltr">2,256,998 בתים (2.15 MB)</td>
             <td>כרטיס חתימה — גרסת רקע בהיר</td>
           </tr>
         </tbody>
       </table>
       <p style="margin-top:1rem">
         <span class="badge warn">הערה</span>
-        אין תיקיות משנה, אין קוד מקור, אין package.json / CI / תלויות בענף הנוכחי.
+        אין תיקיות משנה, אין קוד מקור, אין
+        <span class="mono" dir="ltr">package.json</span> /
+        <span class="en" dir="ltr">CI</span> / תלויות בענף הנוכחי.
       </p>
     </section>
 
     <section id="readme">
-      <h2>3. תוכן README.md</h2>
+      <h2>3. תוכן <span class="mono" dir="ltr">README.md</span></h2>
       <p>תוכן מלא (2 שורות):</p>
-      <div class="tree"># B.E.E Public Assets
+      <div class="tree" dir="ltr"># B.E.E Public Assets
 Public assets for email signatures and external use.</div>
       <table>
         <thead>
           <tr><th>שדה</th><th>ערך</th></tr>
         </thead>
         <tbody>
-          <tr><td>כותרת</td><td>B.E.E Public Assets</td></tr>
-          <tr><td>תיאור</td><td>Public assets for email signatures and external use.</td></tr>
-          <tr><td>קידוד</td><td>ASCII text</td></tr>
-          <tr><td>MD5</td><td><span class="mono hash">9ba3f10bd09a3fd4261f756cc5320dcd</span></td></tr>
-          <tr><td>SHA-256</td><td><span class="mono hash">78d833a5938e0c970b756c0d284dafae1d383731fd6546f707b16ee83a598bf4</span></td></tr>
+          <tr><td>כותרת</td><td><span class="en" dir="ltr">B.E.E Public Assets</span></td></tr>
+          <tr><td>תיאור</td><td><span class="en" dir="ltr">Public assets for email signatures and external use.</span></td></tr>
+          <tr><td>קידוד</td><td><span class="en" dir="ltr">ASCII text</span></td></tr>
+          <tr><td><span class="en" dir="ltr">MD5</span></td><td><span class="mono hash" dir="ltr">9ba3f10bd09a3fd4261f756cc5320dcd</span></td></tr>
+          <tr><td><span class="en" dir="ltr">SHA-256</span></td><td><span class="mono hash" dir="ltr">78d833a5938e0c970b756c0d284dafae1d383731fd6546f707b16ee83a598bf4</span></td></tr>
         </tbody>
       </table>
     </section>
@@ -427,7 +459,8 @@ Public assets for email signatures and external use.</div>
     <section id="assets">
       <h2>4. נכסי החתימה — ניתוח מפורט</h2>
       <p>
-        שני הקבצים הם לוגואים מונפשים בפורמט GIF לשימוש ככרטיס חתימה (signature card).
+        שני הקבצים הם לוגואים מונפשים בפורמט <span class="en" dir="ltr">GIF</span> לשימוש ככרטיס חתימה
+        (<span class="en" dir="ltr">signature card</span>).
         העיצוב זהה בתוכן הגרפי והטקסט; ההבדל הוא רקע כהה מול רקע בהיר.
       </p>
 
@@ -437,19 +470,19 @@ Public assets for email signatures and external use.</div>
           <tr><th>מאפיין</th><th>ערך</th></tr>
         </thead>
         <tbody>
-          <tr><td>פורמט</td><td>GIF89a</td></tr>
-          <tr><td>מימדים</td><td>1200 × 480 פיקסלים (יחס ~2.5:1, באנר אופקי)</td></tr>
+          <tr><td>פורמט</td><td><span class="en" dir="ltr">GIF89a</span></td></tr>
+          <tr><td>מימדים</td><td dir="ltr">1200 × 480 פיקסלים (יחס ~2.5:1, באנר אופקי)</td></tr>
           <tr><td>טבלת צבעים גלובלית</td><td>כן · 256 צבעים · עומק צבע 8 ביט</td></tr>
           <tr><td>מספר פריימים</td><td>110 בכל קובץ</td></tr>
-          <tr><td>משך פריים</td><td>5 centiseconds (≈ 50ms) לפריים</td></tr>
-          <tr><td>משך לולאה משוער</td><td>≈ 5.5 שניות (110 × 50ms)</td></tr>
-          <tr><td>טקסט על הלוגו</td><td><strong>B.E.E.</strong> · Innovating matter · Generating power</td></tr>
+          <tr><td>משך פריים</td><td dir="ltr">5 centiseconds (≈ 50ms) לפריים</td></tr>
+          <tr><td>משך לולאה משוער</td><td dir="ltr">≈ 5.5 שניות (110 × 50ms)</td></tr>
+          <tr><td>טקסט על הלוגו</td><td><strong class="en" dir="ltr">B.E.E.</strong> · <span class="en" dir="ltr">Innovating matter · Generating power</span></td></tr>
           <tr><td>אייקון</td><td>מצפן/כוכב 8 קודקודים + גרעין אטומי + מסלולי אלקטרונים</td></tr>
           <tr><td>צבעי קודקודי המצפן</td><td>צפון אדום · מזרח כתום · דרום כחול · מערב ירוק</td></tr>
         </tbody>
       </table>
 
-      <h3>4.2 bee-signature-card-dark.gif</h3>
+      <h3>4.2 <span class="mono" dir="ltr">bee-signature-card-dark.gif</span></h3>
       <table>
         <thead>
           <tr><th>שדה</th><th>ערך</th></tr>
@@ -457,14 +490,14 @@ Public assets for email signatures and external use.</div>
         <tbody>
           <tr><td>רקע</td><td>כחול-נייבי כהה</td></tr>
           <tr><td>טקסט</td><td>לבן</td></tr>
-          <tr><td>גודל</td><td>2,786,724 בתים (2.66 MB)</td></tr>
-          <tr><td>MD5</td><td><span class="mono hash">358e303160fdf5355b4d7bf01e0caabd</span></td></tr>
-          <tr><td>SHA-256</td><td><span class="mono hash">186d4a7c6a425360d8aa2b1bf96fecfbb75c608a45e84645773b6cfba242c89c</span></td></tr>
+          <tr><td>גודל</td><td dir="ltr">2,786,724 בתים (2.66 MB)</td></tr>
+          <tr><td><span class="en" dir="ltr">MD5</span></td><td><span class="mono hash" dir="ltr">358e303160fdf5355b4d7bf01e0caabd</span></td></tr>
+          <tr><td><span class="en" dir="ltr">SHA-256</span></td><td><span class="mono hash" dir="ltr">186d4a7c6a425360d8aa2b1bf96fecfbb75c608a45e84645773b6cfba242c89c</span></td></tr>
           <tr><td>שימוש מומלץ</td><td>חתימות / רקעים כהים, תבניות מייל כהות</td></tr>
         </tbody>
       </table>
 
-      <h3>4.3 bee-signature-card-light.gif</h3>
+      <h3>4.3 <span class="mono" dir="ltr">bee-signature-card-light.gif</span></h3>
       <table>
         <thead>
           <tr><th>שדה</th><th>ערך</th></tr>
@@ -472,17 +505,19 @@ Public assets for email signatures and external use.</div>
         <tbody>
           <tr><td>רקע</td><td>לבן</td></tr>
           <tr><td>טקסט</td><td>שחור</td></tr>
-          <tr><td>גודל</td><td>2,256,998 בתים (2.15 MB)</td></tr>
-          <tr><td>MD5</td><td><span class="mono hash">666c539b69ac407c3927aa8e03ebaffb</span></td></tr>
-          <tr><td>SHA-256</td><td><span class="mono hash">6591be82c6977f3b648a64bd58504ec6d135416de174f5b5f569792b4c9bae05</span></td></tr>
+          <tr><td>גודל</td><td dir="ltr">2,256,998 בתים (2.15 MB)</td></tr>
+          <tr><td><span class="en" dir="ltr">MD5</span></td><td><span class="mono hash" dir="ltr">666c539b69ac407c3927aa8e03ebaffb</span></td></tr>
+          <tr><td><span class="en" dir="ltr">SHA-256</span></td><td><span class="mono hash" dir="ltr">6591be82c6977f3b648a64bd58504ec6d135416de174f5b5f569792b4c9bae05</span></td></tr>
           <tr><td>שימוש מומלץ</td><td>חתימות / רקעים בהירים, מסמכים לבנים</td></tr>
         </tbody>
       </table>
 
       <p style="margin-top:1rem">
         <span class="badge warn">הערה טכנית</span>
-        גודל הקבצים (~2–2.7 MB) גבוה יחסית לחתימת מייל טיפוסית. חלק מלקוחות מייל חוסמים או מדחסים GIF כבדים —
-        כדאי לשקול גרסת PNG סטטית או GIF דחוס יותר לשימוש יומיומי.
+        גודל הקבצים (<span class="en" dir="ltr">~2–2.7 MB</span>) גבוה יחסית לחתימת מייל טיפוסית.
+        חלק מלקוחות מייל חוסמים או מדחסים <span class="en" dir="ltr">GIF</span> כבדים —
+        כדאי לשקול גרסת <span class="en" dir="ltr">PNG</span> סטטית או
+        <span class="en" dir="ltr">GIF</span> דחוס יותר לשימוש יומיומי.
       </p>
     </section>
 
@@ -491,61 +526,63 @@ Public assets for email signatures and external use.</div>
       <div class="preview-grid">
         <figure class="preview">
           <img src="../bee-signature-card-dark.gif" alt="B.E.E. signature card — dark version" width="1200" height="480" />
-          <figcaption><span class="mono">bee-signature-card-dark.gif</span> — גרסה כהה · 1200×480 · 110 פריימים</figcaption>
+          <figcaption><span class="mono" dir="ltr">bee-signature-card-dark.gif</span> — גרסה כהה · <span class="en" dir="ltr">1200×480</span> · 110 פריימים</figcaption>
         </figure>
         <figure class="preview light">
           <img src="../bee-signature-card-light.gif" alt="B.E.E. signature card — light version" width="1200" height="480" />
-          <figcaption><span class="mono">bee-signature-card-light.gif</span> — גרסה בהירה · 1200×480 · 110 פריימים</figcaption>
+          <figcaption><span class="mono" dir="ltr">bee-signature-card-light.gif</span> — גרסה בהירה · <span class="en" dir="ltr">1200×480</span> · 110 פריימים</figcaption>
         </figure>
       </div>
     </section>
 
     <section id="git">
-      <h2>6. מידע Git</h2>
+      <h2>6. מידע <span class="en" dir="ltr">Git</span></h2>
       <table>
         <thead>
           <tr><th>שדה</th><th>ערך</th></tr>
         </thead>
         <tbody>
-          <tr><td>Remote</td><td><span class="mono">github.com/Barak-B/bee-assets</span></td></tr>
-          <tr><td>ענף נוכחי (בסריקה)</td><td><span class="mono">main</span> (מסונכרן עם <span class="mono">origin/main</span>)</td></tr>
-          <tr><td>קומיטים בענף main</td><td>1</td></tr>
-          <tr><td>קומיט HEAD</td><td><span class="mono">1cd12fb490f80d11955515ff07577cf9d33f3c40</span> — <em>Add B.E.E signature logos</em></td></tr>
-          <tr><td>מחבר</td><td>Barak Barzel &lt;barak-barzel@barak-e.com&gt;</td></tr>
-          <tr><td>תאריך קומיט</td><td>Thu May 7 02:56:21 2026 +0300</td></tr>
-          <tr><td>קבצים בקומיט</td><td>README.md + שני קבצי GIF</td></tr>
-          <tr><td>מצב working tree</td><td>נקי בעת תחילת הסריקה</td></tr>
+          <tr><td><span class="en" dir="ltr">Remote</span></td><td><span class="mono" dir="ltr">github.com/Barak-B/bee-assets</span></td></tr>
+          <tr><td>ענף נוכחי (בסריקה)</td><td><span class="mono" dir="ltr">main</span> (מסונכרן עם <span class="mono" dir="ltr">origin/main</span>)</td></tr>
+          <tr><td>קומיטים בענף <span class="mono" dir="ltr">main</span></td><td>1</td></tr>
+          <tr><td>קומיט <span class="en" dir="ltr">HEAD</span></td><td><span class="mono" dir="ltr">1cd12fb490f80d11955515ff07577cf9d33f3c40</span> — <em class="en" dir="ltr">Add B.E.E signature logos</em></td></tr>
+          <tr><td>מחבר</td><td dir="ltr">Barak Barzel &lt;barak-barzel@barak-e.com&gt;</td></tr>
+          <tr><td>תאריך קומיט</td><td dir="ltr">Thu May 7 02:56:21 2026 +0300</td></tr>
+          <tr><td>קבצים בקומיט</td><td><span class="mono" dir="ltr">README.md</span> + שני קבצי <span class="en" dir="ltr">GIF</span></td></tr>
+          <tr><td>מצב <span class="en" dir="ltr">working tree</span></td><td>נקי בעת תחילת הסריקה</td></tr>
         </tbody>
       </table>
       <p>
-        הערה: ה-hash המלא של HEAD הוא
-        <span class="mono hash">1cd12fb490f80d11955515ff07577cf9d33f3c40</span>.
+        הערה: ה־hash המלא של <span class="en" dir="ltr">HEAD</span> הוא
+        <span class="mono hash" dir="ltr">1cd12fb490f80d11955515ff07577cf9d33f3c40</span>.
       </p>
     </section>
 
     <section id="branches">
-      <h2>7. ענפים מרוחקים (לא ב-checkout הנוכחי)</h2>
+      <h2>7. ענפים מרוחקים (לא ב־checkout הנוכחי)</h2>
       <p>
-        בנוסף ל-<span class="mono">main</span>, במאגר קיימים שני ענפי עבודה מרוחקים עם תוכן משמעותי.
+        בנוסף ל־<span class="mono" dir="ltr">main</span>, במאגר קיימים שני ענפי עבודה מרוחקים עם תוכן משמעותי.
         הם <strong>אינם</strong> חלק מעץ הקבצים של הענף הנוכחי, אך הם חלק מהמאגר כולו.
       </p>
 
-      <h3>7.1 <span class="mono">claude/capability-extensions-collection-JjV2s</span></h3>
+      <h3>7.1 <span class="mono" dir="ltr">claude/capability-extensions-collection-JjV2s</span></h3>
       <p>
         <span class="badge info">~224 קבצים</span>
         <span class="badge info">~86 קומיטים</span>
-        ענף מחקר/תפעול עשיר של פרויקט BEE — תיעוד, LLD, reference code, knowledge base,
-        ומפות HTML אינטראקטיביות.
+        ענף מחקר/תפעול עשיר של פרויקט <span class="en" dir="ltr">BEE</span> — תיעוד,
+        <span class="en" dir="ltr">LLD</span>, <span class="en" dir="ltr">reference code</span>,
+        <span class="en" dir="ltr">knowledge base</span>,
+        ומפות <span class="en" dir="ltr">HTML</span> אינטראקטיביות.
       </p>
       <ul class="clean">
-        <li><strong>research/BRAIN.md</strong> — נקודת כניסה קנונית לפרויקט (עודכן ~2026-06-26)</li>
-        <li><strong>research/protocol_hive.md</strong> — "חוקת" הארכיטקטורה (Tiers, LLD shape)</li>
-        <li><strong>research/phase-1 / phase-2 / phase-3</strong> — גלי פיתוח (בנק, רכש, הצעות, ledger, engineering, CS)</li>
-        <li><strong>research/knowledge-base/</strong> — רגולציה ישראלית (סולאר, חיבור רשת, חשבוניות)</li>
-        <li><strong>research/local-state/</strong> — snapshots של OpenClaw (Alfred) ו-Hermes</li>
-        <li><strong>research/graphify-*</strong> + <strong>gitnexus-*</strong> — ערכות פריסה וגרפי ידע</li>
-        <li><strong>research/hive-*.html</strong> — מפות ארכיטקטורה ואינוונטר בעברית</li>
-        <li><strong>demos/</strong> — למשל parse-bank-csv, price-anomaly</li>
+        <li><strong class="mono" dir="ltr">research/BRAIN.md</strong> — נקודת כניסה קנונית לפרויקט (עודכן ~2026-06-26)</li>
+        <li><strong class="mono" dir="ltr">research/protocol_hive.md</strong> — "חוקת" הארכיטקטורה (<span class="en" dir="ltr">Tiers</span>, <span class="en" dir="ltr">LLD shape</span>)</li>
+        <li><strong class="mono" dir="ltr">research/phase-1 / phase-2 / phase-3</strong> — גלי פיתוח (בנק, רכש, הצעות, <span class="en" dir="ltr">ledger</span>, <span class="en" dir="ltr">engineering</span>, <span class="en" dir="ltr">CS</span>)</li>
+        <li><strong class="mono" dir="ltr">research/knowledge-base/</strong> — רגולציה ישראלית (סולאר, חיבור רשת, חשבוניות)</li>
+        <li><strong class="mono" dir="ltr">research/local-state/</strong> — snapshots של <span class="en" dir="ltr">OpenClaw (Alfred)</span> ו־<span class="en" dir="ltr">Hermes</span></li>
+        <li><strong class="mono" dir="ltr">research/graphify-*</strong> + <strong class="mono" dir="ltr">gitnexus-*</strong> — ערכות פריסה וגרפי ידע</li>
+        <li><strong class="mono" dir="ltr">research/hive-*.html</strong> — מפות ארכיטקטורה ואינוונטר בעברית</li>
+        <li><strong class="mono" dir="ltr">demos/</strong> — למשל <span class="en" dir="ltr">parse-bank-csv</span>, <span class="en" dir="ltr">price-anomaly</span></li>
       </ul>
       <p>התפלגות סוגי קבצים (משוערת לפי סיומות):</p>
       <table>
@@ -553,25 +590,25 @@ Public assets for email signatures and external use.</div>
           <tr><th>סיומת</th><th>כמות</th><th>הערות</th></tr>
         </thead>
         <tbody>
-          <tr><td><span class="mono">.md</span></td><td>88</td><td>תיעוד, LLD, תוכניות</td></tr>
-          <tr><td><span class="mono">.js</span></td><td>29</td><td>סקריפטים / reference</td></tr>
-          <tr><td><span class="mono">.ts</span></td><td>22</td><td>TypeScript (phase-a)</td></tr>
-          <tr><td><span class="mono">.txt</span></td><td>19</td><td>snapshots של local-state</td></tr>
-          <tr><td><span class="mono">.json</span></td><td>17</td><td>קונפיגים / גרפים</td></tr>
-          <tr><td><span class="mono">.sh</span></td><td>10</td><td>סקריפטי פריסה</td></tr>
-          <tr><td><span class="mono">.html</span></td><td>9</td><td>מפות ויזואליות</td></tr>
-          <tr><td><span class="mono">.ps1</span></td><td>4</td><td>התקנה ל-Windows</td></tr>
-          <tr><td>אחר</td><td>~26</td><td>yaml, sql, prisma, gif, mjs…</td></tr>
+          <tr><td><span class="mono" dir="ltr">.md</span></td><td>88</td><td>תיעוד, <span class="en" dir="ltr">LLD</span>, תוכניות</td></tr>
+          <tr><td><span class="mono" dir="ltr">.js</span></td><td>29</td><td>סקריפטים / <span class="en" dir="ltr">reference</span></td></tr>
+          <tr><td><span class="mono" dir="ltr">.ts</span></td><td>22</td><td><span class="en" dir="ltr">TypeScript (phase-a)</span></td></tr>
+          <tr><td><span class="mono" dir="ltr">.txt</span></td><td>19</td><td>snapshots של <span class="en" dir="ltr">local-state</span></td></tr>
+          <tr><td><span class="mono" dir="ltr">.json</span></td><td>17</td><td>קונפיגים / גרפים</td></tr>
+          <tr><td><span class="mono" dir="ltr">.sh</span></td><td>10</td><td>סקריפטי פריסה</td></tr>
+          <tr><td><span class="mono" dir="ltr">.html</span></td><td>9</td><td>מפות ויזואליות</td></tr>
+          <tr><td><span class="mono" dir="ltr">.ps1</span></td><td>4</td><td>התקנה ל־<span class="en" dir="ltr">Windows</span></td></tr>
+          <tr><td>אחר</td><td>~26</td><td><span class="en" dir="ltr">yaml, sql, prisma, gif, mjs…</span></td></tr>
         </tbody>
       </table>
 
-      <h3>7.2 <span class="mono">claude/electron-chat-integration-5VtHN</span></h3>
+      <h3>7.2 <span class="mono" dir="ltr">claude/electron-chat-integration-5VtHN</span></h3>
       <p>
         <span class="badge info">4 קבצים</span>
-        כולל את נכסי main + קובץ אחד נוסף:
+        כולל את נכסי <span class="mono" dir="ltr">main</span> + קובץ אחד נוסף:
       </p>
       <ul class="clean">
-        <li><span class="mono">web/public/master-plan.html</span> — scaffold למפת צי (fleet atlas) של bee-build</li>
+        <li><span class="mono" dir="ltr">web/public/master-plan.html</span> — scaffold למפת צי (<span class="en" dir="ltr">fleet atlas</span>) של <span class="en" dir="ltr">bee-build</span></li>
       </ul>
     </section>
 
@@ -579,17 +616,19 @@ Public assets for email signatures and external use.</div>
       <h2>8. מסקנות</h2>
       <ol>
         <li>
-          <strong>ענף main הוא מאגר נכסים ציבוריים בלבד</strong> —
-          README קצר + שני כרטיסי חתימה מונפשים (כהה/בהיר) למותג B.E.E.
+          <strong>ענף <span class="mono" dir="ltr">main</span> הוא מאגר נכסים ציבוריים בלבד</strong> —
+          <span class="en" dir="ltr">README</span> קצר + שני כרטיסי חתימה מונפשים (כהה/בהיר) למותג
+          <span class="en" dir="ltr">B.E.E.</span>
         </li>
         <li>
           <strong>אין אפליקציה או קוד בענף הנוכחי</strong> —
-          אין תלויות, אין בנייה, אין בדיקות על main.
+          אין תלויות, אין בנייה, אין בדיקות על <span class="mono" dir="ltr">main</span>.
         </li>
         <li>
           <strong>המאגר כולו רחב יותר</strong> —
-          ענף <span class="mono">capability-extensions-collection</span> מכיל תיעוד ותשתית מחקרית/תפעולית
-          של מערכת הסוכנים של BEE (Hive / Alfred / Hermes / waves 53–55).
+          ענף <span class="mono" dir="ltr">capability-extensions-collection</span> מכיל תיעוד ותשתית מחקרית/תפעולית
+          של מערכת הסוכנים של <span class="en" dir="ltr">BEE</span>
+          (<span class="en" dir="ltr">(Hive / Alfred / Hermes / waves 53–55)</span>.
         </li>
         <li>
           <strong>הלוגואים מוכנים לשימוש חיצוני</strong>, אך כבדים יחסית לחתימת מייל;
@@ -598,15 +637,18 @@ Public assets for email signatures and external use.</div>
       </ol>
       <h3>קבצים שנוצרו בדוח זה</h3>
       <p>
-        קובץ HTML זה נשמר ב־
-        <span class="mono">reports/folder-inventory.html</span>
+        קובץ <span class="en" dir="ltr">HTML</span> זה נשמר ב־
+        <span class="mono" dir="ltr">reports/folder-inventory.html</span>
         ומציג את כל המידע שנאסף בסריקה.
       </p>
     </section>
 
     <footer>
-      נוצר אוטומטית מסריקת תיקיית המאגר · Barak-B/bee-assets · 2026-07-11 ·
-      נתיבים יחסיים לתמונות: <span class="mono">../bee-signature-card-*.gif</span>
+      נוצר אוטומטית מסריקת תיקיית המאגר ·
+      <span class="mono" dir="ltr">Barak-B/bee-assets</span> ·
+      <span class="en" dir="ltr">2026-07-11</span> ·
+      נתיבים יחסיים לתמונות:
+      <span class="mono" dir="ltr">../bee-signature-card-*.gif</span>
     </footer>
   </div>
 </body>
