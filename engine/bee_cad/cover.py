@@ -132,49 +132,53 @@ def draw_cover(ctx: SheetContext, design: Design, entries: list[SheetEntry]) -> 
         src = design.sources[:8]
         ctx.mtext([f"{i + 1}. {s}" for i, s in enumerate(src)], (lx + lw, oy - 1.0), 1.7, "notes", width=lw)
         oy -= 3.0 + 2.6 * sum(1 + len(s) // 80 for s in src) + 8.0
-    items = open_items(design) + [f"(!{i + 1}) {m}" for i, m in enumerate(design.check_marks)]
-    if items:
-        ctx.text("נושאים לאימות", (lx + lw, oy + 1.5), 3.2, "legend", TA.BOTTOM_RIGHT, bold=True)
-        # keep the list above the title-block band (and the system-data strip) — the rest goes to E-01
-        floor = y0 + TB_H + 6.0
-        shown, yy_est = [], oy - 1.0
-        for it in items:
-            need = 2.3 * (1 + len(it) // 78)
-            if yy_est - need < floor:
-                break
-            shown.append(it)
-            yy_est -= need
-        ctx.mtext([f"{i + 1}. {it}" for i, it in enumerate(shown)], (lx + lw, oy - 1.0), 1.7, "notes", width=lw)
-        if len(items) > len(shown):
-            ctx.text(f"+ {len(items) - len(shown)} נושאים נוספים — ראו גיליון E-01", (lx + lw, floor - 1.0), 1.6, "notes", TA.TOP_RIGHT)
-
     # ---- right column: sheet index ----------------------------------------------------------------
     sx1, sy = x1 - 6.0, y1 - 60.0
+    srh = 5.2 if len(entries) <= 12 else 4.0          # compact rows for long sets: room for the open items
     scols = [("גיליון", 18.0), ("שם הגיליון", 140.0), ("קנ\"מ", 22.0), ("מהד'", 12.0)]
     sw = sum(c[1] for c in scols)
     sx0 = sx1 - sw
     ctx.text("רשימת גיליונות", (sx1, sy + 1.5), 3.2, "legend", TA.BOTTOM_RIGHT, bold=True)
-    max_rows = int((sy - (y0 + TB_H + 24.0)) / rh) - 1
+    max_rows = int((sy - (y0 + TB_H + 24.0)) / srh) - 1
     shown = entries[:max_rows]
     if len(entries) > max_rows:
         warnings.append(f"דף שער: {len(entries) - max_rows} גיליונות לא נכנסו לרשימה")
-    sh = rh * (len(shown) + 1)
+    sh = srh * (len(shown) + 1)
     ctx.rect(sx0, sy - sh, sw, sh, "legend")
     xx = sx1
     for name, cw in scols:
-        ctx.text(name, (xx - cw / 2, sy - rh / 2), 2.0, "legend", TA.MIDDLE_CENTER, bold=True)
+        ctx.text(name, (xx - cw / 2, sy - srh / 2), 2.0, "legend", TA.MIDDLE_CENTER, bold=True)
         xx -= cw
         if xx > sx0 + 0.5:
             ctx.line((xx, sy - sh), (xx, sy), "legend")
     for i, e in enumerate(shown):
-        yy = sy - rh * (i + 1.5)
-        ctx.line((sx0, yy + rh / 2), (sx1, yy + rh / 2), "legend")
-        ctx.text(e.no, (sx1 - scols[0][1] / 2, yy), 2.0, "legend", TA.MIDDLE_CENTER, bold=(e.kind == "cover"))
-        ctx.text(e.title[:70], (sx1 - scols[0][1] - 1.5, yy), 2.0, "legend", TA.MIDDLE_RIGHT)
-        ctx.text(e.scale, (sx1 - scols[0][1] - scols[1][1] - scols[2][1] / 2, yy), 1.8, "legend", TA.MIDDLE_CENTER)
+        yy = sy - srh * (i + 1.5)
+        ctx.line((sx0, yy + srh / 2), (sx1, yy + srh / 2), "legend")
+        ctx.text(e.no, (sx1 - scols[0][1] / 2, yy), 1.9, "legend", TA.MIDDLE_CENTER, bold=(e.kind == "cover"))
+        ctx.text(e.title[:70], (sx1 - scols[0][1] - 1.5, yy), 1.8 if srh < 5 else 2.0, "legend", TA.MIDDLE_RIGHT)
+        ctx.text(e.scale if e.scale not in ("-", "", "לפי ציון") else ("NTS" if e.scale != "לפי ציון" else "לפי ציון"),
+                 (sx1 - scols[0][1] - scols[1][1] - scols[2][1] / 2, yy), 1.8, "legend", TA.MIDDLE_CENTER)
         ctx.text(tb.revision, (sx0 + scols[3][1] / 2, yy), 1.8, "legend", TA.MIDDLE_CENTER)
-    # footer under the sheet list (right column), well above the title block
-    fy = max(sy - sh - 10.0, y0 + TB_H + 5.0 * 3 + 20.0)
+    # footer under the sheet list (right column), then the open items in the same column, down to the
+    # revisions table above the title block
+    fy = sy - sh - 6.0
     ctx.mtext(["סט זה הופק אוטומטית ממודל התכנון (bee-cad). כל ערך בגיליונות מקורו במודל או במקור המצוין בהערות; "
                "פריטים המסומנים \"לאימות\" אינם מאושרים לביצוע."], (sx1, fy), 1.8, "notes", width=sw)
+    items = open_items(design) + [f"(!{i + 1}) {m}" for i, m in enumerate(design.check_marks)]
+    if items:
+        oy2 = fy - 10.0
+        ctx.text("נושאים לאימות", (sx1, oy2 + 1.5), 3.2, "legend", TA.BOTTOM_RIGHT, bold=True)
+        floor = y0 + TB_H + 5.0 * (len(tb.revisions or [1]) + 1) + 4.0
+        chars = int(sw / (1.7 * 0.62))
+        shown, yy = [], oy2 - 1.0
+        for it in items:
+            need = 2.75 * (1 + (len(it) + 5) // chars)
+            if yy - need < floor:
+                break
+            shown.append(it)
+            yy -= need
+        ctx.mtext([f"{i + 1}. {it}" for i, it in enumerate(shown)], (sx1, oy2 - 1.0), 1.7, "notes", width=sw)
+        if len(items) > len(shown):
+            ctx.text(f"+ {len(items) - len(shown)} נושאים נוספים — ראו דוח הבדיקה העצמית (QA) ואת הערות הגיליונות",
+                     (sx1, floor - 0.5), 1.6, "notes", TA.TOP_RIGHT)
     return warnings

@@ -111,7 +111,7 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
         d = doc or new_document(mode)
         ctx = SheetContext(d, d.modelspace(), mode, offset=((A3_W + 30.0) * idx if one_file else 0.0, 0.0))
         tb = design.title.model_copy(update={"sheet_index": idx + 1, "sheet_count": len(plan), "sheet_no": e.no,
-                                             "sheet_title": e.title, "scale": e.scale if e.scale != "-" else design.title.scale})
+                                             "sheet_title": e.title, "scale": e.scale if e.scale not in ("-", "") else "NTS"})
         if e.kind == "cover":
             tb.scale = "-"
         if e.kind in NO_SYSTEM_STRIP:      # plans/details use the bottom band for notes and views
