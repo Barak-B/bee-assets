@@ -45,6 +45,7 @@ class Device(BaseModel):
     manufacturer: Optional[str] = None
     catno: Optional[str] = None          # catalogue number (BOM)
     width_mm: Optional[float] = None     # override of the modular width on the panel view
+    check: Optional[int] = None          # (!n) red check marker — see Design.check_marks
 
     def label_lines(self) -> list[str]:
         """Rating text shown beside the symbol on the single-line."""
@@ -130,6 +131,7 @@ class Board(BaseModel):
     ct: Optional[str] = None              # "3×CT" note on the incomer
     meter: Optional[str] = None           # power meter on the incomer CTs, e.g. "SATEC PM135 → EMS (Cat7)"
     existing: bool = False                # drawn dashed / marked "קיים"
+    emergency_stop: bool = False          # E-stop that trips the storage system (drawn + signage rule)
     enclosure: Optional["Enclosure"] = None
     notes: list[str] = Field(default_factory=list)
 
@@ -215,6 +217,7 @@ class TitleBlock(BaseModel):
     sheet_count: int = 1
     status: Literal["לעיון", "לאישור", "למכרז", "לביצוע", "AS-MADE"] = "לאישור"
     revisions: list[tuple[str, str, str]] = Field(default_factory=list)  # (rev, date, text)
+    system_data: list[tuple[str, str]] = Field(default_factory=list)      # "נתוני מערכת" strip on every sheet
 
 
 class SldGroup(BaseModel):
@@ -245,6 +248,8 @@ class Design(BaseModel):
     sources: list[str] = Field(default_factory=list)         # מסמכי מקור (cover + E-01)
     project_data: list[tuple[str, str]] = Field(default_factory=list)   # extra rows on the cover's data table
     schedules: bool = True                                   # draw cable / load schedule sheets
+    signage: list[dict] = Field(default_factory=list)        # manual bee_cad.signage.Sign rows (added to the auto rules)
+    check_marks: list[str] = Field(default_factory=list)     # "(!1) …" items the reviewer must check (red markers)
 
     def board(self, board_id: str) -> Board:
         for b in self.boards:

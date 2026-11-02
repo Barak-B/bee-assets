@@ -402,3 +402,25 @@ def test_cabinet_base_holes_and_clearances():
     assert site_checks(t, lay) == []
     tight = t.model_copy(update={"units": [u, u.model_copy(update={"tag": "X", "x_mm": u.x_mm + u.width_mm + 50})]})
     assert any("50" in w for w in site_checks(tight, lay))
+
+
+def test_signage_and_markers():
+    from bee_cad.signage import all_signage, auto_signage
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "kal_gader_bess.json"
+    des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
+    auto = auto_signage(des)
+    rules = {s.rule for s in auto}
+    assert {"label_panel_fed_by_storage", "storage_main_switch", "storage_emergency_switch", "storage_module_switch", "multi_source_note"} <= rules
+    assert sum(1 for s in auto if s.rule == "storage_module_switch") == 4
+    assert any(s.board == "BESSP" and s.kind == "emergency" for s in auto)
+    allrows = all_signage(des)
+    assert allrows[-1].rule == "manufacturer_warning" and allrows[-1].no == len(allrows)
+    result = build(des, ("sld",))
+    doc = next(iter(result.values()))[0]
+    msp = doc.modelspace()
+    assert len([h for h in msp.query("HATCH") if h.dxf.layer == "BEE-LABEL"]) >= 4      # red boxes on the single-lines
+    texts = [t.dxf.text for t in msp.query("TEXT")]
+    assert texts.count("(!2)") == 4 and "(!1)" in texts
+    assert any(t.startswith("טיוטה") for t in texts)                                     # draft banner
+    assert "נתוני מערכת" in texts

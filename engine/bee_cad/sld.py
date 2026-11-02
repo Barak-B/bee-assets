@@ -55,6 +55,8 @@ class SldRenderer:
         for line in d.label_lines():
             ctx.text(line, (sx, yy), h, "sld_text", align)
             yy -= h + 0.7
+        if d.check:
+            ctx.text(f"(!{d.check})", (sx, yy), h, "check", align, bold=True)
         if d.lock:
             ctx.insert("BEE_LOCK", (x - 5.5, y_top - SYM_H + 2.0))
 
@@ -229,6 +231,15 @@ class SldRenderer:
         ctx.msp.add_lwpolyline([(x_left, fy0), (x_in + width - 6.0, fy0), (x_in + width - 6.0, y_board_top + 4.0), (x_left, y_board_top + 4.0)],
                                close=True, dxfattribs={"layer": LAYERS["sld_board"].name})
         ctx.text(b.title, (x_in + width - 7.5, y_board_top + 2.5), 3.0, "sld_tag", TA.TOP_RIGHT, bold=True)
+        # red signage boxes above the frame, right of the supply column
+        from .signage import draw_board_labels
+
+        lx0 = x_in + (40.0 if b.supply.kind == "utility" else 34.0)
+        draw_board_labels(ctx, self.full_design, b, lx0, x_in + width - 8.0, y_board_top + 5.5)
+        if b.emergency_stop:
+            ctx.insert("BEE_ESTOP", (x_left + 6.0, y_board_top - 10.0), layer="sld_sym")
+            ctx.text("S1", (x_left + 6.0, y_board_top - 12.0), 1.6, "sld_tag", TA.TOP_CENTER, bold=True)
+            ctx.text("חירום", (x_left + 6.0, y_board_top - 14.4), 1.3, "sld_text", TA.TOP_CENTER)
         if b.enclosure:
             e = b.enclosure
             ctx.text(f"{e.rows}×{e.modules_per_row} מודולים", (x_in + width - 7.5, y_board_top - 1.5), 1.6, "sld_text", TA.TOP_RIGHT)
@@ -453,7 +464,8 @@ class SldRenderer:
             ny = min(y_main_bottom - 4.0, ctx.y0 + 108.0)
             ctx.text("הערות", (nx, ny), 2.6, "notes", TA.TOP_RIGHT, bold=True)
             ctx.mtext([f"{i + 1}. {t}" for i, t in enumerate(d.notes)], (nx, ny - 4.0), 1.8, "notes", width=118.0)
-        self.draw_phase_summary(ctx.x1 - TB_W - 6.0, ctx.y0 + 4.0)
+        if not d.title.system_data:      # with the system-data strip the per-phase summary lives on E-31
+            self.draw_phase_summary(ctx.x1 - TB_W - 6.0, ctx.y0 + 4.0)
 
 
 def _wrap_words(text: str, width: int) -> list[str]:

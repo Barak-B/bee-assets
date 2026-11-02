@@ -52,16 +52,19 @@ class SheetContext:
         return "BEE-LAT"
 
     def text(self, s: str, pos: tuple[float, float], h: float = 2.5, layer: str = "sld_text",
-             align: TA = TA.LEFT, rotation: float = 0.0, bold: bool = False) -> None:
+             align: TA = TA.LEFT, rotation: float = 0.0, bold: bool = False,
+             color: int | None = None, true_color: int | None = None) -> None:
         if not s:
             return
         style = self.style_for(s)
         if bold and style == "BEE-HEB":
             style = "BEE-HEB-B"
-        ent = self.msp.add_text(
-            encode(s, self.mode),
-            dxfattribs={"layer": LAYERS[layer].name, "height": h, "style": style, "rotation": rotation},
-        )
+        attribs = {"layer": LAYERS[layer].name, "height": h, "style": style, "rotation": rotation}
+        if color is not None:
+            attribs["color"] = color
+        if true_color is not None:
+            attribs["true_color"] = true_color
+        ent = self.msp.add_text(encode(s, self.mode), dxfattribs=attribs)
         ent.set_placement(pos, align=align)
 
     def mtext(self, lines: list[str], pos: tuple[float, float], h: float = 2.2, layer: str = "notes",
@@ -143,8 +146,28 @@ def draw_frame(ctx: SheetContext, tb: TitleBlock) -> None:
     ctx.line((ctx.x0, hy), (ctx.x1, hy), "frame")
     ctx.rect(ctx.x0, hy, 24.0, 9.0, "frame")
     ctx.text(tb.sheet_no, (ctx.x0 + 12.0, hy + 4.5), 5.0, "frame_text", TA.MIDDLE_CENTER)
-    ctx.text(f"{tb.project} — {tb.site}" if tb.site else tb.project, (ctx.x0 + 27.0, hy + 4.5), 2.2, "frame_text", TA.MIDDLE_LEFT)
+    draft = tb.status in ("לעיון", "לאישור")
+    head = tb.project if draft else (f"{tb.project} — {tb.site}" if tb.site else tb.project)
+    ctx.text(head[:34], (ctx.x0 + 27.0, hy + 4.5), 2.2, "frame_text", TA.MIDDLE_LEFT)
     ctx.text(tb.sheet_title, (ctx.x1 - 3.0, hy + 4.5), 4.5, "frame_text", TA.MIDDLE_RIGHT, bold=True)
+    # draft banner in the header strip (office convention: red box "טיוטה — לבדיקה וחתימת מהנדס")
+    if draft:
+        bw, bx = 64.0, ctx.x0 + 24.0 + 6.0 + 80.0
+        ctx.rect(bx, hy + 1.2, bw, 6.6, "check")
+        ctx.text("טיוטה — לבדיקה וחתימת מהנדס", (bx + bw / 2, hy + 4.5), 3.0, "check", TA.MIDDLE_CENTER, bold=True)
+
+    # system data strip left of the title block (נתוני מערכת), when the title block carries it
+    if tb.system_data:
+        sw = 100.0
+        sx0, sy0 = ctx.x1 - TB_W - 2.0 - sw, ctx.y0
+        rows_n = min(len(tb.system_data), 6)
+        ctx.rect(sx0, sy0, sw, TB_H, "frame")
+        ctx.text("נתוני מערכת", (sx0 + sw - 1.5, sy0 + TB_H - 1.5), 2.0, "frame_text", TA.TOP_RIGHT, bold=True)
+        rh = (TB_H - 6.0) / max(rows_n, 1)
+        for i, (k, v) in enumerate(tb.system_data[:rows_n]):
+            yy = sy0 + TB_H - 6.0 - rh * (i + 0.5)
+            ctx.text(k, (sx0 + sw - 1.5, yy), 1.6, "frame_text", TA.MIDDLE_RIGHT)
+            ctx.text(str(v), (sx0 + 1.5, yy), 1.7, "frame_text", TA.MIDDLE_LEFT, bold=True)
 
     # title block bottom-right
     tx0, ty0 = ctx.x1 - TB_W, ctx.y0
@@ -174,7 +197,7 @@ def draw_frame(ctx: SheetContext, tb: TitleBlock) -> None:
     y += rows[2]
     ctx.text("מתכנן", (tx0 + TB_W - 1.0, y + rows[3] - 1.6), 1.4, "frame_text", TA.TOP_RIGHT)
     ctx.text(tb.designer, (tx0 + TB_W - 3.0, y + 4.5), 3.2, "frame_text", TA.MIDDLE_RIGHT, bold=True)
-    ctx.text(tb.status, (tx0 + 3.0, y + 4.5), 2.4, "frame_text", TA.MIDDLE_LEFT)
+    ctx.text(tb.status, (tx0 + 3.0, y + 4.5), 2.4, "check" if tb.status in ("לעיון", "לאישור") else "frame_text", TA.MIDDLE_LEFT, bold=True)
     if tb.client:
         ctx.text(f"מזמין: {tb.client}", (tx0 + 40.0, y + 4.5), 2.0, "frame_text", TA.MIDDLE_LEFT)
 

@@ -32,6 +32,9 @@ LAYERS: dict[str, LayerDef] = {
     "ac": LayerDef("BEE-AC", 5, 50),
     "comm": LayerDef("BEE-COMM", 6, 18, "DASHED"),
     "existing": LayerDef("BEE-EXISTING", 8, 25, "DASHED"),
+    "label": LayerDef("BEE-LABEL", 1, 35),             # red signage boxes
+    "label_text": LayerDef("BEE-LABEL-TEXT", 7, 18),   # white text on the red boxes (true colour set per entity)
+    "check": LayerDef("BEE-CHECK", 1, 18),             # red (!n) check markers and the draft banner
     "panel_encl": LayerDef("BEE-PANEL-ENCL", 7, 50),
     "panel_rail": LayerDef("BEE-PANEL-RAIL", 8, 25),
     "panel_dev": LayerDef("BEE-PANEL-DEV", 7, 35),

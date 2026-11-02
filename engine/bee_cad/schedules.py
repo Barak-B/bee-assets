@@ -140,7 +140,7 @@ def draw_table(ctx: SheetContext, x_right: float, y_top: float, cols: list[Colum
             ctx.line((x_right - tw, yy + ROW_H / 2), (x_right, yy + ROW_H / 2), "legend")
         cx = x_right
         for c, v in zip(cols, row):
-            maxc = int(c.width / (h_text * 0.62))
+            maxc = int(c.width / (h_text * 0.8))
             v = v if len(v) <= maxc else v[:maxc - 1] + "…"
             if c.align == TA.MIDDLE_RIGHT:
                 ctx.text(v, (cx - 1.2, yy), h_text, "legend", TA.MIDDLE_RIGHT)
@@ -199,6 +199,23 @@ def draw_general_notes(ctx: SheetContext, design: Design) -> list[str]:
     y = ctx.y1 - 14.0
     ctx.text("הערות כלליות", (xr, y), 3.0, "notes", TA.TOP_RIGHT, bold=True)
     ctx.mtext([f"{i + 1}. {n}" for i, n in enumerate(notes)], (xr, y - 5.0), 1.8, "notes", width=190.0)
+    # signage table under the general notes
+    from .signage import all_signage
+
+    signs = all_signage(design)
+    y_sig = y - 5.0 - 2.4 * sum(1 + len(n) // 95 for n in notes) - 10.0
+    if signs:
+        cols = [Column("מס'", 10.0), Column("נוסח השלט", 86.0, TA.MIDDLE_RIGHT), Column("מיקום", 50.0, TA.MIDDLE_RIGHT),
+                Column("כלל", 30.0), Column("סטטוס", 14.0)]
+        rows = [[str(sg.no), sg.text, sg.location, sg.rule, sg.status] for sg in signs[:14]]
+        y_after = draw_table(ctx, xr, y_sig, cols, rows, "טבלת שילוט", h_text=1.4)
+        ctx.text("כל השלטים עמידים לאורך שנים, בעברית ובערבית, במקום בולט — כלל label_hebrew_arabic_durable; שלטים אדומים מסומנים גם בחד-קווי.",
+                 (xr, y_after - 1.5), 1.4, "notes", TA.TOP_RIGHT)
+        y_sig = y_after - 6.0
+    if design.check_marks:
+        ctx.text("סימוני בדיקה", (xr, y_sig - 2.0), 2.4, "check", TA.TOP_RIGHT, bold=True)
+        ctx.mtext([f"(!{i + 1}) {m}" for i, m in enumerate(design.check_marks)] +
+                  ["* = ערך משוער או לפי כלל שטרם אושר — לאימות"], (xr, y_sig - 6.0), 1.5, "check", width=190.0)
     if design.sources:
         ys = ctx.y0 + TB_H + 5.0 * 3 + 12.0 + 4.0 * min(len(design.sources), 12) + 8.0
         ctx.text("מסמכי מקור", (xr, ys), 3.0, "notes", TA.TOP_RIGHT, bold=True)
@@ -214,8 +231,16 @@ def draw_general_notes(ctx: SheetContext, design: Design) -> list[str]:
         if blk in ctx.doc.blocks:
             ctx.msp.add_blockref(blk, (cx + 8.0, cy - 9.0), dxfattribs={"layer": LAYERS["sld_sym"].name, "xscale": 0.75, "yscale": 0.75})
         ctx.text(label, (cx + cw - 3.0, cy - 4.5), 1.8, "legend", TA.MIDDLE_RIGHT)
+    # red signage box sample at the end of the legend
+    from .signage import label_box
+
+    i = len(LEGEND_ITEMS)
+    col, row = i % 2, i // 2
+    cx, cy = lx + col * cw, ly - 10.0 - row * rh
+    label_box(ctx, cx + 2.0, cy - 11.0, 22.0, 6.0, "שלט אזהרה", 1.6)
+    ctx.text("שלט אדום (ראו טבלת שילוט)", (cx + cw - 3.0, cy - 8.0), 1.8, "legend", TA.MIDDLE_RIGHT)
     # abbreviations under the legend
-    ay = ly - 10.0 - ((len(LEGEND_ITEMS) + 1) // 2) * rh - 6.0
+    ay = ly - 10.0 - ((len(LEGEND_ITEMS) + 2) // 2) * rh - 6.0
     ctx.text("קיצורים", (lx + 150.0, ay), 3.0, "legend", TA.TOP_RIGHT, bold=True)
     cols = [Column("קיצור", 24.0), Column("משמעות", 51.0, TA.MIDDLE_RIGHT), Column("קיצור", 24.0), Column("משמעות", 51.0, TA.MIDDLE_RIGHT)]
     half = (len(ABBREVIATIONS) + 1) // 2

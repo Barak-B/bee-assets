@@ -132,12 +132,21 @@ def draw_cover(ctx: SheetContext, design: Design, entries: list[SheetEntry]) -> 
         src = design.sources[:8]
         ctx.mtext([f"{i + 1}. {s}" for i, s in enumerate(src)], (lx + lw, oy - 1.0), 1.7, "notes", width=lw)
         oy -= 3.0 + 2.6 * sum(1 + len(s) // 80 for s in src) + 8.0
-    items = open_items(design)
+    items = open_items(design) + [f"(!{i + 1}) {m}" for i, m in enumerate(design.check_marks)]
     if items:
         ctx.text("נושאים לאימות", (lx + lw, oy + 1.5), 3.2, "legend", TA.BOTTOM_RIGHT, bold=True)
-        ctx.mtext([f"{i + 1}. {it}" for i, it in enumerate(items[:10])], (lx + lw, oy - 1.0), 1.7, "notes", width=lw)
-        if len(items) > 10:
-            warnings.append(f"דף שער: {len(items) - 10} נושאים לאימות לא נכנסו")
+        # keep the list above the title-block band (and the system-data strip) — the rest goes to E-01
+        floor = y0 + TB_H + 6.0
+        shown, yy_est = [], oy - 1.0
+        for it in items:
+            need = 2.3 * (1 + len(it) // 78)
+            if yy_est - need < floor:
+                break
+            shown.append(it)
+            yy_est -= need
+        ctx.mtext([f"{i + 1}. {it}" for i, it in enumerate(shown)], (lx + lw, oy - 1.0), 1.7, "notes", width=lw)
+        if len(items) > len(shown):
+            ctx.text(f"+ {len(items) - len(shown)} נושאים נוספים — ראו גיליון E-01", (lx + lw, floor - 1.0), 1.6, "notes", TA.TOP_RIGHT)
 
     # ---- right column: sheet index ----------------------------------------------------------------
     sx1, sy = x1 - 6.0, y1 - 60.0
