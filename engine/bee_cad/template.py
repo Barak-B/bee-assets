@@ -282,6 +282,9 @@ class TemplateRenderer:
                 if b - a > 0.5:
                     self.dim_v(x, a, b, off, self.scale)
         ctx.text(f"מבט על — שבלונת קידוח   1:{int(self.scale)}", (ox + L / 2, oy - 16.0), 2.6, "panel_text", TA.TOP_CENTER, bold=True)
+        from .sheet import draw_scale_bar
+
+        draw_scale_bar(ctx, ox + L - 60.0, oy - 26.0, self.scale)
         return L, W
 
     def draw_detail(self, ox: float, oy: float, avail_h: float) -> None:

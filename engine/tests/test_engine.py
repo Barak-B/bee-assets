@@ -373,7 +373,7 @@ def test_schedules_notes_cover():
     assert any(r[6] == "125.0" for r in lrows)          # given load, not estimated
     assert len(STANDARD_NOTES) >= 8
     plan = plan_sheets(des, ("cover", "notes", "schedules"))
-    assert [e.no for e in plan] == ["E-00", "E-01", "E-30", "E-31"]
+    assert [e.no for e in plan] == ["E-00", "E-01", "E-30", "E-31", "E-32"]
     result = build(des, ("cover", "notes", "schedules"))
     doc = next(iter(result.values()))[0]
     for i, (no, (_, warnings)) in enumerate(result.items()):
@@ -419,8 +419,35 @@ def test_signage_and_markers():
     result = build(des, ("sld",))
     doc = next(iter(result.values()))[0]
     msp = doc.modelspace()
-    assert len([h for h in msp.query("HATCH") if h.dxf.layer == "BEE-LABEL"]) >= 4      # red boxes on the single-lines
+    assert len([h for h in msp.query("HATCH") if h.dxf.layer == "BEE-LABEL"]) == 6      # every board label drawn on the single-lines
     texts = [t.dxf.text for t in msp.query("TEXT")]
     assert texts.count("(!2)") == 4 and "(!1)" in texts
     assert any(t.startswith("טיוטה") for t in texts)                                     # draft banner
     assert "נתוני מערכת" in texts
+
+
+def test_civil_sheets_and_boq():
+    from bee_cad.audit import audit_sheet
+    from bee_cad.civil import Civil, loads
+    from bee_cad.render import plan_sheets
+    from bee_cad.schedules import boq_rows
+    from bee_cad.template import DrillTemplate
+
+    ex = Path(__file__).resolve().parents[1] / "examples" / "kal_gader_bess.json"
+    des = Design.model_validate(json.loads(ex.read_text(encoding="utf-8")))
+    plan = [e.no for e in plan_sheets(des, ("civil", "schedules"))]
+    assert plan == ["C-01", "C-02", "C-03", "E-30", "E-31", "E-32"]
+    t = DrillTemplate.model_validate(des.drill_template)
+    rows = loads(des, t, Civil.model_validate(des.civil))
+    assert rows[0][0] == "Normal 261" and rows[0][4] == "19.0*" and rows[-1][4] == "15.1**"
+    boq = boq_rows(des)
+    names = [r[0] for r in boq]
+    assert "עוגן כימי" in names and "בטון משטח" in names and "ארון אגירה" in names
+    assert next(r for r in boq if r[0] == "עוגן כימי")[2] == "32"
+    assert any(r[2] == "(!)" for r in boq)                       # cables without length are flagged, not zero
+    result = build(des, ("civil", "schedules"))
+    doc = next(iter(result.values()))[0]
+    for i, (no, (_, warnings)) in enumerate(result.items()):
+        assert warnings == [], (no, warnings)
+        rep = audit_sheet(doc, i, no)
+        assert rep.clean, (no, rep.summary(), rep.text_overlaps[:2], rep.text_line_collisions[:2])

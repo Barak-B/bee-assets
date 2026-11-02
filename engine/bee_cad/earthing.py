@@ -212,6 +212,9 @@ class EarthingRenderer:
                 ctx.insert("BEE_EARTH", (ex, ey - 2.0), layer="pe", scale=0.7)
                 ctx.text("אלקטרודה", (ex, ey - 4.5), 1.6, "sld_text", TA.TOP_CENTER)
         ctx.text(f"תשתית הארקה במשטח הבטון — מבט על   1:{int(scale)}", (ox + L / 2, oy + W + 3.0), 2.4, "panel_text", TA.BOTTOM_CENTER, bold=True)
+        from .sheet import draw_scale_bar
+
+        draw_scale_bar(ctx, ox + L / 2 - 25.0, oy - 16.0, scale)
         return L, W
 
     def draw_electrode_detail(self, ox: float, oy: float) -> None:

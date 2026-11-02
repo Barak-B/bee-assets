@@ -241,6 +241,7 @@ class Design(BaseModel):
     site: Optional[dict] = None                  # bee_cad.site.SiteLayout — infrastructure layout over the same slab/units
     earthing: Optional[dict] = None              # bee_cad.earthing.Earthing — bars, conductors, ring, electrodes
     comm: Optional[dict] = None                  # bee_cad.comm.CommNetwork — meters, EMS, switch, router, PCS links
+    civil: Optional[dict] = None                 # bee_cad.civil.Civil — pad plan, sections, trench (C-01..C-03)
     nodes: list[Node] = Field(default_factory=list)
     legend: bool = True
     notes: list[str] = Field(default_factory=list)

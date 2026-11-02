@@ -12,9 +12,10 @@ from typing import Iterable
 
 from ezdxf.document import Drawing
 
+from .civil import Civil, draw_civil
 from .comm import CommNetwork, draw_comm
 from .cover import SheetEntry, draw_cover
-from .schedules import CABLE_COLS, LOAD_COLS, cable_rows, draw_cable_schedule, draw_general_notes, draw_load_schedule, load_rows, rows_per_page
+from .schedules import CABLE_COLS, LOAD_COLS, boq_rows, cable_rows, draw_boq, draw_cable_schedule, draw_general_notes, draw_load_schedule, load_rows, rows_per_page
 from .earthing import Earthing, draw_earthing
 from .model import Design
 from .mv import draw_mv, draw_mv_schedule
@@ -26,7 +27,9 @@ from .template import DrillTemplate, draw_template, scale_text
 from .text import TextMode, has_hebrew, to_visual
 
 
-SHEET_KINDS = ("cover", "notes", "site", "mv", "sld", "earthing", "comm", "panel", "drill", "schedules")
+BOQ_PER = 40
+NO_SYSTEM_STRIP = {"site", "earthing", "drill", "panel", "mv", "mv_schedule", "civil_plan", "civil_sections", "civil_trench"}
+SHEET_KINDS = ("cover", "notes", "site", "mv", "sld", "earthing", "comm", "panel", "drill", "civil", "schedules")
 
 
 def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[SheetEntry]:
@@ -47,6 +50,9 @@ def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[She
                 plan.append(SheetEntry("cables", f"{prefix}-30" + ("" if p == 0 else chr(ord("A") + p - 1)), "רשימת כבלים"))
             for p in range((n_load + per - 1) // per or 1):
                 plan.append(SheetEntry("loads", f"{prefix}-31" + ("" if p == 0 else chr(ord("A") + p - 1)), "טבלת עומסים וסיכום לפי לוח"))
+            n_boq = len(boq_rows(design))
+            for p in range((n_boq + BOQ_PER - 1) // BOQ_PER or 1):
+                plan.append(SheetEntry("boq", f"{prefix}-32" + ("" if p == 0 else chr(ord("A") + p - 1)), "כתב כמויות"))
         elif kind == "mv":
             for i, mb in enumerate(design.mv_boards):
                 no = design.title.sheet_no if i == 0 else f"{prefix}-M{i + 1:02d}"
@@ -65,6 +71,12 @@ def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[She
         elif kind == "earthing" and design.earthing:
             e = Earthing.model_validate(design.earthing)
             plan.append(SheetEntry("earthing", e.sheet_no, e.title))
+        elif kind == "civil" and design.civil and design.drill_template:
+            c = Civil.model_validate(design.civil)
+            plan.append(SheetEntry("civil_plan", f"{c.sheet_prefix}-01", "משטח בטון ויסודות — תוכנית", "1:50"))
+            plan.append(SheetEntry("civil_sections", f"{c.sheet_prefix}-02", "משטח בטון — חתכים ופרטים", "1:20 / 1:10"))
+            if c.trench:
+                plan.append(SheetEntry("civil_trench", f"{c.sheet_prefix}-03", "פרטי חפירה, תעלות ותמיכות", "1:10"))
         elif kind == "comm" and design.comm:
             n = CommNetwork.model_validate(design.comm)
             plan.append(SheetEntry("comm", n.sheet_no, n.title))
@@ -102,6 +114,8 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
                                              "sheet_title": e.title, "scale": e.scale if e.scale != "-" else design.title.scale})
         if e.kind == "cover":
             tb.scale = "-"
+        if e.kind in NO_SYSTEM_STRIP:      # plans/details use the bottom band for notes and views
+            tb.system_data = []
         draw_frame(ctx, tb)
         if e.kind == "cover":
             warnings = draw_cover(ctx, design, plan)
@@ -112,6 +126,11 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
             pages = [x for x in plan if x.kind == "cables"]
             pno = pages.index(e)
             warnings = draw_cable_schedule(ctx, design, rows[pno * 36:(pno + 1) * 36], pno + 1, len(pages))
+        elif e.kind == "boq":
+            rows = boq_rows(design)
+            pages = [x for x in plan if x.kind == "boq"]
+            pno = pages.index(e)
+            warnings = draw_boq(ctx, design, rows[pno * BOQ_PER:(pno + 1) * BOQ_PER], pno + 1, len(pages))
         elif e.kind == "loads":
             rows, summary = load_rows(design)
             pages = [x for x in plan if x.kind == "loads"]
@@ -128,6 +147,8 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
             warnings = draw_sld(ctx, sld_subset(design, e.no) if design.sld_groups else design, design)
         elif e.kind == "earthing":
             warnings = draw_earthing(ctx, design, Earthing.model_validate(design.earthing))
+        elif e.kind.startswith("civil_"):
+            warnings = draw_civil(ctx, design, Civil.model_validate(design.civil), e.kind.split("_", 1)[1])
         elif e.kind == "comm":
             warnings = draw_comm(ctx, design, CommNetwork.model_validate(design.comm))
         elif e.kind == "panel":

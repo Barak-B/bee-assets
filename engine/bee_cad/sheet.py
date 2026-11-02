@@ -95,6 +95,44 @@ class SheetContext:
                                                       "xscale": scale, "yscale": scale})
 
 
+def draw_scale_bar(ctx: SheetContext, x: float, y: float, scale: float, length_mm_real: float | None = None) -> None:
+    """Graphic scale bar (black/white segments) with metre labels, as on the office plans."""
+    if length_mm_real is None:
+        length_mm_real = {20: 1000, 25: 1000, 40: 2000, 50: 2500, 75: 5000, 100: 5000, 125: 10000, 150: 10000, 200: 10000}.get(int(scale), 5000)
+    segs = 5
+    seg = length_mm_real / segs / scale
+    for i in range(segs):
+        x0 = x + i * seg
+        if i % 2 == 0:
+            h = ctx.msp.add_hatch(color=7, dxfattribs={"layer": LAYERS["dim"].name})
+            h.paths.add_polyline_path([(x0, y), (x0 + seg, y), (x0 + seg, y + 1.6), (x0, y + 1.6)], is_closed=True)
+        ctx.rect(x0, y, seg, 1.6, "dim")
+        val = length_mm_real / segs * i / 1000.0
+        ctx.text(f"{val:g}", (x0, y - 0.8), 1.5, "dim", TA.TOP_CENTER)
+    ctx.text(f"{length_mm_real / 1000:g}", (x + segs * seg, y - 0.8), 1.5, "dim", TA.TOP_CENTER)
+    ctx.text("m", (x + segs * seg + 2.5, y + 0.8), 1.5, "dim", TA.MIDDLE_LEFT)
+    ctx.text(f"1:{int(scale)}", (x + segs * seg / 2, y + 2.4), 2.0, "dim", TA.BOTTOM_CENTER, bold=True)
+
+
+def draw_north(ctx: SheetContext, x: float, y: float, deg: float = 0.0, r: float = 7.0) -> None:
+    """North arrow: circle, half-filled arrow rotated ``deg`` (clockwise from the sheet's up), N label and bearing note."""
+    import math
+
+    ctx.msp.add_circle((x, y), r, dxfattribs={"layer": LAYERS["dim"].name})
+    a = math.radians(-deg)
+
+    def rot(px: float, py: float) -> tuple[float, float]:
+        return (x + px * math.cos(a) - py * math.sin(a), y + px * math.sin(a) + py * math.cos(a))
+
+    tip, base_l, base_r, tail = rot(0, r), rot(-2.2, -r * 0.6), rot(2.2, -r * 0.6), rot(0, -r * 0.3)
+    ctx.msp.add_lwpolyline([tip, base_l, tail, base_r], close=True, dxfattribs={"layer": LAYERS["dim"].name})
+    h = ctx.msp.add_hatch(color=7, dxfattribs={"layer": LAYERS["dim"].name})
+    h.paths.add_polyline_path([tip, base_l, tail], is_closed=True)
+    nx, ny = rot(0, r + 3.2)
+    ctx.text("N", (nx, ny), 3.0, "dim", TA.MIDDLE_CENTER, bold=True)
+    ctx.text("צפון" + (f": {deg:g}°" if deg else ""), (x, y - r - 1.5), 1.6, "dim", TA.TOP_CENTER)
+
+
 def new_document(mode: TextMode = "unicode") -> Drawing:
     doc = ezdxf.new("R2018", setup=True)
     doc.header["$INSUNITS"] = 4          # millimetres

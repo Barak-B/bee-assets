@@ -120,12 +120,12 @@ def all_signage(design: Design) -> list[Sign]:
     return rows
 
 
-def label_box(ctx: SheetContext, x: float, y: float, w: float, h: float, text: str, h_text: float = 1.8) -> None:
-    """Red solid box with white bold text (two lines wrap)."""
+def label_box(ctx: SheetContext, x: float, y: float, w: float, h: float, text: str, h_text: float = 1.8, max_lines: int = 2) -> None:
+    """Red solid box with white bold text (wrapped to ``max_lines``)."""
     hatch = ctx.msp.add_hatch(color=1, dxfattribs={"layer": LAYERS["label"].name})
     hatch.paths.add_polyline_path([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], is_closed=True)
     ctx.rect(x, y, w, h, "label")
-    max_chars = int(w / (h_text * 0.62))
+    max_chars = int((w - 2.0) / (h_text * 0.95))
     words, lines, cur = text.split(), [], ""
     for wd in words:
         if cur and len(cur) + 1 + len(wd) > max_chars:
@@ -135,7 +135,7 @@ def label_box(ctx: SheetContext, x: float, y: float, w: float, h: float, text: s
             cur = f"{cur} {wd}".strip()
     if cur:
         lines.append(cur)
-    lines = lines[:2]
+    lines = lines[:max_lines]
     n = len(lines)
     for i, line in enumerate(lines):
         yy = y + h / 2 + (n - 1 - 2 * i) * (h_text * 0.65)
@@ -143,18 +143,30 @@ def label_box(ctx: SheetContext, x: float, y: float, w: float, h: float, text: s
 
 
 def draw_board_labels(ctx: SheetContext, design: Design, b: Board, x0: float, x1: float, y: float) -> int:
-    """Draw the board's red label boxes in a row between x0 and x1 at baseline y (boxes 8 mm high).
-    Returns the number drawn; the rest stay in the signage table."""
+    """Draw the board's red label boxes above its frame: right-aligned from x1, up to two rows.
+    Wide room: 46 mm boxes, two text lines; narrow room (down to 24 mm): one column, three smaller lines.
+    Returns the number drawn; the rest stay in the signage table only."""
     signs = [s for s in all_signage(design) if s.board == b.id]
     if not signs:
         return 0
-    bw, bh, gap = 46.0, 8.0, 2.0
-    x = x0
+    gap = 2.0
+    room = x1 - x0
+    if room >= 46.0:
+        bw, bh, ht, ml = 46.0, 8.0, 1.8, 2
+        if room < len(signs) * 48.0:
+            bw = max(36.0, min(46.0, (room - gap) / max(1, (len(signs) + 1) // 2) - gap))
+            ht = 1.7 if bw < 44 else 1.8
+    elif room >= 24.0:
+        bw, bh, ht, ml = room, 10.0, 1.4, 3
+    else:
+        return 0
+    per_row = max(1, int((room + gap) // (bw + gap)))
     n = 0
-    for s in signs:
-        if x + bw > x1:
+    for i, sg in enumerate(signs[: per_row * 2]):
+        row, col = divmod(i, per_row)
+        x = x1 - (col + 1) * bw - col * gap
+        if x < x0 - 1e-6:
             break
-        label_box(ctx, x, y, bw, bh, s.text)
-        x += bw + gap
+        label_box(ctx, x, y + row * (bh + gap), bw, bh, sg.text, ht, ml)
         n += 1
     return n

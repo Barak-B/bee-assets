@@ -249,3 +249,123 @@ def draw_general_notes(ctx: SheetContext, design: Design) -> list[str]:
     if ay - 5.0 - HEAD_H - ROW_H * half < ctx.y0 + 6.0:
         warnings.append("הערות כלליות: טבלת הקיצורים חורגת מהגיליון")
     return warnings
+
+
+# ----------------------------------------------------------------------------- bill of quantities
+def boq_rows(design: Design) -> list[list[str]]:
+    """Bill of quantities (כתב כמויות) aggregated from the whole model: equipment, devices, cables (by
+    designation, summed lengths with 10% reserve), trays, earthing, anchors, concrete. A quantity that is
+    not in the model (cable without length…) is shown as '(!)' so it is never silently zero."""
+    import math
+    from collections import OrderedDict
+
+    rows: list[list[str]] = []
+    # equipment: storage cabinets / PCS nodes
+    kinds = OrderedDict()
+    for n in design.nodes:
+        if n.kind in ("pcs", "bess", "battery"):
+            key = f"{n.sublabel or n.label}"
+            kinds[key] = kinds.get(key, 0) + 1
+    for k, q in kinds.items():
+        rows.append(["ארון אגירה", k, str(q), "יח'"])
+    # boards
+    for b in design.boards:
+        if b.existing:
+            continue
+        e = b.enclosure
+        dim = f"{e.width_mm:g}×{e.height_mm:g}×{e.depth_mm:g} {e.ip}" if e else ""
+        rows.append(["לוח חשמל", f"{b.title} — {dim}".strip(" —"), "1", "יח'"])
+    # devices grouped by kind/poles/rating (new boards only)
+    dev = OrderedDict()
+    for b in design.boards:
+        if b.existing:
+            continue
+        items = [b.incomer] if b.incomer else []
+        items += [b.spd] if b.spd else []
+        for g in b.groups:
+            if g.device:
+                items.append(g.device)
+            items += [c.device for c in g.circuits]
+        for f in b.feeders:
+            items.append(f.device)
+            if f.rcd:
+                items.append(f.rcd)
+        for d in items:
+            name = {"mcb": "מא\"ז", "mccb": "מפסק יצוק MCCB", "acb": "מפסק אוויר", "rcd": "מפסק פחת", "rcbo": "מא\"ז משולב פחת",
+                    "switch": "מנתק", "fuse": "נתיך", "spd": "מגן ברקים", "meter": "מונה", "ct": "משנה זרם", "contactor": "מגען"}.get(d.kind, d.kind)
+            spec = " ".join(x for x in [f"{d.poles}P", f"{d.curve or ''}{d.rating_a:g}A" if d.rating_a else "",
+                                        f"{d.idn_ma}mA" if d.idn_ma else "", f"{d.icu_ka:g}kA" if d.icu_ka else ""] if x)
+            dev[(name, spec)] = dev.get((name, spec), 0) + 1
+        if b.meter:
+            dev[("רב-מודד", b.meter.split(" / ")[0])] = dev.get(("רב-מודד", b.meter.split(" / ")[0]), 0) + 1
+        if b.ct:
+            dev[("משני זרם", b.ct)] = dev.get(("משני זרם", b.ct), 0) + 1
+        if b.emergency_stop:
+            dev[("לחצן חירום + ממסר", "PSK ISO-556B או שו\"ע")] = dev.get(("לחצן חירום + ממסר", "PSK ISO-556B או שו\"ע"), 0) + 1
+    for (name, spec), q in dev.items():
+        rows.append([name, spec, str(q), "יח'"])
+    # cables by designation
+    cab = OrderedDict()
+    for r in cable_rows(design):
+        des, length = r[3], r[4]
+        tot, unknown = cab.get(des, (0.0, False))
+        if length:
+            tot += float(length)
+        else:
+            unknown = True
+        cab[des] = (tot, unknown)
+    for des, (tot, unknown) in cab.items():
+        qty = f"{math.ceil(tot * 1.1):d}" if tot else ""
+        rows.append(["כבל", des, (qty + ("+" if unknown and qty else "")) or "(!)", "מ' — אורך תוואי +10%" if tot else "מ' — אורך לא חושב"])
+    # trays from the site model
+    if design.site:
+        for tr in design.site.get("trays", []):
+            pts = tr.get("points", [])
+            ln = sum(math.dist(a, b) for a, b in zip(pts, pts[1:])) / 1000.0
+            rows.append(["תעלה / סולם", f"{tr.get('label', '')}", f"{ln * 1.1:.1f}", "מ'"])
+    # earthing
+    if design.earthing:
+        for bar in design.earthing.get("bars", []):
+            if "קיים" not in bar.get("label", ""):
+                rows.append(["פס השוואת פוטנציאלים", f"{bar.get('material', '')} — {bar.get('label', '')}", "1", "יח'"])
+        ring = design.earthing.get("ring")
+        if ring and design.drill_template:
+            s = design.drill_template["slab"]
+            off = ring.get("offset_mm", 150)
+            per = 2 * ((s["length_mm"] - 2 * off) + (s["width_mm"] - 2 * off)) / 1000.0
+            rows.append(["טבעת הארקת יסוד", ring.get("material", ""), f"{per * 1.1:.1f}", "מ'"])
+        for el in design.earthing.get("electrodes", []):
+            rows.append(["אלקטרודת הארקה", f"{el.get('depth_m', 3):g} מ' בשוחה", str(el.get("qty", 1)), "יח'"])
+    # anchors, beams, concrete
+    if design.drill_template:
+        from .template import DrillTemplate
+
+        t = DrillTemplate.model_validate(design.drill_template)
+        n_anchor = sum(len(t.anchor_points(u)) for u in t.units)
+        rows.append(["עוגן כימי", f"{t.anchor.bolt} — {t.anchor.name}", str(n_anchor), "יח'"])
+        if t.cabinet_base:
+            rows.append(["ברגי חיבור ארון→קורה", f"{t.cabinet_base.bolt} + אום + דסקית", str(len(t.cabinet_base.holes) * len(t.units)), "יח'"])
+        beam_len = sum((t.pedestal.length_mm or u.depth_mm) * t.pedestal.count_per_unit for u in t.units) / 1000.0
+        rows.append(["קורת הגבהה", t.pedestal.profile, f"{beam_len:.1f}", "מ'"])
+        vol = t.slab.length_mm * t.slab.width_mm * t.slab.thickness_mm / 1e9
+        rows.append(["בטון משטח", "ב-30** כולל זיון — לפי מהנדס", f"{vol:.2f}", "מ\"ק"])
+        rows.append(["בטון רזה", "ב-15* 50 מ\"מ", f"{vol / t.slab.thickness_mm * 50:.2f}", "מ\"ק"])
+        rows.append(["מצע סוג א'", "200 מ\"מ מהודק*", f"{(t.slab.length_mm + 300) * (t.slab.width_mm + 300) * 200 / 1e9:.2f}", "מ\"ק"])
+    return rows
+
+
+BOQ_COLS = [Column("פריט", 40.0, TA.MIDDLE_RIGHT), Column("דירוג / מפרט", 110.0, TA.MIDDLE_RIGHT), Column("כמות", 18.0), Column("יחידה", 40.0, TA.MIDDLE_RIGHT)]
+
+
+def draw_boq(ctx: SheetContext, design: Design, rows: list[list[str]], page: int, pages: int) -> list[str]:
+    y_top = ctx.y1 - 16.0
+    draw_table(ctx, ctx.x1 - 6.0, y_top, BOQ_COLS, rows, f"כתב כמויות — דף {page}/{pages}", h_text=1.5)
+    notes = ["הכמויות נגזרות מהמודל (חד-קווי, פריסת תשתיות, הארקות, שבלונת קידוח); אורכי כבלים לפי אורך התוואי + 10% רזרבה.",
+             "(!) = כמות שאינה במודל (אורך שטרם נמדד) — להשלמה לפני הזמנה; '+' = חלק מהאורכים חסר.",
+             "* = ערך משוער או לפי כלל שטרם אושר; ** = לפי מהנדס קונסטרוקציה. אינו כולל ציוד באספקת המזמין (ארונות אגירה, EMS) אלא אם צוין.",
+             "כתב הכמויות משמש בסיס להצעת המחיר — מחירי היחידה בכלי ההצעות של המשרד."]
+    nx = ctx.x1 - TB_W - 8.0 - 104.0 if design.title.system_data else ctx.x1 - TB_W - 8.0
+    ny = ctx.y0 + TB_H + 5.0 * 3 + 30.0
+    ctx.text("הערות", (ctx.x0 + 150.0, ny), 2.4, "notes", TA.TOP_RIGHT, bold=True)
+    ctx.mtext([f"{i + 1}. {n}" for i, n in enumerate(notes)], (ctx.x0 + 150.0, ny - 4.0), 1.6, "notes", width=140.0)
+    return []

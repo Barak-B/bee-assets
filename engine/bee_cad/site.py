@@ -242,6 +242,11 @@ class SiteRenderer:
             self.dim_v(ox, oy + s(first.y_mm), oy + s(first.y_mm + first.depth_mm), -8.0)
             self.dim_v(ox, oy + s(first.y_mm + first.depth_mm), oy + D, -8.0)
         ctx.text(f"פריסת תשתיות — מבט על   1:{int(self.scale)}", (ox + W / 2, oy - 17.0), 2.6, "panel_text", TA.TOP_CENTER, bold=True)
+        from .sheet import draw_north, draw_scale_bar
+
+        draw_scale_bar(ctx, ox + W / 2 - 30.0, oy - 28.0, self.scale)
+        if L.north_deg is not None:
+            draw_north(ctx, ox + W + 24.0, oy + D + 14.0, L.north_deg)
         return W, D
 
     # ------------------------------------------------------------------ front elevation
