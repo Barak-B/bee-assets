@@ -343,8 +343,8 @@ class TemplateRenderer:
                 self.dim_v(ox, oy + a, oy + b, -16.0, sc)
         self.dim_h(ox, ox + uw, oy + ud, 7.0, sc)
         self.dim_v(ox + uw, oy, oy + ud, 7.0, sc)
-        ctx.text(f"פרט ארון {u.model} — תבנית קידוח   1:{int(sc)}", (ox + uw / 2, oy + ud + 15.0), 2.4, "panel_text", TA.BOTTOM_CENTER, bold=True)
-        ctx.text(f"קורות {t.pedestal.kind} — {t.pedestal.profile}, גובה {t.pedestal.height_mm:g} מ\"מ", (ox + uw / 2, oy + ud + 23.0), 1.5, "panel_text", TA.BOTTOM_CENTER)
+        ctx.text(f"פרט ארון {u.model} — תבנית קידוח   1:{int(sc)}", (ox + uw / 2, oy + ud + 18.5), 2.4, "panel_text", TA.BOTTOM_CENTER, bold=True)
+        ctx.text(f"קורות {t.pedestal.kind} — {t.pedestal.profile}, גובה {t.pedestal.height_mm:g} מ\"מ", (ox + uw / 2, oy + ud + 24.5), 1.5, "panel_text", TA.BOTTOM_CENTER)
         if base:
             off = [f"B{i + 1}" for i, ok in enumerate(t.base_holes_on_beam(u)) if not ok]
             lines = [f"B1–B{len(base.holes)}: חורי בסיס הארון {base.slot}, ברגי {base.bolt} לאגף הקורה"]
@@ -352,7 +352,7 @@ class TemplateRenderer:
                 lines.append(f"{', '.join(off)} — על פרופיל רוחבי מרותך בין הקורות")
             lines.append(f"מקור: {base.source}")
             for k, line in enumerate(lines):
-                ctx.text(line, (ox, oy + ud + 26.0 + 2.6 * (len(lines) - 1 - k)), 1.3, "panel_text", TA.BOTTOM_LEFT)
+                ctx.text(line, (ox, oy + ud + 28.0 + 2.6 * (len(lines) - 1 - k)), 1.3, "panel_text", TA.BOTTOM_LEFT)
 
     def draw_tables(self, x_right: float, y_top: float) -> None:
         ctx, t = self.ctx, self.t
@@ -435,7 +435,14 @@ class TemplateRenderer:
         nx = ctx.x1 - TB_W - 8.0
         ny = ctx.y0 + TB_H + 5.0 * 3 + 58.0
         ctx.text("הערות", (nx, ny), 2.4, "notes", TA.TOP_RIGHT, bold=True)
-        ctx.mtext([f"{i + 1}. {n}" for i, n in enumerate(notes)], (nx, ny - 4.0), 1.6, "notes", width=nx - (ctx.x0 + 112.0))
+        from .cover import _wrap
+        maxc = int((nx - (ctx.x0 + 112.0)) / (1.6 * 0.9))
+        yy = ny - 4.5
+        for i, n in enumerate(notes):
+            for k, line in enumerate(_wrap(f"{i + 1}. {n}", maxc)):
+                ctx.text(line, (nx - (0 if k == 0 else 3.0), yy), 1.6, "notes", TA.TOP_RIGHT)
+                yy -= 2.7
+            yy -= 0.5
         return self.warnings
 
 

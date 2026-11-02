@@ -46,6 +46,11 @@ LAYERS: dict[str, LayerDef] = {
     "pv_module": LayerDef("BEE-PV-MODULE", 7, 25),
     "pv_string": LayerDef("BEE-PV-STRING", 1, 70),
     "pv_roof": LayerDef("BEE-PV-ROOF", 8, 35),
+    "rebar": LayerDef("BEE-FND-REBAR", 7, 18),                 # mesh bars in plan
+    "rebar_main": LayerDef("BEE-FND-REBAR-MAIN", 1, 50),       # bars in sections / bending shapes (red)
+    "fnd_thick": LayerDef("BEE-FND-THICK", 7, 35, "DASHED"),   # edge thickening (hidden line in plan)
+    "fnd_joint": LayerDef("BEE-FND-JOINT", 6, 50, "DASHDOT"),  # control joints
+    "fnd_ref": LayerDef("BEE-FND-REF", 8, 18, "HIDDEN"),       # cabinets / beams for reference
 }
 
 STRING_COLORS = [1, 3, 5, 6, 4, 30, 200, 32]  # S1 red, S2 green, S3 blue, S4 magenta, S5 cyan, S6 orange, S7 violet, S8 brown

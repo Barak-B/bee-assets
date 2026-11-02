@@ -1,0 +1,179 @@
+{
+ "title": {
+  "designer": "ברק הנדסת חשמל",
+  "project": "אניגמה — BESS 8×261kWh",
+  "site": "ברקן",
+  "client": "אפקון אגירה",
+  "sheet_no": "S-00",
+  "revision": "A",
+  "date": "2026-11-02",
+  "status": "לאישור",
+  "revisions": [
+   [
+    "A",
+    "2026-11-02",
+    "לעיון דוד וייסברג — טיוטה לבדיקת קונסטרוקטור"
+   ]
+  ]
+ },
+ "notes": [
+  "לאימות: לוח איסוף BESS ולוח Comm' עומדים לפי G009 משמאל למשטח, מחוצה לו — יסוד נפרד או הרחבת המשטח לאישור."
+ ],
+ "sources": [
+  "Roche Energy — RCH Anigma G002 Complete Design, rev A1 (Aviel.P, 11/10/26): G001 תוכנית העמדה, G006 הארקות, G009 פריסת תשתיות, G0010 פרט כבילה",
+  "Rochex/Afcon 125kW-261kWh ESS O&M manual 20260410 §5.5 (יסוד), §5.5.5/5.7 (עיגון)"
+ ],
+ "drill_template": {
+  "title": "שבלונת קידוח — 8 ארונות על קורות Double-T",
+  "sheet_no": "S-03",
+  "slab": {
+   "length_mm": 9000,
+   "width_mm": 2500,
+   "thickness_mm": 200,
+   "edge_min_mm": 150,
+   "datum": "פינה קדמית-שמאלית של משטח הבטון (מבט על, חזית הארונות למטה)"
+  },
+  "pedestal": {
+   "kind": "Double-T",
+   "profile": "IPE 200 מגולוון — \"הגבהה קורות מתכת Double T\" לפי G009",
+   "height_mm": 200,
+   "length_mm": 1465,
+   "width_mm": 100,
+   "count_per_unit": 2,
+   "inset_mm": 0,
+   "galvanised": true
+  },
+  "anchor": {
+   "name": "עוגן כימי Hilti HIT-HY 200-A + מוט HAS-U 8.8 מגולוון (או שו\"ע) — לאימות",
+   "bolt": "M16",
+   "hole_dia_mm": 18,
+   "depth_mm": 125,
+   "torque_nm": 80,
+   "spacing_min_mm": 100,
+   "qty_per_unit": 8
+  },
+  "units": [
+   {
+    "tag": "PCS08",
+    "model": "Normal 261",
+    "width_mm": 989,
+    "depth_mm": 1465,
+    "x_mm": 194,
+    "y_mm": 100,
+    "anchor_inset_x_mm": 30,
+    "anchor_inset_y_mm": 150,
+    "anchor_offset_y_mm": 0,
+    "anchor_stagger_mm": 100,
+    "weight_t": 2.8
+   },
+   {
+    "tag": "PCS07",
+    "model": "Normal 261",
+    "width_mm": 989,
+    "depth_mm": 1465,
+    "x_mm": 1283,
+    "y_mm": 100,
+    "anchor_inset_x_mm": 30,
+    "anchor_inset_y_mm": 150,
+    "anchor_offset_y_mm": 200,
+    "anchor_stagger_mm": 100,
+    "weight_t": 2.8
+   },
+   {
+    "tag": "PCS06",
+    "model": "Normal 261",
+    "width_mm": 989,
+    "depth_mm": 1465,
+    "x_mm": 2372,
+    "y_mm": 100,
+    "anchor_inset_x_mm": 30,
+    "anchor_inset_y_mm": 150,
+    "anchor_offset_y_mm": 0,
+    "anchor_stagger_mm": 100,
+    "weight_t": 2.8
+   },
+   {
+    "tag": "PCS05",
+    "model": "Normal 261",
+    "width_mm": 989,
+    "depth_mm": 1465,
+    "x_mm": 3461,
+    "y_mm": 100,
+    "anchor_inset_x_mm": 30,
+    "anchor_inset_y_mm": 150,
+    "anchor_offset_y_mm": 200,
+    "anchor_stagger_mm": 100,
+    "weight_t": 2.8
+   },
+   {
+    "tag": "PCS04",
+    "model": "Normal 261",
+    "width_mm": 989,
+    "depth_mm": 1465,
+    "x_mm": 4550,
+    "y_mm": 100,
+    "anchor_inset_x_mm": 30,
+    "anchor_inset_y_mm": 150,
+    "anchor_offset_y_mm": 0,
+    "anchor_stagger_mm": 100,
+    "weight_t": 2.8
+   },
+   {
+    "tag": "PCS03",
+    "model": "Normal 261",
+    "width_mm": 989,
+    "depth_mm": 1465,
+    "x_mm": 5639,
+    "y_mm": 100,
+    "anchor_inset_x_mm": 30,
+    "anchor_inset_y_mm": 150,
+    "anchor_offset_y_mm": 200,
+    "anchor_stagger_mm": 100,
+    "weight_t": 2.8
+   },
+   {
+    "tag": "PCS02",
+    "model": "Normal 261",
+    "width_mm": 989,
+    "depth_mm": 1465,
+    "x_mm": 6728,
+    "y_mm": 100,
+    "anchor_inset_x_mm": 30,
+    "anchor_inset_y_mm": 150,
+    "anchor_offset_y_mm": 0,
+    "anchor_stagger_mm": 100,
+    "weight_t": 2.8
+   },
+   {
+    "tag": "PCS01",
+    "model": "Normal 261",
+    "width_mm": 989,
+    "depth_mm": 1465,
+    "x_mm": 7817,
+    "y_mm": 100,
+    "anchor_inset_x_mm": 30,
+    "anchor_inset_y_mm": 150,
+    "anchor_offset_y_mm": 200,
+    "anchor_stagger_mm": 100,
+    "weight_t": 2.8
+   }
+  ],
+  "notes": [
+   "פריסה לפי Anigma G009 (Roche, 11/10/26, A1): 8 ארונות Normal 261 בשורה, 100 מ\"מ ביניהם, חזית 100 מ\"מ מקצה המשטח; 8×989+7×100 = 8612 — ממורכז ב-9000 (194 בכל צד).",
+   "מאחורי הארונות רצועה של כ-600 מ\"מ לתעלת כבלים 400×100 ולתעלת רשת 100×85; תעלות 200×100 בין הקורות (G009 מבט צד).",
+   "יחידות לסירוגין: שורות הברגים מוסטות 200 מ\"מ כדי לשמור ≥100 מ\"מ בין עוגני קורות סמוכות ברווח ה-100."
+  ],
+  "verify": [
+   "מיקום הארונות על המשטח (194 מ\"מ מהקצוות, 100 מהחזית) נמדד מ-G009 — לאימות מול Roche.",
+   "פרופיל הקורה וסוג העוגן — אישור קונסטרוקטור ו-ETA של העוגן."
+  ]
+ },
+ "foundation": {
+  "top_above_ground_mm": 150,
+  "verify": [
+   "מידות המשטח: G009 = 9.0×2.5×0.2 מ' מול G006 = 9.2×1.8 מ' — לאישור Roche/אפקון.",
+   "ערכי ברירת המחדל (בטון, זיון, הגבהת שפה) נלקחו מפרטי משטחים קטנים יותר; התאמתם למשטח 9 מ' עם 8 ארונות (כ-22.4 טון) — לאישור מהנדס קונסטרוקציה, כולל כושר נשיאת הקרקע (אין דוח קרקע).",
+   "פני המשטח 150 מ\"מ מעל הקרקע לפי G009 — תחתית ההגבהה כ-250 מ\"מ מתחת לפני הקרקע; לוודא ניקוז ומפלסים באתר."
+  ]
+ }
+}

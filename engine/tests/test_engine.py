@@ -451,3 +451,25 @@ def test_civil_sheets_and_boq():
         assert warnings == [], (no, warnings)
         rep = audit_sheet(doc, i, no)
         assert rep.clean, (no, rep.summary(), rep.text_overlaps[:2], rep.text_line_collisions[:2])
+
+
+def test_foundation_anigma():
+    """Anigma slab: joints at cabinet centres (bays ≤ 4 m, anchors ≥ 150 from joints), bar schedule and clean sheets."""
+    from bee_cad.foundation import Foundation, bar_schedule, checks
+    from bee_cad.template import DrillTemplate
+
+    d = Design.model_validate(json.loads((EXAMPLE.parent / "anigma_foundation.json").read_text(encoding="utf-8")))
+    t = DrillTemplate.model_validate(d.drill_template)
+    f = Foundation.model_validate(d.foundation)
+    js = f.joints(t)
+    assert [round(x, 1) for x in js] == [2866.5, 6133.5]
+    assert all(ok for _, _, ok in checks(d, t, f))
+    rows = bar_schedule(t, f)
+    assert rows[0]["n"] == 13 and rows[1]["n"] == 45
+    assert 500 < sum(r["kg"] for r in rows) < 650
+    sb = f.shape_b(t.slab.thickness_mm)
+    assert abs(sb["total"] - 2133) < 5            # 90+30+35+28+30 cm, as in the reference detail
+    out = build(d, ["cover", "foundation", "drill"])
+    assert list(out) == ["S-00", "S-01", "S-02", "S-03"]
+    for no, (doc, warnings) in out.items():
+        assert not warnings, (no, warnings)

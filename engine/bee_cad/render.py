@@ -17,6 +17,7 @@ from .comm import CommNetwork, draw_comm
 from .cover import SheetEntry, draw_cover
 from .schedules import CABLE_COLS, LOAD_COLS, boq_rows, cable_rows, draw_boq, draw_cable_schedule, draw_general_notes, draw_load_schedule, load_rows, rows_per_page
 from .earthing import Earthing, draw_earthing
+from .foundation import Foundation, draw_foundation
 from .model import Design
 from .mv import draw_mv, draw_mv_schedule
 from .panel import draw_panel
@@ -28,8 +29,8 @@ from .text import TextMode, has_hebrew, to_visual
 
 
 BOQ_PER = 40
-NO_SYSTEM_STRIP = {"site", "earthing", "drill", "panel", "mv", "mv_schedule", "civil_plan", "civil_sections", "civil_trench"}
-SHEET_KINDS = ("cover", "notes", "site", "mv", "sld", "earthing", "comm", "panel", "drill", "civil", "schedules")
+NO_SYSTEM_STRIP = {"site", "earthing", "drill", "panel", "mv", "mv_schedule", "civil_plan", "civil_sections", "civil_trench", "fnd_plan", "fnd_details"}
+SHEET_KINDS = ("cover", "notes", "site", "mv", "sld", "earthing", "comm", "panel", "drill", "civil", "foundation", "schedules")
 
 
 def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[SheetEntry]:
@@ -77,6 +78,10 @@ def plan_sheets(design: Design, sheets: Iterable[str] = SHEET_KINDS) -> list[She
             plan.append(SheetEntry("civil_sections", f"{c.sheet_prefix}-02", "משטח בטון — חתכים ופרטים", "1:20 / 1:10"))
             if c.trench:
                 plan.append(SheetEntry("civil_trench", f"{c.sheet_prefix}-03", "פרטי חפירה, תעלות ותמיכות", "1:10"))
+        elif kind == "foundation" and design.foundation and design.drill_template:
+            fo = Foundation.model_validate(design.foundation)
+            plan.append(SheetEntry("fnd_plan", f"{fo.sheet_prefix}-01", fo.title_plan, "1:50 / 1:20"))
+            plan.append(SheetEntry("fnd_details", f"{fo.sheet_prefix}-02", fo.title_details, "1:10 / 1:5"))
         elif kind == "comm" and design.comm:
             n = CommNetwork.model_validate(design.comm)
             plan.append(SheetEntry("comm", n.sheet_no, n.title))
@@ -149,6 +154,8 @@ def build(design: Design, sheets: Iterable[str] = SHEET_KINDS, mode: TextMode = 
             warnings = draw_earthing(ctx, design, Earthing.model_validate(design.earthing))
         elif e.kind.startswith("civil_"):
             warnings = draw_civil(ctx, design, Civil.model_validate(design.civil), e.kind.split("_", 1)[1])
+        elif e.kind.startswith("fnd_"):
+            warnings = draw_foundation(ctx, design, Foundation.model_validate(design.foundation), e.kind.split("_", 1)[1])
         elif e.kind == "comm":
             warnings = draw_comm(ctx, design, CommNetwork.model_validate(design.comm))
         elif e.kind == "panel":
