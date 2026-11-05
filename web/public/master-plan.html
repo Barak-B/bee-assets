@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>B.E.E · Master Plan · Fleet Atlas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-0: #05080f;
+        --bg-1: #0a1220;
+        --bg-2: #111b2e;
+        --line: rgba(140, 180, 230, 0.1);
+        --line-2: rgba(140, 180, 230, 0.22);
+        --ink: #ffffff;
+        --muted: #c8d2e2;
+        --dim: #7a8aa0;
+        --cy: #22d3ee;
+        --cy-dim: rgba(34, 211, 238, 0.35);
+        --am: #f2b23a;
+        --am-glow: #fde68a;
+        --gr: #2be68e;
+        --rd: #ff5e5e;
+        --vi: #a78bfa;
+        --bl: #5fa8ff;
+        --paper: #e8dfcb;
+        --ink-paper: #1e2536;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; height: 100%;
+        background: var(--bg-0); color: var(--ink);
+        font-family: 'Heebo', sans-serif;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse 90% 60% at 50% 0%, rgba(34,211,238,.05), transparent 60%),
+          radial-gradient(ellipse 70% 50% at 50% 100%, rgba(242,178,58,.04), transparent 60%),
+          var(--bg-0);
+      }
+      .app { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr auto; }
+
+      /* TOP BAR */
+      .topbar {
+        display: grid; grid-template-columns: 1fr auto 1fr;
+        gap: 18px; align-items: center; padding: 12px 22px;
+        background: linear-gradient(180deg, rgba(17,27,46,.75), rgba(10,18,32,.55));
+        border-bottom: 1px solid var(--line-2);
+        position: relative; z-index: 30;
+      }
+      .topbar::after {
+        content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+        background: linear-gradient(90deg, transparent, var(--cy-dim) 20%, var(--cy-dim) 80%, transparent);
+        opacity: .5;
+      }
+      .brand { display: flex; gap: 14px; align-items: center; }
+      .brand .mark {
+        width: 36px; height: 36px;
+        background: radial-gradient(circle at 30% 30%, var(--am-glow), var(--am) 65%, #b07418);
+        border-radius: 50%;
+        box-shadow: 0 0 14px rgba(242,178,58,.45), inset 0 0 6px rgba(0,0,0,.25);
+        position: relative;
+      }
+      .brand .mark::after {
+        content: ''; position: absolute; inset: 6px; border-radius: 50%;
+        background: repeating-conic-gradient(rgba(0,0,0,.18) 0deg 6deg, transparent 6deg 12deg);
+        mix-blend-mode: multiply; opacity: .35;
+      }
+      .brand-text h1 {
+        margin: 0;
+        font: 500 14px/1.2 'Frank Ruhl Libre', serif;
+        letter-spacing: -.01em; color: var(--ink);
+      }
+      .brand-text .sub {
+        font: 500 9px 'Geist Mono', monospace;
+        letter-spacing: .22em; text-transform: uppercase;
+        color: var(--cy); margin-top: 3px;
+      }
+      .sys { justify-self: center; display: flex; gap: 10px; align-items: center; }
+      .sys .pill {
+        display: flex; gap: 8px; align-items: center;
+        padding: 6px 12px; border: 1px solid var(--line-2);
+        background: rgba(34,211,238,.04); border-radius: 1px;
+        font: 500 9.5px 'Geist Mono', monospace;
+        letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+      }
+      .sys .pill .dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--gr); box-shadow: 0 0 8px var(--gr);
+        animation: pd 2s ease-in-out infinite;
+      }
+      .sys .pill .v { color: var(--ink); margin-inline-start: 4px; }
+      @keyframes pd { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+      .lang { justify-self: end; display: flex; gap: 2px; font: 500 10px 'Geist Mono', monospace; }
+      .lang button {
+        padding: 6px 11px; background: transparent;
+        border: 1px solid var(--line-2); color: var(--muted);
+        cursor: pointer; border-radius: 1px; letter-spacing: .15em;
+      }
+      .lang button.on { color: var(--cy); border-color: var(--cy); background: rgba(34,211,238,.06); }
+
+      /* STAGE */
+      .stage {
+        position: relative; overflow: hidden;
+        display: grid; grid-template-columns: 1.15fr 1fr; gap: 0;
+        background:
+          linear-gradient(180deg, rgba(232,223,203,.04), rgba(232,223,203,.02)),
+          var(--bg-0);
+      }
+      .map-wrap {
+        position: relative;
+        border-inline-end: 1px solid var(--line-2);
+        background:
+          radial-gradient(ellipse 60% 70% at 50% 45%, rgba(34,211,238,.05), transparent 70%),
+          repeating-linear-gradient(0deg, transparent 0 39px, rgba(140,180,230,.04) 39px 40px),
+          repeating-linear-gradient(90deg, transparent 0 39px, rgba(140,180,230,.04) 39px 40px);
+      }
+      .map-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .il-outline {
+        fill: rgba(34,211,238,.04);
+        stroke: var(--cy-dim); stroke-width: 1.3;
+      }
+      .pin-base {
+        fill: rgba(10,18,32,.85);
+        stroke: var(--cy); stroke-width: 1.2;
+      }
+      .pin-pulse {
+        fill: none; stroke: var(--cy); stroke-width: 1.5; opacity: .8;
+        transform-origin: center; transform-box: fill-box;
+        animation: pulse 2.6s ease-out infinite;
+      }
+      .pin-pulse.am { stroke: var(--am); }
+      .pin-pulse.gr { stroke: var(--gr); }
+      .pin-pulse.vi { stroke: var(--vi); }
+      .pin-pulse.rd { stroke: var(--rd); }
+      @keyframes pulse {
+        0%   { r: 6;  opacity: .85; }
+        100% { r: 26; opacity: 0; }
+      }
+      .pin-dot {
+        fill: var(--cy);
+        filter: drop-shadow(0 0 6px rgba(34,211,238,.65));
+      }
+      .pin-dot.am { fill: var(--am); filter: drop-shadow(0 0 6px rgba(242,178,58,.6)); }
+      .pin-dot.gr { fill: var(--gr); filter: drop-shadow(0 0 6px rgba(43,230,142,.6)); }
+      .pin-dot.vi { fill: var(--vi); filter: drop-shadow(0 0 6px rgba(167,139,250,.6)); }
+      .pin-dot.rd { fill: var(--rd); filter: drop-shadow(0 0 6px rgba(255,94,94,.6)); }
+      .pin-label {
+        font: 600 10.5px 'Geist Mono', monospace;
+        letter-spacing: .12em; text-transform: uppercase;
+        fill: var(--ink);
+        paint-order: stroke fill;
+        stroke: rgba(5,8,15,.85); stroke-width: 3; stroke-linejoin: round;
+      }
+      .pin-label.sub { font-size: 9px; fill: var(--muted); }
+      .compass {
+        position: absolute; bottom: 16px; inset-inline-start: 16px;
+        width: 56px; height: 56px; opacity: .55;
+        font: 600 10px 'Geist Mono', monospace; color: var(--muted);
+      }
+      .compass svg { width: 100%; height: 100%; }
+      .scale-bar {
+        position: absolute; bottom: 18px; inset-inline-end: 16px;
+        font: 500 9px 'Geist Mono', monospace; color: var(--muted);
+        letter-spacing: .15em; text-align: end;
+      }
+      .scale-bar .bar {
+        width: 120px; height: 4px; margin-top: 4px;
+        background:
+          linear-gradient(90deg, var(--cy) 0 33%, transparent 33% 66%, var(--cy) 66% 100%);
+        border: 1px solid var(--line-2);
+      }
+      .stage-cap {
+        position: absolute; top: 14px; inset-inline-start: 16px;
+        padding: 8px 12px; background: rgba(10,18,32,.7);
+        border: 1px solid var(--line-2); backdrop-filter: blur(10px);
+        font: 600 11px 'Geist Mono', monospace;
+        letter-spacing: .18em; text-transform: uppercase; color: var(--cy);
+      }
+
+      /* RIGHT PANEL — site cards */
+      .sites {
+        position: relative; padding: 18px 22px;
+        overflow: auto;
+        display: grid; grid-template-rows: auto 1fr;
+        gap: 14px;
+      }
+      .sites h2 {
+        margin: 0; font: 500 12px 'Geist Mono', monospace;
+        letter-spacing: .22em; text-transform: uppercase; color: var(--cy);
+      }
+      .site-grid {
+        display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+        align-content: start;
+      }
+      .card {
+        position: relative;
+        padding: 14px;
+        background: linear-gradient(180deg, rgba(17,27,46,.7), rgba(10,18,32,.55));
+        border: 1px solid var(--line-2);
+        border-radius: 1px;
+        box-shadow:
+          0 0 0 1px rgba(34,211,238,.04),
+          0 12px 30px -22px rgba(34,211,238,.35);
+        cursor: pointer;
+        transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+      }
+      .card:hover {
+        transform: translateY(-1px);
+        border-color: var(--cy);
+        box-shadow:
+          0 0 0 1px rgba(34,211,238,.16),
+          0 18px 40px -22px rgba(34,211,238,.55);
+      }
+      .card::before {
+        content: ''; position: absolute; inset-inline-start: 0; top: 10px; bottom: 10px;
+        width: 2px; background: linear-gradient(180deg, var(--cy), transparent);
+      }
+      .card.am::before { background: linear-gradient(180deg, var(--am), transparent); }
+      .card.gr::before { background: linear-gradient(180deg, var(--gr), transparent); }
+      .card.vi::before { background: linear-gradient(180deg, var(--vi), transparent); }
+      .card.rd::before { background: linear-gradient(180deg, var(--rd), transparent); }
+      .card .row {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 8px;
+      }
+      .card .name {
+        font: 600 14px/1.2 'Frank Ruhl Libre', serif;
+        letter-spacing: -.005em; color: var(--ink);
+      }
+      .card .loc {
+        font: 500 9.5px 'Geist Mono', monospace;
+        letter-spacing: .16em; text-transform: uppercase; color: var(--cy);
+      }
+      .card .kind {
+        font: 500 9px 'Geist Mono', monospace; letter-spacing: .18em;
+        text-transform: uppercase; color: var(--muted); margin-top: 2px;
+      }
+      .card .stats {
+        margin-top: 10px; display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .card .stat .k {
+        font: 500 8.5px 'Geist Mono', monospace;
+        letter-spacing: .18em; text-transform: uppercase; color: var(--dim);
+      }
+      .card .stat .v {
+        font: 600 14px 'Heebo', sans-serif;
+        font-variant-numeric: tabular-nums;
+        color: var(--ink); margin-top: 2px; line-height: 1;
+      }
+      .card .stat .v small {
+        font: 500 9px 'Geist Mono', monospace; color: var(--muted);
+        margin-inline-start: 3px;
+      }
+      .card .meter {
+        margin-top: 10px; height: 3px; background: rgba(140,180,230,.08);
+        overflow: hidden; border-radius: 2px;
+      }
+      .card .meter .fl {
+        height: 100%; transition: width 600ms cubic-bezier(.2,.7,0,1);
+      }
+      .card.am .meter .fl { background: linear-gradient(90deg, var(--am), var(--am-glow)); box-shadow: 0 0 6px rgba(242,178,58,.5); }
+      .card.gr .meter .fl { background: linear-gradient(90deg, var(--gr), #9dfdb4); box-shadow: 0 0 6px rgba(43,230,142,.5); }
+      .card.vi .meter .fl { background: linear-gradient(90deg, var(--vi), #dcceff); box-shadow: 0 0 6px rgba(167,139,250,.5); }
+      .card.rd .meter .fl { background: linear-gradient(90deg, var(--rd), #ffa5a5); box-shadow: 0 0 6px rgba(255,94,94,.5); }
+      .card .meter .fl.cy { background: linear-gradient(90deg, var(--cy), #a8eef7); box-shadow: 0 0 6px rgba(34,211,238,.45); }
+      .card .link {
+        margin-top: 10px;
+        font: 500 9.5px 'Geist Mono', monospace;
+        letter-spacing: .2em; text-transform: uppercase;
+        color: var(--cy);
+        display: inline-flex; gap: 6px; align-items: center;
+      }
+      .card .link::after { content: '→'; transition: transform 200ms ease; }
+      .card:hover .link::after { transform: translateX(-4px); }
+      html[dir="ltr"] .card .link::after { content: '→'; }
+
+      /* BOTTOM BAR */
+      .bottombar {
+        display: grid; grid-template-columns: 1fr auto; gap: 16px;
+        align-items: center; padding: 12px 22px;
+        background: linear-gradient(180deg, rgba(10,18,32,.55), rgba(17,27,46,.75));
+        border-top: 1px solid var(--line-2);
+        position: relative; z-index: 20;
+      }
+      .bottombar::before {
+        content: ''; position: absolute; left: 0; right: 0; top: -1px; height: 1px;
+        background: linear-gradient(90deg, transparent, var(--cy-dim) 20%, var(--cy-dim) 80%, transparent);
+        opacity: .5;
+      }
+      .metrics {
+        display: flex; gap: 22px; flex-wrap: wrap; align-items: baseline;
+      }
+      .metric .k {
+        font: 500 9px 'Geist Mono', monospace;
+        letter-spacing: .22em; text-transform: uppercase; color: var(--dim);
+      }
+      .metric .v {
+        font: 600 18px 'Heebo', sans-serif;
+        font-variant-numeric: tabular-nums;
+        margin-inline-start: 8px; color: var(--ink);
+      }
+      .metric .v small {
+        font: 500 10px 'Geist Mono', monospace;
+        color: var(--muted); margin-inline-start: 3px;
+      }
+      .ts {
+        display: flex; gap: 12px; align-items: center;
+        font: 500 10px 'Geist Mono', monospace; color: var(--muted);
+        letter-spacing: .18em; text-transform: uppercase;
+      }
+      .ts input[type="range"] {
+        -webkit-appearance: none; appearance: none;
+        width: 240px; height: 4px; background: rgba(140,180,230,.15);
+        outline: none; border: 1px solid var(--line-2); border-radius: 1px;
+      }
+      .ts input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none; width: 12px; height: 12px;
+        background: var(--cy); border-radius: 50%;
+        box-shadow: 0 0 8px rgba(34,211,238,.6);
+        cursor: pointer;
+      }
+      .ts input[type="range"]::-moz-range-thumb {
+        width: 12px; height: 12px; background: var(--cy);
+        border: 0; border-radius: 50%;
+        box-shadow: 0 0 8px rgba(34,211,238,.6); cursor: pointer;
+      }
+      .ts .c { color: var(--cy); margin-inline-start: 4px; }
+
+      @media (max-width: 1100px) {
+        .stage { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+        .map-wrap { border-inline-end: 0; border-bottom: 1px solid var(--line-2); }
+      }
+      @media (max-width: 720px) {
+        .site-grid { grid-template-columns: 1fr; }
+        .sys { display: none; }
+        .metrics { gap: 12px; }
+        .ts input[type="range"] { width: 160px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="mark" aria-hidden="true"></div>
+          <div class="brand-text">
+            <h1 data-he="אטלס רשת אנרגיה — תוכנית-על" data-en="Grid Energy Atlas — Master Plan">אטלס רשת אנרגיה — תוכנית-על</h1>
+            <div class="sub" data-he="B.E.E · צי לקוחות חי" data-en="B.E.E · FLEET TELEMETRY">B.E.E · צי לקוחות חי</div>
+          </div>
+        </div>
+        <div class="sys">
+          <div class="pill">
+            <span class="dot"></span><span data-he="אתרים" data-en="Sites">אתרים</span>
+            <span class="v" id="sys-sites">6 / 6</span>
+          </div>
+          <div class="pill">
+            <span data-he="Σ ייצור" data-en="Σ Gen">Σ ייצור</span>
+            <span class="v" id="sys-gen">4.62 MW</span>
+          </div>
+          <div class="pill">
+            <span data-he="Σ צריכה" data-en="Σ Load">Σ צריכה</span>
+            <span class="v" id="sys-load">3.18 MW</span>
+          </div>
+          <div class="pill">
+            <span data-he="Σ אגירה" data-en="Σ SoC">Σ אגירה</span>
+            <span class="v" id="sys-soc">61%</span>
+          </div>
+        </div>
+        <div class="lang">
+          <button id="lng-he" class="on">עב</button>
+          <button id="lng-en">EN</button>
+        </div>
+      </header>
+
+      <section class="stage">
+        <div class="map-wrap">
+          <div class="stage-cap" data-he="מפת אתרים — ישראל" data-en="Sites Map — Israel">מפת אתרים — ישראל</div>
+          <svg class="map-svg" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid meet" direction="ltr">
+            <defs>
+              <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+                <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(34,211,238,.07)" stroke-width="1"/>
+              </pattern>
+            </defs>
+            <!-- Simplified Israel outline -->
+            <path class="il-outline" d="
+              M 320,30 L 330,55 L 340,80 L 345,110 L 350,135
+              L 355,165 L 350,195 L 340,220 L 335,245 L 340,270
+              L 350,295 L 360,320 L 365,350 L 370,385 L 365,420
+              L 350,445 L 320,470 L 290,490 L 270,520 L 255,555
+              L 245,595 L 240,635 L 235,675 L 230,710 L 215,735
+              L 200,755 L 185,770 L 175,780 L 170,775 L 175,755
+              L 185,720 L 200,675 L 215,625 L 225,580 L 230,540
+              L 225,505 L 215,475 L 210,445 L 215,415 L 225,385
+              L 235,355 L 245,325 L 250,295 L 245,265 L 240,235
+              L 245,205 L 255,175 L 270,145 L 285,115 L 300,85
+              L 312,55 Z" fill="url(#hatch)"/>
+            <!-- Lat/long crosshair lines -->
+            <g stroke="rgba(140,180,230,.07)" stroke-width=".8" stroke-dasharray="3 6">
+              <line x1="0" y1="200" x2="600" y2="200"/>
+              <line x1="0" y1="400" x2="600" y2="400"/>
+              <line x1="0" y1="600" x2="600" y2="600"/>
+              <line x1="200" y1="0" x2="200" y2="800"/>
+              <line x1="400" y1="0" x2="400" y2="800"/>
+            </g>
+            <!-- City markers (faint) -->
+            <g font="500 8px 'Geist Mono', monospace" fill="rgba(140,180,230,.35)" letter-spacing=".1em">
+              <circle cx="305" cy="190" r="1.5" fill="rgba(140,180,230,.4)"/>
+              <text x="312" y="193">HAIFA</text>
+              <circle cx="295" cy="285" r="1.5" fill="rgba(140,180,230,.4)"/>
+              <text x="302" y="288">TEL AVIV</text>
+              <circle cx="335" cy="335" r="1.5" fill="rgba(140,180,230,.4)"/>
+              <text x="342" y="338">JERUSALEM</text>
+              <circle cx="280" cy="490" r="1.5" fill="rgba(140,180,230,.4)"/>
+              <text x="287" y="493">BE'ER SHEVA</text>
+              <circle cx="200" cy="735" r="1.5" fill="rgba(140,180,230,.4)"/>
+              <text x="207" y="738">EILAT</text>
+            </g>
+            <!-- Site pins -->
+            <g id="pins"></g>
+          </svg>
+          <div class="compass" aria-hidden="true">
+            <svg viewBox="0 0 56 56">
+              <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(140,180,230,.25)"/>
+              <path d="M28 8 L31 28 L28 25 L25 28 Z" fill="var(--cy)" opacity=".7"/>
+              <path d="M28 48 L25 28 L28 31 L31 28 Z" fill="rgba(140,180,230,.4)"/>
+              <text x="28" y="6" text-anchor="middle" font="600 8px 'Geist Mono'" fill="var(--cy)" letter-spacing=".15em">N</text>
+            </svg>
+          </div>
+          <div class="scale-bar">
+            <div data-he="קנה מידה" data-en="SCALE">קנה מידה</div>
+            <div class="bar"></div>
+            <div style="margin-top:4px">0 — 100 KM</div>
+          </div>
+        </div>
+
+        <div class="sites">
+          <h2 data-he="צי הלקוחות · בזמן אמת" data-en="Client Fleet · Live">צי הלקוחות · בזמן אמת</h2>
+          <div class="site-grid" id="site-grid"></div>
+        </div>
+      </section>
+
+      <footer class="bottombar">
+        <div class="metrics">
+          <div class="metric">
+            <span class="k" data-he="Σ ייצור היום" data-en="Σ Gen today">Σ ייצור היום</span>
+            <span class="v" id="m-gen">28.4<small>MWh</small></span>
+          </div>
+          <div class="metric">
+            <span class="k" data-he="Σ צריכה" data-en="Σ Consumed">Σ צריכה</span>
+            <span class="v" id="m-con">19.7<small>MWh</small></span>
+          </div>
+          <div class="metric">
+            <span class="k" data-he="Σ אגירה" data-en="Σ Stored">Σ אגירה</span>
+            <span class="v" id="m-sto">6.1<small>MWh</small></span>
+          </div>
+          <div class="metric">
+            <span class="k" data-he="Σ ייצוא" data-en="Σ Exported">Σ ייצוא</span>
+            <span class="v" id="m-exp">5.8<small>MWh</small></span>
+          </div>
+          <div class="metric">
+            <span class="k" data-he="Σ חיסכון" data-en="Σ Savings">Σ חיסכון</span>
+            <span class="v" id="m-sav">₪ 12,780</span>
+          </div>
+          <div class="metric">
+            <span class="k" data-he="Σ CO₂ נמנע" data-en="Σ CO₂ avoided">Σ CO₂ נמנע</span>
+            <span class="v" id="m-co2">10.8<small>t</small></span>
+          </div>
+        </div>
+        <div class="ts">
+          <span data-he="שעה" data-en="Time">שעה</span>
+          <span class="c" id="t-val">13:00</span>
+          <input type="range" id="time" min="0" max="24" step=".25" value="13" />
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      (function () {
+        const $ = (s) => document.querySelector(s);
+        const $$ = (s) => document.querySelectorAll(s);
+        const fmtTime = (h) => {
+          const H = Math.floor(h), M = Math.round((h - H) * 60);
+          return `${String(H).padStart(2,'0')}:${String(M).padStart(2,'0')}`;
+        };
+        const nfmt = (n) => n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+        // ---- Site fleet (mock data) ----
+        const sites = [
+          { id: 'kfar-hai',  name_he: 'אטלס כפר חי',     name_en: 'Atlas Kfar Hai',     loc_he: 'גליל',           loc_en: 'Galilee',     kind_he: 'קיבוץ · PV+ESS', kind_en: 'Kibbutz · PV+ESS', pv: 1200, ess: 2500, load: 920,  accent: 'am', x: 320, y: 175, link: 'sites/kfar-hai.html' },
+          { id: 'aniran',    name_he: 'אנירן',           name_en: 'Aniran',             loc_he: 'השרון',           loc_en: 'Sharon',      kind_he: 'מסחרי · PV',     kind_en: 'Commercial · PV',  pv: 540,  ess: 0,    load: 420,  accent: 'cy', x: 305, y: 245, link: 'sites/aniran.html'   },
+          { id: 'penilak',   name_he: 'פנילק',           name_en: 'Penilak',            loc_he: 'מודיעין',          loc_en: 'Modi\'in',    kind_he: 'תעשייתי · PV+ESS', kind_en: 'Industrial · PV+ESS', pv: 880, ess: 1800, load: 760, accent: 'gr', x: 320, y: 310, link: 'sites/penilak.html'  },
+          { id: 'atlas-be',  name_he: 'אטלס באר שבע',     name_en: 'Atlas Be\'er Sheva', loc_he: 'נגב צפוני',        loc_en: 'N. Negev',    kind_he: 'שדה סולארי',     kind_en: 'Solar Farm',         pv: 2000, ess: 0,    load: 0,    accent: 'am', x: 280, y: 490, link: 'sites/atlas-be.html' },
+          { id: 'gat-fert',  name_he: 'גת דשנים',        name_en: 'Gat Fertilizers',    loc_he: 'דרום',            loc_en: 'South',       kind_he: 'תעשייתי · אוטומציה', kind_en: 'Industrial · Auto', pv: 0,   ess: 0,    load: 580,  accent: 'vi', x: 270, y: 440, link: 'sites/gat-fert.html' },
+          { id: 'revivim',   name_he: 'רביבים',          name_en: 'Revivim',            loc_he: 'נגב',             loc_en: 'Negev',       kind_he: 'חקלאי · PV+ESS', kind_en: 'Agri · PV+ESS',    pv: 450,  ess: 900,  load: 320,  accent: 'gr', x: 260, y: 560, link: 'sites/revivim.html'  },
+        ];
+
+        // ---- Physics (per site, hour-of-day) ----
+        const sunP = (h) => h < 5.5 || h > 19.5 ? 0 : Math.max(0, Math.cos(((h - 12.5) / 6) * Math.PI / 2) ** 2);
+        const loadP = (h) => {
+          let l = 0.28;
+          l += Math.max(0, Math.cos(((h - 8)  / 1.8) * Math.PI / 2) ** 2) * 0.35;
+          l += Math.max(0, Math.cos(((h - 20) / 2.2) * Math.PI / 2) ** 2) * 0.70;
+          l += Math.max(0, Math.cos(((h - 13) / 2.5) * Math.PI / 2) ** 2) * 0.20;
+          return Math.min(1, l);
+        };
+
+        // ---- Build site cards & pins ----
+        const grid = $('#site-grid');
+        const pinsG = $('#pins');
+        sites.forEach((s, i) => {
+          // card
+          const card = document.createElement('a');
+          card.href = s.link;
+          card.className = `card ${s.accent}`;
+          card.style.textDecoration = 'none';
+          card.innerHTML = `
+            <div class="row">
+              <div>
+                <div class="name" data-he="${s.name_he}" data-en="${s.name_en}">${s.name_he}</div>
+                <div class="kind" data-he="${s.kind_he}" data-en="${s.kind_en}">${s.kind_he}</div>
+              </div>
+              <div class="loc" data-he="${s.loc_he}" data-en="${s.loc_en}">${s.loc_he}</div>
+            </div>
+            <div class="stats">
+              <div class="stat">
+                <div class="k" data-he="ייצור" data-en="Gen">ייצור</div>
+                <div class="v" id="card-${s.id}-gen">— <small>kW</small></div>
+              </div>
+              <div class="stat">
+                <div class="k" data-he="אגירה" data-en="SoC">אגירה</div>
+                <div class="v" id="card-${s.id}-soc">— <small>%</small></div>
+              </div>
+              <div class="stat">
+                <div class="k" data-he="חיסכון" data-en="Savings">חיסכון</div>
+                <div class="v" id="card-${s.id}-sav">₪ —</div>
+              </div>
+            </div>
+            <div class="meter"><div class="fl" id="card-${s.id}-fl" style="width:0%"></div></div>
+            <div class="link" data-he="פתח תכנית אתר" data-en="Open site plan">פתח תכנית אתר</div>
+          `;
+          grid.appendChild(card);
+
+          // pin
+          const pinG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          pinG.setAttribute('transform', `translate(${s.x} ${s.y})`);
+          pinG.innerHTML = `
+            <circle class="pin-pulse ${s.accent}" cx="0" cy="0" r="6"/>
+            <circle class="pin-base" cx="0" cy="0" r="6"/>
+            <circle class="pin-dot ${s.accent}" cx="0" cy="0" r="2.6"/>
+            <text class="pin-label" x="${s.x < 300 ? -10 : 10}" y="4" text-anchor="${s.x < 300 ? 'end' : 'start'}">${s.name_en}</text>
+            <text class="pin-label sub" x="${s.x < 300 ? -10 : 10}" y="16" text-anchor="${s.x < 300 ? 'end' : 'start'}">${s.kind_en}</text>
+          `;
+          pinG.style.cursor = 'pointer';
+          pinG.addEventListener('click', () => window.location.href = s.link);
+          pinsG.appendChild(pinG);
+
+          // persistent SoC
+          s.batt = 55 + (i * 7) % 30; // varied initial SoC
+        });
+
+        // ---- Lang ----
+        let lang = localStorage.getItem('bee-mp-lang') || 'he';
+        function setLang(L) {
+          lang = L;
+          document.documentElement.setAttribute('lang', L);
+          document.documentElement.setAttribute('dir', L === 'he' ? 'rtl' : 'ltr');
+          $$('[data-he]').forEach(el => { if (el.dataset[L]) el.textContent = el.dataset[L]; });
+          $('#lng-he').classList.toggle('on', L === 'he');
+          $('#lng-en').classList.toggle('on', L === 'en');
+          localStorage.setItem('bee-mp-lang', L);
+          apply();
+        }
+        $('#lng-he').onclick = () => setLang('he');
+        $('#lng-en').onclick = () => setLang('en');
+
+        // ---- Apply (live update) ----
+        const timeEl = $('#time'), tv = $('#t-val');
+        function apply() {
+          const h = parseFloat(timeEl.value);
+          tv.textContent = fmtTime(h);
+          const sK = sunP(h);
+          const lK = loadP(h);
+
+          let sumGen = 0, sumLoad = 0, sumSoc = 0, socN = 0;
+          let dayGen = 0, dayCon = 0, dayStored = 0, dayExp = 0;
+
+          sites.forEach(s => {
+            const gen = sK * s.pv;
+            const load = lK * s.load;
+            const net = gen - load;
+            // battery dynamics (very simple)
+            let bC = 0, bD = 0;
+            if (s.ess > 0) {
+              if (net > 5 && s.batt < 99) bC = Math.min(net, s.ess * 0.12);
+              else if (net < -5 && s.batt > 5) bD = Math.min(-net, s.ess * 0.12);
+              s.batt = Math.min(100, Math.max(5, s.batt + (bC - bD) * 0.001));
+            }
+            const grid = net - bC + bD; // +export, -import
+            const sav = gen * 0.45;
+
+            const genEl = document.getElementById(`card-${s.id}-gen`);
+            const socEl = document.getElementById(`card-${s.id}-soc`);
+            const savEl = document.getElementById(`card-${s.id}-sav`);
+            const flEl  = document.getElementById(`card-${s.id}-fl`);
+            if (genEl) genEl.innerHTML = `${gen.toFixed(0)}<small>kW</small>`;
+            if (socEl) socEl.innerHTML = s.ess > 0 ? `${s.batt.toFixed(0)}<small>%</small>` : `—`;
+            if (savEl) savEl.textContent = `₪ ${nfmt(sav)}`;
+            if (flEl)  flEl.style.width = `${Math.min(100, (gen / Math.max(s.pv, 1)) * 100).toFixed(0)}%`;
+
+            sumGen  += gen;
+            sumLoad += load;
+            if (s.ess > 0) { sumSoc += s.batt; socN++; }
+            dayGen  += s.pv  * 0.0048; // ~ avg over day for headline
+            dayCon  += s.load * 0.0042;
+            dayStored += s.ess * 0.0005;
+            dayExp  += Math.max(0, grid) * 0.005;
+          });
+
+          $('#sys-gen').textContent  = `${(sumGen / 1000).toFixed(2)} MW`;
+          $('#sys-load').textContent = `${(sumLoad / 1000).toFixed(2)} MW`;
+          $('#sys-soc').textContent  = socN ? `${(sumSoc / socN).toFixed(0)}%` : '—';
+          const sitesUp = sites.filter(s => sK > 0.02 || s.load > 0).length;
+          $('#sys-sites').textContent = `${sitesUp} / ${sites.length}`;
+
+          $('#m-gen').innerHTML = `${dayGen.toFixed(1)}<small>MWh</small>`;
+          $('#m-con').innerHTML = `${dayCon.toFixed(1)}<small>MWh</small>`;
+          $('#m-sto').innerHTML = `${dayStored.toFixed(1)}<small>MWh</small>`;
+          $('#m-exp').innerHTML = `${dayExp.toFixed(1)}<small>MWh</small>`;
+          $('#m-sav').textContent = `₪ ${nfmt(dayGen * 1000 * 0.45)}`;
+          $('#m-co2').innerHTML = `${(dayGen * 0.38).toFixed(1)}<small>t</small>`;
+        }
+
+        timeEl.addEventListener('input', apply);
+        setLang(lang);
+        apply();
+        setInterval(apply, 2000);
+      })();
+    </script>
+  </body>
+</html>
