@@ -259,7 +259,7 @@ class EarthingRenderer:
         cols = [("סעיף", 60.0), ("גבול", 20.0), ("ערך", 20.0), ("תקין", 12.0)]
         tw, rh = sum(c[1] for c in cols), 4.5
         h = rh * (len(rows) + 1)
-        ctx.text("בדיקות טבעת הארקת היסוד", (x_right, y_top + 1.2), 2.2, "legend", TA.BOTTOM_RIGHT, bold=True)
+        ctx.text("בדיקות טבעת הארקת היסוד" if self.e.ring else "בדיקות הארקה", (x_right, y_top + 1.2), 2.2, "legend", TA.BOTTOM_RIGHT, bold=True)
         ctx.rect(x_right - tw, y_top - h, tw, h, "legend")
         xx = x_right
         for name, cw in cols:
@@ -283,7 +283,7 @@ class EarthingRenderer:
             return self.warnings
         # bars across the top, right to left
         x = ctx.x1 - 6.0
-        y_top = ctx.y1 - 14.0
+        y_top = ctx.y1 - 20.0
         for b in e.bars:
             x0 = self.draw_bar(b, x, y_top)
             x = x0 - 26.0
@@ -309,14 +309,42 @@ class EarthingRenderer:
             rows = ring_checks(e, t.slab.length_mm, t.slab.width_mm)
         else:
             rows = ring_checks(e, None, None)
+            if e.electrodes:
+                self.draw_electrode_row(ctx.x0 + 16.0, ctx.y0 + 70.0)
+                self.draw_electrode_detail(ctx.x0 + 16.0, ctx.y0 + 150.0)
         # right column: checks table, then notes, down to the revision table
         xr = ctx.x1 - 6.0
         y_after = self.draw_checks(xr, y_mid, rows)
         notes = list(e.notes) + [f"לאימות: {v}" for v in e.verify]
         ny = y_after - 8.0
         ctx.text("הערות", (xr, ny), 2.4, "notes", TA.TOP_RIGHT, bold=True)
-        ctx.mtext([f"{i + 1}. {n}" for i, n in enumerate(notes)], (xr, ny - 4.0), 1.6, "notes", width=150.0)
+        from .cover import _wrap
+        yy = ny - 4.6
+        for i, n in enumerate(notes, 1):
+            for k, line in enumerate(_wrap(f"{i}. {n}", 100)):
+                ctx.text(line, (xr - (0 if k == 0 else 3.0), yy), 1.6, "notes", TA.TOP_RIGHT)
+                yy -= 2.7
+            yy -= 0.5
         return self.warnings
+
+    def draw_electrode_row(self, ox: float, oy: float) -> None:
+        """Plan of the electrodes in a row (no slab): pits, spacing ≥ rod depth, bare Cu interconnection to the bar."""
+        ctx, e = self.ctx, self.e
+        el = e.electrodes[0]
+        n = sum(x.qty for x in e.electrodes)
+        pitch = 34.0
+        ctx.text(f"סידור אלקטרודות — {n} מוטות בשורה (סכמטי)", (ox, oy + 16.0), 2.2, "panel_text", TA.BOTTOM_LEFT, bold=True)
+        xs = [ox + 10.0 + i * pitch for i in range(n)]
+        for i, x in enumerate(xs):
+            ctx.rect(x - 4.0, oy - 4.0, 8.0, 8.0, "panel_encl")
+            ctx.msp.add_circle((x, oy), 1.2, dxfattribs={"layer": LAYERS["pe"].name})
+            ctx.text(f"E{i + 1}", (x, oy + 5.0), 1.8, "sld_tag", TA.BOTTOM_CENTER, bold=True)
+        ctx.msp.add_lwpolyline([(xs[0], oy), (xs[-1], oy)], dxfattribs={"layer": LAYERS["pe"].name, "const_width": 0.4})
+        ctx.msp.add_lwpolyline([(xs[-1], oy), (xs[-1] + 26.0, oy), (xs[-1] + 26.0, oy + 10.0)], dxfattribs={"layer": LAYERS["pe"].name, "const_width": 0.4})
+        ctx.text("לפה\"פ", (xs[-1] + 27.5, oy + 10.0), 1.6, "sld_text", TA.MIDDLE_LEFT)
+        if n > 1:
+            ctx.text(f"≥ {el.depth_m:g} m", ((xs[0] + xs[1]) / 2, oy - 6.0), 1.6, "dim", TA.TOP_CENTER)
+        ctx.text("גיד נחושת חשוף 35 ממ\"ר בעומק ≥0.5 מ' בין השוחות; מהדק טבעת תקני בכל מוט", (ox, oy - 11.0), 1.5, "sld_text", TA.TOP_LEFT)
 
 
 def draw_earthing(ctx: SheetContext, design: Design, e: Earthing) -> list[str]:

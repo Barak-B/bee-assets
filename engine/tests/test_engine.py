@@ -473,3 +473,27 @@ def test_foundation_anigma():
     assert list(out) == ["S-00", "S-01", "S-02", "S-03"]
     for no, (doc, warnings) in out.items():
         assert not warnings, (no, warnings)
+
+
+def test_prime_houses_routes_and_boq():
+    """Route schematic + span detail render clean; the BOQ agrees with its own rule and scales with route length."""
+    from bee_cad.boq_xlsx import Boq, compute
+    from bee_cad.routes import RoutePlan, route_rows
+
+    d = Design.model_validate(json.loads((EXAMPLE.parent / "prime_kfar_bilu_houses.json").read_text(encoding="utf-8")))
+    rp = RoutePlan.model_validate(d.routes)
+    assert [r[2] for r in route_rows(rp)] == ["15*", "80*", "40*", "12*"]
+    out = build(d, ["cover", "routes", "sld", "earthing"])
+    assert list(out) == ["E-00", "E-02", "E-03", "E-04"]
+    for no, (doc, warnings) in out.items():
+        assert not warnings, (no, warnings)
+    raw = json.loads((EXAMPLE.parent / "prime_kfar_bilu_boq.json").read_text(encoding="utf-8"))
+    r1 = compute(Boq.model_validate(raw))
+    assert r1["gross"] == r1["net"] + r1["vat"]
+    cu = next(x for c in r1["chapters"] for x in c["rows"] if x["item"].code == "CU535")
+    assert cu["qty"] == 136                      # ROUNDUP(120*1.1 + 2*2)
+    for p in raw["params"]:
+        if p["key"] == "L_H2":
+            p["value"] = 150
+    r2 = compute(Boq.model_validate(raw))
+    assert r2["net"] > r1["net"]

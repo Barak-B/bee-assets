@@ -1,0 +1,718 @@
+{
+ "title": {
+  "designer": "B.E.E — ברק הנדסת חשמל",
+  "project": "הגדלת לוחות — שני בתים",
+  "site": "כפר בילו 34 (לאימות)",
+  "client": "פריים אנרג'י",
+  "sheet_no": "E-00",
+  "revision": "A",
+  "date": "2026-11-07",
+  "status": "לאישור",
+  "revisions": [
+   [
+    "A",
+    "2026-11-07",
+    "טיוטה לפי סיור ולדימיר ושיחה עם דוד (פריים)"
+   ]
+  ],
+  "system_data": [
+   [
+    "חיבור (הנחה)",
+    "3X40A לכל בית*"
+   ],
+   [
+    "לוחות",
+    "2 לוחות ראשיים חדשים"
+   ],
+   [
+    "שיטת הארקה",
+    "TN-C-S (איפוס) + פחת 30mA"
+   ],
+   [
+    "מתיחה בין מבנים",
+    "12 מ' — 2 סטרינגים"
+   ]
+  ]
+ },
+ "notes": [
+  "לאימות: זהות האתר — כפר בילו 34 (ש.ל.י.י. יזמות) לפי תיק הלקוח; תמונות הסיור לא נבחנו (נמצאות רק במחשב).",
+  "לאימות: גודל החיבור הנדרש לכל בית (הנחה 3X40A; הכבלים מתאימים עד 3X63A) ומספר המעגלים הקיימים בכל לוח.",
+  "לאימות: הליקויים במבנה בית 1 שציין דוד — פירוט לפני תמחור סופי."
+ ],
+ "sources": [
+  "סיכום ברק משיחה עם דוד (מהנדס פריים) וסיור ולדימיר — 11/2026",
+  "טופס בדיקה נספח ג — כפר בילו 34 (12/10/26): נדרשת הגדלת חיבור וחפ\"ת כהגנה בלעדית במתקן חקלאי"
+ ],
+ "boards": [
+  {
+   "id": "H1",
+   "title": "לוח ראשי בית 1 — הגדלה",
+   "supply": {
+    "kind": "utility",
+    "label": "מגומחת המונים — מונה בית 1",
+    "meter": "3X40A (הגדלה)*",
+    "voltage": "400/230V",
+    "frequency": "50Hz",
+    "cable": {
+     "designation": "N2XY 5X16 Cu",
+     "length_m": 15,
+     "du_pct": 0.35,
+     "method": "תת-קרקעי בצנרת"
+    },
+    "earthing": "TN-C-S"
+   },
+   "incomer": {
+    "tag": "Q0",
+    "kind": "mcb",
+    "poles": 4,
+    "rating_a": 40,
+    "curve": "C",
+    "lock": true,
+    "note": "מפסק ראשי"
+   },
+   "busbar": {
+    "label": "L1,L2,L3,N,PE",
+    "rating_a": 63
+   },
+   "spd": {
+    "tag": "SPD",
+    "kind": "spd",
+    "poles": 4,
+    "note": "T2 3P+N 20kA"
+   },
+   "groups": [
+    {
+     "tag": "H1-RCD1",
+     "title": "קבוצה 1",
+     "device": {
+      "tag": "H1-RCD1",
+      "kind": "rcd",
+      "poles": 4,
+      "rating_a": 40,
+      "idn_ma": 30,
+      "rcd_type": "A"
+     },
+     "circuits": [
+      {
+       "tag": "C1",
+       "device": {
+        "tag": "C1",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 10,
+        "curve": "B"
+       },
+       "load": "תאורה — קיים*",
+       "phase": "L1",
+       "kind": "final",
+       "cable": {
+        "designation": "3X1.5"
+       }
+      },
+      {
+       "tag": "C2",
+       "device": {
+        "tag": "C2",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 10,
+        "curve": "B"
+       },
+       "load": "תאורה — קיים*",
+       "phase": "L2",
+       "kind": "final",
+       "cable": {
+        "designation": "3X1.5"
+       }
+      },
+      {
+       "tag": "C3",
+       "device": {
+        "tag": "C3",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 16,
+        "curve": "C"
+       },
+       "load": "שקעים — קיים*",
+       "phase": "L3",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      },
+      {
+       "tag": "C4",
+       "device": {
+        "tag": "C4",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 16,
+        "curve": "C"
+       },
+       "load": "שקעים — קיים*",
+       "phase": "L1",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      },
+      {
+       "tag": "C5",
+       "device": {
+        "tag": "C5",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 16,
+        "curve": "C"
+       },
+       "load": "שקעי מטבח — קיים*",
+       "phase": "L2",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      }
+     ]
+    },
+    {
+     "tag": "H1-RCD2",
+     "title": "קבוצה 2",
+     "device": {
+      "tag": "H1-RCD2",
+      "kind": "rcd",
+      "poles": 4,
+      "rating_a": 40,
+      "idn_ma": 30,
+      "rcd_type": "A"
+     },
+     "circuits": [
+      {
+       "tag": "C6",
+       "device": {
+        "tag": "C6",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 20,
+        "curve": "C"
+       },
+       "load": "מזגן — קיים*",
+       "phase": "L3",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      },
+      {
+       "tag": "C7",
+       "device": {
+        "tag": "C7",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 20,
+        "curve": "C"
+       },
+       "load": "מזגן — קיים*",
+       "phase": "L1",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      },
+      {
+       "tag": "C8",
+       "device": {
+        "tag": "C8",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 16,
+        "curve": "C"
+       },
+       "load": "דוד חשמל — קיים*",
+       "phase": "L2",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      },
+      {
+       "tag": "C9",
+       "device": {
+        "tag": "C9",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 16,
+        "curve": "C"
+       },
+       "load": "שמור",
+       "phase": "L3",
+       "kind": "final",
+       "cable": {
+        "designation": "-"
+       }
+      }
+     ]
+    }
+   ],
+   "enclosure": {
+    "model": "ארון לוח מתכתי צמוד קיר, 3 שורות × 18 מודולים",
+    "manufacturer": "לפי ת\"י 61439-3",
+    "width_mm": 500,
+    "height_mm": 650,
+    "depth_mm": 160,
+    "rows": 3,
+    "modules_per_row": 18,
+    "row_pitch_mm": 150,
+    "mounting": "surface",
+    "ip": "IP40"
+   },
+   "notes": [
+    "לוח חדש במקום הלוח הקיים; המעגלים הקיימים יועברו ויסומנו (רשימת המעגלים — לפי סקר באתר*).",
+    "ערך לולאת תקלה נמדד מעל 4Ω — שיפור הארקה, פה\"פ ראשי ואלקטרודות לפי גיליון E-04; מפסקי פחת 30mA על כל המעגלים."
+   ]
+  },
+  {
+   "id": "H2",
+   "title": "לוח ראשי בית 2 — הגדלה",
+   "supply": {
+    "kind": "utility",
+    "label": "מגומחת המונים — מונה בית 2",
+    "meter": "3X40A (הגדלה)*",
+    "voltage": "400/230V",
+    "frequency": "50Hz",
+    "cable": {
+     "designation": "N2XY 5X35 Cu",
+     "length_m": 120,
+     "du_pct": 1.3,
+     "method": "תת-קרקעי בצנרת"
+    },
+    "earthing": "TN-C-S"
+   },
+   "incomer": {
+    "tag": "Q0",
+    "kind": "mcb",
+    "poles": 4,
+    "rating_a": 40,
+    "curve": "C",
+    "lock": true,
+    "note": "מפסק ראשי"
+   },
+   "busbar": {
+    "label": "L1,L2,L3,N,PE",
+    "rating_a": 63
+   },
+   "spd": {
+    "tag": "SPD",
+    "kind": "spd",
+    "poles": 4,
+    "note": "T2 3P+N 20kA"
+   },
+   "groups": [
+    {
+     "tag": "H2-RCD1",
+     "title": "קבוצה 1",
+     "device": {
+      "tag": "H2-RCD1",
+      "kind": "rcd",
+      "poles": 4,
+      "rating_a": 40,
+      "idn_ma": 30,
+      "rcd_type": "A"
+     },
+     "circuits": [
+      {
+       "tag": "C1",
+       "device": {
+        "tag": "C1",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 10,
+        "curve": "B"
+       },
+       "load": "תאורה — קיים*",
+       "phase": "L1",
+       "kind": "final",
+       "cable": {
+        "designation": "3X1.5"
+       }
+      },
+      {
+       "tag": "C2",
+       "device": {
+        "tag": "C2",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 10,
+        "curve": "B"
+       },
+       "load": "תאורה — קיים*",
+       "phase": "L2",
+       "kind": "final",
+       "cable": {
+        "designation": "3X1.5"
+       }
+      },
+      {
+       "tag": "C3",
+       "device": {
+        "tag": "C3",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 16,
+        "curve": "C"
+       },
+       "load": "שקעים — קיים*",
+       "phase": "L3",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      },
+      {
+       "tag": "C4",
+       "device": {
+        "tag": "C4",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 16,
+        "curve": "C"
+       },
+       "load": "שקעים — קיים*",
+       "phase": "L1",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      },
+      {
+       "tag": "C5",
+       "device": {
+        "tag": "C5",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 16,
+        "curve": "C"
+       },
+       "load": "שקעי מטבח — קיים*",
+       "phase": "L2",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      }
+     ]
+    },
+    {
+     "tag": "H2-RCD2",
+     "title": "קבוצה 2",
+     "device": {
+      "tag": "H2-RCD2",
+      "kind": "rcd",
+      "poles": 4,
+      "rating_a": 40,
+      "idn_ma": 30,
+      "rcd_type": "A"
+     },
+     "circuits": [
+      {
+       "tag": "C6",
+       "device": {
+        "tag": "C6",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 20,
+        "curve": "C"
+       },
+       "load": "מזגן — קיים*",
+       "phase": "L3",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      },
+      {
+       "tag": "C7",
+       "device": {
+        "tag": "C7",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 20,
+        "curve": "C"
+       },
+       "load": "מזגן — קיים*",
+       "phase": "L1",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      },
+      {
+       "tag": "C8",
+       "device": {
+        "tag": "C8",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 16,
+        "curve": "C"
+       },
+       "load": "דוד חשמל — קיים*",
+       "phase": "L2",
+       "kind": "final",
+       "cable": {
+        "designation": "3X2.5"
+       }
+      },
+      {
+       "tag": "C9",
+       "device": {
+        "tag": "C9",
+        "kind": "mcb",
+        "poles": 1,
+        "rating_a": 16,
+        "curve": "C"
+       },
+       "load": "שמור",
+       "phase": "L3",
+       "kind": "final",
+       "cable": {
+        "designation": "-"
+       }
+      }
+     ]
+    }
+   ],
+   "enclosure": {
+    "model": "ארון לוח מתכתי צמוד קיר, 3 שורות × 18 מודולים",
+    "manufacturer": "לפי ת\"י 61439-3",
+    "width_mm": 500,
+    "height_mm": 650,
+    "depth_mm": 160,
+    "rows": 3,
+    "modules_per_row": 18,
+    "row_pitch_mm": 150,
+    "mounting": "surface",
+    "ip": "IP40"
+   },
+   "notes": [
+    "לוח חדש במקום הלוח הקיים; הארקה תקינה לפי מדידה; האיפוס קיים בתוך הלוח — יועבר לפס הראשי בלוח החדש בנקודה אחת (PEN → PE+N) ויסומן.",
+    "קו הזנה כ-120 מ'*: 5X35 Cu — מפל מתח ≈1.3% ב-3X40A, ≈2.1% ב-3X63A."
+   ]
+  }
+ ],
+ "nodes": [],
+ "sld_groups": [
+  {
+   "sheet_no": "E-03",
+   "title": "חד-קווי — לוחות ראשיים בית 1 ובית 2 (הגדלה)",
+   "boards": [
+    "H1",
+    "H2"
+   ],
+   "nodes": [],
+   "notes": [
+    "שני הלוחות חדשים, מתכתיים, 3 שורות; מפסק ראשי 4P 40A C עם נעילה; 2 מפסקי פחת 4P 40A 30mA סוג A; מגן ברק T2.",
+    "המעגלים המסומנים * הם קיימים ויועברו ללוח החדש לפי סקר; חתכי הכבלים הקיימים ייבדקו מול ההגנות.",
+    "הלוחות יוכנו לבדיקת חח\"י לאחר ההגדלה: שילוט, סימון מעגלים, תוכנית AS-MADE בלוח ודו\"ח בדיקות."
+   ]
+  }
+ ],
+ "earthing": {
+  "title": "הארקות והשוואת פוטנציאלים — בית 1 ובית 2",
+  "sheet_no": "E-04",
+  "system": "TN-C-S",
+  "ring": null,
+  "bars": [
+   {
+    "id": "פה\"פ-1",
+    "label": "פה\"פ ראשי — בית 1 (חדש)",
+    "material": "Cu 4×30",
+    "holes": 10,
+    "location": "ליד לוח ראשי בית 1, בקופסה עם מכסה",
+    "conductors": [
+     {
+      "target": "PE לוח ראשי בית 1",
+      "size": "16 Cu",
+      "kind": "pe"
+     },
+     {
+      "target": "אלקטרודות הארקה ×3",
+      "size": "35 Cu",
+      "kind": "electrode",
+      "qty": 3
+     },
+     {
+      "target": "צנרת מים ראשית",
+      "size": "10 Cu",
+      "kind": "bond"
+     },
+     {
+      "target": "צנרת גז (אם קיימת)",
+      "size": "10 Cu",
+      "kind": "bond"
+     },
+     {
+      "target": "קונסטרוקציה / גופים מתכתיים",
+      "size": "16 Cu",
+      "kind": "bond"
+     },
+     {
+      "target": "הארקת יסוד (אם קיימת — לאיתור)",
+      "size": "קיים",
+      "kind": "existing"
+     }
+    ]
+   },
+   {
+    "id": "פה\"פ-2",
+    "label": "פה\"פ ראשי — בית 2 (קיים, לבדיקה)",
+    "material": "קיים",
+    "holes": 8,
+    "location": "בית 2",
+    "conductors": [
+     {
+      "target": "PE לוח ראשי בית 2",
+      "size": "16 Cu",
+      "kind": "pe"
+     },
+     {
+      "target": "הארקות קיימות",
+      "size": "קיים",
+      "kind": "existing",
+      "qty": 2
+     },
+     {
+      "target": "צנרת מים",
+      "size": "10 Cu",
+      "kind": "bond"
+     }
+    ]
+   }
+  ],
+  "links": [],
+  "electrodes": [
+   {
+    "label": "אלקטרודת הארקה — מוט פלדה מצופה נחושת Ø19 מ\"מ, עומק 3 מ', בשוחת ביקורת (ת\"י 1742); מרחק ≥3 מ' בין המוטות",
+    "qty": 3,
+    "depth_m": 3.0,
+    "pit": true
+   }
+  ],
+  "notes": [
+   "בית 1: ערך לולאת התקלה שנמדד מעל 4Ω. התיקון: פה\"פ ראשי חדש, 3 אלקטרודות, גישור צנרת וגופים מתכתיים, החלפת מוליכי PE פגומים, ומפסקי פחת 30mA על כל המעגלים.",
+   "איפוס (TN-C-S) בגומחה — בתיאום ובאישור חח\"י במסגרת הגדלת החיבור; עד האישור המתקן מוגן בפחת כהגנה בלעדית.",
+   "בית 2: הארקה תקינה לפי מדידה; האיפוס בתוך הלוח הקיים יועבר לפס הראשי בלוח החדש בנקודת הפרדה אחת, עם שילוט.",
+   "לאחר הביצוע: מדידת התנגדות הארקה, רציפות פה\"פ, לולאת תקלה בכניסה ובקצה המעגל הארוך, ובדיקת מפסקי פחת — רישום בדו\"ח."
+  ],
+  "verify": [
+   "ערך היעד ללולאת התקלה ולהתנגדות ההארקה — לפי תקנות החשמל ושיטת ההגנה שתאושר (איפוס או TT עם פחת).",
+   "קיום הארקת יסוד בבית 1 ומיקום צנרת המים והגז — בסקר."
+  ]
+ },
+ "routes": {
+  "title": "תרשים תוואים ומתיחה בין מבנים",
+  "sheet_no": "E-02",
+  "nodes": [
+   {
+    "id": "N",
+    "label": "גומחת מונים",
+    "sublabel": "מוני בית 1 ובית 2",
+    "kind": "niche",
+    "x": 10,
+    "y": 80
+   },
+   {
+    "id": "H1",
+    "label": "בית 1",
+    "sublabel": "לוח ראשי — הגדלה",
+    "kind": "house",
+    "x": 10,
+    "y": 35
+   },
+   {
+    "id": "WH",
+    "label": "מחסנים",
+    "sublabel": "נקודת ביניים בתוואי",
+    "kind": "warehouse",
+    "x": 52,
+    "y": 80
+   },
+   {
+    "id": "H2",
+    "label": "בית 2",
+    "sublabel": "לכיוון המטה — הגדלה",
+    "kind": "house",
+    "x": 90,
+    "y": 80
+   },
+   {
+    "id": "CB1",
+    "label": "מבנה מסחרי א'",
+    "sublabel": "אחורי",
+    "kind": "building",
+    "x": 52,
+    "y": 25
+   },
+   {
+    "id": "CB2",
+    "label": "מבנה מסחרי ב'",
+    "sublabel": "אחורי",
+    "kind": "building",
+    "x": 90,
+    "y": 25
+   }
+  ],
+  "links": [
+   {
+    "tag": "R1",
+    "a": "N",
+    "b": "H1",
+    "length_m": 15,
+    "cable": "N2XY 5X16 Cu",
+    "method": "underground"
+   },
+   {
+    "tag": "R2",
+    "a": "N",
+    "b": "WH",
+    "length_m": 80,
+    "cable": "N2XY 5X35 Cu",
+    "method": "underground",
+    "note": "אותו קו ממשיך לבית 2"
+   },
+   {
+    "tag": "R3",
+    "a": "WH",
+    "b": "H2",
+    "length_m": 40,
+    "cable": "N2XY 5X35 Cu (המשך)",
+    "method": "underground"
+   },
+   {
+    "tag": "R4",
+    "a": "CB1",
+    "b": "CB2",
+    "length_m": 12,
+    "cable": "2 סטרינגים H1Z2Z2-K",
+    "method": "overhead"
+   }
+  ],
+  "span": {
+   "a": "CB1",
+   "b": "CB2",
+   "span_m": 12,
+   "height_m": 4.5,
+   "clearance_min_m": 4.0,
+   "sag_pct": 2.0,
+   "drop_m": 4.0
+  },
+  "notes": [
+   "אורכי התוואים לפי הסיור (\"סביב\"): לכיוון המטה כ-120 מ', עד המחסנים כ-80 מ'. * = הערכה, לא נמדד.",
+   "R2+R3: תעלה אחת 0.4×0.9 מ', צינור שרשורי Ø75, חול וסרט סימון; כבל 5X35 Cu אחד לכל האורך.",
+   "R4: במקום חציבה במשטח הבטון בין המבנים — מתיחת תיל נושא בין הקירות ותליית 2 הסטרינגים בצינור עמיד UV."
+  ],
+  "verify": [
+   "התוואי בפועל, חציות כביש/בטון ונקודות כניסה למבנים — סימון בשטח לפני חפירה.",
+   "גובה המעבר מתחת למתיחה (רכבים/מלגזות) וחוזק הקירות לעיגון."
+  ]
+ }
+}

@@ -38,7 +38,7 @@ def _wrap(s: str, max_chars: int) -> list[str]:
 
 def open_items(design: Design) -> list[str]:
     out: list[str] = []
-    for part in (design.drill_template, design.site, design.earthing, design.comm, design.foundation):
+    for part in (design.drill_template, design.site, design.earthing, design.comm, design.foundation, design.routes):
         if part:
             out += list(part.get("verify", []))
     for n in design.notes:
